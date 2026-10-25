@@ -16,10 +16,11 @@
 #define AWVA_SDK_SHELL_H_
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "awva_sdk/engines.h"
-#include "awva_sdk/midi_voices.h"
+#include "awva_sdk/timed_midi.h"
 
 namespace awva::sdk {
 
@@ -34,16 +35,21 @@ public:
 	void set_fx(bool on) { fx_on_ = on; }
 	void set_preset(int i) { engine_.set_preset(i); }
 
-	// MIDI in (midi_voices.h); takes effect at the next 2 ms step. offset: the message's frame in
-	// the next process() call (a plugin host's sample offset): it goes in before the block that
-	// frame is in, so where it lands doesn't depend on the call sizes. 0: now. (Up to kTimed
-	// messages wait; more, and messages of more than 3 bytes, go in now.)
-	void midi(const uint8_t* msg, int len, int offset = 0);
-	void midi(uint8_t status, uint8_t d1, uint8_t d2, int offset = 0) {
+	// MIDI in, at a frame: offset is the message's frame in the next process() call (a plugin
+	// host's sample offset; 0: now). It is taken at the first 2 ms step at or after its frame
+	// (timed_midi.h: the component's and the renderer's rule, in integer frames), so where it
+	// lands doesn't depend on the call sizes. A Note On may carry the host's note id (-1: none),
+	// handed back by ended_notes() when the note has ended. false: the queue is full.
+	bool midi(const uint8_t* msg, int len, int offset = 0, int32_t note_id = -1);
+	bool midi(uint8_t status, uint8_t d1, uint8_t d2, int offset = 0, int32_t note_id = -1) {
 		const uint8_t m[3] = {status, d1, d2};
-		midi(m, 3, offset);
+		return midi(m, 3, offset, note_id);
 	}
-	static constexpr int kTimed = 64;
+	// MIDI 2.0 in: a UMP packet (type 4, or MIDI 1.0 in UMP, type 2), the same way
+	bool ump(const uint32_t* words, int offset = 0, int32_t note_id = -1);
+	// the host's ids of the notes that ended (released, then the engine's tail passed or it went
+	// idle, or another note took their key): how many were written, at most max
+	int ended_notes(int32_t* ids, int max);
 
 	// or the key signals directly (a Striso over USB, OSC, a test): from now on these, not MIDI;
 	// gate, strike and release follow from them (dsp::track_key)
@@ -64,21 +70,15 @@ private:
 
 	Engine engine_;
 	Effect fx_;
-	MidiVoices midi_;
+	std::unique_ptr<TimedMidi> midi_; // (large: on the heap)
 	int sr_, nv_;
 	bool fx_on_;
 	bool direct_ = false; // set_controls() was used
 	std::vector<VoiceControls> vc_;
 	GlobalControls g_;
-	uint64_t frames_ = 0, steps_ = 0; // frames rendered, MIDI steps run
-	uint64_t out_ = 0;                // frames handed out
-	struct Timed {
-		uint64_t frame; // handed-out frame it belongs to
-		uint8_t msg[3];
-		int len;
-	};
-	Timed timed_[kTimed];
-	int ntimed_ = 0;
+	uint64_t frames_ = 0; // frames rendered
+	uint64_t out_ = 0;    // frames handed out
+
 	float mono_[dsp::BLOCK], l_[dsp::BLOCK], r_[dsp::BLOCK];
 	int pos_ = dsp::BLOCK; // next frame of l_, r_ to hand out
 };

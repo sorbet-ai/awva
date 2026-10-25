@@ -120,3 +120,26 @@ TEST_CASE("midi files: written and read back, tempo map applied") {
 	CHECK(g.events[1].t == doctest::Approx(1.5));
 	CHECK(!sdk::parse_midi(std::vector<uint8_t>{'R', 'I', 'F', 'F'}).error.empty());
 }
+
+TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Registered 74) on one channel; CC74 leaves those notes alone") {
+	sdk::MidiVoices m(4);
+	const auto ump = [&m](uint32_t w0, uint32_t w1) { REQUIRE(m.ump2(w0, w1)); };
+	ump(0x40903c00u, 0xc0000000u); // note 60, channel 1
+	ump(0x40904000u, 0xc0000000u); // note 64, channel 1
+	ump(0x40103c04u, 0xc0000000u); // APNC 4 (y) of note 60: +0.5
+	ump(0x40004074u, 0x40000000u); // RPNC 74 (brightness) of note 64: -0.5
+	m.step();
+	float y60 = 9, y64 = 9;
+	for (int v = 0; v < m.num_voices(); v++) {
+		if (m.voices()[v].note == 60.0f) y60 = m.voices()[v].but_y;
+		if (m.voices()[v].note == 64.0f) y64 = m.voices()[v].but_y;
+	}
+	CHECK(y60 == doctest::Approx(0.5).epsilon(1e-6));
+	CHECK(y64 == doctest::Approx(-0.5).epsilon(1e-6));
+	ump(0x40b04a00u, 0xffffffffu); // CC74 of the channel: the notes keep their own
+	m.step();
+	for (int v = 0; v < m.num_voices(); v++) {
+		if (m.voices()[v].note == 60.0f) CHECK(m.voices()[v].but_y == y60);
+		if (m.voices()[v].note == 64.0f) CHECK(m.voices()[v].but_y == y64);
+	}
+}

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // The players (performance.h).
 #include "awva_sdk/performance.h"
+#include "awva_sdk/timed_midi.h"
 
 #include <cstdio>
 #include <filesystem>
@@ -87,25 +88,24 @@ private:
 class Midi final : public Player {
 public:
 	Midi(std::string path, MidiFile f, int voices, int sample_rate) :
-	    path_(std::move(path)), f_(std::move(f)), in_(voices), sr_(sample_rate) {}
+	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate) {}
 	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
-		// the 2 ms MIDI steps due by this block (as the board takes MIDI in), each with the
-		// messages that came before it
-		const double t = static_cast<double>(b) * dsp::BLOCK / sr_;
-		for (; static_cast<double>(steps_) * midi::TICK_SECONDS <= t; steps_++) {
-			const double ts = static_cast<double>(steps_) * midi::TICK_SECONDS;
-			for (; k_ < f_.events.size() && f_.events[k_].t <= ts; k_++) (void)in_.message(f_.events[k_].bytes, f_.events[k_].len);
-			in_.step();
-		}
-		for (int v = 0; v < in_.num_voices(); v++) {
-			const dsp::VoiceControls& m = in_.voices()[v];
+		// in integer frames (timed_midi.h, the component's rule): an event at its frame (its time,
+		// rounded to the nearest frame), taken at the first 2 ms step at or after it; the steps due
+		// by this block's start run first
+		const uint64_t start = static_cast<uint64_t>(b) * dsp::BLOCK;
+		for (; k_ < f_.events.size() && frame_of(f_.events[k_].t) <= start; k_++)
+			(void)in_->midi1(frame_of(f_.events[k_].t), f_.events[k_].bytes, f_.events[k_].len);
+		in_->advance(start);
+		for (int v = 0; v < in_->midi().num_voices(); v++) {
+			const dsp::VoiceControls& m = in_->midi().voices()[v];
 			vc[v].note = m.note;
 			vc[v].pres = m.pres;
 			vc[v].vpres = m.vpres;
 			vc[v].but_x = m.but_x;
 			vc[v].but_y = m.but_y;
 		}
-		g = in_.globals();
+		g = in_->midi().globals();
 	}
 	[[nodiscard]] double seconds() const override { return f_.seconds + 2.0; }
 	[[nodiscard]] std::string describe() const override {
@@ -117,10 +117,10 @@ public:
 private:
 	std::string path_;
 	MidiFile f_;
-	MidiVoices in_;
+	[[nodiscard]] uint64_t frame_of(double t) const { return t <= 0 ? 0u : static_cast<uint64_t>(std::llround(t * sr_)); }
+	std::unique_ptr<TimedMidi> in_;
 	int sr_;
 	size_t k_ = 0;
-	uint64_t steps_ = 0;
 };
 
 } // namespace

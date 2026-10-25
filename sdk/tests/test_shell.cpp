@@ -55,18 +55,19 @@ TEST_CASE("shell: a MIDI note sounds and ends, the call size makes no difference
 	CHECK(a == b);
 }
 
-TEST_CASE("shell: timed MIDI goes in before the block of its frame, late or untimed MIDI at once") {
+TEST_CASE("shell: timed MIDI goes in at the first 2 ms step at or after its frame (timed_midi.h)") {
 	const sdk::EngineEntry* va = sdk::find_engine("va");
 	REQUIRE(va != nullptr);
-	// a note at frame 100 of a 1000-frame call is the note sent before a call that starts there
+	// a note at frame 100 of a 1000-frame call is the note sent at frame 192, the next step
+	// (steps every 96 frames at 48 kHz), before the block that starts there
 	sdk::Shell a(*va, 48000), b(*va, 48000);
 	std::vector<float> la(2000), ra(2000), lb(2000), rb(2000);
 	a.midi(0x90, 60, 100, 100);
 	a.process(la.data(), ra.data(), 1000);
 	a.process(la.data() + 1000, ra.data() + 1000, 1000);
-	b.process(lb.data(), rb.data(), 96); // (the block of frame 100: frames 96..127)
+	b.process(lb.data(), rb.data(), 192);
 	b.midi(0x90, 60, 100);
-	b.process(lb.data() + 96, rb.data() + 96, 1904);
+	b.process(lb.data() + 192, rb.data() + 192, 1808);
 	CHECK(la == lb);
 	float peak = 0;
 	for (float x : la) peak = std::fmax(peak, std::fabs(x));
@@ -128,4 +129,27 @@ TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 	std::remove(path);
 	CHECK(sdk::midi_player("no/such/file.mid", 10, 48000, &error) == nullptr);
 	CHECK(!error.empty());
+}
+
+TEST_CASE("shell: MIDI 2.0 in (UMP) plays as its MIDI 1.0 counterpart; a note's id comes back when it has ended") {
+	const sdk::EngineEntry* va = sdk::find_engine("va");
+	REQUIRE(va != nullptr);
+	sdk::Shell a(*va, 48000), b(*va, 48000);
+	std::vector<float> la(4800), ra(4800), lb(4800), rb(4800);
+	a.midi(0x90, 60, 127, 0, 7);
+	const uint32_t on[2] = {0x40903c00u, 0xffff0000u}; // velocity 1.0 = MIDI 1.0's 127
+	b.ump(on, 0, 7);
+	a.process(la.data(), ra.data(), 4800);
+	b.process(lb.data(), rb.data(), 4800);
+	CHECK(la == lb);
+	int32_t ids[4];
+	CHECK(a.ended_notes(ids, 4) == 0);
+	a.midi(0x80, 60, 0);
+	int got = 0;
+	for (int k = 0; k < 200 && got == 0; k++) {
+		a.process(la.data(), ra.data(), 4800);
+		got = a.ended_notes(ids, 4);
+	}
+	REQUIRE(got == 1);
+	CHECK(ids[0] == 7);
 }
