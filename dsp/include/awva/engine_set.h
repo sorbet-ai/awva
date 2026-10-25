@@ -3,20 +3,23 @@
 // EngineSet<E...>: a fixed set of VoiceEngines chosen at compile time (the board's VOICE=all
 // firmware runs one of them at a time), as three plain-data objects the host places itself:
 //
-//   EngineSet<...>::States   every engine object               (Placement::tcm:   the board's DTCM)
+//   EngineSet<...>::State    the engine object they share       (Placement::tcm:   the board's DTCM)
 //   EngineSet<...>::Fast     one FastMemory region they share  (Placement::fast:  AHB SRAM1/2)
 //   EngineSet<...>::Large    one LargeMemory region they share (Placement::large: AXI SRAM)
 //
-// Only one engine runs at a time, so the engines' memory regions are one arena per region class,
-// as large as the largest engine's region: an engine's FastMemory and LargeMemory are the start of
-// the arena while it runs. start(k, ...) hands the arenas to engine k: its share of each is zeroed
-// (the state at power on, whatever ran before), then its init() runs. An engine whose init()
-// writes all of its regions itself (init_writes_memory, engine.h) skips the zeroing: the same
-// state, without writing the bytes twice in the switch block. The engine objects stay
-// separate (their parameters persist across switches).
+// Only one engine runs at a time, so the engine object and its memory regions are one arena per
+// class, as large as the largest engine's: while an engine runs, its object is the start of the
+// State arena and its FastMemory and LargeMemory the start of the others. start(k, ...) hands the
+// arenas to engine k: its object's share is zeroed, and its regions' share unless its init() writes
+// all of them itself (init_writes_memory, engine.h: the same state, without writing the bytes
+// twice in the switch block); then its init() runs. So an engine always starts from its state at
+// power on, whatever ran before; nothing of it is kept while another engine runs (init() sets its
+// preset's parameters anyway).
 //
 // visit(k, f): f(engine k) with engine k's own type, as a chain of compares the compiler inlines
-// (no function pointers: the board's stack check follows every call).
+// (no function pointers: the board's stack check follows every call). Its object's members are
+// those of the engine last started; its static members (info, presets, parameter descriptions)
+// are any engine's.
 #ifndef AWVA_ENGINE_SET_H_
 #define AWVA_ENGINE_SET_H_
 
@@ -32,12 +35,6 @@ namespace awva {
 
 namespace detail {
 
-template <size_t I, class T> struct Slot {
-	AWVA_NO_UNIQUE_ADDRESS T value;
-};
-template <class Seq, class... T> struct Slots;
-template <size_t... I, class... T> struct Slots<std::index_sequence<I...>, T...> : Slot<I, T>... {};
-
 template <size_t I, class T, class... R> struct Nth {
 	using type = typename Nth<I - 1, R...>::type;
 };
@@ -47,17 +44,9 @@ template <class T, class... R> struct Nth<0, T, R...> {
 
 } // namespace detail
 
-// a plain-data tuple (an aggregate: zero-filled storage is a valid value, no constructor runs)
-template <class... T> struct Plain : detail::Slots<std::index_sequence_for<T...>, T...> {
-	template <size_t I> using type = typename detail::Nth<I, T...>::type;
-	template <size_t I> [[nodiscard]] type<I>& get() { return static_cast<detail::Slot<I, type<I>>&>(*this).value; }
-	template <size_t I> [[nodiscard]] const type<I>& get() const {
-		return static_cast<const detail::Slot<I, type<I>>&>(*this).value;
-	}
-};
-
-// One memory region the engines take turns in: Bytes of storage, aligned for every region type it
-// holds. Plain data (zero-filled storage is valid). as<M>() is the region of type M at its start.
+// One memory region the engines take turns in (their objects, or a region class): Bytes of storage,
+// aligned for every type it holds. Plain data (zero-filled storage is valid). as<M>() is the
+// object or region of type M at its start.
 template <size_t Bytes, size_t Align> struct Arena {
 	static constexpr size_t size = Bytes;
 	static constexpr size_t align = Align;
@@ -88,7 +77,7 @@ template <VoiceEngine... E> struct EngineSet {
 	static constexpr int count = sizeof...(E);
 	template <size_t I> using engine = typename detail::Nth<I, E...>::type;
 
-	using States = Plain<E...>;
+	using State = SharedArena<E...>;
 	using Fast = SharedArena<typename E::FastMemory...>;
 	using Large = SharedArena<typename E::LargeMemory...>;
 	static_assert((Fits<Fast, E, typename E::FastMemory>::value && ...));
@@ -96,18 +85,18 @@ template <VoiceEngine... E> struct EngineSet {
 
 	// f(engine k) for 0 <= k < count (nothing otherwise); f gets the engine and its index as a
 	// std::integral_constant
-	template <class F> static void visit(int k, States& s, F&& f) {
+	template <class F> static void visit(int k, State& s, F&& f) {
 		visit_(k, s, f, std::index_sequence_for<E...>());
 	}
 	// the same with the engine's memory regions in the arenas: f(engine, fast, large, index).
 	// Only for the engine the arenas were started for (start below).
-	template <class F> static void visit(int k, States& s, Fast& fast, Large& large, F&& f) {
+	template <class F> static void visit(int k, State& s, Fast& fast, Large& large, F&& f) {
 		visit_mem_(k, s, fast, large, f, std::index_sequence_for<E...>());
 	}
-	// engine k takes over the arenas: its regions zeroed, then init(engine, fast, large, index)
-	// (the engine's init with them). Call it where the engines run (the synth thread): the engine
-	// that ran before must not touch the arenas again.
-	template <class F> static void start(int k, States& s, Fast& fast, Large& large, F&& init) {
+	// engine k takes over the arenas: its object and regions zeroed, then init(engine, fast, large,
+	// index) (the engine's init with them). Call it where the engines run (the synth thread): the
+	// engine that ran before must not touch the arenas again.
+	template <class F> static void start(int k, State& s, Fast& fast, Large& large, F&& init) {
 		visit_mem_(k, s, fast, large, init, std::index_sequence_for<E...>(), true);
 	}
 
@@ -118,20 +107,23 @@ template <VoiceEngine... E> struct EngineSet {
 	}
 
 private:
-	template <class F, size_t... I> static void visit_(int k, States& s, F& f, std::index_sequence<I...>) {
-		(void)((k == static_cast<int>(I) && (f(s.template get<I>(), std::integral_constant<size_t, I>()), true)) || ...);
+	template <class F, size_t... I> static void visit_(int k, State& s, F& f, std::index_sequence<I...>) {
+		(void)((k == static_cast<int>(I) && (f(s.template as<engine<I>>(), std::integral_constant<size_t, I>()), true)) || ...);
 	}
-	template <size_t I, class F> static void with_mem_(States& s, Fast& fast, Large& large, F& f, bool clear) {
+	template <size_t I, class F> static void with_mem_(State& s, Fast& fast, Large& large, F& f, bool clear) {
 		using FastM = typename engine<I>::FastMemory;
 		using LargeM = typename engine<I>::LargeMemory;
-		if (clear && !init_writes_memory<engine<I>>) {
-			fast.template clear<FastM>();
-			large.template clear<LargeM>();
+		if (clear) {
+			s.template clear<engine<I>>();
+			if (!init_writes_memory<engine<I>>) {
+				fast.template clear<FastM>();
+				large.template clear<LargeM>();
+			}
 		}
-		f(s.template get<I>(), fast.template as<FastM>(), large.template as<LargeM>(), std::integral_constant<size_t, I>());
+		f(s.template as<engine<I>>(), fast.template as<FastM>(), large.template as<LargeM>(), std::integral_constant<size_t, I>());
 	}
 	template <class F, size_t... I>
-	static void visit_mem_(int k, States& s, Fast& fast, Large& large, F& f, std::index_sequence<I...>, bool clear = false) {
+	static void visit_mem_(int k, State& s, Fast& fast, Large& large, F& f, std::index_sequence<I...>, bool clear = false) {
 		(void)((k == static_cast<int>(I) && (with_mem_<I>(s, fast, large, f, clear), true)) || ...);
 	}
 };
