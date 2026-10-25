@@ -40,6 +40,8 @@ int main(int argc, char** argv) {
 	char h[16];
 	std::snprintf(h, sizeof h, "%08x", d.schema_hash);
 	j += R"(  "schema_hash": ")" + std::string(h) + "\",\n";
+	std::snprintf(h, sizeof h, "%06x", d.led);
+	j += R"(  "led": ")" + std::string(h) + "\",\n";
 	j += "  \"channels\": " + std::to_string(d.channels) + ",\n  \"max_voices\": " + std::to_string(d.max_voices) + ",\n";
 	j += "  \"instr_per_block\": " + std::to_string(d.instr_per_block) + ",\n";
 	j += "  \"state_bytes\": " + std::to_string(d.state_bytes) + ",\n  \"fast_bytes\": " + std::to_string(d.fast_bytes) +

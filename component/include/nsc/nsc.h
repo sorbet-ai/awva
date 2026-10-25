@@ -108,6 +108,7 @@ typedef struct nsc_desc {
 	uint32_t schema_hash; /* FNV-1a over the parameters' ids, ranges and kinds: a change breaks stored values */
 	uint32_t inputs;      /* the Input bits of engine.h (pressure, velocity, x, y, pedal, motion) */
 	int32_t channels;     /* 1 or 2 */
+	uint32_t led;         /* its colour, 0xrrggbb (a voice key's on the board); 0: none, the host's default */
 	int32_t max_voices;
 	uint32_t instr_per_block; /* the budget: QEMU instructions per block, worst preset, 10 voices */
 	float tail_seconds;
