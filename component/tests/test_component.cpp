@@ -254,3 +254,74 @@ TEST_CASE("parameters by index and id, the board's write rule; reset and sample 
 	CHECK(c.active_voices(dll.in.state) == 0);
 	CHECK(c.param(dll.in.state, 0) == d.params[0].max); // (kept)
 }
+
+namespace {
+
+// the default performance with the instrument moving: shaken (acc_abs, 6 Hz, 1-3 s), tilted and
+// turned (acc_x/y/z and rot_x/y/z, slow), and the pedal pressed and released (2-4 s)
+class Moving final : public sdk::Player {
+public:
+	explicit Moving(std::unique_ptr<sdk::Player> p) :
+	    p_(std::move(p)) {}
+	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+		p_->block(b, vc, g);
+		const double t = static_cast<double>(b) * NSC_BLOCK / SR;
+		const double s = std::sin(2.0 * 3.14159265358979 * 6.0 * t);
+		g.acc_abs = static_cast<float>(t > 1.0 && t < 3.0 ? 1.0 + 1.3 * s * s : 1.0);
+		g.acc_x = static_cast<float>(0.3 * std::sin(1.1 * t));
+		g.acc_y = static_cast<float>(0.2 * std::sin(0.7 * t));
+		g.acc_z = static_cast<float>(-1.0 + 0.1 * std::sin(0.5 * t));
+		g.rot_x = static_cast<float>(0.4 * std::sin(1.7 * t));
+		g.rot_y = static_cast<float>(0.3 * std::sin(1.3 * t));
+		g.rot_z = static_cast<float>(0.2 * std::sin(0.9 * t));
+		const double pd = t < 2.0 ? 0.0 : (t < 3.0 ? t - 2.0 : (t < 4.0 ? 4.0 - t : 0.0));
+		g.pedal = static_cast<float>(3.0 / 16 + (13.0 / 16) * pd);
+	}
+	[[nodiscard]] double seconds() const override { return p_->seconds(); }
+	[[nodiscard]] std::string describe() const override { return "moving (shake, tilt, turn, pedal) " + p_->describe(); }
+
+private:
+	std::unique_ptr<sdk::Player> p_;
+};
+
+// one engine through a player, linked in: its output
+std::vector<float> render_linked(const char* id, int preset, sdk::Player& player, double seconds) {
+	sdk::Engine linked(*sdk::find_engine(id));
+	linked.init(SR, NV);
+	if (preset >= 0) linked.set_preset(preset);
+	std::vector<dsp::VoiceControls> v(NV, dsp::voice_at_rest);
+	dsp::GlobalControls g = dsp::globals_at_rest;
+	const int blocks = static_cast<int>(seconds * SR / NSC_BLOCK);
+	std::vector<float> a(static_cast<size_t>(blocks) * NSC_BLOCK);
+	for (int k = 0; k < blocks; k++) {
+		player.block(k, v.data(), g);
+		for (auto& c : v) dsp::track_key(c);
+		float* o[1] = {&a[static_cast<size_t>(k) * NSC_BLOCK]};
+		linked.process(v.data(), g, o);
+	}
+	return a;
+}
+
+} // namespace
+
+TEST_CASE("every engine's library renders bit for bit as linked in with the globals moving (shake, motion, pedal)") {
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		const char* id = e->info->name;
+		const int np = e->info->num_presets;
+		for (int p : {0, np > 0 ? np - 1 : 0}) {
+			const int preset = np > 0 ? p : -1;
+			std::string err;
+			Moving moving(sdk::scripted_player("default", NV, SR, &err));
+			render_both(id, preset, moving, 5.0);
+			// were the globals live? (reported: the contract checks that every declared input counts)
+			if (e->info->inputs & (dsp::in_shake | dsp::in_accel | dsp::in_rotation | dsp::in_pedal)) {
+				auto still = sdk::scripted_player("default", NV, SR, &err);
+				Moving moved(sdk::scripted_player("default", NV, SR, &err));
+				const bool moves = !same(render_linked(id, preset, *still, 5.0), render_linked(id, preset, moved, 5.0));
+				const std::string what = std::string(id) + " preset " + std::to_string(preset) + (moves ? ": the globals change its sound" : ": the globals make no difference here");
+				MESSAGE(what);
+			}
+			if (np <= 1) break;
+		}
+	}
+}

@@ -18,7 +18,8 @@ struct wind {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "wind";
 	static constexpr const char* summary = "woodwinds: reed and jet driven bores, cylindrical and conical (9 presets)";
-	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_pedal;
+	// pres, vpres, but_y (the embouchure), acc_abs (the saxes' growl); the pedal is not read
+	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake;
 	static constexpr Budget budget = {::wind::MAX_VOICES, 20000, 2.0f};
 	// the hero parameters (seeded from Striso Live's hero.dart; the contract suite checks the names)
 	static constexpr Heroes heroes = {{"reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"}};

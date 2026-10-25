@@ -600,54 +600,93 @@ TEST_CASE("voice stealing: note jumps, instant re-strikes, every voice at once")
 	}
 }
 
-TEST_CASE("inputs: an input the engine doesn't declare makes no difference") {
-	struct Probe {
-		uint32_t bit;
-		const char* name;
-		std::function<void(Keys&, int)> modulate;
-	};
-	const auto t_of = [](int b) { return static_cast<double>(b) * dsp::BLOCK / SR; };
-	const Probe probes[] = {
+// The inputs' probes: each modulates one input of the phrase (the contract's inputs checks)
+struct Probe {
+	uint32_t bit;
+	const char* name;
+	std::function<void(Keys&, int)> modulate;
+};
+const std::vector<Probe>& input_probes() {
+	static const auto t_of = [](int b) { return static_cast<double>(b) * dsp::BLOCK / SR; };
+	static const std::vector<Probe> probes = {
 	    {dsp::in_velocity, "velocity", [](Keys& k, int) { for (VoiceControls& c : k.vc) c.vpres = 0.0f; }},
-	    {dsp::in_tilt_x, "tilt x", [&](Keys& k, int b) { for (VoiceControls& c : k.vc) c.but_x = static_cast<float>(0.9 * std::sin(2 * M_PI * 3 * t_of(b))); }},
-	    {dsp::in_tilt_y, "tilt y", [&](Keys& k, int b) { for (VoiceControls& c : k.vc) c.but_y = static_cast<float>(0.9 * std::sin(2 * M_PI * 2 * t_of(b))); }},
+	    {dsp::in_tilt_x, "tilt x", [](Keys& k, int b) { for (VoiceControls& c : k.vc) c.but_x = static_cast<float>(0.9 * std::sin(2 * M_PI * 3 * t_of(b))); }},
+	    {dsp::in_tilt_y, "tilt y", [](Keys& k, int b) { for (VoiceControls& c : k.vc) c.but_y = static_cast<float>(0.9 * std::sin(2 * M_PI * 2 * t_of(b))); }},
 	    {dsp::in_note_events, "gate, strike, release", [](Keys& k, int) { for (VoiceControls& c : k.vc) c.gate = c.strike = c.release = 0.0f; }},
-	    {dsp::in_shake, "shake", [&](Keys& k, int b) { const double s = std::sin(2 * M_PI * 3 * t_of(b)); k.g.acc_abs = static_cast<float>(1 + 2.5 * s * s); }},
-	    {dsp::in_accel, "acceleration", [&](Keys& k, int b) {
+	    {dsp::in_shake, "shake", [](Keys& k, int b) { const double s = std::sin(2 * M_PI * 3 * t_of(b)); k.g.acc_abs = static_cast<float>(1 + 2.5 * s * s); }},
+	    {dsp::in_accel, "acceleration", [](Keys& k, int b) {
 		     k.g.acc_x = static_cast<float>(std::sin(2 * M_PI * 0.5 * t_of(b)));
 		     k.g.acc_y = static_cast<float>(std::sin(2 * M_PI * 0.7 * t_of(b)));
 		     k.g.acc_z = static_cast<float>(-std::cos(2 * M_PI * 0.3 * t_of(b)));
 	     }},
-	    {dsp::in_rotation, "rotation", [&](Keys& k, int b) {
+	    {dsp::in_rotation, "rotation", [](Keys& k, int b) {
 		     k.g.rot_x = static_cast<float>(0.8 * std::sin(2 * M_PI * 0.9 * t_of(b)));
 		     k.g.rot_y = static_cast<float>(0.8 * std::sin(2 * M_PI * 1.3 * t_of(b) + 1));
 		     k.g.rot_z = static_cast<float>(0.8 * std::sin(2 * M_PI * 1.7 * t_of(b) + 2));
 	     }},
 	    {dsp::in_pedal, "pedal", [](Keys& k, int) { k.g.pedal = 1.0f; }},
 	};
-	for (const Probe& pr : probes) {
+	return probes;
+}
+
+// the phrase played plain, and with one input modulated: are they the same, bit for bit?
+bool input_makes_no_difference(int p, const Probe& pr) {
+	std::vector<float> plain, modulated;
+	{
+		sdk::Engine a = fresh(p);
+		Keys ka(a.voices());
+		play(a, ka, blocks(2.5), &plain, [&](int n) { phrase(ka, n); });
+	}
+	sdk::Engine b = fresh(p);
+	Keys kb(b.voices());
+	play(b, kb, blocks(2.5), &modulated, [&](int n) {
+		phrase(kb, n);
+		pr.modulate(kb, n);
+	});
+	return same_bits(plain, modulated);
+}
+
+TEST_CASE("inputs: an input the engine doesn't declare makes no difference") {
+	for (const Probe& pr : input_probes()) {
 		if (info().inputs & pr.bit) continue;
 		for (int p : presets()) {
 			CAPTURE(std::string(info().name));
-			CAPTURE(pr.name);
+			CAPTURE(std::string(pr.name));
 			CAPTURE(p);
-			std::vector<float> plain, modulated;
-			{
-				sdk::Engine a = fresh(p);
-				Keys ka(a.voices());
-				play(a, ka, blocks(2.5), &plain, [&](int n) { phrase(ka, n); });
-			}
-			sdk::Engine b = fresh(p);
-			Keys kb(b.voices());
-			play(b, kb, blocks(2.5), &modulated, [&](int n) {
-				phrase(kb, n);
-				pr.modulate(kb, n);
-			});
-			CHECK(same_bits(plain, modulated));
+			CHECK(input_makes_no_difference(p, pr));
 		}
 	}
 }
 
+// Declared inputs that the phrase can't show, by engine: each with its reason. Keep it short; an
+// input an engine doesn't read is not declared.
+struct InputExemption {
+	const char* engine;
+	uint32_t bit;
+	const char* why;
+};
+constexpr InputExemption input_exemptions[] = {
+    {"", 0, ""}, // (none: every engine's declared inputs count in some preset; this entry matches no engine)
+};
+
+TEST_CASE("inputs: an input the engine declares changes its sound in at least one preset") {
+	for (const Probe& pr : input_probes()) {
+		if (!(info().inputs & pr.bit)) continue;
+		bool exempt = false;
+		for (const InputExemption& x : input_exemptions)
+			if (x.bit == pr.bit && std::string(x.engine) == info().name) exempt = true;
+		if (exempt) continue;
+		bool moves = false;
+		for (int p : presets())
+			if (!input_makes_no_difference(p, pr)) {
+				moves = true;
+				break;
+			}
+		CAPTURE(std::string(info().name));
+		CAPTURE(std::string(pr.name));
+		CHECK(moves);
+	}
+}
 TEST_CASE("cpu: the worst case runs much faster than real time on the PC") {
 	sdk::Engine e = fresh(presets().back());
 	Keys k(e.voices());
