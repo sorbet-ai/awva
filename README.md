@@ -7,7 +7,8 @@ They work with the Striso board as a supported host: its firmware takes this rep
 | | |
 |---|---|
 | `dsp/` | the engines, header only: the contract (`engine.h`), the shared helpers, the UMP profile and decoder, MIDI in, the voice allocator, mono legato; `engines/<name>.h` traits, `effects/fx.h` |
-| `sdk/` | one library per engine, the contract suite, the renderer (`awva_render`), the shell, MIDI files |
+| `sdk/` | one library per engine, the contract suite, the renderer (`awva_render`), the docs generator (`awva_docs`), the shell, MIDI files |
+| `docs/` | the engines' reference pages and how they work, and playing them with MIDI 2.0 and MPE: [docs/README.md](docs/README.md) |
 | `tools/harness/` | the scripted performances, `harness_util.h`, key recordings (`rec/`) |
 | `third_party/doctest` | the test framework |
 

@@ -181,6 +181,11 @@ target_link_libraries(awva_sdk PUBLIC awva_sdk_options awva_effect_fx)
 add_executable(awva_render tools/awva_render.cpp)
 target_link_libraries(awva_render PRIVATE awva_sdk awva_engines awva_performances)
 
+# the engines' reference pages from their EngineInfo (docs/engines/<name>.md, the index docs/README.md);
+# the test docs.up_to_date fails when they are stale (run awva_docs on docs/ to update them)
+add_executable(awva_docs tools/awva_docs.cpp)
+target_link_libraries(awva_docs PRIVATE awva_sdk awva_engines)
+
 # --- render_custom: one engine and one performance with extra compiler flags ---------------------------
 # (tools/harness/render_strisy.sh configures these). The performance is compiled into the engine's
 # translation unit, so its test hooks (BOWED_TEST_HOOK and the like) reach the engine.
@@ -292,6 +297,11 @@ foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va 
   add_test(NAME awva_render.refuses_${name} COMMAND awva_render ${args})
   set_tests_properties(awva_render.refuses_${name} PROPERTIES LABELS unit WILL_FAIL TRUE)
 endforeach()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
+  add_test(NAME docs.up_to_date COMMAND awva_docs "${CMAKE_CURRENT_SOURCE_DIR}/../docs" --check)
+  set_tests_properties(docs.up_to_date PROPERTIES LABELS unit)
+endif()
 
 # the engine components (component/: the C ABI, each engine as its own library)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../component" "${CMAKE_CURRENT_BINARY_DIR}/component")
