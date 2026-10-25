@@ -15,7 +15,7 @@ FILES=$(ls dsp/include/awva/fx.h dsp/include/awva/voice_*.h dsp/include/awva/con
   dsp/include/awva/engine_set.h dsp/include/awva/midi_in.h dsp/include/awva/ump.h dsp/include/awva/legato.h \
   dsp/include/awva/engines/*.h dsp/include/awva/effects/*.h \
   sdk/include/awva_sdk/*.h sdk/src/*.h sdk/src/*.cpp sdk/tools/*.cpp sdk/tests/*.cpp tools/harness/harness_util.h \
-  $(ls component/include/nsc/*.h component/tools/*.cpp component/tests/*.cpp 2>/dev/null))
+  $(ls component/include/nsc/*.h component/tools/*.cpp component/tests/*.cpp examples/*/*.c examples/*/*.cpp 2>/dev/null))
 if [ "${1:-}" = --check ]; then
   "$CF" --dry-run -Werror $FILES
 else
