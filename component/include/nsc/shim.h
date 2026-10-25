@@ -19,6 +19,7 @@
 
 #include "nsc/nsc.h"
 #include "awva/engine.h"
+#include "awva/preset.h"
 #include "awva_sdk/timed_midi.h"
 
 #ifndef NSC_VERSION
@@ -36,16 +37,10 @@ namespace dsp = awva;
 static_assert(sizeof(nsc_voice) == sizeof(dsp::VoiceControls) && offsetof(nsc_voice, release) == offsetof(dsp::VoiceControls, release),
     "nsc_voice is dsp::VoiceControls");
 static_assert(sizeof(nsc_globals) == sizeof(dsp::GlobalControls), "nsc_globals is dsp::GlobalControls");
+using awva::preset::fnv1a; // (the parameters' ids, the schema hash: preset.h's)
+using awva::preset::fnv1a_word;
 static_assert(NSC_MAX_EVENTS == awva::sdk::TimedMidi::MAX_EVENTS && NSC_MAX_NOTE_IDS == awva::sdk::TimedMidi::NOTES, "ended()'s guarantee is TimedMidi's");
 
-[[nodiscard]] constexpr uint32_t fnv1a(const char* s, uint32_t h = 2166136261u) {
-	for (; *s; s++) h = (h ^ static_cast<uint8_t>(*s)) * 16777619u;
-	return h;
-}
-[[nodiscard]] inline uint32_t fnv1a_word(uint32_t h, uint32_t w) {
-	for (int b = 0; b < 4; b++) h = (h ^ ((w >> (8 * b)) & 0xffu)) * 16777619u;
-	return h;
-}
 
 template <dsp::VoiceEngine E> struct Shim {
 	// the sample rates the engines are made for (outside, some go silent or loud: hosts refuse them)
@@ -57,9 +52,10 @@ template <dsp::VoiceEngine E> struct Shim {
 		float output;   // the output level (the component's own parameter, after the engine's)
 		uint64_t frame; // frames rendered by process()
 		int32_t sample_rate, voices;
+		float defaults[E::info.num_params > 0 ? E::info.num_params : 1]; // the parameters after init(): what a preset that lacks one gives it
 		E engine;
 		State(int nv, int sr) :
-		    midi(nv, sr), vc(), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), engine() {}
+		    midi(nv, sr), vc(), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
 	static_assert(E::info.budget.max_voices <= 16, "16 voices at most");
@@ -93,6 +89,10 @@ template <dsp::VoiceEngine E> struct Shim {
 		}();
 		(void)done;
 		return p;
+	}
+	// the presets' params_hash (awva/preset.h schema_hash): the engine's parameters (without output)
+	static uint32_t preset_hash() {
+		return awva::preset::schema_hash(E::info.num_params, [](int i) { return E::param_desc(i); });
 	}
 	static uint32_t schema() {
 		uint32_t h = 2166136261u;
@@ -164,6 +164,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		for (auto& c : s->vc) c = dsp::voice_at_rest;
 		s->g = dsp::globals_at_rest;
 		s->engine.init(*static_cast<typename E::FastMemory*>(fast), *static_cast<typename E::LargeMemory*>(large), sr, nv);
+		for (int i = 0; i < E::info.num_params; i++) s->defaults[i] = *s->engine.param(i);
 		return 0;
 	}
 	static void reset(void* state) {
@@ -242,6 +243,51 @@ template <dsp::VoiceEngine E> struct Shim {
 		if (d->kind != dsp::ParamKind::continuous) v = static_cast<float>(static_cast<int>(v + (v >= 0 ? 0.5f : -0.5f)));
 		return st(state).engine.set_param(i, v) ? 1 : 0;
 	}
+	// a preset by name (awva/preset.h resolve): clamped, skipped, missing (the defaults) counted;
+	// another engine's, or a text that isn't one, refused with nothing changed
+	static int32_t load_preset(void* state, const char* json, uint32_t length, nsc_preset_report* report) {
+		State& s = st(state);
+		nsc_preset_report r{};
+		awva::preset::Preset p;
+		const awva::preset::Error err = json ? awva::preset::read(json, length, p) : awva::preset::Error::syntax;
+		if (err != awva::preset::Error::none) {
+			r.error = awva::preset::error_name(err);
+		} else {
+			float values[NP > 0 ? NP : 1];
+			const awva::preset::Resolved res = awva::preset::resolve(
+			    p, E::info.name, preset_hash(), E::info.num_params,
+			    [](int i) { return E::param_desc(i); }, s.defaults, values);
+			if (res.refused) {
+				r.error = "another engine's preset";
+			} else {
+				s.engine.load_params(values, -1);
+				r.loaded = 1;
+				r.exact = res.exact ? 1 : 0;
+				r.clamped = res.num_clamped;
+				r.skipped = res.num_skipped;
+				r.missing = res.num_missing;
+			}
+		}
+		if (report) *report = r;
+		return r.loaded;
+	}
+	// the current values as a preset: the engine's id and schema, the build's version, every
+	// parameter by name, the current preset's heroes
+	static uint32_t save_preset(const void* state, const char* title, char* out, uint32_t capacity) {
+		E& e = const_cast<E&>(st(state).engine);
+		awva::preset::Preset p;
+		p.engine.set(E::info.name);
+		p.version.set(NSC_VERSION);
+		p.params_hash = preset_hash();
+		p.has_hash = true;
+		p.title.set(title);
+		const int pr = e.preset();
+		const dsp::Heroes& h = dsp::heroes_of(E::info, pr >= 0 ? E::preset_name(pr) : nullptr);
+		for (const char* n : h.name)
+			if (n && p.num_heroes < awva::preset::MAX_HEROES) p.heroes[p.num_heroes++].set(n);
+		for (int i = 0; i < E::info.num_params; i++) p.add_param(E::param_desc(i)->name, *e.param(i));
+		return out ? static_cast<uint32_t>(awva::preset::write(p, out, capacity)) : 0;
+	}
 	static int32_t param_index(uint32_t id) {
 		const nsc_param* p = params();
 		for (int i = 0; i <= NP; i++)
@@ -251,7 +297,7 @@ template <dsp::VoiceEngine E> struct Shim {
 
 	static const nsc_component* get() {
 		static const nsc_component c = {desc(), init, reset, mode, process, process_voices, active_voices, ended, voices,
-		    preset, set_preset, param, set_param, param_index};
+		    preset, set_preset, param, set_param, param_index, load_preset, save_preset};
 		return &c;
 	}
 };

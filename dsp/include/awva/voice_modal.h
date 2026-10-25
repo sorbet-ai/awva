@@ -38,6 +38,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 
 namespace modal {
 
@@ -61,39 +62,29 @@ struct Partial {
 	float bow;   // rubbed level (wine glass only)
 };
 struct Model {
-	const char* name;
-	int n;         // number of partials
-	float alpha;   // T60 ~ (f/f_C4)^-alpha over the keyboard
-	float gain;    // level matching between presets
-	float damper;  // damper strength on release (1 = vibraphone damper bar)
-	float tremolo; // 1: motor tremolo from pressure and gyro (vibraphone)
-	float rub;     // > 0: held pressure rubs (wine glass), rubbed level per unit pressure
+	int n; // number of partials
 	Partial p[NMODES];
 };
-
-static constexpr int NUM_PRESETS = 6;
 
 // the instrument models: the partials, their tuning and decays; the parameter model picks one
 static constexpr int NUM_MODELS = 6;
 static constexpr Model models[NUM_MODELS] = {
-    {// aluminium bar tuned 1 : 4 : 10, resonator tube; weak torsional and higher bending modes
-        "vibraphone", 7, 0.8f, 0.87f, 1.0f, 1.0f, 0.0f, {{1.000f, 1.00f, 0.0f, 9.0f, 0}, {4.000f, 0.32f, 1.2f, 2.2f, 0}, {10.00f, 0.11f, 2.0f, 0.7f, 0}, {2.760f, 0.025f, 1.5f, 0.5f, 0}, {6.250f, 0.025f, 2.0f, 0.30f, 0}, {13.50f, 0.02f, 2.5f, 0.15f, 0}, {17.80f, 0.03f, 2.5f, 0.15f, 0}}},
-    {// rosewood bar tuned 1 : 3.96 : 9.86 (Rossing, E3 bar), resonator; short woody torsional modes
-        "marimba", 8, 0.9f, 1.83f, 0.6f, 0.0f, 0.0f, {{1.000f, 1.00f, 0.0f, 1.6f, 0}, {3.960f, 0.38f, 1.3f, 0.35f, 0}, {9.860f, 0.13f, 2.0f, 0.10f, 0}, {2.800f, 0.06f, 1.5f, 0.06f, 0}, {5.600f, 0.05f, 1.8f, 0.04f, 0}, {7.300f, 0.04f, 2.0f, 0.03f, 0}, {12.30f, 0.03f, 2.5f, 0.025f, 0}, {15.90f, 0.04f, 2.5f, 0.03f, 0}}},
-    {// steel bar, free-free bending modes 1 : 2.71 : 5.15 : 8.43 (Rossing, glockenspiel)
-        "glockenspiel", 7, 0.7f, 0.96f, 0.7f, 0.0f, 0.0f, {{1.000f, 1.00f, 0.0f, 6.0f, 0}, {2.710f, 0.42f, 1.2f, 1.2f, 0}, {5.150f, 0.20f, 1.8f, 0.5f, 0}, {8.430f, 0.09f, 2.2f, 0.25f, 0}, {12.60f, 0.05f, 2.5f, 0.12f, 0}, {3.600f, 0.04f, 1.5f, 0.20f, 0}, {7.100f, 0.03f, 2.0f, 0.10f, 0}}},
+    {// vibraphone: aluminium bar tuned 1 : 4 : 10, resonator tube; weak torsional and higher bending modes
+        7, {{1.000f, 1.00f, 0.0f, 9.0f, 0}, {4.000f, 0.32f, 1.2f, 2.2f, 0}, {10.00f, 0.11f, 2.0f, 0.7f, 0}, {2.760f, 0.025f, 1.5f, 0.5f, 0}, {6.250f, 0.025f, 2.0f, 0.30f, 0}, {13.50f, 0.02f, 2.5f, 0.15f, 0}, {17.80f, 0.03f, 2.5f, 0.15f, 0}}},
+    {// marimba: rosewood bar tuned 1 : 3.96 : 9.86 (Rossing, E3 bar), resonator; short woody torsional modes
+        8, {{1.000f, 1.00f, 0.0f, 1.6f, 0}, {3.960f, 0.38f, 1.3f, 0.35f, 0}, {9.860f, 0.13f, 2.0f, 0.10f, 0}, {2.800f, 0.06f, 1.5f, 0.06f, 0}, {5.600f, 0.05f, 1.8f, 0.04f, 0}, {7.300f, 0.04f, 2.0f, 0.03f, 0}, {12.30f, 0.03f, 2.5f, 0.025f, 0}, {15.90f, 0.04f, 2.5f, 0.03f, 0}}},
+    {// glockenspiel: steel bar, free-free bending modes 1 : 2.71 : 5.15 : 8.43 (Rossing, glockenspiel)
+        7, {{1.000f, 1.00f, 0.0f, 6.0f, 0}, {2.710f, 0.42f, 1.2f, 1.2f, 0}, {5.150f, 0.20f, 1.8f, 0.5f, 0}, {8.430f, 0.09f, 2.2f, 0.25f, 0}, {12.60f, 0.05f, 2.5f, 0.12f, 0}, {3.600f, 0.04f, 1.5f, 0.20f, 0}, {7.100f, 0.03f, 2.0f, 0.10f, 0}}},
     {// tuned church bell, prime = note: hum 0.5, tierce 1.183 (minor third), quint 1.506,
         // nominal 2.0, deciem 2.514, undeciem 2.662, duodeciem 3.011, upper octave 4.166 ...
-        "bell", 11, 0.6f, 0.67f, 0.3f, 0.0f, 0.0f, {{1.000f, 0.55f, 0.3f, 9.0f, 0}, {0.500f, 0.45f, 0.0f, 14.0f, 0}, {1.183f, 0.60f, 0.4f, 8.0f, 0}, {1.506f, 0.25f, 0.6f, 5.0f, 0}, {2.000f, 1.00f, 0.8f, 6.0f, 0}, {2.514f, 0.35f, 1.2f, 3.5f, 0}, {2.662f, 0.25f, 1.3f, 3.0f, 0}, {3.011f, 0.30f, 1.5f, 2.5f, 0}, {4.166f, 0.20f, 1.8f, 1.6f, 0}, {5.433f, 0.12f, 2.2f, 1.0f, 0}, {6.796f, 0.08f, 2.5f, 0.7f, 0}}},
-    {// steel tine clamped at one end: 1 : 6.27 : 17.55, plus short box/knock modes
-        "kalimba", 5, 0.7f, 1.25f, 0.5f, 0.0f, 0.0f, {{1.000f, 1.00f, 0.0f, 3.5f, 0}, {6.270f, 0.20f, 1.5f, 0.25f, 0}, {17.55f, 0.06f, 2.5f, 0.06f, 0}, {3.100f, 0.04f, 1.5f, 0.05f, 0}, {10.30f, 0.03f, 2.0f, 0.04f, 0}}},
+        11, {{1.000f, 0.55f, 0.3f, 9.0f, 0}, {0.500f, 0.45f, 0.0f, 14.0f, 0}, {1.183f, 0.60f, 0.4f, 8.0f, 0}, {1.506f, 0.25f, 0.6f, 5.0f, 0}, {2.000f, 1.00f, 0.8f, 6.0f, 0}, {2.514f, 0.35f, 1.2f, 3.5f, 0}, {2.662f, 0.25f, 1.3f, 3.0f, 0}, {3.011f, 0.30f, 1.5f, 2.5f, 0}, {4.166f, 0.20f, 1.8f, 1.6f, 0}, {5.433f, 0.12f, 2.2f, 1.0f, 0}, {6.796f, 0.08f, 2.5f, 0.7f, 0}}},
+    {// kalimba: steel tine clamped at one end: 1 : 6.27 : 17.55, plus short box/knock modes
+        5, {{1.000f, 1.00f, 0.0f, 3.5f, 0}, {6.270f, 0.20f, 1.5f, 0.25f, 0}, {17.55f, 0.06f, 2.5f, 0.06f, 0}, {3.100f, 0.04f, 1.5f, 0.05f, 0}, {10.30f, 0.03f, 2.0f, 0.04f, 0}}},
     {// wine glass, (m,0) modes 1 : 2.32 : 4.25 : 6.63 : 9.4; rubbing the rim drives the (2,0) mode
-        "wine glass", 5, 0.7f, 0.90f, 0.15f, 0.0f, 0.32f, {{1.000f, 1.00f, 0.0f, 12.0f, 1.0f}, {2.320f, 0.35f, 1.0f, 5.0f, 0.12f}, {4.250f, 0.15f, 1.8f, 2.5f, 0.03f}, {6.630f, 0.07f, 2.2f, 1.2f, 0}, {9.400f, 0.04f, 2.5f, 0.7f, 0}}},
+        5, {{1.000f, 1.00f, 0.0f, 12.0f, 1.0f}, {2.320f, 0.35f, 1.0f, 5.0f, 0.12f}, {4.250f, 0.15f, 1.8f, 2.5f, 0.03f}, {6.630f, 0.07f, 2.2f, 1.2f, 0}, {9.400f, 0.04f, 2.5f, 0.7f, 0}}},
 };
 
-[[nodiscard]] static inline const char* preset_name(int i) {
-	return (i >= 0 && i < NUM_PRESETS) ? models[i].name : models[0].name;
-}
+static constexpr int NUM_PRESETS = 6; // the factory presets (the end of this file)
 
 // preset after init() (host renders: -DMODAL_PRESET=n)
 #ifdef MODAL_PRESET
@@ -159,6 +150,10 @@ struct Params {
 	float model;     // model: the instrument (models[]: its partials and decays)
 };
 static constexpr int NUM_PARAMS = (int)(sizeof(Params) / sizeof(float));
+
+// the factory presets: presets/modal/NN-<name>.preset.json, compiled in (the end of this file)
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
     {"level", "level", 0.1f, 3.0f, strisy::ParamKind::continuous},
@@ -282,8 +277,6 @@ static inline void reset_voice(VoiceState& s) {
 	s.fade = 0;
 }
 
-// Select a preset; callable between blocks at any time. Sounding voices fade out over one block
-// (their partials would otherwise jump to the new instrument's ratios).
 // Recompute values derived from the parameters, after clamping every parameter into its range
 // (NaN becomes the minimum). Cheap; called after each live write and by set_preset.
 static inline void params_changed(Engine& e) {
@@ -298,37 +291,6 @@ static inline void params_changed(Engine& e) {
 	const Model& P = *e.pr;
 	for (int k = 0; k < NMODES; k++)
 		e.sig_ref[k] = k < P.n ? 6.9077553f * (1.0f + e.prm.hfdamp * (P.p[k].ratio - 1.0f)) / (P.p[k].t60 * e.prm.decay) : 0.0f;
-}
-
-// Select a preset (sets all parameters); callable between blocks at any time. Sounding voices fade
-// out over one block (their partials would otherwise jump to the new instrument's ratios).
-// preset i's parameters: model i at its own level, decay tracking, damper, tremolo and rub
-[[nodiscard]] static inline Params preset_params(int i) {
-	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	const Model& P = models[i];
-	Params q;
-	q.level = P.gain;
-	q.thresh = 0.03f;
-	q.span = 0.7f;
-	q.hard = 0.6f;
-	q.hardvel = 0.4f;
-	q.tilt = 0.2f;
-	q.mute = 0.3f;
-	q.upper = 1.0f;
-	q.decay = 1.0f;
-	q.keytrack = P.alpha;
-	q.hfdamp = 0.0f;
-	q.damper = P.damper;
-	q.lift = 0.15f;
-	q.pedal = 1.0f;
-	q.trem = P.tremolo > 0.0f ? 1.0f : 0.0f;
-	q.tremrate = 5.0f;
-	q.tremdepth = 0.6f;
-	q.tremthr = 0.7f;
-	q.rub = P.rub;
-	q.rubnoise = 0.05f;
-	q.model = (float)i;
-	return q;
 }
 
 // e.prm, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name):
@@ -701,7 +663,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 namespace strisy {
 template <> struct EngineParams<modal::Engine> {
 	static constexpr int count = modal::NUM_PARAMS;
-	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &modal::param_desc[i] : nullptr; }
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &modal::param_desc[i] : nullptr; }
 	static float* ptr(modal::Engine& e, int i) { return (i >= 0 && i < count) ? &e.prm.level + i : nullptr; }
 	static void changed(modal::Engine& e, int) {
 		const modal::Model* was = e.pr;
@@ -713,5 +675,28 @@ template <> struct EngineParams<modal::Engine> {
 	}
 };
 } // namespace strisy
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/modal/NN-<name>.preset.json, the files themselves (presets/modal.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace modal {
+#include "presets/modal.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/modal/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NUM_PARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NUM_PARAMS; k++) (&p.level)[k] = f.values[k];
+	return p;
+}
+} // namespace modal
 
 #endif // VOICE_MODAL_H_

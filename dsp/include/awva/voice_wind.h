@@ -61,6 +61,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 
 namespace wind {
@@ -202,238 +203,29 @@ static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 // the instruments: the bore kind, the lowest note (it sets the cone apex length) and the tuning
 // correction table (voice_wind_tune.h CORR) of each; the parameter instrument picks one
 struct Instrument {
-	const char* name;
 	int kind;
 	real low_note;
 };
 
-static constexpr int NUM_PRESETS = 9;
 static constexpr int NUM_INSTRUMENTS = 9;
 static constexpr Instrument instruments[NUM_INSTRUMENTS] = {
-    {"clarinet", KIND_CYL, 50},
-    {"bass clarinet", KIND_CYL, 34},
-    {"soprano sax", KIND_CONE, 56},
-    {"alto sax", KIND_CONE, 49},
-    {"tenor sax", KIND_CONE, 44},
-    {"baritone sax", KIND_CONE, 37},
-    {"oboe", KIND_CONE, 58},
-    {"bassoon", KIND_CONE, 34},
-    {"flute", KIND_JET, 60},
+    {KIND_CYL, 50},  // clarinet
+    {KIND_CYL, 34},  // bass clarinet
+    {KIND_CONE, 56}, // soprano sax
+    {KIND_CONE, 49}, // alto sax
+    {KIND_CONE, 44}, // tenor sax
+    {KIND_CONE, 37}, // baritone sax
+    {KIND_CONE, 58}, // oboe
+    {KIND_CONE, 34}, // bassoon
+    {KIND_JET, 60},  // flute
 };
 
-[[nodiscard]] static inline const char* preset_name(int i) {
-	return (i >= 0 && i < NUM_PRESETS) ? instruments[i].name : instruments[0].name;
-}
+// the factory presets: presets/wind/NN-<name>.preset.json, compiled in (the end of this file)
+static constexpr int NUM_PRESETS = 9;
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
-[[nodiscard]] static inline Params base_params() {
-	Params p;
-	p.level = 1.0f;
-	p.speak = 0.12f;
-	p.dyn = 0.75f;
-	p.attack = 3.0f;
-	p.dyn_gain = 0.6f;
-	p.tongue = 0.35f;
-	p.tongue_noise = 0.5f;
-	p.reed_open = 0.30f;
-	p.reed_freq = 4000.0f;
-	p.reed_damp = 0.5f;
-	p.loss = 0.985f;
-	p.lattice = 1100.0f;
-	p.lat_breath = 0.4f;
-	p.apex = 0.5f;
-	p.apex_lp = 6.0f;
-	p.jet = 0.5f;
-	p.jet_off = 0.3f;
-	p.body = 0.4f;
-	p.rad_hp = 250.0f;
-	p.bright = 5000.0f;
-	p.br_breath = 1.5f;
-	p.f1_hz = 800.0f;
-	p.f1_db = 0.0f;
-	p.f2_hz = 2500.0f;
-	p.f2_db = 0.0f;
-	p.f_q = 1.5f;
-	p.breath = 0.3f;
-	p.turb = 0.02f;
-	p.noise_hz = 2000.0f;
-	p.tilt_bright = 0.5f;
-	p.tilt_breath = 0.5f;
-	p.growl = 0.0f;
-	p.growl_from = 1.05f;
-	p.vib = 0.0f;
-	p.vib_hz = 5.0f;
-	p.vib_breath = 0.0f;
-	p.instrument = 0.0f;
-	return p;
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	Params p = base_params();
-	p.instrument = (real)(i >= 0 && i < NUM_INSTRUMENTS ? i : 0); // (preset i is instrument i)
-	switch (i) {
-	default:
-	case 0: // clarinet
-		p.level = 2.05f;
-		break;
-	case 1: // bass clarinet
-		p.level = 2.25f;
-		p.lattice = 650.0f;
-		p.reed_open = 0.34f;
-		p.reed_freq = 2500.0f;
-		p.bright = 3000.0f;
-		p.rad_hp = 120.0f;
-		p.noise_hz = 1200.0f;
-		p.br_breath = 1.5f;
-		break;
-	case 2: // soprano sax
-		p.level = 1.27f;
-		p.apex = 0.28f;
-		p.apex_lp = 3.0f;
-		p.dyn = 0.7f;
-		p.lattice = 1800.0f;
-		p.reed_open = 0.42f;
-		p.reed_freq = 3600.0f;
-		p.f1_hz = 900.0f;
-		p.f1_db = 4.0f;
-		p.f2_hz = 3000.0f;
-		p.f2_db = 10.0f;
-		p.f_q = 1.2f;
-		p.bright = 10000.0f;
-		p.rad_hp = 800.0f;
-		p.growl = 0.45f;
-		p.breath = 0.4f;
-		p.br_breath = 3.0f;
-		break;
-	case 3: // alto sax
-		p.level = 1.56f;
-		p.apex = 0.28f;
-		p.apex_lp = 3.0f;
-		p.dyn = 0.7f;
-		p.lattice = 1500.0f;
-		p.reed_open = 0.42f;
-		p.reed_freq = 3400.0f;
-		p.f1_hz = 650.0f;
-		p.f1_db = 4.0f;
-		p.f2_hz = 2500.0f;
-		p.f2_db = 10.0f;
-		p.f_q = 1.2f;
-		p.bright = 9000.0f;
-		p.rad_hp = 600.0f;
-		p.growl = 0.45f;
-		p.breath = 0.4f;
-		p.br_breath = 3.0f;
-		break;
-	case 4: // tenor sax
-		p.level = 1.68f;
-		p.apex = 0.28f;
-		p.apex_lp = 3.0f;
-		p.dyn = 0.7f;
-		p.lattice = 1200.0f;
-		p.reed_open = 0.44f;
-		p.reed_freq = 3000.0f;
-		p.f1_hz = 500.0f;
-		p.f1_db = 4.0f;
-		p.f2_hz = 2000.0f;
-		p.f2_db = 9.0f;
-		p.f_q = 1.2f;
-		p.bright = 8000.0f;
-		p.rad_hp = 450.0f;
-		p.growl = 0.45f;
-		p.breath = 0.45f;
-		p.br_breath = 3.0f;
-		break;
-	case 5: // baritone sax
-		p.level = 1.84f;
-		p.apex = 0.28f;
-		p.apex_lp = 3.0f;
-		p.dyn = 0.7f;
-		p.lattice = 900.0f;
-		p.reed_open = 0.46f;
-		p.reed_freq = 2600.0f;
-		p.f1_hz = 380.0f;
-		p.f1_db = 4.0f;
-		p.f2_hz = 1500.0f;
-		p.f2_db = 8.0f;
-		p.f_q = 1.2f;
-		p.bright = 6000.0f;
-		p.rad_hp = 300.0f;
-		p.growl = 0.45f;
-		p.breath = 0.45f;
-		p.noise_hz = 1500.0f;
-		p.br_breath = 3.0f;
-		break;
-	case 6: // oboe
-		p.level = 1.16f;
-		p.apex = 0.28f;
-		p.apex_lp = 3.0f;
-		p.dyn = 0.68f;
-		p.lattice = 2000.0f;
-		p.reed_open = 0.30f;
-		p.reed_freq = 5000.0f;
-		p.reed_damp = 0.6f;
-		p.f1_hz = 1250.0f;
-		p.f1_db = 12.0f;
-		p.f2_hz = 3000.0f;
-		p.f2_db = 10.0f;
-		p.f_q = 2.0f;
-		p.bright = 9000.0f;
-		p.rad_hp = 1000.0f;
-		p.breath = 0.2f;
-		p.noise_hz = 2500.0f;
-		p.br_breath = 2.0f;
-		p.speak = 0.09f;
-		p.tilt_breath = 0.3f;
-		break;
-	case 7: // bassoon
-		p.level = 2.31f;
-		p.apex = 0.28f;
-		p.apex_lp = 3.0f;
-		p.dyn = 0.7f;
-		p.lattice = 600.0f;
-		p.reed_open = 0.22f;
-		p.reed_freq = 3000.0f;
-		p.reed_damp = 0.6f;
-		p.f1_hz = 480.0f;
-		p.f1_db = 8.0f;
-		p.f2_hz = 1150.0f;
-		p.f2_db = 8.0f;
-		p.f_q = 2.0f;
-		p.bright = 4000.0f;
-		p.rad_hp = 300.0f;
-		p.breath = 0.2f;
-		p.noise_hz = 1200.0f;
-		p.br_breath = 3.0f;
-		p.bright = 5000.0f;
-		p.speak = 0.05f;
-		p.tilt_breath = 0.3f;
-		break;
-	case 8: // flute
-		p.level = 0.59f;
-		p.speak = 0.12f;
-		p.dyn = 1.2f;
-		p.lattice = 3000.0f;
-		p.loss = 0.95f;
-		p.jet = 0.5f;
-		p.jet_off = 0.6f;
-		p.body = 3.0f;
-		p.rad_hp = 300.0f;
-		p.bright = 7000.0f;
-		p.f_q = 1.0f;
-		p.breath = 1.0f;
-		p.turb = 0.03f;
-		p.noise_hz = 3000.0f;
-		p.tongue_noise = 0.8f;
-		p.br_breath = 2.0f;
-		p.tongue = 0.6f;
-		break;
-	}
-#ifdef WIND_OVR
-	WIND_OVR; // host experiments: -DWIND_OVR=p.apex=0.2f,p.loss=0.98f
-#endif
-	return p;
-}
-
-// measured tuning correction per preset: samples of extra loop delay at notes 20 + 7k
+// measured tuning correction per instrument: samples of extra loop delay at notes 20 + 7k
 #include "voice_wind_tune.h"
 
 [[nodiscard]] static inline real tuning_corr(int instrument, real note) {
@@ -1062,12 +854,36 @@ static inline void process(Engine& e, real* __restrict__ output) {
 namespace strisy {
 template <> struct EngineParams<wind::Engine> {
 	static constexpr int count = wind::NUM_LIVE_PARAMS;
-	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &wind::param_table[i].d : nullptr; }
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &wind::param_table[i].d : nullptr; }
 	static float* ptr(wind::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(wind::param_table[i].m)) : nullptr; }
 	static void changed(wind::Engine& e, int i) { // the DSP follows e.p through its smoothed copy
 		if (i >= 0 && i < count && wind::param_table[i].m == &wind::Params::instrument) wind::instrument_changed(e);
 	}
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/wind/NN-<name>.preset.json, the files themselves (presets/wind.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace wind {
+#include "presets/wind.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/wind/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace wind
 
 #endif // VOICE_WIND_H_

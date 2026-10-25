@@ -12,6 +12,7 @@ This records where each file of this repository comes from. The repository was s
 | `dsp/include/awva/ump.h`, `midi_in.h`, `voice_allocator.h`, `legato.h` | the UMP profile and decoder, the MIDI 1.0/MPE up-converter, the voice allocator, mono legato |
 | `dsp/include/awva/voice_{va,modal,bowed,reed,sine,wind,ep,brass,trumpet,accordion}.h`, `voice_wind_tune.h`, `trumpet_{bore,cal,seed}.h` | the engines |
 | `dsp/include/awva/engines/*.h`, `effects/fx.h` | the engines' and the effects' contract traits |
+| `dsp/include/awva/preset.h`, `presets/<engine>/*.preset.json`, `dsp/include/awva/presets/*.inc` (generated from them), `tools/presets_inc.cmake` | the preset format and the factory presets as files. JSON has no comments, so the preset files carry no SPDX line: they are Apache-2.0, copyright Sorbet AI, like the rest. |
 | `dsp/include/awva/fx.h` | the master effects (drive, phaser, chorus, tremolo, delay, Dattorro plate, limiter). The upstream `synth.dsp` has no such chain: only a stereo width delay, which is not here. |
 | `sdk/`, `tools/harness/` (performances, `harness_util.h`, `rec/` key recordings) | the SDK, its tests, the renderer, the scripted performances |
 | `tools/trumpet/` | the trumpet's bore fits, calibration and warm-start table generators |

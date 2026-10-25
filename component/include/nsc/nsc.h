@@ -44,7 +44,9 @@
  * (CLAP_EVENT_MIDI2), a late one at its negative frame; ended() gives CLAP_EVENT_NOTE_END with the
  * note ids; params by id are clap_plugin_params (id = nsc_param.id, value in min .. max, default
  * def; NSC_PARAM_STEPS / NSC_PARAM_TOGGLE = CLAP_PARAM_IS_STEPPED); presets are a preset-discovery
- * provider's factory presets (by index here); active_voices() is the voice-info extension's count;
+ * provider's factory presets (by index here), and a preset as a file is CLAP's state or a preset
+ * file (load_preset / save_preset, the awva-preset/1 JSON of awva/preset.h); active_voices() is
+ * the voice-info extension's count;
  * tail_seconds the tail extension; min_rate .. max_rate what activate() accepts; reset()
  * clap_plugin.reset; the regions are what activate() allocates.
  */
@@ -137,6 +139,16 @@ typedef struct nsc_desc {
 	const char* heroes[NSC_MAX_HEROES]; /* the engine's hero parameters (names; NULL-terminated) */
 } nsc_desc;
 
+/* what load_preset() did */
+typedef struct nsc_preset_report {
+	int32_t loaded;    /* 1: its values are set (0: refused, nothing changed, error says why) */
+	int32_t exact;     /* 1: this schema_hash, every value as the preset has it, nothing skipped or missing */
+	int32_t clamped;   /* values out of their range, clamped (steps rounded) */
+	int32_t skipped;   /* parameters this engine doesn't have, ignored */
+	int32_t missing;   /* parameters the preset doesn't name: their values after init() */
+	const char* error; /* when refused: "another engine's preset" or the format error (static text) */
+} nsc_preset_report;
+
 enum nsc_mode {
 	NSC_MODE_LEGATO = 1, /* value 1: mono legato (one voice, slurs), 0: polyphonic (the default) */
 };
@@ -167,6 +179,13 @@ typedef struct nsc_component {
 	float (*param)(const void* state, int32_t index);
 	int32_t (*set_param)(void* state, int32_t index, float value); /* 1 taken (clamped, rounded by kind) */
 	int32_t (*param_index)(uint32_t id);                           /* -1: no such parameter */
+	/* a preset as text, awva-preset/1 JSON (awva/preset.h): parameters by name, so one from another
+	 * version of the engine loads (out of range clamped, unknown skipped, missing at their init()
+	 * values; report may be NULL). Audio thread, as set_preset; about 5 KB of stack. 1 loaded. */
+	int32_t (*load_preset)(void* state, const char* json, uint32_t length, nsc_preset_report* report);
+	/* the current values as a preset titled title, into out (NUL-terminated); its length, 0 if it
+	 * didn't fit (8 KB always does). Any thread, as param(); about 5 KB of stack. */
+	uint32_t (*save_preset)(const void* state, const char* title, char* out, uint32_t capacity);
 } nsc_component;
 
 /* the one exported symbol */

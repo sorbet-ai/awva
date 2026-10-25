@@ -71,6 +71,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 #ifdef BRASS_TEST_HOOK
 #include <stdio.h>
@@ -176,229 +177,10 @@ struct Params {
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-[[nodiscard]] static inline Params trumpet_params() {
-	Params p;
-	p.gain = 0.328f;
-	p.pc_a = 0.3f;
-	p.pc_b = 0.7f;
-	p.lv_hz = 40.0f;
-	p.rel = 0.03f;
-	p.rel_ped = 0.4f;
-	p.lip_soft = -1.5f;
-	p.lip_loud = 0.65f;
-	p.lip_tilt = 0.15f;
-	p.jitter = 3.0f;
-	p.breath = 0.08f;
-	p.brass = 16.0f;
-	p.bore_t = 0.025f;
-	p.bell_hz = 1400.0f;
-	p.rad_hz = 350.0f;
-	p.cup_hz = 1200.0f;
-	p.cup_q = 1.4f;
-	p.cup_g = 1.5f;
-	p.tone_hz = 5500.0f;
-	p.tone_q = 0.8f;
-	p.tone_dyn = 1.5f;
-	p.tilt_tone = 0.6f;
-	p.mute = 0.0f;
-	p.mute_hz = 1700.0f;
-	p.mute_q = 4.0f;
-	p.mute_hp = 0.3f;
-	p.mute_bp = 2.5f;
-	p.mute_lp = 0.0f;
-	p.wah = 0.0f;
-	p.tongue = 1.0f;
-	p.acc_amp = 0.35f;
-	p.acc_t = 0.05f;
-	p.acc_bright = 0.5f;
-	p.scoop = 0.25f;
-	p.blat = 0.25f;
-	p.t_noise = 0.15f;
-	p.slur = 0.25f;
-	p.vib = 0.0f;
-	p.vib_hz = 5.5f;
-	p.flutter = 0.6f;
-	p.flut_hz = 24.0f;
-	p.pair = 0.0f;
-	p.detune = 8.0f;
-	return p;
-}
-
+// the factory presets: presets/brass/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 9;
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	static constexpr const char* names[NUM_PRESETS] = {
-	    "trumpet", "flugelhorn", "trombone", "horn", "euphonium", "tuba", "harmon", "plunger", "section"};
-	return (i >= 0 && i < NUM_PRESETS) ? names[i] : names[0];
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	Params p = trumpet_params();
-	switch (i) {
-	case 1: // flugelhorn: conical, deep cup: dark and mellow, little steepening
-		p.gain = 0.415f;
-		p.lip_soft = -1.8f;
-		p.lip_loud = 0.4f;
-		p.breath = 0.12f;
-		p.brass = 8.0f;
-		p.bore_t = 0.03f;
-		p.bell_hz = 900.0f;
-		p.rad_hz = 250.0f;
-		p.cup_hz = 750.0f;
-		p.cup_q = 1.2f;
-		p.cup_g = 1.0f;
-		p.tone_hz = 2600.0f;
-		p.tone_q = 0.7f;
-		p.tone_dyn = 1.2f;
-		p.acc_amp = 0.25f;
-		p.acc_bright = 0.3f;
-		p.scoop = 0.15f;
-		p.blat = 0.1f;
-		p.t_noise = 0.1f;
-		break;
-	case 2: // trombone: long cylindrical bore: round when soft, the brassiest when loud
-		p.gain = 0.411f;
-		p.lip_soft = -1.5f;
-		p.lip_loud = 0.7f;
-		p.brass = 30.0f;
-		p.bore_t = 0.04f;
-		p.bell_hz = 700.0f;
-		p.rad_hz = 150.0f;
-		p.cup_hz = 550.0f;
-		p.cup_q = 1.3f;
-		p.cup_g = 1.5f;
-		p.tone_hz = 4500.0f;
-		p.tone_dyn = 1.8f;
-		p.acc_amp = 0.35f;
-		p.blat = 0.35f;
-		p.scoop = 0.3f;
-		break;
-	case 3: // French horn: hand in the bell, dark and round, cuivre only when pushed
-		p.gain = 0.444f;
-		p.lv_hz = 25.0f;
-		p.lip_soft = -1.8f;
-		p.lip_loud = 0.6f;
-		p.breath = 0.06f;
-		p.brass = 20.0f;
-		p.bore_t = 0.06f;
-		p.bell_hz = 500.0f;
-		p.rad_hz = 120.0f;
-		p.cup_hz = 450.0f;
-		p.cup_q = 1.2f;
-		p.cup_g = 0.8f;
-		p.tone_hz = 1600.0f;
-		p.tone_q = 1.1f;
-		p.tone_dyn = 1.4f;
-		p.tilt_tone = 0.8f;
-		p.acc_amp = 0.2f;
-		p.acc_t = 0.07f;
-		p.scoop = 0.2f;
-		p.blat = 0.15f;
-		p.t_noise = 0.08f;
-		break;
-	case 4: // euphonium: conical tenor tuba, warm and singing
-		p.gain = 0.478f;
-		p.lip_soft = -1.8f;
-		p.lip_loud = 0.45f;
-		p.breath = 0.08f;
-		p.brass = 10.0f;
-		p.bore_t = 0.05f;
-		p.bell_hz = 500.0f;
-		p.rad_hz = 100.0f;
-		p.cup_hz = 400.0f;
-		p.cup_q = 1.2f;
-		p.cup_g = 0.8f;
-		p.tone_hz = 2000.0f;
-		p.tone_q = 0.7f;
-		p.tone_dyn = 1.3f;
-		p.acc_amp = 0.25f;
-		p.acc_t = 0.06f;
-		p.scoop = 0.15f;
-		p.blat = 0.12f;
-		break;
-	case 5: // tuba: big, warm low brass
-		p.gain = 0.473f;
-		p.lip_soft = -1.6f;
-		p.lip_loud = 0.5f;
-		p.breath = 0.06f;
-		p.brass = 10.0f;
-		p.bore_t = 0.06f;
-		p.bell_hz = 350.0f;
-		p.rad_hz = 60.0f;
-		p.cup_hz = 280.0f;
-		p.cup_q = 1.1f;
-		p.cup_g = 1.0f;
-		p.tone_hz = 1500.0f;
-		p.tone_q = 0.7f;
-		p.tone_dyn = 1.5f;
-		p.acc_amp = 0.3f;
-		p.acc_t = 0.07f;
-		p.scoop = 0.2f;
-		p.blat = 0.15f;
-		p.t_noise = 0.08f;
-		break;
-	case 6: // harmon-muted trumpet: thin and nasal, tilt is the hand on the stem (wah)
-		p.gain = 0.29f;
-		p.mute = 1.0f;
-		p.mute_hz = 1700.0f;
-		p.mute_q = 5.0f;
-		p.mute_hp = 0.2f;
-		p.mute_bp = 3.0f;
-		p.mute_lp = 0.25f;
-		p.wah = 1.0f;
-		p.tilt_tone = 0.0f;
-		p.lip_tilt = 0.0f;
-		p.lip_soft = -0.8f;
-		p.breath = 0.12f; // a buzzier embouchure: soft notes still feed the mute
-		break;
-	case 7: // trombone with a straight mute and a plunger over it (tilt back closes the plunger)
-		p.gain = 0.412f;
-		p.lip_soft = -1.5f;
-		p.lip_loud = 0.7f;
-		p.brass = 30.0f;
-		p.bore_t = 0.04f;
-		p.bell_hz = 700.0f;
-		p.rad_hz = 150.0f;
-		p.cup_hz = 550.0f;
-		p.cup_q = 1.3f;
-		p.cup_g = 1.5f;
-		p.tone_hz = 4500.0f;
-		p.tone_q = 1.3f;
-		p.tone_dyn = 1.8f;
-		p.tilt_tone = 2.0f;
-		p.lip_tilt = 0.0f;
-		p.mute = 0.8f;
-		p.mute_hz = 1000.0f;
-		p.mute_q = 1.4f;
-		p.mute_hp = 1.4f;
-		p.mute_bp = 0.6f;
-		p.mute_lp = 0.3f;
-		p.wah = 0.5f;
-		p.blat = 0.35f;
-		p.scoop = 0.3f;
-		break;
-	case 8: // brass section: two players a few cents apart
-		p.gain = 0.507f;
-		p.lip_soft = -1.6f;
-		p.lip_loud = 0.55f;
-		p.brass = 18.0f;
-		p.bore_t = 0.035f;
-		p.bell_hz = 1000.0f;
-		p.rad_hz = 220.0f;
-		p.cup_hz = 900.0f;
-		p.cup_q = 1.3f;
-		p.cup_g = 1.2f;
-		p.tone_hz = 4000.0f;
-		p.tone_dyn = 1.5f;
-		p.pair = 1.0f;
-		p.detune = 9.0f;
-		p.jitter = 4.0f;
-		break;
-	default:
-		break;
-	}
-	return p;
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 // preset after init() (host renders: -DBRASS_PRESET=n)
 #ifdef BRASS_PRESET
@@ -1199,10 +981,34 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 namespace strisy {
 template <> struct EngineParams<brass::Engine> {
 	static constexpr int count = brass::NUM_LIVE_PARAMS;
-	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &brass::param_table[i].d : nullptr; }
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &brass::param_table[i].d : nullptr; }
 	static float* ptr(brass::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(brass::param_table[i].m)) : nullptr; }
 	static void changed(brass::Engine& e, int) { brass::update_derived(e); }
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/brass/NN-<name>.preset.json, the files themselves (presets/brass.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace brass {
+#include "presets/brass.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/brass/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace brass
 
 #endif // VOICE_BRASS_H_

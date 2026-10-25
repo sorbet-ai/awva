@@ -279,10 +279,15 @@ target_include_directories(awva_effect_fx_contract PRIVATE "${AWVA_DOCTEST_DIR}"
 target_link_libraries(awva_effect_fx_contract PRIVATE awva_effect_fx)
 doctest_discover_tests(awva_effect_fx_contract TEST_PREFIX "contract.fx." PROPERTIES LABELS "contract;unit")
 
-add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp)
+add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp
+  tests/test_presets.cpp)
 target_include_directories(awva_sdk_tests PRIVATE "${AWVA_DOCTEST_DIR}")
 target_link_libraries(awva_sdk_tests PRIVATE awva_sdk awva_engines awva_performances)
 doctest_discover_tests(awva_sdk_tests TEST_PREFIX "sdk." PROPERTIES LABELS unit)
+
+# the factory presets compiled in are the files: dsp/include/awva/presets/*.inc up to date
+add_test(NAME presets_inc COMMAND "${CMAKE_COMMAND}" -DCHECK=ON -P "${CMAKE_CURRENT_SOURCE_DIR}/../tools/presets_inc.cmake")
+set_tests_properties(presets_inc PROPERTIES LABELS unit)
 
 # the renderer says what it played, and refuses what it can't find
 set(_rec "${AWVA_HARNESS_DIR}/rec/play_2026-10-22_staccato.csv")

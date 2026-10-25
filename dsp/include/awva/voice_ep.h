@@ -50,6 +50,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 
 namespace ep {
@@ -102,275 +103,10 @@ struct Params {
 static constexpr int NUM_PARAMS = 25;
 static_assert(sizeof(Params) == NUM_PARAMS * sizeof(real), "Params must be plain floats");
 
-[[nodiscard]] static inline Params base_params() {
-	Params p;
-	p.hard = 1.0f;
-	p.vsens = 1.4f;
-	p.dyn = 0.8f;
-	p.decay = 7.0f;
-	p.dkey = 0.65f;
-	p.prompt = 0.35f;
-	p.bell = 0.09f;
-	p.bratio = 6.9f;
-	p.bdecay = 0.9f;
-	p.tick = 0.08f;
-	p.tratio = 19.0f;
-	p.beat = 0.12f;
-	p.bcents = 1.2f;
-	p.align = 0.95f;
-	p.tilt = 0.3f;
-	p.drive = 1.1f;
-	p.dig = 0.4f;
-	p.wurli = 0.0f;
-	p.damper = 1.0f;
-	p.gain = 2.27f;
-	p.grit = 0.15f;
-	p.tone = 7000.0f;
-	p.bodyhz = 250.0f;
-	p.body = 0.25f;
-	p.wobble = 0.0f;
-	return p;
-}
-
+// the factory presets: presets/ep/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 14;
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	static constexpr const char* names[NUM_PRESETS] = {
-	    "stage", "suitcase", "mk2", "dyno", "ballad", "bark", "neosoul",
-	    "fm80s", "lofi", "wurli", "wurlibark", "pianet", "felt", "celesta"};
-	return (i >= 0 && i < NUM_PRESETS) ? names[i] : names[0];
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	Params p = base_params();
-	switch (i) {
-	case 1: // suitcase: rounder, more low-mid body, darker speaker, a little amp grit
-		p.hard = 0.85f;
-		p.decay = 8.0f;
-		p.prompt = 0.35f;
-		p.bell = 0.1f;
-		p.tick = 0.07f;
-		p.align = 0.72f;
-		p.drive = 1.15f;
-		p.grit = 0.3f;
-		p.tone = 5000.0f;
-		p.bodyhz = 180.0f;
-		p.body = 0.6f;
-		p.gain = 1.93f;
-		break;
-	case 2: // mk2: brighter and tighter, shorter sustain, harder hammers
-		p.hard = 1.3f;
-		p.decay = 5.0f;
-		p.dkey = 0.75f;
-		p.prompt = 0.5f;
-		p.bell = 0.2f;
-		p.bratio = 7.4f;
-		p.bdecay = 0.7f;
-		p.tick = 0.13f;
-		p.align = 0.72f;
-		p.drive = 1.1f;
-		p.grit = 0.08f;
-		p.tone = 9500.0f;
-		p.bodyhz = 2500.0f;
-		p.body = 0.25f;
-		p.gain = 3.46f;
-		break;
-	case 3: // dyno: bright, sparkling, clean; more (but still moderate) bell and presence
-		p.hard = 1.6f;
-		p.bell = 0.25f;
-		p.bratio = 7.0f;
-		p.bdecay = 1.1f;
-		p.tick = 0.15f;
-		p.beat = 0.1f;
-		p.bcents = 2.5f;
-		p.align = 0.62f;
-		p.drive = 0.9f;
-		p.grit = 0.05f;
-		p.tone = 12000.0f;
-		p.bodyhz = 3200.0f;
-		p.body = 0.5f;
-		p.gain = 2.62f;
-		break;
-	case 4: // ballad: soft hammers, sweet alignment, long sustain, warm and clean
-		p.hard = 0.7f;
-		p.vsens = 1.2f;
-		p.dyn = 0.7f;
-		p.decay = 9.0f;
-		p.prompt = 0.35f;
-		p.bell = 0.07f;
-		p.tick = 0.04f;
-		p.align = 0.62f;
-		p.drive = 0.8f;
-		p.dig = 0.25f;
-		p.grit = 0.0f;
-		p.tone = 5500.0f;
-		p.bodyhz = 300.0f;
-		p.body = 0.2f;
-		p.gain = 2.30f;
-		break;
-	case 5: // bark: tine close to the pole, high drive, amp pushed; digging in growls
-		p.hard = 1.2f;
-		p.decay = 6.0f;
-		p.prompt = 0.5f;
-		p.bell = 0.12f;
-		p.align = 1.05f;
-		p.tilt = 0.35f;
-		p.drive = 2.0f;
-		p.dig = 0.8f;
-		p.grit = 0.55f;
-		p.tone = 6000.0f;
-		p.bodyhz = 700.0f;
-		p.body = 0.4f;
-		p.gain = 2.92f;
-		break;
-	case 6: // neosoul: dark Mk I, long sustain, heavy low body, mild bark and grit
-		p.hard = 0.8f;
-		p.decay = 10.0f;
-		p.prompt = 0.4f;
-		p.bell = 0.08f;
-		p.tick = 0.05f;
-		p.align = 0.85f;
-		p.drive = 1.4f;
-		p.dig = 0.5f;
-		p.grit = 0.3f;
-		p.tone = 3500.0f;
-		p.bodyhz = 140.0f;
-		p.body = 0.8f;
-		p.gain = 1.75f;
-		break;
-	case 7: // fm80s: DX7-style tine: harmonic 14x bell, detuned 1:1 partner, clean pickup
-		p.hard = 1.4f;
-		p.decay = 4.5f;
-		p.dkey = 0.8f;
-		p.prompt = 0.4f;
-		p.bell = 0.45f;
-		p.bratio = 14.0f;
-		p.bdecay = 0.6f;
-		p.tick = 0.0f;
-		p.beat = 0.35f;
-		p.bcents = 7.0f;
-		p.align = 0.6f;
-		p.drive = 0.6f;
-		p.dig = 0.2f;
-		p.damper = 0.8f;
-		p.grit = 0.0f;
-		p.tone = 14000.0f;
-		p.body = 0.0f;
-		p.gain = 3.27f;
-		break;
-	case 8: // lofi: worn suitcase on tape: wow and flutter, saturation, dull top
-		p.hard = 0.9f;
-		p.decay = 7.0f;
-		p.bell = 0.1f;
-		p.align = 0.8f;
-		p.drive = 1.4f;
-		p.grit = 0.5f;
-		p.tone = 3800.0f;
-		p.bodyhz = 400.0f;
-		p.body = 0.5f;
-		p.wobble = 9.0f;
-		p.gain = 2.20f;
-		break;
-	case 9: // wurli: 200A reed + electrostatic pickup: nasal, square-ish bark when hard
-		p.wurli = 1.0f;
-		p.align = 0.72f;
-		p.drive = 2.0f;
-		p.hard = 1.1f;
-		p.decay = 3.2f;
-		p.dkey = 0.7f;
-		p.prompt = 0.4f;
-		p.bell = 0.08f;
-		p.bratio = 6.4f;
-		p.bdecay = 0.4f;
-		p.tick = 0.05f;
-		p.beat = 0.0f;
-		p.damper = 1.4f;
-		p.grit = 0.2f;
-		p.tone = 6500.0f;
-		p.bodyhz = 1100.0f;
-		p.body = 0.7f;
-		p.gain = 2.80f;
-		break;
-	case 10: // wurlibark: driven Wurlitzer, more asymmetry, digging in growls
-		p.wurli = 1.0f;
-		p.align = 0.85f;
-		p.drive = 3.2f;
-		p.dig = 0.8f;
-		p.hard = 1.2f;
-		p.decay = 3.2f;
-		p.dkey = 0.7f;
-		p.prompt = 0.45f;
-		p.bell = 0.08f;
-		p.bratio = 6.4f;
-		p.bdecay = 0.4f;
-		p.tick = 0.05f;
-		p.beat = 0.0f;
-		p.damper = 1.4f;
-		p.grit = 0.5f;
-		p.tone = 5500.0f;
-		p.bodyhz = 1000.0f;
-		p.body = 0.6f;
-		p.gain = 3.21f;
-		break;
-	case 11: // pianet: plucked reed, short and woody-bright, no bell, half electrostatic
-		p.wurli = 0.6f;
-		p.hard = 1.5f;
-		p.decay = 1.4f;
-		p.dkey = 0.5f;
-		p.prompt = 0.7f;
-		p.bell = 0.06f;
-		p.bratio = 6.3f;
-		p.tick = 0.1f;
-		p.beat = 0.0f;
-		p.align = 0.8f;
-		p.drive = 1.3f;
-		p.damper = 2.0f;
-		p.tone = 7000.0f;
-		p.bodyhz = 1500.0f;
-		p.body = 0.5f;
-		p.gain = 2.85f;
-		break;
-	case 12: // felt: muted EP, soft felt hammer, short sustain, dark
-		p.hard = 0.4f;
-		p.decay = 1.2f;
-		p.dkey = 0.5f;
-		p.prompt = 0.3f;
-		p.bell = 0.05f;
-		p.tick = 0.0f;
-		p.align = 0.65f;
-		p.drive = 0.9f;
-		p.damper = 1.6f;
-		p.tone = 3200.0f;
-		p.bodyhz = 220.0f;
-		p.body = 0.3f;
-		p.grit = 0.1f;
-		p.gain = 2.49f;
-		break;
-	case 13: // celesta: toy / celesta-like: hard hammer, consonant 4x partial, short and clean
-		p.hard = 2.2f;
-		p.decay = 2.5f;
-		p.dkey = 0.6f;
-		p.prompt = 0.2f;
-		p.bell = 0.3f;
-		p.bratio = 4.0f;
-		p.bdecay = 0.5f;
-		p.tick = 0.3f;
-		p.tratio = 10.7f;
-		p.beat = 0.0f;
-		p.align = 0.6f;
-		p.drive = 0.5f;
-		p.damper = 0.8f;
-		p.grit = 0.0f;
-		p.tone = 14000.0f;
-		p.bodyhz = 2000.0f;
-		p.body = 0.3f;
-		p.gain = 2.57f;
-		break;
-	default:
-		break;
-	}
-	return p;
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 // preset after init() (host renders: -DEP_PRESET=n)
 #ifdef EP_PRESET
@@ -953,6 +689,62 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	e.dc = dc;
 }
 
+
+// the live parameters (strisy::EngineParams below), in their order
+static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
+    {"hard", "hammer", 0.3f, 3.0f, strisy::ParamKind::continuous},
+    {"vsens", "hammer", 0.5f, 4.0f, strisy::ParamKind::continuous},
+    {"dyn", "hammer", 0.0f, 1.0f, strisy::ParamKind::continuous},
+    {"decay", "tine", 0.2f, 30.0f, strisy::ParamKind::continuous},
+    {"dkey", "tine", 0.0f, 1.5f, strisy::ParamKind::continuous},
+    {"prompt", "tine", 0.0f, 1.0f, strisy::ParamKind::continuous},
+    {"bell", "tine", 0.0f, 2.0f, strisy::ParamKind::continuous},
+    {"bratio", "tine", 2.0f, 16.0f, strisy::ParamKind::continuous},
+    {"bdecay", "tine", 0.05f, 5.0f, strisy::ParamKind::continuous},
+    {"tick", "tine", 0.0f, 1.5f, strisy::ParamKind::continuous},
+    {"tratio", "tine", 6.0f, 30.0f, strisy::ParamKind::continuous},
+    {"beat", "tonebar", 0.0f, 0.5f, strisy::ParamKind::continuous},
+    {"bcents", "tonebar", 0.0f, 25.0f, strisy::ParamKind::continuous},
+    {"align", "pickup", 0.3f, 1.6f, strisy::ParamKind::continuous},
+    {"tilt", "pickup", 0.0f, 0.6f, strisy::ParamKind::continuous},
+    {"drive", "pickup", 0.2f, 4.0f, strisy::ParamKind::continuous},
+    {"dig", "pickup", 0.0f, 1.0f, strisy::ParamKind::continuous},
+    {"wurli", "pickup", 0.0f, 1.0f, strisy::ParamKind::continuous},
+    {"damper", "damper", 0.0f, 3.0f, strisy::ParamKind::continuous},
+    {"gain", "amp", 0.0f, 8.0f, strisy::ParamKind::continuous},
+    {"grit", "amp", 0.0f, 1.0f, strisy::ParamKind::continuous},
+    {"tone", "amp", 800.0f, 16000.0f, strisy::ParamKind::continuous},
+    {"bodyhz", "amp", 60.0f, 4000.0f, strisy::ParamKind::continuous},
+    {"body", "amp", -0.9f, 2.0f, strisy::ParamKind::continuous},
+    {"wobble", "mod", 0.0f, 40.0f, strisy::ParamKind::continuous},
+};
+static constexpr real Params::*const param_members[NUM_PARAMS] = {
+    &Params::hard,
+    &Params::vsens,
+    &Params::dyn,
+    &Params::decay,
+    &Params::dkey,
+    &Params::prompt,
+    &Params::bell,
+    &Params::bratio,
+    &Params::bdecay,
+    &Params::tick,
+    &Params::tratio,
+    &Params::beat,
+    &Params::bcents,
+    &Params::align,
+    &Params::tilt,
+    &Params::drive,
+    &Params::dig,
+    &Params::wurli,
+    &Params::damper,
+    &Params::gain,
+    &Params::grit,
+    &Params::tone,
+    &Params::bodyhz,
+    &Params::body,
+    &Params::wobble,
+};
 } // namespace ep
 
 // ---------------------------------------------------------------------------------------------
@@ -961,68 +753,34 @@ static inline void process(Engine& e, real* __restrict__ output) {
 namespace strisy {
 template <> struct EngineParams<ep::Engine> {
 	static constexpr int count = ep::NUM_PARAMS;
-	static const ParamDesc* desc(int i) {
-		static constexpr ParamDesc d[ep::NUM_PARAMS] = {
-		    {"hard", "hammer", 0.3f, 3.0f, strisy::ParamKind::continuous},
-		    {"vsens", "hammer", 0.5f, 4.0f, strisy::ParamKind::continuous},
-		    {"dyn", "hammer", 0.0f, 1.0f, strisy::ParamKind::continuous},
-		    {"decay", "tine", 0.2f, 30.0f, strisy::ParamKind::continuous},
-		    {"dkey", "tine", 0.0f, 1.5f, strisy::ParamKind::continuous},
-		    {"prompt", "tine", 0.0f, 1.0f, strisy::ParamKind::continuous},
-		    {"bell", "tine", 0.0f, 2.0f, strisy::ParamKind::continuous},
-		    {"bratio", "tine", 2.0f, 16.0f, strisy::ParamKind::continuous},
-		    {"bdecay", "tine", 0.05f, 5.0f, strisy::ParamKind::continuous},
-		    {"tick", "tine", 0.0f, 1.5f, strisy::ParamKind::continuous},
-		    {"tratio", "tine", 6.0f, 30.0f, strisy::ParamKind::continuous},
-		    {"beat", "tonebar", 0.0f, 0.5f, strisy::ParamKind::continuous},
-		    {"bcents", "tonebar", 0.0f, 25.0f, strisy::ParamKind::continuous},
-		    {"align", "pickup", 0.3f, 1.6f, strisy::ParamKind::continuous},
-		    {"tilt", "pickup", 0.0f, 0.6f, strisy::ParamKind::continuous},
-		    {"drive", "pickup", 0.2f, 4.0f, strisy::ParamKind::continuous},
-		    {"dig", "pickup", 0.0f, 1.0f, strisy::ParamKind::continuous},
-		    {"wurli", "pickup", 0.0f, 1.0f, strisy::ParamKind::continuous},
-		    {"damper", "damper", 0.0f, 3.0f, strisy::ParamKind::continuous},
-		    {"gain", "amp", 0.0f, 8.0f, strisy::ParamKind::continuous},
-		    {"grit", "amp", 0.0f, 1.0f, strisy::ParamKind::continuous},
-		    {"tone", "amp", 800.0f, 16000.0f, strisy::ParamKind::continuous},
-		    {"bodyhz", "amp", 60.0f, 4000.0f, strisy::ParamKind::continuous},
-		    {"body", "amp", -0.9f, 2.0f, strisy::ParamKind::continuous},
-		    {"wobble", "mod", 0.0f, 40.0f, strisy::ParamKind::continuous},
-		};
-		return (i >= 0 && i < ep::NUM_PARAMS) ? &d[i] : nullptr;
-	}
-	static float* ptr(ep::Engine& e, int i) {
-		static float ep::Params::*const m[ep::NUM_PARAMS] = {
-		    &ep::Params::hard,
-		    &ep::Params::vsens,
-		    &ep::Params::dyn,
-		    &ep::Params::decay,
-		    &ep::Params::dkey,
-		    &ep::Params::prompt,
-		    &ep::Params::bell,
-		    &ep::Params::bratio,
-		    &ep::Params::bdecay,
-		    &ep::Params::tick,
-		    &ep::Params::tratio,
-		    &ep::Params::beat,
-		    &ep::Params::bcents,
-		    &ep::Params::align,
-		    &ep::Params::tilt,
-		    &ep::Params::drive,
-		    &ep::Params::dig,
-		    &ep::Params::wurli,
-		    &ep::Params::damper,
-		    &ep::Params::gain,
-		    &ep::Params::grit,
-		    &ep::Params::tone,
-		    &ep::Params::bodyhz,
-		    &ep::Params::body,
-		    &ep::Params::wobble,
-		};
-		return (i >= 0 && i < ep::NUM_PARAMS) ? &(e.p.*m[i]) : nullptr;
-	}
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < ep::NUM_PARAMS) ? &ep::param_desc[i] : nullptr; }
+	static float* ptr(ep::Engine& e, int i) { return (i >= 0 && i < ep::NUM_PARAMS) ? &(e.p.*ep::param_members[i]) : nullptr; }
 	static void changed(ep::Engine& e, int) { ep::derive(e); }
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/ep/NN-<name>.preset.json, the files themselves (presets/ep.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace ep {
+#include "presets/ep.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/ep/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NUM_PARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NUM_PARAMS; k++) p.*(param_members[k]) = f.values[k];
+	return p;
+}
+} // namespace ep
 
 #endif // VOICE_EP_H_

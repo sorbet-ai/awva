@@ -6,8 +6,9 @@ They work with the Striso board as a supported host: its firmware takes this rep
 
 | | |
 |---|---|
-| `dsp/` | the engines, header only: the contract (`engine.h`), the shared helpers, the UMP profile and decoder, MIDI in, the voice allocator, mono legato; `engines/<name>.h` traits, `effects/fx.h` |
+| `dsp/` | the engines, header only: the contract (`engine.h`), the shared helpers, the UMP profile and decoder, MIDI in, the voice allocator, mono legato, the preset format (`preset.h`); `engines/<name>.h` traits, `effects/fx.h` |
 | `sdk/` | one library per engine, the contract suite, the renderer (`awva_render`), the docs generator (`awva_docs`), the shell, MIDI files |
+| `presets/` | the factory presets, one file each: `<engine>/NN-<name>.preset.json` (below) |
 | `docs/` | the engines' reference pages and how they work, and playing them with MIDI 2.0 and MPE: [docs/README.md](docs/README.md) |
 | `examples/` | using an engine in your own program: from plain C (`c_host`), and a MIDI file through the SDK (`mpe_file`) |
 | `tools/harness/` | the scripted performances, `harness_util.h`, key recordings (`rec/`) |
@@ -38,6 +39,14 @@ Two ways in, each with a small example in `examples/` that the tests build and r
   ```
 
 How the MIDI messages map to the engines' controls: [docs/midi.md](docs/midi.md).
+
+## Presets
+
+A preset is one JSON file, `awva-preset/1` (`dsp/include/awva/preset.h`): the engine's id and its parameter schema hash, a title, description, tags, the hero parameters, every parameter **by name**, and the modes. The same format is used by the factory presets, the SDK (`awva_sdk/presets.h`: load with a report, save), the component (`load_preset` / `save_preset`) and the board's preset store.
+
+A preset survives an engine's versions by name, with no migration code. A value out of range is clamped, a name the engine no longer has is skipped, and a parameter the preset doesn't name gets its default; each is reported. Another engine's preset is refused.
+
+The factory presets are the files in `presets/`, and nothing else: each engine reads its files at compile time (`dsp/include/awva/presets/<engine>.inc`, their texts). A file that lacks a parameter or has one out of range doesn't compile. To change one, edit the file, then run `cmake -P tools/presets_inc.cmake`; the test `presets_inc` fails if that was forgotten. The contract proves that each file, loaded by name, plays bit for bit as the engine's preset.
 
 The render goldens, the QEMU target renders and the board-vs-shell tests run in the firmware repository, against the commit it pins. A change here shows up there as a golden diff in the pin bump.
 

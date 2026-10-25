@@ -31,6 +31,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <utility>
+
 #include "params.h"
 
 namespace awva::preset {
@@ -288,7 +290,9 @@ public:
 		} else if (exp10 < 0) {
 			v = exp10 < -60 ? 0.0 : (exp10 >= -22 ? v / pow10(-exp10) : v / pow10(22) / pow10(-exp10 - 22));
 		}
-		if (v > 3.4028234663852886e38) return fail(Error::bad_value);
+		// above float's largest (FLT_MAX) up to half its last step rounds to it; from there on it's inf
+		if (v >= 3.4028235677973366e38) return fail(Error::bad_value);
+		if (v > 3.4028234663852886e38) v = 3.4028234663852886e38;
 		out = static_cast<float>(neg ? -v : v);
 		return true;
 	}
@@ -536,7 +540,7 @@ template <class Desc> [[nodiscard]] constexpr Resolved resolve(const Preset& p, 
 // a factory preset of an engine with N parameters: its name (the title) and every value, in the
 // engine's parameter order
 template <int N> struct Factory {
-	Str<TITLE> name;
+	Str<NAME> name;
 	float values[N] = {};
 };
 
@@ -554,7 +558,7 @@ template <int N, class Desc> [[nodiscard]] consteval Factory<N> factory(const ch
 	Preset p;
 	if (read(json, n, p) != Error::none) detail::factory_preset_is_wrong("not a preset");
 	Factory<N> f;
-	f.name.set(p.title.c_str());
+	if (!f.name.set(p.title.c_str())) detail::factory_preset_is_wrong("a title longer than a name");
 	if (p.num_params != N) detail::factory_preset_is_wrong("not every parameter, or one too many");
 	for (int i = 0; i < N; i++) {
 		const strisy::ParamDesc* d = desc(i);
@@ -565,6 +569,22 @@ template <int N, class Desc> [[nodiscard]] consteval Factory<N> factory(const ch
 	}
 	return f;
 }
+
+// The factory presets of an engine from their files' texts Json[0 .. Count): factories<P, Json,
+// Count>[i], P its strisy::EngineParams (count, a constexpr desc). Each preset is read in a constant
+// evaluation of its own (factory_preset<P, Json, I>), within any compiler's step limit.
+template <class P, const char* const* Json, int I>
+inline constexpr Factory<P::count> factory_preset = factory<P::count>(Json[I], [](int k) { return P::desc(k); });
+
+namespace detail {
+template <class P, const char* const* Json, class Seq> struct Factories;
+template <class P, const char* const* Json, int... I> struct Factories<P, Json, std::integer_sequence<int, I...>> {
+	static constexpr Factory<P::count> at[sizeof...(I)] = {factory_preset<P, Json, I>...};
+};
+} // namespace detail
+
+template <class P, const char* const* Json, int Count>
+inline constexpr const Factory<P::count>* factories = detail::Factories<P, Json, std::make_integer_sequence<int, Count>>::at;
 
 // --- writing ---------------------------------------------------------------------------------
 
@@ -615,8 +635,10 @@ struct Writer {
 	}
 	static void format_float(float v, char* buf) {
 		if (v == 0.0f) {
-			buf[0] = '0';
-			buf[1] = 0;
+			const bool neg = (float_bits(v) >> 31) != 0;
+			buf[0] = neg ? '-' : '0';
+			buf[1] = neg ? '0' : 0;
+			buf[2] = 0;
 			return;
 		}
 		for (int digits = 1; digits <= 9; digits++) {

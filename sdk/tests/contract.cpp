@@ -27,6 +27,7 @@
 #include <fstream>
 #include <sstream>
 #include <functional>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -552,10 +553,17 @@ TEST_CASE("presets: each factory preset is its file, by name, bit for bit") {
 			CHECK(std::memcmp(a.param(p), b.param(p), sizeof(float)) == 0);
 		}
 		CHECK(same_floats(render_phrase(a), render_phrase(b)));
-		// the title is the preset's name
-		awva::preset::Preset p;
-		REQUIRE(sdk::from_json(json, p));
-		CHECK(p.title == a.preset_name(i));
+		// the title is the preset's name; the heroes are the engine's for it (engines/<name>.h)
+		auto p = std::make_unique<awva::preset::Preset>();
+		REQUIRE(sdk::from_json(json, *p));
+		CHECK(p->title == a.preset_name(i));
+		int nh = 0;
+		for (const char* h : a.heroes().name) {
+			if (!h) continue;
+			REQUIRE(nh < p->num_heroes);
+			CHECK(p->heroes[nh++] == h);
+		}
+		CHECK(nh == p->num_heroes);
 	}
 }
 

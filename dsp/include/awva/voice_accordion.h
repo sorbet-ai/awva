@@ -74,6 +74,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 
 namespace accordion {
@@ -208,141 +209,10 @@ struct Params {
 };
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 
+// the factory presets: presets/accordion/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 9;
-static constexpr const char* preset_names[NUM_PRESETS] = {
-    "clarinet", "bassoon", "piccolo", "violin", "musette", "organ", "master", "bandoneon", "harmonium"};
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	return (i >= 0 && i < NUM_PRESETS) ? preset_names[i] : preset_names[0];
-}
-
-[[nodiscard]] static inline Params base_params() {
-	Params p;
-	p.level = 1.0f;
-	p.r16 = 0.0f;
-	p.r8a = 1.0f;
-	p.r8b = 0.0f;
-	p.r8c = 0.0f;
-	p.r4 = 0.0f;
-	p.beat = 1.3f;
-	p.beat_flat = 1.0f;
-	p.beat_track = 0.0f;
-	p.cassotto = 0.0f;
-	p.bellows = 0.5f;
-	p.curve = 0.6f;
-	p.bel_ms = 40.0f;
-	p.valve = 0.25f;
-	p.throttle = 0.35f;
-	p.chamber_ms = 6.0f;
-	p.release_ms = 18.0f;
-	p.speak_ms = 22.0f;
-	p.low_slow = 0.35f;
-	p.thresh = 0.025f;
-	p.amp = 3.3f;
-	p.rest = 0.9f;
-	p.push = 0.3f;
-	p.gap = 0.12f;
-	p.exit = 0.6f;
-	p.down = 1.5f;
-	p.constrict = 1.6f;
-	p.pump = 0.5f;
-	p.flat = 3.0f;
-	p.bend = 30.0f;
-	p.spread = 0.5f;
-	p.voicing = 1.1f;
-	p.ch_hz = 2500.0f;
-	p.ch_db = 13.0f;
-	p.ch_q = 1.4f;
-	p.cas_hz = 1600.0f;
-	p.cas_leak = 0.45f;
-	p.grille_hz = 7500.0f;
-	p.tilt = 0.3f;
-	p.rev_pedal = 1.0f;
-	p.rev_shake = 1.0f;
-	p.rev_ms = 80.0f;
-	return p;
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	Params p = base_params();
-	switch (i) {
-	default:
-	case 0: // clarinet
-		p.level = 0.95f;
-		break;
-	case 1: // bassoon
-		p.level = 1.05f;
-		p.r8a = 0.0f;
-		p.r16 = 1.0f;
-		p.cassotto = 0.0f; // (as the reference; cassotto on: darker)
-		break;
-	case 2: // piccolo
-		p.level = 1.45f;
-		p.r8a = 0.0f;
-		p.r4 = 1.0f;
-		break;
-	case 3: // violin: two 8', a light tremolo
-		p.level = 0.75f;
-		p.r8b = 1.0f;
-		p.beat = 1.3f;
-		break;
-	case 4: // musette: three 8', wet French tuning
-		p.level = 0.62f;
-		p.r8b = 1.0f;
-		p.r8c = 1.0f;
-		p.beat = 5.2f;
-		break;
-	case 5: // organ: 16' + 4'
-		p.level = 0.82f;
-		p.r8a = 0.0f;
-		p.r16 = 1.0f;
-		p.r4 = 0.8f;
-		break;
-	case 6: // master
-		p.level = 0.5f;
-		p.r16 = 1.0f;
-		p.r8b = 0.9f;
-		p.r8c = 0.9f;
-		p.r4 = 0.8f;
-		p.beat = 2.6f;
-		p.cassotto = 1.0f;
-		break;
-	case 7: // bandoneon: 16' + 8' in octaves, dry; big reeds on long zinc plates
-		p.level = 0.68f;
-		p.r16 = 1.0f;
-		p.r8a = 0.9f;
-		p.speak_ms = 50.0f;
-		p.rest = 0.8f;
-		p.amp = 2.6f;
-		p.constrict = 1.2f;
-		p.down = 1.1f;
-		p.pump = 1.0f;
-		p.ch_hz = 1800.0f;
-		p.ch_db = 10.0f;
-		p.ch_q = 1.2f;
-		p.grille_hz = 6000.0f;
-		p.flat = 5.0f;
-		break;
-	case 8: // harmonium: 8' + 4' reed organ, no reed chambers, one wind supply
-		p.level = 1.8f;
-		p.r4 = 0.5f;
-		p.bellows = 1.0f;
-		p.bel_ms = 90.0f;
-		p.speak_ms = 70.0f;
-		p.chamber_ms = 25.0f;
-		p.release_ms = 30.0f;
-		p.rest = 0.8f;
-		p.amp = 2.4f;
-		p.ch_hz = 2200.0f;
-		p.ch_db = 6.0f;
-		p.ch_q = 0.8f;
-		p.grille_hz = 5500.0f;
-		p.rev_pedal = 0.0f;
-		p.rev_shake = 0.0f;
-		break;
-	}
-	return p;
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 // ---------------------------------------------------------------------------------------------
 // State
@@ -919,10 +789,34 @@ static inline void glide_params(Engine& e) {
 namespace strisy {
 template <> struct EngineParams<accordion::Engine> {
 	static constexpr int count = accordion::NUM_LIVE_PARAMS;
-	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &accordion::param_table[i].d : nullptr; }
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &accordion::param_table[i].d : nullptr; }
 	static float* ptr(accordion::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(accordion::param_table[i].m)) : nullptr; }
 	static void changed(accordion::Engine&, int) {} // the DSP follows e.p through its smoothed copy
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/accordion/NN-<name>.preset.json, the files themselves (presets/accordion.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace accordion {
+#include "presets/accordion.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/accordion/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace accordion
 
 #endif // VOICE_ACCORDION_H_

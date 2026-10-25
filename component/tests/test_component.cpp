@@ -11,8 +11,11 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <algorithm>
 
@@ -22,6 +25,7 @@
 #include "awva_sdk/midi_voices.h"
 #include "awva_sdk/performance.h"
 #include "awva_sdk/smf.h"
+#include "awva_sdk/presets.h"
 
 namespace {
 
@@ -504,6 +508,89 @@ TEST_CASE("a late event (a negative frame, before its block) lands where it woul
 		b.c().process(b.in.state, k == 2 ? &late : nullptr, k == 2 ? 1 : 0, oy);
 	}
 	CHECK(x == y);
+
+namespace {
+// presets/<engine>/<NN>-*.preset.json, "" if none
+std::string factory_file(const char* engine, int i) {
+	char nn[16];
+	std::snprintf(nn, sizeof nn, "%02d-", i);
+	const std::filesystem::path d = std::filesystem::path(AWVA_PRESETS_DIR) / engine;
+	if (!std::filesystem::is_directory(d)) return "";
+	for (const auto& f : std::filesystem::directory_iterator(d))
+		if (f.path().filename().string().rfind(nn, 0) == 0) {
+			std::ifstream in(f.path(), std::ios::binary);
+			std::stringstream ss;
+			ss << in.rdbuf();
+			return ss.str();
+		}
+	return "";
+}
+} // namespace
+
+// load_preset / save_preset: the preset files through the ABI. Each factory file loads exact, to
+// the values set_preset gives the engine linked in; what a component saves the SDK loads exact;
+// another engine's preset and a text that isn't one are refused with nothing changed.
+TEST_CASE("presets as text through the ABI: the factory files, saved and loaded, refused") {
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		if (e->info->num_params <= 0) continue;
+		INFO(e->info->name);
+		Loaded dll(e->info->name);
+		const nsc_component& c = dll.c();
+		c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+		CHECK(c.desc->schema_hash == sdk::params_hash(*e));
+		for (int i = 0; i < e->info->num_presets; i++) {
+			CAPTURE(i);
+			const std::string json = factory_file(e->info->name, i);
+			REQUIRE(!json.empty());
+			nsc_preset_report r{};
+			REQUIRE(c.load_preset(dll.in.state, json.data(), static_cast<uint32_t>(json.size()), &r) == 1);
+			CHECK(r.loaded == 1);
+			CHECK(r.exact == 1);
+			CHECK(r.clamped + r.skipped + r.missing == 0);
+			CHECK(r.error == nullptr);
+			CHECK(c.preset(dll.in.state) == -1); // (a preset by name)
+			sdk::Engine linked(*e);
+			linked.init(SR, NV);
+			linked.set_preset(i);
+			for (int k = 0; k < c.desc->num_params; k++) {
+				const float a = c.param(dll.in.state, k), b = *linked.param(k);
+				CHECK(std::memcmp(&a, &b, sizeof a) == 0);
+			}
+		}
+		// edited, saved by the component, loaded by the SDK: exact, the same values
+		for (int k = 0; k < c.desc->num_params; k += 3) {
+			const nsc_param& p = c.desc->params[k];
+			c.set_param(dll.in.state, k, p.min + 0.37f * (p.max - p.min));
+		}
+		std::vector<char> out(8192);
+		const uint32_t n = c.save_preset(dll.in.state, "edited", out.data(), static_cast<uint32_t>(out.size()));
+		REQUIRE(n > 0);
+		CHECK(std::strlen(out.data()) == n);
+		CHECK(c.save_preset(dll.in.state, "edited", out.data(), 64) == 0); // (didn't fit)
+		REQUIRE(c.save_preset(dll.in.state, "edited", out.data(), static_cast<uint32_t>(out.size())) == n);
+		sdk::Engine linked(*e);
+		linked.init(SR, NV);
+		const sdk::PresetReport rep = sdk::load_preset_json(linked, std::string_view(out.data(), n));
+		REQUIRE(rep.loaded);
+		CHECK(rep.exact);
+		for (int k = 0; k < c.desc->num_params; k++) {
+			const float a = c.param(dll.in.state, k), b = *linked.param(k);
+			CHECK(std::memcmp(&a, &b, sizeof a) == 0);
+		}
+		// refused: another engine's, and not a preset; nothing changed
+		const std::string other = std::strcmp(e->info->name, "va") == 0 ? factory_file("ep", 0) : factory_file("va", 0);
+		const float before = c.param(dll.in.state, 0);
+		nsc_preset_report r{};
+		CHECK(c.load_preset(dll.in.state, other.data(), static_cast<uint32_t>(other.size()), &r) == 0);
+		CHECK(r.loaded == 0);
+		REQUIRE(r.error != nullptr);
+		CHECK(std::string(r.error) == "another engine's preset");
+		const char junk[] = "{\"format\": \"awva-preset/1\", \"params\": {\"x\": }";
+		CHECK(c.load_preset(dll.in.state, junk, sizeof junk - 1, &r) == 0);
+		CHECK(r.error != nullptr);
+		CHECK(c.load_preset(dll.in.state, nullptr, 0, nullptr) == 0);
+		CHECK(c.param(dll.in.state, 0) == before);
+	}
 }
 
 TEST_CASE("a late frame in the very first block is frame 0 (nothing before the start)") {

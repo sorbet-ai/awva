@@ -59,6 +59,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 
 namespace bowed {
 
@@ -150,148 +151,10 @@ struct Params {
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-[[nodiscard]] static inline Params violin_params() {
-	Params p;
-	p.gain = 1.0f;
-	p.force_lo = 0.75f;
-	p.force_hi = 0.95f;
-	p.force_over = 1.0f;
-	p.speed_curve = 0.7f;
-	p.rosin = 0.01f;
-	p.pos = 0.11f;
-	p.pos_tilt = 1.0f;
-	p.pos_press = 0.5f;
-	p.tilt_dead = 0.35f;
-	p.damp = 4.0f;
-	p.bright = 1.0f;
-	p.tone_lo = 0.3f;
-	p.tone_hi = 1.2f;
-	p.body_size = 1.0f;
-	p.body_track = 0.0f;
-	p.body_amt = 1.0f;
-	p.body_q = 1.0f;
-	p.hill = 0.75f;
-	p.direct = 0.3f;
-	p.acc_force = 0.0f;
-	p.acc_time = 0.02f;
-	p.acc_noise = 0.04f;
-	p.acc_bright = 0.4f;
-	p.rel = 0.1f;
-	p.rel_ped = 3.0f;
-	p.rel_lift = 0.0f;
-	p.vib = 0.0f;
-	p.vib_hz = 5.5f;
-	p.vib_delay = 0.35f;
-	p.trem = 1.3f;
-	p.body_rot = 0.7f;
-	p.ens = 0.0f;
-	p.ens_detune = 7.0f;
-	p.ens_spread = 18.0f;
-	p.pizz = 0.0f;
-	p.pizz_decay = 1.0f;
-	p.pizz_bright = 1.0f;
-	return p;
-}
-
+// the factory presets: presets/bowed/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 9;
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	static constexpr const char* names[NUM_PRESETS] = {
-	    "violin", "viola", "cello", "bass", "section", "ponticello", "flautando", "sordino", "pizzicato"};
-	return (i >= 0 && i < NUM_PRESETS) ? names[i] : names[0];
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	Params p = violin_params();
-	switch (i) {
-	case 1: // viola: a bigger body a fifth lower, darker and more nasal
-		p.gain = 1.17f;
-		p.body_size = 0.8f;
-		p.hill = 0.55f;
-		p.body_amt = 1.15f;
-		p.bright = 0.85f;
-		p.tone_hi = 1.0f;
-		p.damp = 4.5f;
-		break;
-	case 2: // cello: low body resonances, warm and round, longer ring
-		p.gain = 1.41f;
-		p.body_size = 0.45f;
-		p.hill = 0.6f;
-		p.body_amt = 1.1f;
-		p.direct = 0.25f;
-		p.bright = 0.8f;
-		p.tone_hi = 1.0f;
-		p.damp = 5.0f;
-		break;
-	case 3: // double bass: big body, dark, a little more rosin, long ring
-		p.gain = 1.35f;
-		p.body_size = 0.3f;
-		p.hill = 0.45f;
-		p.body_amt = 1.1f;
-		p.direct = 0.25f;
-		p.bright = 0.65f;
-		p.tone_lo = 0.25f;
-		p.tone_hi = 0.85f;
-		p.damp = 6.0f;
-		p.rosin = 0.02f;
-		p.acc_time = 0.02f;
-		break;
-	case 4: // string section: three players, the body follows the register, gentle vibrato
-		p.gain = 1.5f;
-		p.body_track = 1.0f;
-		p.ens = 0.8f;
-		p.ens_detune = 7.0f;
-		p.ens_spread = 18.0f;
-		p.vib = 12.0f;
-		p.vib_hz = 5.2f;
-		p.vib_delay = 0.4f;
-		p.tone_hi = 1.1f;
-		break;
-	case 5: // sul ponticello: bow at the bridge, glassy upper partials
-		p.gain = 0.76f;
-		p.pos = 0.075f;
-		p.pos_tilt = 0.4f;
-		p.pos_press = 0.2f;
-		p.tone_lo = 0.6f;
-		p.tone_hi = 1.6f;
-		p.hill = 1.2f;
-		p.bright = 1.3f;
-		break;
-	case 6: // flautando: light fast bow over the fingerboard, soft and airy
-		p.gain = 1.2f;
-		p.pos = 0.15f;
-		p.pos_tilt = 0.25f;
-		p.pos_press = 0.2f;
-		p.force_lo = 0.65f;
-		p.force_hi = 0.85f;
-		p.tone_lo = 0.2f;
-		p.tone_hi = 0.55f;
-		p.bright = 0.7f;
-		p.hill = 0.4f;
-		p.rosin = 0.02f;
-		break;
-	case 7: // con sordino: mute on the bridge, veiled and soft-edged
-		p.gain = 1.95f;
-		p.hill = 0.12f;
-		p.tone_lo = 0.2f;
-		p.tone_hi = 0.6f;
-		p.body_amt = 0.8f;
-		p.direct = 0.12f;
-		p.bright = 0.85f;
-		break;
-	case 8: // pizzicato: plucked, any register (the body follows the note)
-		p.gain = 0.6f;
-		p.pizz = 1.0f;
-		p.body_track = 1.0f;
-		p.pizz_decay = 1.5f;
-		p.pizz_bright = 0.5f;
-		p.rel = 0.08f;
-		break;
-	default:
-		break;
-	}
-	return p;
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 // preset after init() (host renders: -DBOWED_PRESET=n)
 #ifdef BOWED_PRESET
@@ -1211,7 +1074,7 @@ static inline void update_derived(Engine&) {}
 namespace strisy {
 template <> struct EngineParams<bowed::Engine> {
 	static constexpr int count = bowed::NUM_LIVE_PARAMS;
-	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &bowed::param_table[i].d : nullptr; }
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &bowed::param_table[i].d : nullptr; }
 	static float* ptr(bowed::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(bowed::param_table[i].m)) : nullptr; }
 	static void changed(bowed::Engine& e, int i) {
 		if (i >= 0 && i < count) e.live |= uint64_t{1} << i; // its glide arrives
@@ -1219,5 +1082,29 @@ template <> struct EngineParams<bowed::Engine> {
 	}
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/bowed/NN-<name>.preset.json, the files themselves (presets/bowed.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace bowed {
+#include "presets/bowed.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/bowed/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace bowed
 
 #endif // VOICE_BOWED_H_

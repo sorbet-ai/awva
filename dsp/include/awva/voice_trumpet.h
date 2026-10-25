@@ -71,6 +71,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 #ifdef TRUMPET_TEST_HOOK
 #include <stdio.h>
@@ -175,61 +176,10 @@ struct Params {
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-[[nodiscard]] static inline Params trumpet_params() {
-	Params p;
-	p.gain = 19.3075f;
-	p.pc_a = 0.351743f;
-	p.pc_b = 1.19262f;
-	p.lv_hz = 16.0102f;
-	p.rel = 0.050774f;
-	p.rel_ped = 0.4f;
-	p.p_soft = 1.05585f;
-	p.p_loud = 14.9845f;
-	p.p_reg = -0.130238f;
-	p.p_curve = 2.41112f;
-	p.lip_tune = -265.508f;
-	p.lip_treg = 84.7883f;
-	p.lip_q = 9.98719f;
-	p.lip_mass = 5.04216f;
-	p.mass_reg = 1.24726f;
-	p.lip_open = 0.020385f;
-	p.open_reg = 1.02704f;
-	p.lip_width = 12.906f;
-	p.contact = 1.01252f;
-	p.lip_nl = 4.18258f;
-	p.embouch = 0.93927f;
-	p.lip_tilt = 0.061837f;
-	p.jitter = 1.37483f;
-	p.cup = 1.48285f;
-	p.pop_hz = 1427.48f;
-	p.pop_q = 0.976347f;
-	p.bore_t = 0.044498f;
-	p.bore_reg = 0.784376f;
-	p.bell_hz = 1821.65f;
-	p.brass = 448.664f;
-	p.rad_hz = 109.229f;
-	p.tone_hz = 8298.62f;
-	p.tone_q = 0.542062f;
-	p.low_comp = 1.05614f;
-	p.breath = 0.108717f;
-	p.t_noise = 0.211963f;
-	p.tongue = 1.39721f;
-	p.acc_amp = 1.25615f;
-	p.acc_t = 0.031235f;
-	p.tongue_t = 0.001128f;
-	p.tongue_lip = 0.053056f;
-	p.slur = 0.148917f;
-	p.pitch_t = 0.00626f;
-	p.flutter = 0.6f;
-	p.flut_hz = 24.0f;
-	return p;
-}
-
+// the factory presets: presets/trumpet/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 1;
-
-[[nodiscard]] static inline const char* preset_name(int) { return "trumpet"; }
-
-[[nodiscard]] static inline Params preset_params(int) { return trumpet_params(); }
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef TRUMPET_PRESET
 static constexpr int DEFAULT_PRESET = TRUMPET_PRESET;
@@ -1127,10 +1077,34 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 namespace strisy {
 template <> struct EngineParams<trumpet::Engine> {
 	static constexpr int count = trumpet::NUM_LIVE_PARAMS;
-	[[nodiscard]] static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &trumpet::param_table[i].d : nullptr; }
+	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &trumpet::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(trumpet::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(trumpet::param_table[i].m)) : nullptr; }
 	static void changed(trumpet::Engine& e, int) { trumpet::update_derived(e); }
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/trumpet/NN-<name>.preset.json, the files themselves (presets/trumpet.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace trumpet {
+#include "presets/trumpet.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/trumpet/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace trumpet
 
 #endif // VOICE_TRUMPET_H_

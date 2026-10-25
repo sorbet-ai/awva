@@ -36,6 +36,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 
 namespace va {
@@ -98,344 +99,10 @@ struct Params {
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-// preset 0: the original voice
-[[nodiscard]] static inline Params classic_params() {
-	Params p;
-	p.gain = 2.3f;
-	p.pc_a = 0.3f;
-	p.pc_b = 0.7f;
-	p.lv_hz = 70.0f;
-	p.held_tc = 0.045f;
-	p.rel_min = 0.10f;
-	p.rel_ped = 2.9f;
-	p.rel_vneg = 3.0f;
-	p.acc_amp = 0.75f;
-	p.acc_t0 = 0.04f;
-	p.acc_key = 1.0f / 36;
-	p.acc_cut = 28.0f;
-	p.acc_drive = 0.7f;
-	p.acc_sync = 10.0f;
-	p.acc_pitch = 0.0f;
-	p.cut_key = 0.75f;
-	p.cut_base = 26.0f;
-	p.cut_env = 46.0f;
-	p.cut_drift = 0.3f;
-	p.cut_yn = 9.0f;
-	p.cut_yp = 5.0f;
-	p.res_base = 0.2f;
-	p.res_yn = 0.72f;
-	p.res_yp = 0.08f;
-	p.bass_comp = 0.45f;
-	p.dr_base = 0.6f;
-	p.dr_env = 0.9f;
-	p.y_off = 0.0f;
-	p.saw = 0.5f;
-	p.saw_yn = 0.75f;
-	p.saw_yp = 0.65f;
-	p.c_lvl = 0.36f;
-	p.c_yn = 0.5f;
-	p.c_yp = 0.6f;
-	p.c_det = 0.07f;
-	p.c_drift = 0.025f;
-	p.gyro_det = 0.22f;
-	p.pul0 = 0.0f;
-	p.pul_yn = 0.45f;
-	p.pwm_depth = 0.13f;
-	p.pwm_hz = 0.37f;
-	p.sub = 0.5f;
-	p.sub0 = 0.2f;
-	p.sub_yn = 0.25f;
-	p.sub_yp = 0.6f;
-	p.b_sync = 1.0f;
-	p.b_lvl0 = 0.0f;
-	p.b_yp = 0.5f;
-	p.b_det = 0.0f;
-	p.sync0 = 5.0f;
-	p.sync_yp = 12.0f;
-	p.sync_env = 9.0f;
-	p.drift_a = 0.03f;
-	p.vib_depth = 0.35f;
-	p.vib_hz = 5.3f;
-	return p;
-}
-
+// the factory presets: presets/va/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 8;
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	static constexpr const char* names[NUM_PRESETS] = {"classic", "pad", "lead", "bass", "brass", "keys", "acid", "strings"};
-	return (i >= 0 && i < NUM_PRESETS) ? names[i] : "classic";
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	Params p = classic_params();
-	switch (i) {
-	case 1: // pad: three detuned saws + PWM, slow swell from pressure, long release, wide chorus
-		p.gain = 3.6f;
-		p.pc_a = 0.45f;
-		p.pc_b = 0.55f;
-		p.lv_hz = 3.0f;
-		p.held_tc = 0.35f;
-		p.rel_min = 0.9f;
-		p.rel_ped = 3.5f;
-		p.rel_vneg = 1.0f;
-		p.acc_amp = 0.12f;
-		p.acc_t0 = 0.08f;
-		p.acc_cut = 8.0f;
-		p.acc_drive = 0.2f;
-		p.cut_key = 0.6f;
-		p.cut_base = 40.0f;
-		p.cut_env = 34.0f;
-		p.cut_yn = 6.0f;
-		p.cut_yp = 8.0f;
-		p.res_base = 0.12f;
-		p.res_yn = 0.45f;
-		p.res_yp = 0.05f;
-		p.dr_base = 0.45f;
-		p.dr_env = 0.5f;
-		p.saw = 0.32f;
-		p.saw_yn = 0.5f;
-		p.saw_yp = 0.3f;
-		p.c_lvl = 0.3f;
-		p.c_yn = 0.3f;
-		p.c_yp = 0.3f;
-		p.c_det = 0.11f;
-		p.c_drift = 0.04f;
-		p.gyro_det = 0.35f;
-		p.pul0 = 0.12f;
-		p.pul_yn = 0.3f;
-		p.pwm_depth = 0.2f;
-		p.pwm_hz = 0.5f;
-		p.sub = 0.5f;
-		p.sub0 = 0.1f;
-		p.sub_yn = 0.25f;
-		p.sub_yp = 0.5f;
-		p.b_sync = 0.0f;
-		p.b_lvl0 = 0.28f;
-		p.b_yp = 0.1f;
-		p.b_det = 0.1f;
-		p.drift_a = 0.05f;
-		p.vib_depth = 0.25f;
-		p.vib_hz = 4.6f;
-		break;
-	case 2: // lead: sync and drive at rest, fast response, strong vibrato from shaking
-		p.gain = 2.4f;
-		p.pc_a = 0.35f;
-		p.pc_b = 0.65f;
-		p.lv_hz = 120.0f;
-		p.held_tc = 0.03f;
-		p.rel_min = 0.08f;
-		p.rel_ped = 1.5f;
-		p.acc_amp = 0.5f;
-		p.acc_t0 = 0.03f;
-		p.acc_cut = 20.0f;
-		p.acc_drive = 0.9f;
-		p.acc_sync = 14.0f;
-		p.acc_pitch = -0.15f;
-		p.cut_key = 0.7f;
-		p.cut_base = 36.0f;
-		p.cut_env = 40.0f;
-		p.cut_yn = 6.0f;
-		p.cut_yp = 6.0f;
-		p.res_base = 0.3f;
-		p.res_yn = 0.5f;
-		p.res_yp = 0.1f;
-		p.dr_base = 1.1f;
-		p.dr_env = 1.3f;
-		p.y_off = 0.35f;
-		p.c_lvl = 0.3f;
-		p.c_det = 0.05f;
-		p.sub = 0.5f;
-		p.sub0 = 0.12f;
-		p.sync0 = 7.0f;
-		p.sync_yp = 14.0f;
-		p.sync_env = 12.0f;
-		p.vib_depth = 0.6f;
-		p.vib_hz = 5.6f;
-		break;
-	case 3: // bass: heavy sub, tight keytracked filter, punchy strike decay, short release
-		p.gain = 2.1f;
-		p.pc_a = 0.4f;
-		p.pc_b = 0.6f;
-		p.lv_hz = 90.0f;
-		p.held_tc = 0.03f;
-		p.rel_min = 0.06f;
-		p.rel_ped = 1.2f;
-		p.rel_vneg = 4.0f;
-		p.acc_amp = 0.9f;
-		p.acc_t0 = 0.018f;
-		p.acc_key = 1.0f / 30;
-		p.acc_cut = 34.0f;
-		p.acc_drive = 0.9f;
-		p.cut_key = 0.4f;
-		p.cut_base = 42.0f;
-		p.cut_env = 36.0f;
-		p.cut_drift = 0.2f;
-		p.cut_yn = 8.0f;
-		p.cut_yp = 6.0f;
-		p.res_base = 0.22f;
-		p.res_yn = 0.6f;
-		p.dr_base = 0.8f;
-		p.dr_env = 1.0f;
-		p.saw = 0.45f;
-		p.c_lvl = 0.2f;
-		p.c_det = 0.04f;
-		p.sub = 0.5f;
-		p.sub0 = 0.75f;
-		p.sub_yn = 0.15f;
-		p.sub_yp = 0.4f;
-		p.sync0 = 3.0f;
-		p.sync_yp = 12.0f;
-		p.sync_env = 6.0f;
-		p.drift_a = 0.02f;
-		p.vib_depth = 0.2f;
-		break;
-	case 4: // brass: cutoff follows pressure closely, a bite and a slight scoop on strikes
-		p.gain = 2.65f;
-		p.pc_a = 0.2f;
-		p.pc_b = 0.8f;
-		p.lv_hz = 40.0f;
-		p.held_tc = 0.06f;
-		p.rel_min = 0.12f;
-		p.rel_ped = 2.0f;
-		p.acc_amp = 0.35f;
-		p.acc_t0 = 0.022f;
-		p.acc_cut = 22.0f;
-		p.acc_drive = 1.0f;
-		p.acc_pitch = -0.35f;
-		p.cut_key = 0.85f;
-		p.cut_base = 12.0f;
-		p.cut_env = 62.0f;
-		p.cut_yn = 8.0f;
-		p.cut_yp = 6.0f;
-		p.res_base = 0.15f;
-		p.res_yn = 0.55f;
-		p.dr_base = 0.7f;
-		p.dr_env = 1.2f;
-		p.saw = 0.5f;
-		p.c_lvl = 0.4f;
-		p.c_det = 0.06f;
-		p.pul0 = 0.1f;
-		p.sub0 = 0.12f;
-		p.vib_depth = 0.4f;
-		p.vib_hz = 5.0f;
-		break;
-	case 5: // keys: the strike sets a decaying note (like an electric piano), pressure sustains softly
-		p.gain = 3.8f;
-		p.pc_a = 0.15f;
-		p.pc_b = 0.45f;
-		p.lv_hz = 110.0f;
-		p.held_tc = 0.06f;
-		p.rel_min = 0.22f;
-		p.rel_ped = 3.0f;
-		p.rel_vneg = 2.0f;
-		p.acc_amp = 1.5f;
-		p.acc_t0 = 0.1f;
-		p.acc_key = 1.0f / 28;
-		p.acc_cut = 30.0f;
-		p.acc_drive = 0.5f;
-		p.cut_key = 0.7f;
-		p.cut_base = 30.0f;
-		p.cut_env = 34.0f;
-		p.cut_yn = 8.0f;
-		p.cut_yp = 8.0f;
-		p.res_base = 0.15f;
-		p.res_yn = 0.6f;
-		p.dr_base = 0.5f;
-		p.dr_env = 0.7f;
-		p.saw = 0.35f;
-		p.c_lvl = 0.25f;
-		p.c_det = 0.05f;
-		p.pul0 = 0.3f;
-		p.pwm_depth = 0.05f;
-		p.sub0 = 0.15f;
-		p.vib_depth = 0.3f;
-		break;
-	case 6: // acid: resonant squelch, strikes spike the cutoff, tilt back = screaming resonance
-		p.gain = 2.3f;
-		p.pc_a = 0.4f;
-		p.pc_b = 0.6f;
-		p.lv_hz = 100.0f;
-		p.held_tc = 0.03f;
-		p.rel_min = 0.07f;
-		p.rel_ped = 1.5f;
-		p.acc_amp = 0.6f;
-		p.acc_t0 = 0.025f;
-		p.acc_cut = 40.0f;
-		p.acc_drive = 1.2f;
-		p.acc_sync = 0.0f;
-		p.cut_key = 0.5f;
-		p.cut_base = 34.0f;
-		p.cut_env = 44.0f;
-		p.cut_yn = 10.0f;
-		p.cut_yp = 14.0f;
-		p.res_base = 0.62f;
-		p.res_yn = 0.33f;
-		p.res_yp = 0.3f;
-		p.bass_comp = 0.5f;
-		p.dr_base = 1.0f;
-		p.dr_env = 1.0f;
-		p.saw = 0.55f;
-		p.saw_yn = 0.4f;
-		p.saw_yp = 0.0f;
-		p.c_lvl = 0.0f;
-		p.pul_yn = 0.5f;
-		p.sub0 = 0.1f;
-		p.sub_yp = 0.3f;
-		p.b_yp = 0.0f;
-		p.sync0 = 0.0f;
-		p.sync_yp = 0.0f;
-		p.sync_env = 0.0f;
-		p.drift_a = 0.02f;
-		break;
-	case 7: // strings: ensemble of three saws, bowed swell from pressure, rotation for chorus
-		p.gain = 3.1f;
-		p.pc_a = 0.25f;
-		p.pc_b = 0.75f;
-		p.lv_hz = 9.0f;
-		p.held_tc = 0.2f;
-		p.rel_min = 0.45f;
-		p.rel_ped = 3.0f;
-		p.rel_vneg = 2.0f;
-		p.acc_amp = 0.2f;
-		p.acc_t0 = 0.05f;
-		p.acc_cut = 12.0f;
-		p.acc_drive = 0.3f;
-		p.cut_key = 0.8f;
-		p.cut_base = 22.0f;
-		p.cut_env = 50.0f;
-		p.cut_yn = 8.0f;
-		p.cut_yp = 10.0f;
-		p.res_base = 0.08f;
-		p.res_yn = 0.4f;
-		p.res_yp = 0.0f;
-		p.dr_base = 0.5f;
-		p.dr_env = 0.6f;
-		p.saw = 0.32f;
-		p.saw_yn = 0.4f;
-		p.saw_yp = 0.2f;
-		p.c_lvl = 0.32f;
-		p.c_yn = 0.3f;
-		p.c_yp = 0.2f;
-		p.c_det = 0.09f;
-		p.c_drift = 0.04f;
-		p.gyro_det = 0.3f;
-		p.pul_yn = 0.35f;
-		p.pwm_depth = 0.18f;
-		p.sub0 = 0.05f;
-		p.sub_yn = 0.2f;
-		p.b_sync = 0.0f;
-		p.b_lvl0 = 0.3f;
-		p.b_yp = 0.1f;
-		p.b_det = 0.13f;
-		p.drift_a = 0.04f;
-		p.vib_depth = 0.3f;
-		p.vib_hz = 5.2f;
-		break;
-	default:
-		break;
-	}
-	return p;
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 // preset after init() (host renders: -DVA_PRESET=n)
 #ifdef VA_PRESET
@@ -1010,10 +677,34 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 namespace strisy {
 template <> struct EngineParams<va::Engine> {
 	static constexpr int count = va::NUM_LIVE_PARAMS;
-	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &va::param_table[i].d : nullptr; }
+	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &va::param_table[i].d : nullptr; }
 	static float* ptr(va::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(va::param_table[i].m)) : nullptr; }
 	static void changed(va::Engine& e, int) { va::update_derived(e); }
 };
 } // namespace strisy
+
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/va/NN-<name>.preset.json, the files themselves (presets/va.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace va {
+#include "presets/va.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/va/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace va
 
 #endif // VOICE_VA_H_

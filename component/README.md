@@ -13,6 +13,7 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
   - id, title, summary, version (the repository commit) and the ABI;
   - the parameters (stable id, name, group, range, kind);
   - the factory presets, by name, each with its hero parameters, and the engine's own heroes;
+  - the schema hash, which is a preset file's `params_hash`;
   - the budget: QEMU instructions per block, max voices, tail;
   - the three memory regions and the stack.
 - **Memory** is the host's. It provides state, fast and large regions, zero-filled and 64-byte aligned. No call allocates, blocks or throws, and nothing is global.
@@ -21,6 +22,7 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
   - the up-converter for MIDI 1.0 in UMP, which is what an MPE host sends;
   - the voice allocator;
   - mono legato (`mode(NSC_MODE_LEGATO, 1)`).
+- **Presets as text.** `load_preset(json)` takes an `awva-preset/1` file (`awva/preset.h`) by name. The report counts what was clamped, skipped (names this engine lacks) and missing (set to their values after `init()`). Another engine's preset, or text that isn't a preset, is refused with nothing changed. `save_preset(title)` writes the current values as such a file. ABI 2 added these two calls.
 - **`process_voices(controls)`** is for a host that allocates voices itself. The board does today, and the virtual board's loaded engines use it: the engine's own `process()` on the host's controls.
 
 ## The plugin lane's findings (ABI 2)
@@ -49,7 +51,7 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 | 7d | which calls run where | **Audio thread only**, never concurrently with each other: `process`, `process_voices`, `set_param`, `set_preset`, `mode`, `reset`. **Any thread:** `desc`, `param_index`, and `param`, which reads a float. **`init` on the main thread**, before any audio-thread call. |
 | 8 | level and channels | The engines are mono (`channels` = 1). Nominal level is about ±1, peaks up to ±4, never above 8 (the render tests' limit). The master effects (stereo, with their limiter at 4.5) are not part of an engine component; they become their own effect component. A plugin scales as it likes (the prototype uses ×0.25). |
 | 9 | sample-rate changes | Call `init()` again at the new rate: the regions are reused, nothing is carried over, the notes end. The host re-applies its parameter values and preset after `init()`. The cost is one engine init: the trumpet's warm-start tables are static data, so it is milliseconds. |
-| 10 | state and its version | The state is: the preset index, then the parameter values by id, under `schema_hash`. A value whose id is unknown is dropped; a different schema hash means a value is clamped to its range. The preset JSON of the proposal (§8) is phase 2. |
+| 10 | state and its version | The state is a preset file: `save_preset()` writes it, `load_preset()` reads it back (`awva-preset/1`, parameters by name under `params_hash` = `schema_hash`). Across versions a value is clamped to its range, an unknown name is skipped, and a missing one gets its value after `init()`. The report says which happened. A host that wants the factory preset index as well stores `preset()` beside it. |
 | 11 | UMP coverage | Types 4 (MIDI 2.0 channel voice) and 2 (MIDI 1.0 channel voice) play. All groups are taken as one; the group is ignored. Types 0, 1, 3, 5 and 0xD/0xF (utility, system, SysEx, stream) are ignored. |
 
 ## The Shell's gaps, closed
