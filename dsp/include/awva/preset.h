@@ -308,36 +308,47 @@ public:
 	}
 
 	// any value (skipped)
-	constexpr bool skip_value(int depth = 0) {
-		if (depth > 16) return fail(Error::syntax);
-		ws();
-		if (at >= n_) return fail(Error::syntax);
-		const char c = s_[at];
-		if (c == '"') return skip_string();
-		if (c == 't') return literal("true");
-		if (c == 'f') return literal("false");
-		if (c == 'n') return literal("null");
-		if (c == '{' || c == '[') {
-			const char close = c == '{' ? '}' : ']';
-			at++;
-			if (peek(close)) {
+	// one value of any kind skipped, nested up to 32 deep: without recursion (the board parses on
+	// 1 KB stacks, and a preset may come from anywhere)
+	constexpr bool skip_value() {
+		uint32_t objects = 0; // bit d: level d is an object (else an array)
+		int depth = 0;
+		for (;;) {
+			ws();
+			if (at >= n_) return fail(Error::syntax);
+			const char c = s_[at];
+			if (c == '{' || c == '[') {
 				at++;
-				return true;
-			}
-			for (;;) {
-				if (c == '{') {
-					if (!skip_string() || !eat(':')) return false;
+				if (peek(c == '{' ? '}' : ']')) {
+					at++;
+				} else {
+					if (depth == 32) return fail(Error::syntax);
+					objects = c == '{' ? objects | (1u << depth) : objects & ~(1u << depth);
+					depth++;
+					if (c == '{' && !(skip_string() && eat(':'))) return false;
+					continue; // its first value
 				}
-				if (!skip_value(depth + 1)) return false;
+			} else if (c == '"') {
+				if (!skip_string()) return false;
+			} else if (c == 't' || c == 'f' || c == 'n') {
+				if (!literal(c == 't' ? "true" : (c == 'f' ? "false" : "null"))) return false;
+			} else {
+				float f = 0;
+				if (!number(f)) return false;
+			}
+			// a value ended: the next one at its level, or the levels it closes
+			for (;;) {
+				if (depth == 0) return true;
+				const bool object = ((objects >> (depth - 1)) & 1u) != 0;
 				if (peek(',')) {
 					at++;
-					continue;
+					if (object && !(skip_string() && eat(':'))) return false;
+					break;
 				}
-				return eat(close);
+				if (!eat(object ? '}' : ']')) return false;
+				depth--;
 			}
 		}
-		float f = 0;
-		return number(f);
 	}
 
 	[[nodiscard]] constexpr char cur() const { return at < n_ ? s_[at] : 0; }

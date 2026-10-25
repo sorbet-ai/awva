@@ -133,6 +133,17 @@ TEST_CASE("preset reader: JSON's syntax, flat, and what it refuses") {
 	for (int i = 0; i <= preset::MAX_PARAMS; i++) many += (i ? ", \"p" : "\"p") + std::to_string(i) + "\": 1";
 	CHECK(read_err(many + "}}") == preset::Error::too_long);
 	CHECK(read_err("") == preset::Error::syntax);
+	// unknown values nest up to 32 deep, skipped without recursion; deeper is refused
+	auto nested = [&](int depth) {
+		std::string v;
+		for (int i = 0; i < depth; i++) v += i % 2 ? "{\"k\": " : "[1, ";
+		v += "2";
+		for (int i = depth - 1; i >= 0; i--) v += i % 2 ? "}" : "]";
+		return HEAD + "\"future\": " + v + "}";
+	};
+	read_ok(nested(32));
+	CHECK(read_err(nested(33)) == preset::Error::syntax);
+	CHECK(read_err(nested(100000)) == preset::Error::syntax);
 	CHECK(read_err(R"({"format": "awva-preset/1", "engine": {"id": "modal"})") == preset::Error::syntax);
 }
 
