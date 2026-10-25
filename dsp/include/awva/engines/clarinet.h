@@ -1,0 +1,36 @@
+// SPDX-FileCopyrightText: 2026 Sorbet AI
+// SPDX-License-Identifier: Apache-2.0
+// The clarinet engine (voice_clarinet.h) as a awva::VoiceEngine: awva::engines::clarinet.
+// Its bore delay lines (25.6 KB): LargeMemory.
+#ifndef AWVA_ENGINES_CLARINET_H_
+#define AWVA_ENGINES_CLARINET_H_
+
+#include "../voice_clarinet.h"
+#include "../adapter.h"
+
+namespace awva {
+namespace traits {
+struct clarinet {
+	AWVA_ENGINE_FUNCTIONS(clarinet)
+	AWVA_ENGINE_PRESETS(clarinet)
+	using FastMemory = NoMemory;
+	using LargeMemory = ::clarinet::LargeMemory;
+	// init() writes every byte of its LargeMemory (every voice's four delay lines): no zeroing on a switch (engine.h)
+	static constexpr bool init_writes_memory = true;
+	static constexpr const char* name = "clarinet";
+	static constexpr const char* summary = "physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets)";
+	// pres the breath, vpres the tongue, but_y the embouchure; the pedal lengthens the release
+	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_pedal;
+	static constexpr Budget budget = {::clarinet::MAX_VOICES, 35000, 2.0f}; // profile.sh 34284; silent ~0.25 s after the release
+	// the hero parameters: the reed's opening and resonance, the breath at ff and at the lightest touch, the lattice
+	// cutoff, the tongue, the embouchure under tilt, the release
+	static constexpr Heroes heroes = {{"zeta", "reed_hz", "g_loud", "p_soft", "lat_hz", "tongue", "emb", "release"}};
+};
+} // namespace traits
+
+namespace engines {
+using clarinet = Adapter<traits::clarinet>;
+} // namespace engines
+} // namespace awva
+
+#endif
