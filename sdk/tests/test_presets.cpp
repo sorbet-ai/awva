@@ -94,7 +94,7 @@ TEST_CASE("preset floats: written with the fewest digits, read back bit for bit"
 	CHECK(json.find("\"d\": 16000") != std::string::npos);
 }
 
-TEST_CASE("preset reader: JSON's syntax, flat; what it refuses") {
+TEST_CASE("preset reader: JSON's syntax, flat, and what it refuses") {
 	// unknown keys skipped, nested values too; escapes; booleans as modes; whitespace anywhere
 	const auto p = read_ok(R"( { "format" : "awva-preset/1", "future": {"a": [1, {"b": null}], "c": "x"},
 	    "engine": {"id": "modal", "version": "1.2.3", "params_hash": "77b3f666", "extra": true},
