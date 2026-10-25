@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # awva CI: build the SDK and the components, run their tests (Linux, macOS universal, Windows),
-# and check the format (clang-format 15).
+# run the examples (examples/: from plain C and through the SDK; non-silent, deterministic, and the
+# MPE render the same as awva_render's), and check the format (clang-format 15).
 name: ci
 on: [push, pull_request]
 jobs:
@@ -27,7 +28,9 @@ jobs:
       - name: build
         run: cmake --build build/sdk
       - name: test
-        run: ctest --test-dir build/sdk --output-on-failure -j 4
+        run: ctest --test-dir build/sdk --output-on-failure -j 4 -LE example
+      - name: examples
+        run: ctest --test-dir build/sdk --output-on-failure -L example
   format:
     runs-on: ubuntu-22.04
     steps:

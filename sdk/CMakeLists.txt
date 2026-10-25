@@ -305,3 +305,8 @@ endif()
 
 # the engine components (component/: the C ABI, each engine as its own library)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../component" "${CMAKE_CURRENT_BINARY_DIR}/component")
+
+# the examples (examples/: a C host of a component library, an MPE file through the SDK)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../examples/CMakeLists.txt")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../examples" "${CMAKE_CURRENT_BINARY_DIR}/examples")
+endif()

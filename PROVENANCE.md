@@ -16,6 +16,7 @@ This records where each file of this repository comes from. The repository was s
 | `sdk/`, `tools/harness/` (performances, `harness_util.h`, `rec/` key recordings) | the SDK, its tests, the renderer, the scripted performances |
 | `tools/trumpet/` | the trumpet's bore fits, calibration and warm-start table generators |
 | `docs/`, `sdk/tools/awva_docs.cpp` | the documentation: reference tables generated from the engines' EngineInfo, the engines' accounts written from their headers' own comments |
+| `examples/` | programs that use an engine: from plain C through the component ABI (`c_host`), and a MIDI file through the SDK's MIDI in (`mpe_file`) |
 
 The following records rules and behaviour that the upstream firmware's `synth_control.cpp` also implements: whether these are re-statements of MIDI/MPE practice or derivations is a question for a legal check.
 - `midi_in.h` and `voice_allocator.h` hold the MIDI-in mapping and the voice-stealing rule. They were extracted from the fork's `synth_control.cpp`, where they had been rewritten in this project.
