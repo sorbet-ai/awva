@@ -764,15 +764,13 @@ static inline void bellows(Engine& e, real dt) {
 	}
 }
 
+static inline void glide_params(Engine& e); // (after the parameter table)
+
 static inline void process(Engine& e, real* __restrict__ output) {
-	// smooth the live parameters towards the written values (~55 ms)
+	// smooth the live parameters towards the written values (~55 ms; the glide arrives,
+	// strisy::glide_param)
 	{
-		real* a = &e.ps.level;
-		const real* t = &e.p.level;
-		for (int i = 0; i < NPARAMS; i++) {
-			const real d = t[i] - a[i];
-			a[i] = (d == d) ? a[i] + 0.012f * d : t[i];
-		}
+		glide_params(e);
 		// a rank switched off fades out, then stops
 		real* lv = &e.ps.r16;
 		const real* lt = &e.p.r16;
@@ -904,6 +902,12 @@ static constexpr ParamEntry param_table[] = {
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
+
+// one block of every live parameter's glide: 0.012 of the way (as before, bit for bit, while that
+// is more than strisy::kGlideStep of the range), then onto the written value
+static inline void glide_params(Engine& e) {
+	for (const ParamEntry& r : param_table) e.ps.*r.m = strisy::glide_param(e.ps.*r.m, e.p.*r.m, 0.012f, r.d);
+}
 
 } // namespace accordion
 
