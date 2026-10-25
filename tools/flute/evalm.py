@@ -31,7 +31,7 @@ def ref():
 
 
 def fit_set(inst, every=1):
-    rows = [r for r in ref().values() if r['inst'] == inst and not r['vib']]
+    rows = [r for r in ref().values() if r['inst'] == inst and not r['vib'] and r['dyn'] in O.DYN_P]
     rows.sort(key=lambda r: (r['dyn'], r['note']))
     # every n-th pitch (the same pitches at every dynamic)
     return [r for r in rows if r['note'] % every == 0]

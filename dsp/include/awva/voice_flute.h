@@ -320,18 +320,38 @@ static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only f
 	return p;
 }
 
-// the piccolo: the flute's player scaled to the piccolo's geometry (not fitted: no recordings): an
-// octave higher, a bore of 5.4 mm instead of 9.5, a smaller embouchure and lip opening, the
-// tone-hole lattice's cutoff up with the smaller holes
+// the piccolo: the flute's player on the piccolo's geometry (an octave higher, a bore of 5.4 mm
+// instead of 9.5), its jet, bore losses, radiation, noise and attack fitted to the VSCO-2 Community
+// Edition piccolo (CC0: five sustained notes G5-G7 at one dynamic; the takes' rise from the key)
 [[nodiscard]] static inline Params piccolo_params() {
 	Params p = flute_params();
 	p.bore_mm = 5.4f;
 	p.low_note = 74.0f;
 	p.range_lo = 74.0f;
 	p.range_hi = 103.0f; // (its top notes, to C8, outside: they speak at the lightest touch so)
-	p.jet_w *= 0.6f;
-	p.jet_h *= 0.7f;
-	p.cut_hz = rmin(p.cut_hz * 1.6f, 12000.0f);
+	p.p_soft = 239.455f;
+	p.p_loud = 1231.42f;
+	p.p_reg = 0.885767f;
+	p.theta = 0.412137f;
+	p.jet_h = 0.374902f;
+	p.jet_w = 14.3544f;
+	p.g_soft = 1.37998f;
+	p.y0 = -0.311863f;
+	p.jet_st = 0.816831f;
+	p.bore_t = 0.029264f;
+	p.bore_reg = 0.226017f;
+	p.cut_hz = 8186.31f;
+	p.wall = 12.7542f;
+	p.dipole = 3.41335f;
+	p.tone_hz = 1139.45f;
+	p.turb = 0.5972f;
+	p.hiss = 0.013086f;
+	p.hiss_st = 0.110436f;
+	p.tongue = 0.347686f;
+	p.tongue_t = 0.008014f;
+	p.att_gain = 36.9154f;
+	p.att_t = 0.063462f;
+	p.out_db = -1.0f; // (its fitted top meets the notes above it)
 	return p;
 }
 
