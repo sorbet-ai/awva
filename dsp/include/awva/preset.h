@@ -93,6 +93,19 @@ struct Preset {
 	Mode modes[MAX_MODES];
 	int num_modes = 0;
 
+	// empty again, in place (a Preset is 5 KB: `p = Preset()` would build one on the stack first,
+	// and the board's stacks are 1 KB)
+	constexpr void clear() {
+		engine.set("");
+		version.set("");
+		params_hash = 0;
+		has_hash = false;
+		title.set("");
+		author.set("");
+		description.set("");
+		num_tags = num_heroes = num_params = num_modes = 0;
+	}
+
 	// the value of parameter name, or nullptr
 	[[nodiscard]] constexpr const float* param(const char* name) const {
 		for (int i = 0; i < num_params; i++)
@@ -432,7 +445,7 @@ constexpr bool hex32(const Str<16>& s, uint32_t& out) {
 
 // json (n bytes) into p; Error::none when it is a preset
 [[nodiscard]] constexpr Error read(const char* json, size_t n, Preset& p) {
-	p = Preset();
+	p.clear();
 	detail::Reader r(json, n);
 	bool format = false;
 	const bool ok = detail::object(r, [&](detail::Reader& rr, const Str<NAME>& key) {
@@ -518,13 +531,15 @@ template <int N> constexpr void note(Str<NAME> (&list)[N], int& count, const cha
 }
 } // namespace detail
 
-// p for an engine (its id, its schema hash, n parameters desc(i), their defaults[n]): values[n]
-template <class Desc> [[nodiscard]] constexpr Resolved resolve(const Preset& p, const char* engine_id, uint32_t hash, int n, Desc desc,
-    const float* defaults, float* values) {
-	Resolved r;
+// p for an engine (its id, its schema hash, n parameters desc(i), their defaults[n]): values[n],
+// and r what was done (in place: a Resolved is 1.4 KB)
+template <class Desc> constexpr void resolve(const Preset& p, const char* engine_id, uint32_t hash, int n, Desc desc, const float* defaults,
+    float* values, Resolved& r) {
+	r.refused = r.exact = false;
+	r.num_clamped = r.num_skipped = r.num_missing = 0;
 	if (!(p.engine == engine_id)) {
 		r.refused = true;
-		return r;
+		return;
 	}
 	for (int i = 0; i < n; i++) {
 		const strisy::ParamDesc* d = desc(i);
@@ -543,6 +558,11 @@ template <class Desc> [[nodiscard]] constexpr Resolved resolve(const Preset& p, 
 		if (!known) detail::note(r.skipped, r.num_skipped, p.params[k].name.c_str());
 	}
 	r.exact = p.has_hash && p.params_hash == hash && r.num_clamped == 0 && r.num_skipped == 0 && r.num_missing == 0;
+}
+template <class Desc> [[nodiscard]] constexpr Resolved resolve(const Preset& p, const char* engine_id, uint32_t hash, int n, Desc desc,
+    const float* defaults, float* values) {
+	Resolved r;
+	resolve(p, engine_id, hash, n, desc, defaults, values, r);
 	return r;
 }
 
