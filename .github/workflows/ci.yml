@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Sorbet AI
+# SPDX-License-Identifier: Apache-2.0
+#
+# awva CI: build the SDK and the components, run their tests (Linux, macOS universal, Windows),
+# and check the format (clang-format 15).
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja -y
+      - name: configure
+        shell: bash
+        run: |
+          extra=""
+          [ "$RUNNER_OS" = macOS ] && extra="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+          [ "$RUNNER_OS" = Windows ] && extra="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+          cmake -S sdk -B build/sdk -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo $extra
+      - name: build
+        run: cmake --build build/sdk
+      - name: test
+        run: ctest --test-dir build/sdk --output-on-failure -j 4
+  format:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get install -y clang-format-15
+      - run: tools/format.sh --check

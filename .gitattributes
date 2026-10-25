@@ -1,0 +1,7 @@
+# LF in the repository and every checkout; the files committed with CRLF are kept as they are
+* text=auto eol=lf
+dsp/include/awva/voice_brass.h     -text
+dsp/include/awva/voice_ep.h        -text
+dsp/include/awva/voice_wind.h      -text
+dsp/include/awva/voice_wind_tune.h -text
+tools/harness/rec/**                     -text
