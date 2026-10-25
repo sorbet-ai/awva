@@ -19,6 +19,8 @@ This records where each file of this repository comes from. The repository was s
 | `tools/fit/`, `docs/fitting.md` | the fitting toolkit, consolidated from the instrument lanes' tools (all written for this project), and the distances tested against listener verdicts. `tools/fit/awvafit/sources.json` and `archives.json` list recordings by URL and hash; no recording, and nothing derived from one (the phrase sets' key streams included), is in the repository |
 | `docs/`, `sdk/tools/awva_docs.cpp` | the documentation: reference tables generated from the engines' EngineInfo, the engines' accounts written from their headers' own comments |
 | `examples/` | programs that use an engine: from plain C through the component ABI (`c_host`), and a MIDI file through the SDK's MIDI in (`mpe_file`) |
+| `dsp/include/awva/voice_flute.h`, `engines/flute.h` | the physical flute (flute, alto flute, piccolo): the jet-drive model after the published literature named in its header (Coltman; Verge, Fabre, Hirschberg; Auvray et al. 2014; Fletcher & Rossing); its parameters fitted to the University of Iowa MIS recordings (not in this repository; their terms: free for any project, without restrictions) |
+| `tools/flute/` | the flute's analysis and fitting tools |
 
 The following records rules and behaviour that the originating firmware also implements: whether these are re-statements of MIDI/MPE practice or derivations is a question for a legal check.
 - `midi_in.h` and `voice_allocator.h` hold the MIDI-in mapping and the voice-stealing rule. They were extracted from that firmware, where they had been rewritten in this project.

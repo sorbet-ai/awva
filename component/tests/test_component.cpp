@@ -4,7 +4,7 @@
 // The components from their libraries (component/CMakeLists.txt) against the engines linked in:
 // they load, their descriptor and manifest are the engine's, process_voices() renders bit for bit
 // what the engine renders (the scripted performances and the key recordings, through every
-// preset of accordion and trumpet), and process() with UMP renders bit for bit the SDK's MIDI
+// preset of accordion, trumpet and flute), and process() with UMP renders bit for bit the SDK's MIDI
 // side (MidiVoices) driving the engine on the same 2 ms integer-frame step grid.
 #include <bit>
 #include <cmath>
@@ -226,6 +226,34 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 }
 
 } // namespace
+
+TEST_CASE("flute from its library renders bit for bit as linked in (every preset, the performances, the takes, UMP in poly and legato)") {
+	const char* id = "flute";
+	const sdk::EngineEntry* e = sdk::find_engine(id);
+	REQUIRE(e != nullptr);
+	for (int p = 0; p < e->info->num_presets; p++) {
+		for (const char* perf : {"default", "stale"}) {
+			std::string err;
+			auto pa = sdk::scripted_player(perf, NV, SR, &err);
+			REQUIRE(pa != nullptr);
+			render_both(id, p, *pa, 6.0);
+		}
+	}
+	for (const std::string& t : takes()) {
+		std::string err;
+		auto pa = sdk::key_player(t.c_str(), NV, SR, &err);
+		REQUIRE(pa != nullptr);
+		render_both(id, -1, *pa, 8.0);
+	}
+	for (bool legato : {false, true}) {
+		INFO(id << (legato ? " legato" : " poly"));
+		const std::vector<float> a = render_ump(id, legato, false), b = render_ump(id, legato, true);
+		CHECK(same(a, b));
+		double e2 = 0;
+		for (float x : b) e2 += static_cast<double>(x) * x;
+		CHECK(e2 > 0.0);
+	}
+}
 
 TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (polyphonic and mono legato)") {
 	for (const char* id : {"accordion", "trumpet", "va"}) {
