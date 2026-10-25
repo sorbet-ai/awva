@@ -13,8 +13,17 @@
  *
  * Time: process() renders one block of NSC_BLOCK frames. Its events are UMP packets with their
  * frame within the block; they are taken in 2 ms steps, as the board takes MIDI in: before each
- * block, every step due by its start runs with the events at or before its time (a plugin's
- * events land within one step, 2 ms, of their frame, the same rule as the SDK's renderer).
+ * block, every step due by its start runs with the events at or before its time (the SDK's
+ * renderer's rule: step k at frame ceil(k sr / 500), awva_sdk/timed_midi.h).
+ *
+ * Late events (NSC_MODE_LATE_EVENTS): a host whose blocks aren't multiples of NSC_BLOCK renders a
+ * block when its first frame is due, before it has seen the events of the block's other frames.
+ * Those events are needed only by the steps after the block's start, which run before the next
+ * block: so the host gives them to the next process() with a negative frame, their frame
+ * counted from that block's start (-(NSC_BLOCK - 1) .. -1), and they are taken at the step their
+ * own frame is due at, as if they had come in time. With the mode, any host block size gives the
+ * output of events given block by block in time, bit for bit; without it (the default, and the
+ * board's fixed 32-frame path) a negative frame counts as 0.
  *
  * Input: MIDI 2.0 channel voice messages (UMP type 4) in their standard meaning (pressure full
  * scale = the Striso's full press, 16-bit velocities, Pitch 7.25, bipolar controllers centred), and
@@ -75,7 +84,7 @@ typedef struct nsc_globals {
 
 /* a UMP packet (1 to 4 words, by its message type) at a frame of the block */
 typedef struct nsc_event {
-	uint32_t frame;  /* 0 .. NSC_BLOCK - 1 */
+	int32_t frame;   /* 0 .. NSC_BLOCK - 1; with NSC_MODE_LATE_EVENTS also -(NSC_BLOCK - 1) .. -1 (above) */
 	int32_t note_id; /* the host's id of the note a Note On starts (CLAP's note_id); -1: none */
 	uint32_t words[4];
 } nsc_event;
@@ -120,7 +129,9 @@ typedef struct nsc_desc {
 } nsc_desc;
 
 enum nsc_mode {
-	NSC_MODE_LEGATO = 1, /* value 1: mono legato (one voice, slurs), 0: polyphonic (the default) */
+	NSC_MODE_LEGATO = 1,      /* value 1: mono legato (one voice, slurs), 0: polyphonic (the default) */
+	NSC_MODE_LATE_EVENTS = 2, /* value 1: events with a negative frame are late events (Time, above); 0: they
+	                           * count as frame 0 (the default). A component that returns 0 for it doesn't take them. */
 };
 
 typedef struct nsc_component {

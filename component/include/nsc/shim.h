@@ -53,10 +53,11 @@ template <dsp::VoiceEngine E> struct Shim {
 		dsp::VoiceControls vc[16];
 		dsp::GlobalControls g;
 		uint64_t frame; // frames rendered by process()
+		bool late;      // NSC_MODE_LATE_EVENTS (kept by reset(), as legato is)
 		int32_t sample_rate, voices;
 		E engine;
 		State(int nv, int sr) :
-		    midi(nv, sr), vc(), g(), frame(0), sample_rate(sr), voices(nv), engine() {}
+		    midi(nv, sr), vc(), g(), frame(0), late(false), sample_rate(sr), voices(nv), engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
 	static_assert(E::info.budget.max_voices <= 16, "16 voices at most");
@@ -162,14 +163,25 @@ template <dsp::VoiceEngine E> struct Shim {
 		s.engine.reset();
 	}
 	static int32_t mode(void* state, int32_t which, int32_t value) {
+		if (which == NSC_MODE_LATE_EVENTS) {
+			st(state).late = value != 0;
+			return 1;
+		}
 		if (which != NSC_MODE_LEGATO) return 0;
 		st(state).midi.midi().set_legato(value != 0);
 		return 1;
 	}
+	// an event's frame from the stream's start: within this block, or (late events) before it
+	[[nodiscard]] static uint64_t frame_of(const State& s, int32_t f) {
+		const int32_t lo = s.late && s.frame >= NSC_BLOCK ? -(NSC_BLOCK - 1) : 0;
+		const int32_t c = f < lo ? lo : f > NSC_BLOCK - 1 ? NSC_BLOCK - 1 :
+		                                                    f;
+		return static_cast<uint64_t>(static_cast<int64_t>(s.frame) + c);
+	}
 	static void process(void* state, const nsc_event* ev, int32_t n, float* const* out) {
 		State& s = st(state);
 		for (int i = 0; i < n; i++)
-			(void)s.midi.ump(s.frame + (ev[i].frame < NSC_BLOCK ? ev[i].frame : NSC_BLOCK - 1), ev[i].words, ev[i].note_id);
+			(void)s.midi.ump(frame_of(s, ev[i].frame), ev[i].words, ev[i].note_id);
 		s.midi.advance(s.frame); // (awva_sdk/timed_midi.h: the steps due by this block's start)
 		const dsp::VoiceControls* m = s.midi.midi().voices();
 		for (int v = 0; v < s.voices && v < 16; v++) {
