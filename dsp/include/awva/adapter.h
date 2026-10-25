@@ -39,7 +39,8 @@
 	static constexpr int num_presets = ::ns::NUM_PRESETS; \
 	[[nodiscard]] static const char* preset_name(int i) { return ::ns::preset_name(i); } \
 	static void set_preset(Engine& e, int i) { ::ns::set_preset(e, i); } \
-	static void params_loaded(Engine& e, int i) { ::ns::params_loaded(e, i); }
+	static void params_loaded(Engine& e, int i) { ::ns::params_loaded(e, i); } \
+	[[nodiscard]] static const char* factory_text(int i) { return ::ns::factory_json[i]; }
 
 namespace awva {
 
@@ -145,6 +146,12 @@ template <class T> struct Adapter {
 	[[nodiscard]] static constexpr int num_presets() { return detail::num_presets<T>(); }
 	[[nodiscard]] static const char* preset_name(int i) {
 		if constexpr (has_presets) return i >= 0 && i < T::num_presets ? T::preset_name(i) : nullptr;
+		else return (void)i, nullptr;
+	}
+	// factory preset i's file (presets/<engine>/NN-<name>.preset.json), its text as compiled in
+	// (nullptr: no such preset). A host that calls it links the texts in (about 1.5 KB a preset).
+	[[nodiscard]] static const char* factory_text(int i) {
+		if constexpr (has_presets) return i >= 0 && i < T::num_presets ? T::factory_text(i) : nullptr;
 		else return (void)i, nullptr;
 	}
 	void set_preset(int i) {
