@@ -64,6 +64,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `5a6356e1` | `tremthr` | trem | 0.2 | 1.2 | 0.7 | continuous |
 | `1ecd3be6` | `rub` | rub | 0 | 1 | 0 | continuous |
 | `2f656620` | `rubnoise` | rub | 0 | 0.3 | 0.05 | continuous |
+| `b08b665a` | `model` | model | 0 | 5 | 0 | steps |
 
 ## Budget and memory
 

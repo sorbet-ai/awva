@@ -82,6 +82,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `6a122da6` | `vib` | mod | 0 | 0.6 | 0 | continuous |
 | `9e2c50e9` | `vib_hz` | mod | 2 | 8 | 5 | continuous |
 | `2819a4b5` | `vib_breath` | mod | 0 | 0.3 | 0 | continuous |
+| `9a67fb30` | `instrument` | bore | 0 | 8 | 0 | steps |
 
 ## Budget and memory
 
@@ -91,7 +92,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 20000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 1.88281 KB (1928 bytes) (on a 64-bit host) |
+| engine object | 1.89062 KB (1936 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 120 KB |
 

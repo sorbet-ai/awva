@@ -508,6 +508,7 @@ TEST_CASE("a late event (a negative frame, before its block) lands where it woul
 		b.c().process(b.in.state, k == 2 ? &late : nullptr, k == 2 ? 1 : 0, oy);
 	}
 	CHECK(x == y);
+}
 
 namespace {
 // presets/<engine>/<NN>-*.preset.json, "" if none
@@ -529,7 +530,8 @@ std::string factory_file(const char* engine, int i) {
 
 // load_preset / save_preset: the preset files through the ABI. Each factory file loads exact, to
 // the values set_preset gives the engine linked in; what a component saves the SDK loads exact;
-// another engine's preset and a text that isn't one are refused with nothing changed.
+// another engine's preset and a text that isn't one are refused with nothing changed. (The
+// component's own parameter, output, is not a preset's.)
 TEST_CASE("presets as text through the ABI: the factory files, saved and loaded, refused") {
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		if (e->info->num_params <= 0) continue;
@@ -537,7 +539,6 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 		Loaded dll(e->info->name);
 		const nsc_component& c = dll.c();
 		c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
-		CHECK(c.desc->schema_hash == sdk::params_hash(*e));
 		for (int i = 0; i < e->info->num_presets; i++) {
 			CAPTURE(i);
 			const std::string json = factory_file(e->info->name, i);
@@ -552,13 +553,13 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 			sdk::Engine linked(*e);
 			linked.init(SR, NV);
 			linked.set_preset(i);
-			for (int k = 0; k < c.desc->num_params; k++) {
+			for (int k = 0; k < e->info->num_params; k++) {
 				const float a = c.param(dll.in.state, k), b = *linked.param(k);
 				CHECK(std::memcmp(&a, &b, sizeof a) == 0);
 			}
 		}
 		// edited, saved by the component, loaded by the SDK: exact, the same values
-		for (int k = 0; k < c.desc->num_params; k += 3) {
+		for (int k = 0; k < e->info->num_params; k += 3) {
 			const nsc_param& p = c.desc->params[k];
 			c.set_param(dll.in.state, k, p.min + 0.37f * (p.max - p.min));
 		}
@@ -573,7 +574,7 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 		const sdk::PresetReport rep = sdk::load_preset_json(linked, std::string_view(out.data(), n));
 		REQUIRE(rep.loaded);
 		CHECK(rep.exact);
-		for (int k = 0; k < c.desc->num_params; k++) {
+		for (int k = 0; k < e->info->num_params; k++) {
 			const float a = c.param(dll.in.state, k), b = *linked.param(k);
 			CHECK(std::memcmp(&a, &b, sizeof a) == 0);
 		}

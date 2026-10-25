@@ -142,7 +142,7 @@ typedef struct nsc_desc {
 /* what load_preset() did */
 typedef struct nsc_preset_report {
 	int32_t loaded;    /* 1: its values are set (0: refused, nothing changed, error says why) */
-	int32_t exact;     /* 1: this schema_hash, every value as the preset has it, nothing skipped or missing */
+	int32_t exact;     /* 1: its params_hash is the engine's (preset.h), every value as it has it, nothing skipped or missing */
 	int32_t clamped;   /* values out of their range, clamped (steps rounded) */
 	int32_t skipped;   /* parameters this engine doesn't have, ignored */
 	int32_t missing;   /* parameters the preset doesn't name: their values after init() */
