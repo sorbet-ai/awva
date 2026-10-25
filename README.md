@@ -23,13 +23,13 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 
 Two ways in, each with a small example in `examples/` that the tests build and run:
 
-- **From any language, through the component ABI.** Each engine is also a shared library (`build/sdk/components/<engine>.dll`, `.so` or `.dylib`) with one exported C function, `nsc_entry()`, declared in [`component/include/nsc/nsc.h`](component/include/nsc/nsc.h). The host allocates the memory the engine asks for, calls `init()`, and calls `process()` once per 32-frame block with that block's MIDI 2.0 messages (Universal MIDI Packets). [`examples/c_host/c_host.c`](examples/c_host/c_host.c) does all of it in plain C: it loads an engine at run time, checks the ABI, lists the presets and parameters, plays a phrase with per-note pitch and pressure, and writes a WAV.
+- **From any language, through the component ABI.** Each engine is also a shared library (`build/sdk/components/<engine>.dll`, `.so` or `.dylib`) with one exported C function, `nsc_entry()`, declared in [`component/include/nsc/nsc.h`](component/include/nsc/nsc.h). The host allocates the memory the engine asks for, calls `init()`, and calls `process()` once per 32-frame block with that block's MIDI 2.0 messages (Universal MIDI Packets). [`examples/c_host/c_host.c`](examples/c_host/c_host.c) does all of it in plain C: it loads an engine at run time, checks the ABI, lists the presets and parameters, plays a phrase with per-note pitch and pressure, tags each note with its own id and hears back from `ended()` when each is over, and writes a WAV.
 
   ```
   build/sdk/examples/c_host build/sdk/components va va.wav
   ```
 
-- **From C++, through the SDK.** Link `awva_sdk` and `awva_engines` and use the engines directly, with the SDK's MIDI in (`sdk::MidiVoices`: MIDI 1.0 and MPE up-converted to MIDI 2.0, decoded, and given voices as the board does). [`examples/mpe_file/mpe_file.cpp`](examples/mpe_file/mpe_file.cpp) renders a standard MIDI file, MPE or plain, sample for sample as `awva_render --midi` does; `--demo` writes an MPE file to try.
+- **From C++, through the SDK.** Link `awva_sdk` and `awva_engines` and use the engines directly, with the SDK's MIDI in (`sdk::TimedMidi` over `sdk::MidiVoices`: MIDI 1.0 and MPE up-converted to MIDI 2.0, decoded, and given voices on the board's 2 ms steps). [`examples/mpe_file/mpe_file.cpp`](examples/mpe_file/mpe_file.cpp) renders a standard MIDI file, MPE or plain, sample for sample as `awva_render --midi` does; `--demo` writes an MPE file to try.
 
   ```
   build/sdk/examples/mpe_file --demo demo.mid && build/sdk/examples/mpe_file demo.mid demo.wav va

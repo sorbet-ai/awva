@@ -2,24 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // mpe_file: a standard MIDI file, MPE or plain, through an awva engine with the SDK's MIDI in
-// (awva_sdk/midi_voices.h: the up-converter, the decoder and the voice allocator the board runs).
+// (awva_sdk/timed_midi.h over midi_voices.h: the up-converter, the decoder and the voice allocator
+// the board runs, on its 2 ms steps).
 //
 //   mpe_file IN.mid OUT.wav [ENGINE [PRESET]]   render (32-bit float WAV, mono); prints the hash
 //   mpe_file --demo OUT.mid                     write a short MPE demo file to play
 //
 // The render is what `awva_render --engine ENGINE --midi IN.mid` renders, sample for sample: the
-// same 2 ms MIDI steps, voices and length (the hash it prints is the renderer's).
+// same integer-frame 2 ms steps, voices and length (the hash it prints is the renderer's).
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "awva_sdk/engines.h"
-#include "awva_sdk/midi_voices.h"
 #include "awva_sdk/smf.h"
+#include "awva_sdk/timed_midi.h"
 
 namespace {
 namespace sdk = awva::sdk;
@@ -112,26 +114,26 @@ int main(int argc, char** argv) {
 	engine.init(SR, NV);
 	if (argc > 4) engine.set_preset(std::atoi(argv[4]));
 
-	// MIDI in, as the board takes it: messages queue, and every 2 ms a step runs them
-	sdk::MidiVoices midi(NV);
+	// MIDI in, as the board takes it, in integer frames (awva_sdk/timed_midi.h): each message
+	// queued at its frame, and every 2 ms (96 frames at 48 kHz) a step runs the ones due
+	auto midi = std::make_unique<sdk::TimedMidi>(NV, SR); // (some kilobytes: on the heap)
 	std::vector<awva::VoiceControls> vc(NV, awva::voice_at_rest);
 	awva::GlobalControls g = awva::globals_at_rest;
+	const auto frame_of = [](double t) { return t <= 0 ? uint64_t{0} : static_cast<uint64_t>(std::llround(t * SR)); };
 	size_t next = 0;
-	uint64_t steps = 0;
 
 	const int blocks = static_cast<int>((file.seconds + 2.0) * SR / awva::BLOCK); // the file and 2 s of tail
 	std::vector<float> out(static_cast<size_t>(blocks) * awva::BLOCK);
 	for (int b = 0; b < blocks; b++) {
-		// the 2 ms steps due by this block, each with the file's messages up to its time
-		const double t = static_cast<double>(b) * awva::BLOCK / SR;
-		for (; static_cast<double>(steps) * awva::midi::TICK_SECONDS <= t; steps++) {
-			const double ts = static_cast<double>(steps) * awva::midi::TICK_SECONDS;
-			for (; next < file.events.size() && file.events[next].t <= ts; next++) (void)midi.message(file.events[next].bytes, file.events[next].len);
-			midi.step();
-		}
+		// the file's messages up to this block's start (each at its time, to the nearest frame), then
+		// the steps due by it
+		const uint64_t start = static_cast<uint64_t>(b) * awva::BLOCK;
+		for (; next < file.events.size() && frame_of(file.events[next].t) <= start; next++)
+			(void)midi->midi1(frame_of(file.events[next].t), file.events[next].bytes, file.events[next].len);
+		midi->advance(start);
 		// the voices' key signals to the engine (gate, strike and release follow from them)
 		for (int v = 0; v < NV; v++) {
-			const awva::VoiceControls& m = midi.voices()[v];
+			const awva::VoiceControls& m = midi->midi().voices()[v];
 			vc[v].note = m.note;
 			vc[v].pres = m.pres;
 			vc[v].vpres = m.vpres;
@@ -139,7 +141,7 @@ int main(int argc, char** argv) {
 			vc[v].but_y = m.but_y;
 			awva::track_key(vc[v]);
 		}
-		g = midi.globals();
+		g = midi->midi().globals();
 		float* o[1] = {&out[static_cast<size_t>(b) * awva::BLOCK]};
 		engine.process(vc.data(), g, o);
 	}

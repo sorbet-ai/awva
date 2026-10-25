@@ -5,7 +5,8 @@
 #   c_host     plain C: an engine's component library loaded at run time, a MIDI 2.0 phrase, a WAV
 #   mpe_file   C++ on the SDK: a standard (MPE) MIDI file through an engine, a WAV
 # Built with the SDK (sdk/CMakeLists.txt adds this directory). Tests: example.* run each, twice
-# (non-silent, the same hash both times), and the MPE render against awva_render's.
+# (non-silent, the same hash both times; c_host hears every note end), and the MPE render against
+# awva_render's.
 enable_language(C)
 
 add_executable(c_host c_host/c_host.c)
@@ -22,7 +23,7 @@ target_link_libraries(mpe_file PRIVATE awva_sdk awva_engines)
 
 set(_run "${CMAKE_CURRENT_SOURCE_DIR}/run_example.cmake")
 set(_out "${CMAKE_CURRENT_BINARY_DIR}/out")
-add_test(NAME example.c_host COMMAND "${CMAKE_COMMAND}" -DMODE=twice "-DOUT=${_out}"
+add_test(NAME example.c_host COMMAND "${CMAKE_COMMAND}" -DMODE=twice "-DOUT=${_out}" "-DEXPECT=note 1 ended.*note 2 ended.*note 3 ended"
   "-DCMD=$<TARGET_FILE:c_host>;${AWVA_COMPONENT_DIR};va;${_out}/c_host_va.wav" -P "${_run}")
 add_test(NAME example.mpe_file COMMAND "${CMAKE_COMMAND}" -DMODE=renderer "-DOUT=${_out}"
   "-DMPE=$<TARGET_FILE:mpe_file>" "-DRENDER=$<TARGET_FILE:awva_render>" -P "${_run}")

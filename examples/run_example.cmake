@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The examples' tests (CMakeLists.txt):
-#   MODE=twice     run CMD twice: it must succeed (a non-silent, finite render) with the same hash
+#   MODE=twice     run CMD twice: it must succeed (a non-silent, finite render) with the same hash,
+#                  and print EXPECT (a regex) if given
 #   MODE=renderer  mpe_file writes its demo, renders it, and its hash must be awva_render's
 file(MAKE_DIRECTORY "${OUT}")
 
@@ -16,6 +17,9 @@ function(run_hash out_var)
     message(FATAL_ERROR "${ARGN}: no hash in\n${so}")
   endif()
   set(${out_var} "${CMAKE_MATCH_1}" PARENT_SCOPE)
+  if(DEFINED EXPECT AND NOT so MATCHES "${EXPECT}")
+    message(FATAL_ERROR "${ARGN}: no \"${EXPECT}\" in\n${so}")
+  endif()
   message(STATUS "${so}")
 endfunction()
 

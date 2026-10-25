@@ -7,8 +7,8 @@
  *
  * It loads the engine's library at run time, checks the ABI, lists the presets and parameters,
  * plays a short MIDI 2.0 phrase it builds itself (three notes, each with its own pitch glide and
- * pressure swell) and writes a 32-bit float WAV. It prints "hash <FNV-1a 64 of the samples>" and
- * fails if the output is silent or not finite.
+ * pressure swell), says when each note has ended, and writes a 32-bit float WAV. It prints
+ * "hash <FNV-1a 64 of the samples>" and fails if the output is silent or not finite.
  */
 #include <math.h>
 #include <stdint.h>
@@ -17,6 +17,9 @@
 #include <string.h>
 
 #include "nsc/nsc.h"
+
+/* written for ABI 2: nsc_event.note_id and ended() */
+_Static_assert(NSC_ABI == 2, "c_host follows ABI 2");
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -31,7 +34,7 @@
 
 #define SR 48000
 #define VOICES 10
-#define SECONDS 4
+#define SECONDS 5
 
 /* ---- 1. loading the library: one exported function, nsc_entry() --------------------------- */
 
@@ -53,25 +56,27 @@ static void* region(uint32_t bytes, void** raw) {
 
 /* ---- 2. MIDI 2.0 messages (Universal MIDI Packets, message type 4: two words) -------------- */
 
-/* word 0: type 4, group 0, status, channel 0, then the note and one more byte */
+/* word 0: type 4, group 0, status, channel 0, then the note and one more byte. Every event also
+ * carries a note id: on a Note On, the host's own id for the note (ended() hands it back when the
+ * note is over); -1 on everything else. */
 static uint32_t w0(uint32_t status, uint32_t note, uint32_t byte4) { return 0x40000000u | status << 20 | note << 8 | byte4; }
 
-static nsc_event note_on(uint32_t frame, int note, double velocity) {
-	nsc_event e = {frame, {w0(0x9, (uint32_t)note, 0), (uint32_t)(velocity * 65535.0) << 16, 0, 0}};
+static nsc_event note_on(uint32_t frame, int note, int32_t id, double velocity) {
+	nsc_event e = {frame, id, {w0(0x9, (uint32_t)note, 0), (uint32_t)(velocity * 65535.0) << 16, 0, 0}};
 	return e;
 }
 static nsc_event note_off(uint32_t frame, int note) {
-	nsc_event e = {frame, {w0(0x8, (uint32_t)note, 0), 0x4000u << 16, 0, 0}};
+	nsc_event e = {frame, -1, {w0(0x8, (uint32_t)note, 0), 0x4000u << 16, 0, 0}};
 	return e;
 }
 /* Poly Pressure: the note's own pressure, 32 bits (full scale = a full press, 1.0) */
 static nsc_event pressure(uint32_t frame, int note, double p) {
-	nsc_event e = {frame, {w0(0xa, (uint32_t)note, 0), (uint32_t)(p * 4294967295.0), 0, 0}};
+	nsc_event e = {frame, -1, {w0(0xa, (uint32_t)note, 0), (uint32_t)(p * 4294967295.0), 0, 0}};
 	return e;
 }
 /* Registered Per-Note Controller 3, Pitch 7.25: the note's own absolute pitch in semitones */
 static nsc_event pitch(uint32_t frame, int note, double semitones) {
-	nsc_event e = {frame, {w0(0x0, (uint32_t)note, 3), (uint32_t)(semitones * 33554432.0), 0, 0}};
+	nsc_event e = {frame, -1, {w0(0x0, (uint32_t)note, 3), (uint32_t)(semitones * 33554432.0), 0, 0}};
 	return e;
 }
 
@@ -85,7 +90,7 @@ static int phrase(int b, nsc_event* ev) {
 	for (int k = 0; k < 3; k++) {
 		const double on = 0.6 * k, u = t - on;
 		if (u < 0.0 || t > 3.2) continue;
-		if (b == (int)(on * SR / NSC_BLOCK)) ev[n++] = note_on(0, keys[k], 0.6);
+		if (b == (int)(on * SR / NSC_BLOCK)) ev[n++] = note_on(0, keys[k], 1 + k, 0.6); /* note ids 1, 2, 3 */
 		if (t < 3.0) {
 			const double swell = sin(3.14159265358979 * fmin(u / 1.5, 1.0)); /* 0 -> 1 -> 0 over 1.5 s */
 			ev[n++] = pressure(0, keys[k], 0.25 + 0.75 * swell * swell);
@@ -161,6 +166,10 @@ int main(int argc, char** argv) {
 	for (uint32_t b = 0; b < blocks; b++) {
 		for (int ch = 0; ch < d->channels; ch++) chan[ch] = out + (size_t)ch * frames + (size_t)b * NSC_BLOCK;
 		c->process(state, ev, phrase((int)b, ev), chan);
+		/* the notes that have ended (released, and their sound has died away) */
+		int32_t ended[VOICES];
+		const int32_t n = c->ended(state, ended, VOICES);
+		for (int32_t i = 0; i < n; i++) printf("  note %d ended at %.2f s\n", (int)ended[i], (double)(b + 1) * NSC_BLOCK / SR);
 	}
 
 	/* check it, hash it (FNV-1a 64 over the float bits), write it (the first channel) */
