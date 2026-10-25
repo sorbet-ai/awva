@@ -19,13 +19,17 @@
 
 #include "nsc/nsc.h"
 #include "awva/engine.h"
-#include "awva_sdk/midi_voices.h"
+#include "awva_sdk/timed_midi.h"
 
 #ifndef NSC_VERSION
 #define NSC_VERSION "unknown"
 #endif
 
 namespace nsc {
+
+// a parameter's declared default: its value after init() (the engine's first preset), measured at
+// build time by awva_defaults (component/CMakeLists.txt) into NSC_DEFAULTS_HEADER
+template <class E> float defaults(int i);
 
 namespace dsp = awva;
 
@@ -43,23 +47,15 @@ static_assert(sizeof(nsc_globals) == sizeof(dsp::GlobalControls), "nsc_globals i
 }
 
 template <dsp::VoiceEngine E> struct Shim {
-	static constexpr int QUEUE = 1024; // events waiting for their 2 ms step
-	struct Queued {
-		uint64_t frame;
-		uint32_t words[4];
-	};
 	struct State {
-		awva::sdk::MidiVoices midi;
+		awva::sdk::TimedMidi midi; // the 2 ms steps in integer frames, the notes and their host ids
 		dsp::VoiceControls vc[16];
 		dsp::GlobalControls g;
-		Queued queue[QUEUE];
-		int queued;
 		uint64_t frame; // frames rendered by process()
-		uint64_t steps; // 2 ms steps taken
 		int32_t sample_rate, voices;
 		E engine;
-		explicit State(int nv) :
-		    midi(nv), vc(), g(), queue(), queued(0), frame(0), steps(0), sample_rate(0), voices(0), engine() {}
+		State(int nv, int sr) :
+		    midi(nv, sr), vc(), g(), frame(0), sample_rate(sr), voices(nv), engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
 	static_assert(E::info.budget.max_voices <= 16, "16 voices at most");
@@ -72,7 +68,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		static const bool done = [] {
 			for (int i = 0; i < E::info.num_params; i++) {
 				const dsp::ParamDesc* d = E::param_desc(i);
-				p[i] = {fnv1a(d->name), d->name, d->group, d->min, d->max, static_cast<int32_t>(d->kind)};
+				p[i] = {fnv1a(d->name), d->name, d->group, d->min, d->max, static_cast<int32_t>(d->kind), defaults<E>(i)};
 			}
 			return true;
 		}();
@@ -149,68 +145,32 @@ template <dsp::VoiceEngine E> struct Shim {
 	}
 
 	static void init(void* state, void* fast, void* large, int32_t sr, int32_t nv) {
-		State* s = new (state) State(nv);
+		State* s = new (state) State(nv, sr);
 		for (auto& c : s->vc) c = dsp::voice_at_rest;
 		s->g = dsp::globals_at_rest;
-		s->sample_rate = sr;
-		s->voices = nv;
 		s->engine.init(*static_cast<typename E::FastMemory*>(fast), *static_cast<typename E::LargeMemory*>(large), sr, nv);
 	}
 	static void reset(void* state) {
 		State& s = st(state);
-		const bool legato = s.midi.legato();
-		new (&s.midi) awva::sdk::MidiVoices(s.voices);
-		s.midi.set_legato(legato);
+		const bool legato = s.midi.midi().legato();
+		new (&s.midi) awva::sdk::TimedMidi(s.voices, s.sample_rate);
+		s.midi.midi().set_legato(legato);
 		for (auto& c : s.vc) c = dsp::voice_at_rest;
 		s.g = dsp::globals_at_rest;
-		s.queued = 0;
-		s.frame = s.steps = 0;
+		s.frame = 0;
 		s.engine.reset();
 	}
 	static int32_t mode(void* state, int32_t which, int32_t value) {
 		if (which != NSC_MODE_LEGATO) return 0;
-		st(state).midi.set_legato(value != 0);
+		st(state).midi.midi().set_legato(value != 0);
 		return 1;
-	}
-	[[nodiscard]] static constexpr uint64_t step_frame(uint64_t k, int32_t sr) {
-		return (k * static_cast<uint64_t>(sr) + 499u) / 500u;
-	}
-	static int words_of(uint32_t w0) {
-		constexpr int n[16] = {1, 1, 1, 2, 2, 4, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4};
-		return n[w0 >> 28];
-	}
-	static void feed(State& s, const Queued& q) {
-		const uint32_t w0 = q.words[0];
-		if ((w0 >> 28) == 2) {
-			const uint8_t m[3] = {static_cast<uint8_t>(w0 >> 16), static_cast<uint8_t>((w0 >> 8) & 0x7f), static_cast<uint8_t>(w0 & 0x7f)};
-			const int len = (m[0] & 0xf0) == 0xc0 || (m[0] & 0xf0) == 0xd0 ? 2 : 3;
-			(void)s.midi.message(m, len);
-		} else if ((w0 >> 28) == 4) {
-			(void)s.midi.ump2(w0, q.words[1]);
-		}
 	}
 	static void process(void* state, const nsc_event* ev, int32_t n, float* const* out) {
 		State& s = st(state);
-		for (int i = 0; i < n && s.queued < QUEUE; i++) {
-			Queued q{s.frame + (ev[i].frame < NSC_BLOCK ? ev[i].frame : NSC_BLOCK - 1), {}};
-			const int nw = words_of(ev[i].words[0]);
-			for (int k = 0; k < nw; k++) q.words[k] = ev[i].words[k];
-			s.queue[s.queued++] = q;
-		}
-		// the 2 ms steps due by this block's start, each with the events at or before its frame:
-		// step k is at frame ceil(k sr / 500), integer (at 48 kHz every 96 frames, at 44.1 kHz
-		// 88 or 89)
-		int taken = 0;
-		for (; step_frame(s.steps, s.sample_rate) <= s.frame; s.steps++) {
-			const uint64_t fs = step_frame(s.steps, s.sample_rate);
-			for (; taken < s.queued && s.queue[taken].frame <= fs; taken++) feed(s, s.queue[taken]);
-			s.midi.step();
-		}
-		if (taken > 0) {
-			std::memmove(s.queue, s.queue + taken, sizeof(Queued) * static_cast<size_t>(s.queued - taken));
-			s.queued -= taken;
-		}
-		const dsp::VoiceControls* m = s.midi.voices();
+		for (int i = 0; i < n; i++)
+			(void)s.midi.ump(s.frame + (ev[i].frame < NSC_BLOCK ? ev[i].frame : NSC_BLOCK - 1), ev[i].words, ev[i].note_id);
+		s.midi.advance(s.frame); // (awva_sdk/timed_midi.h: the steps due by this block's start)
+		const dsp::VoiceControls* m = s.midi.midi().voices();
 		for (int v = 0; v < s.voices && v < 16; v++) {
 			s.vc[v].note = m[v].note;
 			s.vc[v].pres = m[v].pres;
@@ -219,7 +179,7 @@ template <dsp::VoiceEngine E> struct Shim {
 			s.vc[v].but_y = m[v].but_y;
 			dsp::track_key(s.vc[v]);
 		}
-		s.g = s.midi.globals();
+		s.g = s.midi.midi().globals();
 		s.engine.process(s.vc, s.g, out);
 		s.frame += NSC_BLOCK;
 	}
@@ -227,6 +187,13 @@ template <dsp::VoiceEngine E> struct Shim {
 		st(state).engine.process(reinterpret_cast<const dsp::VoiceControls*>(vc), *reinterpret_cast<const dsp::GlobalControls*>(g), out);
 	}
 	static int32_t active_voices(const void* state) { return st(state).engine.active_voices(); }
+	// the host's note ids of the notes that ended (released, then their tail passed, the engine
+	// went idle, or another note took their key)
+	static int32_t ended(void* state, int32_t* ids, int32_t max) {
+		State& s = st(state);
+		const auto tail = static_cast<uint64_t>(static_cast<double>(E::info.budget.tail_seconds) * s.sample_rate);
+		return s.midi.ended(ids, max, tail, s.engine.active_voices() == 0);
+	}
 	static int32_t voices(const void* state) { return st(state).engine.voices(); }
 	static int32_t preset(const void* state) { return st(state).engine.preset(); }
 	static void set_preset(void* state, int32_t i) { st(state).engine.set_preset(i); }
@@ -250,7 +217,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	}
 
 	static const nsc_component* get() {
-		static const nsc_component c = {desc(), init, reset, mode, process, process_voices, active_voices, voices,
+		static const nsc_component c = {desc(), init, reset, mode, process, process_voices, active_voices, ended, voices,
 		    preset, set_preset, param, set_param, param_index};
 		return &c;
 	}

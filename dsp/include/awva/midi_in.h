@@ -21,7 +21,9 @@
 // - Standard MIDI 2.0 (message2): the same with its resolution: 16-bit velocities, 32-bit
 //   pressures and controllers (full scale = the Striso's full press, 1.0), CC74 and pitch bends
 //   bipolar by the spec (the centre exact), Registered Per-Note Controller 3 (Pitch 7.25: the
-//   note's absolute pitch), the Registered Controllers 0 (bend range) and 6 (MCM).
+//   note's absolute pitch), per-note y (Assignable Per-Note Controller 4 or Registered 74: the
+//   note's own, which CC74 then leaves alone) and x (Assignable 3), the Registered Controllers 0
+//   (bend range) and 6 (MCM).
 // A note in slot s is the profile's note id_base() + s.
 //
 // The host (any type with these members; the calls are templates, inlined):
@@ -119,7 +121,7 @@ public:
 			note_off(h, channel, d1, -(float)((double)(w1 >> 16) / 65535.0));
 			return true;
 		}
-		const bool note_data = status == 0x90 || status == 0xa0 || status == 0xd0 || status == 0x00 || (status == 0xe0 && member(channel)) ||
+		const bool note_data = status == 0x90 || status == 0xa0 || status == 0xd0 || status == 0x00 || status == 0x10 || (status == 0xe0 && member(channel)) ||
 		    (status == 0xb0 && (d1 == 1 || d1 == 74));
 		if (!note_data) return false;
 		if (h.echoed(channel)) return true;
@@ -136,6 +138,15 @@ public:
 					slot_[s].absolute = true;
 					h.ump(ump::pitch_packet(base_ + s, pitch(s)));
 				}
+			} else if (d2 == 74) { // 74, brightness: the note's own y (bipolar, as CC74)
+				note_y(h, channel, d1, bipolar32(w1));
+			}
+			break;
+		case 0x10: // Assignable Per-Note Controller: 4 the note's y, 3 its x (bipolar; the profile's numbers)
+			if (d2 == 4) note_y(h, channel, d1, bipolar32(w1));
+			if (d2 == 3) {
+				const int s = find(channel, d1);
+				if (s >= 0) h.ump(ump::signed_packet(base_ + s, ump::ctl_x, bipolar32(w1)));
 			}
 			break;
 		default: // CC1 (0 .. 1) or CC74 (bipolar)
@@ -178,6 +189,7 @@ private:
 		uint8_t key = 0;
 		bool pressure = false; // pressure received: pres follows it, not the velocity
 		bool absolute = false; // its pitch came as Pitch 7.25 (MIDI 2.0)
+		bool own_y = false;    // its y came per note (MIDI 2.0): the channel's CC74 no longer moves it
 		uint32_t age = 0;
 		float pitch = 0; // (absolute)
 	};
@@ -213,6 +225,7 @@ private:
 		m.key = (uint8_t)key;
 		m.age = ++age_;
 		m.absolute = false;
+		m.own_y = false;
 		m.pressure = chan_pres_set_[channel]; // MPE: the pressure sent before the note-on
 		const int id = base_ + s;
 		h.ump(ump::pitch_packet(id, pitch(s)));
@@ -259,10 +272,18 @@ private:
 	}
 
 	// a channel's y
+	// one note's own y (MIDI 2.0 per-note): from now on it, not the channel's CC74
+	template <class Host> void note_y(Host& h, int channel, int key, float y) {
+		const int s = find(channel, key);
+		if (s < 0) return;
+		slot_[s].own_y = true;
+		h.ump(ump::signed_packet(base_ + s, ump::ctl_y, y));
+	}
 	template <class Host> void tilt(Host& h, int channel, float y) {
 		chan_y_[channel] = y;
+		// (a note with its own y keeps it)
 		for (int s = 0; s < NOTES; s++)
-			if (slot_[s].channel == channel) h.ump(ump::signed_packet(base_ + s, ump::ctl_y, y));
+			if (slot_[s].channel == channel && !slot_[s].own_y) h.ump(ump::signed_packet(base_ + s, ump::ctl_y, y));
 	}
 
 	// the pitches of the notes of a channel (-1: all) after a change of its bend

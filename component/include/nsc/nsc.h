@@ -43,7 +43,7 @@
 extern "C" {
 #endif
 
-#define NSC_ABI 1
+#define NSC_ABI 2
 #define NSC_MAGIC 0x3143534eu /* "NSC1" */
 #define NSC_BLOCK 32          /* frames per process() */
 #define NSC_MAX_HEROES 8
@@ -73,7 +73,8 @@ typedef struct nsc_globals {
 
 /* a UMP packet (1 to 4 words, by its message type) at a frame of the block */
 typedef struct nsc_event {
-	uint32_t frame; /* 0 .. NSC_BLOCK - 1 */
+	uint32_t frame;  /* 0 .. NSC_BLOCK - 1 */
+	int32_t note_id; /* the host's id of the note a Note On starts (CLAP's note_id); -1: none */
 	uint32_t words[4];
 } nsc_event;
 
@@ -87,6 +88,7 @@ typedef struct nsc_param {
 	const char* group; /* UI group */
 	float min, max;
 	int32_t kind; /* nsc_param_kind */
+	float def;    /* its default: the value after init() */
 } nsc_param;
 
 typedef struct nsc_preset {
@@ -127,6 +129,11 @@ typedef struct nsc_component {
 	void (*process)(void* state, const nsc_event* events, int32_t num_events, float* const* out);
 	void (*process_voices)(void* state, const nsc_voice* voices, const nsc_globals* globals, float* const* out);
 	int32_t (*active_voices)(const void* state);
+	/* after process(): the host's note ids (nsc_event.note_id) of the notes that ended since the
+	 * last call: released, then the engine's tail passed or it went idle, or another note took
+	 * their key (CLAP NOTE_END). Returns how many (at most max) were written; call again while it
+	 * returns max. */
+	int32_t (*ended)(void* state, int32_t* note_ids, int32_t max);
 	int32_t (*voices)(const void* state);
 	int32_t (*preset)(const void* state); /* -1: none */
 	void (*set_preset)(void* state, int32_t index);

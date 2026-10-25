@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 	j += "  \"abi\": " + std::to_string(d.abi) + ",\n  \"version\": " + esc(d.version) + ",\n";
 	char h[16];
 	std::snprintf(h, sizeof h, "%08x", d.schema_hash);
-	j += "  \"schema_hash\": \"" + std::string(h) + "\",\n";
+	j += R"(  "schema_hash": ")" + std::string(h) + "\",\n";
 	j += "  \"channels\": " + std::to_string(d.channels) + ",\n  \"max_voices\": " + std::to_string(d.max_voices) + ",\n";
 	j += "  \"instr_per_block\": " + std::to_string(d.instr_per_block) + ",\n";
 	j += "  \"state_bytes\": " + std::to_string(d.state_bytes) + ",\n  \"fast_bytes\": " + std::to_string(d.fast_bytes) +

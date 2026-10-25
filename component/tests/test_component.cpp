@@ -6,6 +6,7 @@
 // what the engine renders (the scripted performances and the key recordings, through every
 // preset of accordion and trumpet), and process() with UMP renders bit for bit the SDK's MIDI
 // side (MidiVoices) driving the engine on the same 2 ms integer-frame step grid.
+#include <bit>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -47,7 +48,7 @@ struct Loaded {
 		nsc_instance_free(&in);
 		nsc_unload(&lib);
 	}
-	const nsc_component& c() const { return *lib.c; }
+	[[nodiscard]] const nsc_component& c() const { return *lib.c; }
 };
 
 bool same(const std::vector<float>& a, const std::vector<float>& b) {
@@ -182,7 +183,7 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 			std::vector<nsc_event> ev;
 			const uint64_t start = static_cast<uint64_t>(b) * NSC_BLOCK;
 			for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
-				ev.push_back({static_cast<uint32_t>(perf[k].frame - start), {perf[k].w0, perf[k].w1, 0, 0}});
+				ev.push_back({static_cast<uint32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
 			float* o[1] = {&out[start]};
 			dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
 		}
@@ -233,7 +234,7 @@ TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (
 	}
 }
 
-TEST_CASE("parameters by index and id, the board's write rule; reset and sample rates") {
+TEST_CASE("parameters by index and id, the board's write rule, reset and sample rates") {
 	Loaded dll("accordion");
 	const nsc_component& c = dll.c();
 	c.init(dll.in.state, dll.in.fast, dll.in.large, 44100, NV);
@@ -247,7 +248,7 @@ TEST_CASE("parameters by index and id, the board's write rule; reset and sample 
 	CHECK(c.param(dll.in.state, 0) == d.params[0].max);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
-	const nsc_event on = {0, {0x40903c00u, 0xc0000000u, 0, 0}};
+	const nsc_event on = {0, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
 	for (int b = 0; b < 200; b++) c.process(dll.in.state, b == 0 ? &on : nullptr, b == 0 ? 1 : 0, o);
 	CHECK(c.active_voices(dll.in.state) > 0);
 	c.reset(dll.in.state);
@@ -324,4 +325,46 @@ TEST_CASE("every engine's library renders bit for bit as linked in with the glob
 			if (np <= 1) break;
 		}
 	}
+}
+
+TEST_CASE("declared defaults: every parameter's default is its value after init()") {
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		Loaded dll(e->info->name);
+		dll.c().init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+		const nsc_desc& d = *dll.c().desc;
+		for (int i = 0; i < d.num_params; i++) {
+			INFO(e->info->name << " " << d.params[i].name);
+			const float v = dll.c().param(dll.in.state, i);
+			CHECK(std::bit_cast<uint32_t>(v) == std::bit_cast<uint32_t>(d.params[i].def)); // bit for bit
+		}
+	}
+}
+
+TEST_CASE("ended: a note's host id comes back once it has ended (its tail, or the engine idle), not before") {
+	Loaded dll("va");
+	const nsc_component& c = dll.c();
+	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	float buf[NSC_BLOCK];
+	float* o[1] = {buf};
+	int32_t ids[8];
+	const nsc_event on[2] = {{0, 101, {0x40903c00u, 0xc0000000u, 0, 0}}, {5, 102, {0x40914000u, 0xc0000000u, 0, 0}}};
+	c.process(dll.in.state, on, 2, o);
+	for (int b = 0; b < 100; b++) c.process(dll.in.state, nullptr, 0, o);
+	CHECK(c.ended(dll.in.state, ids, 8) == 0);                       // (held)
+	const nsc_event off = {0, -1, {0x40803c00u, 0x40000000u, 0, 0}}; // note 60 off
+	c.process(dll.in.state, &off, 1, o);
+	CHECK(c.ended(dll.in.state, ids, 8) == 0); // (released: its tail)
+	int got = 0;
+	for (int b = 0; b < 48000 * 12 / NSC_BLOCK && got == 0; b++) {
+		c.process(dll.in.state, nullptr, 0, o);
+		got = c.ended(dll.in.state, ids, 8);
+	}
+	REQUIRE(got == 1);
+	CHECK(ids[0] == 101);
+	// the other: a new note on its key takes it at once
+	const nsc_event again = {0, 103, {0x40914000u, 0xc0000000u, 0, 0}};
+	c.process(dll.in.state, &again, 1, o);
+	for (int b = 0; b < 10; b++) c.process(dll.in.state, nullptr, 0, o);
+	REQUIRE(c.ended(dll.in.state, ids, 8) == 1);
+	CHECK(ids[0] == 102);
 }

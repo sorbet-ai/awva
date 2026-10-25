@@ -8,7 +8,7 @@
 namespace awva::sdk {
 
 Shell::Shell(const EngineEntry& engine, int sample_rate, int voices, bool fx) :
-    engine_(engine), fx_(fx_effect()), midi_(std::min(voices, engine.info->budget.max_voices)), sr_(sample_rate),
+    engine_(engine), fx_(fx_effect()), midi_(std::make_unique<TimedMidi>(std::min(voices, engine.info->budget.max_voices), sample_rate)), sr_(sample_rate),
     nv_(std::min(voices, engine.info->budget.max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), dsp::voice_at_rest),
     g_(dsp::globals_at_rest) {
 	engine_.init(sr_, nv_);
@@ -29,44 +29,32 @@ void Shell::set_controls(const VoiceControls* vc, const GlobalControls& g) {
 	g_ = g;
 }
 
-void Shell::midi(const uint8_t* msg, int len, int offset) {
-	// the block of that frame not rendered yet: it waits for it (in frame order)
-	const uint64_t at = out_ + static_cast<uint64_t>(offset > 0 ? offset : 0);
-	if (offset <= 0 || at < frames_ || len > 3 || ntimed_ == kTimed) {
-		midi_.message(msg, len);
-		return;
-	}
-	int i = ntimed_++;
-	for (; i > 0 && timed_[i - 1].frame > at; i--) timed_[i] = timed_[i - 1];
-	timed_[i].frame = at;
-	timed_[i].len = len;
-	std::copy(msg, msg + len, timed_[i].msg);
+bool Shell::midi(const uint8_t* msg, int len, int offset, int32_t note_id) {
+	return midi_->midi1(out_ + static_cast<uint64_t>(offset > 0 ? offset : 0), msg, len, note_id);
+}
+
+bool Shell::ump(const uint32_t* words, int offset, int32_t note_id) {
+	return midi_->ump(out_ + static_cast<uint64_t>(offset > 0 ? offset : 0), words, note_id);
+}
+
+int Shell::ended_notes(int32_t* ids, int max) {
+	const auto tail = static_cast<uint64_t>(static_cast<double>(engine_.info().budget.tail_seconds) * sr_);
+	return midi_->ended(ids, max, tail, engine_.active_voices() == 0);
 }
 
 void Shell::render_block() {
-	// the timed MIDI of this block's frames, before its step
-	int done = 0;
-	while (done < ntimed_ && timed_[done].frame < frames_ + dsp::BLOCK) {
-		midi_.message(timed_[done].msg, timed_[done].len);
-		done++;
-	}
-	if (done > 0) {
-		std::copy(timed_ + done, timed_ + ntimed_, timed_);
-		ntimed_ -= done;
-	}
 	if (!direct_) {
-		// the MIDI steps due by this block's start (every 2 ms from the start)
-		for (; static_cast<double>(steps_) * midi::TICK_SECONDS * sr_ <= static_cast<double>(frames_); steps_++) midi_.step();
+		midi_->advance(frames_); // the 2 ms steps due by this block's start (timed_midi.h)
 		for (int v = 0; v < nv_; v++) {
 			VoiceControls& c = vc_[static_cast<size_t>(v)];
-			const VoiceControls& m = midi_.voices()[v];
+			const VoiceControls& m = midi_->midi().voices()[v];
 			c.note = m.note;
 			c.pres = m.pres;
 			c.vpres = m.vpres;
 			c.but_x = m.but_x;
 			c.but_y = m.but_y;
 		}
-		g_ = midi_.globals();
+		g_ = midi_->midi().globals();
 	}
 	for (VoiceControls& c : vc_) dsp::track_key(c);
 	frames_ += dsp::BLOCK;
