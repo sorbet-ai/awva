@@ -121,7 +121,7 @@ TEST_CASE("midi files: written and read back, tempo map applied") {
 	CHECK(!sdk::parse_midi(std::vector<uint8_t>{'R', 'I', 'F', 'F'}).error.empty());
 }
 
-TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Registered 74) on one channel; CC74 leaves those notes alone") {
+TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Registered 74) on one channel, which CC74 then leaves alone") {
 	sdk::MidiVoices m(4);
 	const auto ump = [&m](uint32_t w0, uint32_t w1) { REQUIRE(m.ump2(w0, w1)); };
 	ump(0x40903c00u, 0xc0000000u); // note 60, channel 1

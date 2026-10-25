@@ -131,7 +131,7 @@ TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 	CHECK(!error.empty());
 }
 
-TEST_CASE("shell: MIDI 2.0 in (UMP) plays as its MIDI 1.0 counterpart; a note's id comes back when it has ended") {
+TEST_CASE("shell: MIDI 2.0 in (UMP) plays as its MIDI 1.0 counterpart, and a note's id comes back when it has ended") {
 	const sdk::EngineEntry* va = sdk::find_engine("va");
 	REQUIRE(va != nullptr);
 	sdk::Shell a(*va, 48000), b(*va, 48000);
