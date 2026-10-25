@@ -408,16 +408,21 @@ static inline void reset_voice(VoiceState& s) {
 // Select a preset (between blocks, any time). With notes sounding they glide into it: the DSP
 // follows the parameters through its smoothed copy (~55 ms), so registers cross-fade instead of
 // stepping; when silent it switches at once.
-static inline void set_preset(Engine& e, int i) {
-	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
-	e.p = preset_params(i);
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
 	bool sounding = false;
 	for (int v = 0; v < MAX_VOICES; v++) sounding = sounding || e.vs[v].active;
 	if (!sounding) {
 		e.ps = e.p;
 		e.casmix = e.p.cassotto > 0.5f ? 1.0f : 0.0f;
 	}
+}
+
+static inline void set_preset(Engine& e, int i) {
+	if (i < 0 || i >= NUM_PRESETS) i = 0;
+	e.p = preset_params(i);
+	params_loaded(e, i);
 }
 
 // preset after init() (host renders: -DACCORDION_PRESET=n)

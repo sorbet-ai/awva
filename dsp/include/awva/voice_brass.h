@@ -557,12 +557,17 @@ static inline void update_derived(Engine& e) {
 
 // Select a preset; callable between blocks at any time (after init). Sounding voices continue with
 // the new parameters (every state stays bounded for any parameter set).
-static inline void set_preset(Engine& e, int i) {
-	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
-	e.p = preset_params(i);
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
 	e.ps = e.p;
 	update_derived(e);
+}
+
+static inline void set_preset(Engine& e, int i) {
+	if (i < 0 || i >= NUM_PRESETS) i = 0;
+	e.p = preset_params(i);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {

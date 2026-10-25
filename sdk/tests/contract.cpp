@@ -23,6 +23,9 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <functional>
 #include <set>
 #include <string>
@@ -30,6 +33,7 @@
 
 #include "doctest/doctest.h"
 #include "awva_sdk/engines.h"
+#include "awva_sdk/presets.h"
 
 const awva::sdk::EngineEntry& AWVA_ENGINE_ENTRY();
 
@@ -483,6 +487,105 @@ TEST_CASE("parameters: to the extremes and back to the default, the sound as unt
 			CAPTURE(db);
 			CHECK(db < -60.0);
 		}
+	}
+}
+
+namespace {
+
+// --- sound presets as files (awva/preset.h, presets/<engine>/*.preset.json) ------------------------
+
+// the factory preset file of preset i (presets/<engine>/<NN>-<name>.preset.json), "" if none
+std::string preset_file(int i) {
+	char nn[8];
+	std::snprintf(nn, sizeof nn, "%02d-", i);
+	const std::filesystem::path d = std::filesystem::path(AWVA_PRESETS_DIR) / info().name;
+	if (!std::filesystem::is_directory(d)) return "";
+	for (const auto& f : std::filesystem::directory_iterator(d)) {
+		const std::string n = f.path().filename().string();
+		if (n.rfind(nn, 0) == 0 && n.size() > 12 && n.substr(n.size() - 12) == ".preset.json") {
+			std::ifstream in(f.path(), std::ios::binary);
+			std::stringstream ss;
+			ss << in.rdbuf();
+			return ss.str();
+		}
+	}
+	return "";
+}
+
+// the phrase from a quiet start (the parameters' glides settled)
+std::vector<float> render_phrase(sdk::Engine& e) {
+	Keys k(e.voices());
+	std::vector<float> out;
+	play(e, k, 100, &out);
+	play(e, k, blocks(1.0), &out, [&](int b) { phrase(k, b); });
+	return out;
+}
+
+bool same_floats(const std::vector<float>& a, const std::vector<float>& b) {
+	return a.size() == b.size() && std::memcmp(a.data(), b.data(), a.size() * sizeof(float)) == 0;
+}
+
+} // namespace
+
+// The factory presets are data: each engine's presets/<engine>/<NN>-<name>.preset.json is its
+// preset NN by name. Loaded by name onto an engine (sdk::load_preset_json: preset.h resolve, the
+// engine's load_params) it is exact, every parameter reads back as set_preset(NN) leaves it, and
+// the engine plays bit for bit as with set_preset(NN). A preset that set state no parameter holds
+// would fail here (that state belongs in a parameter: wind's instrument, modal's model).
+TEST_CASE("presets: each factory preset is its file, by name, bit for bit") {
+	if (info().num_presets <= 0 || info().num_params <= 0) return;
+	for (int i = 0; i < info().num_presets; i++) {
+		CAPTURE(std::string(info().name));
+		CAPTURE(i);
+		const std::string json = preset_file(i);
+		REQUIRE_MESSAGE(!json.empty(), "no presets/" << info().name << "/" << i << "-*.preset.json (awva_presets export presets)");
+		sdk::Engine a = fresh(i);
+		sdk::Engine b = fresh(presets().front());
+		const sdk::PresetReport r = sdk::load_preset_json(b, json);
+		REQUIRE(r.loaded);
+		CHECK(r.exact);
+		CHECK(r.clamped.empty());
+		CHECK(r.skipped.empty());
+		CHECK(r.missing.empty());
+		for (int p = 0; p < a.num_params(); p++) {
+			CAPTURE(std::string(a.param_desc(p)->name));
+			CHECK(std::memcmp(a.param(p), b.param(p), sizeof(float)) == 0);
+		}
+		CHECK(same_floats(render_phrase(a), render_phrase(b)));
+		// the title is the preset's name
+		awva::preset::Preset p;
+		REQUIRE(sdk::from_json(json, p));
+		CHECK(p.title == a.preset_name(i));
+	}
+}
+
+// What an engine saves, it loads: the values of a played-with engine, saved as a preset, written
+// as JSON, read and loaded onto a fresh engine, are bit for bit the same and so is the sound.
+TEST_CASE("presets: saved, written, read and loaded again, the same values and sound") {
+	if (info().num_params <= 0) return;
+	for (int p : presets()) {
+		CAPTURE(std::string(info().name));
+		CAPTURE(p);
+		sdk::Engine a = fresh(p);
+		Rng rng{0x5eedu + static_cast<uint32_t>(p + 7)};
+		for (int i = 0; i < a.num_params(); i++) {
+			const dsp::ParamDesc* d = a.param_desc(i);
+			if (rng.next() < 0.5f) a.set_param(i, rng.range(d->min, d->max));
+		}
+		const std::string json = sdk::to_json(sdk::save_preset(a, "test", "a saved preset"));
+		REQUIRE(!json.empty());
+		sdk::Engine b = fresh(presets().front());
+		const sdk::PresetReport r = sdk::load_preset_json(b, json);
+		REQUIRE(r.loaded);
+		CHECK(r.exact);
+		for (int i = 0; i < a.num_params(); i++) {
+			CAPTURE(std::string(a.param_desc(i)->name));
+			CHECK(std::memcmp(a.param(i), b.param(i), sizeof(float)) == 0);
+		}
+		// both from the same values as presets: the same sound
+		sdk::Engine c = fresh(presets().front());
+		REQUIRE(sdk::load_preset_json(c, json).loaded);
+		CHECK(same_floats(render_phrase(b), render_phrase(c)));
 	}
 }
 

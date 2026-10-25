@@ -423,12 +423,17 @@ static inline void update_derived(Engine& e) {
 	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
 }
 
-static inline void set_preset(Engine& e, int i) {
-	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
-	e.p = preset_params(i);
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
 	e.ps = e.p;
 	update_derived(e);
+}
+
+static inline void set_preset(Engine& e, int i) {
+	if (i < 0 || i >= NUM_PRESETS) i = 0;
+	e.p = preset_params(i);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {

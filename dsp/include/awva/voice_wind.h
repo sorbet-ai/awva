@@ -195,17 +195,21 @@ struct Params {
 	real vib;         // automatic vibrato, semitones
 	real vib_hz;
 	real vib_breath; // automatic breath (amplitude) vibrato
+	real instrument; // which instrument (instruments[]): its bore kind, lowest note and tuning
 };
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 
-struct PresetInfo {
+// the instruments: the bore kind, the lowest note (it sets the cone apex length) and the tuning
+// correction table (voice_wind_tune.h CORR) of each; the parameter instrument picks one
+struct Instrument {
 	const char* name;
 	int kind;
-	real low_note; // lowest note of the instrument (sets the cone apex length)
+	real low_note;
 };
 
 static constexpr int NUM_PRESETS = 9;
-static constexpr PresetInfo preset_info[NUM_PRESETS] = {
+static constexpr int NUM_INSTRUMENTS = 9;
+static constexpr Instrument instruments[NUM_INSTRUMENTS] = {
     {"clarinet", KIND_CYL, 50},
     {"bass clarinet", KIND_CYL, 34},
     {"soprano sax", KIND_CONE, 56},
@@ -218,7 +222,7 @@ static constexpr PresetInfo preset_info[NUM_PRESETS] = {
 };
 
 [[nodiscard]] static inline const char* preset_name(int i) {
-	return (i >= 0 && i < NUM_PRESETS) ? preset_info[i].name : preset_info[0].name;
+	return (i >= 0 && i < NUM_PRESETS) ? instruments[i].name : instruments[0].name;
 }
 
 [[nodiscard]] static inline Params base_params() {
@@ -259,11 +263,13 @@ static constexpr PresetInfo preset_info[NUM_PRESETS] = {
 	p.vib = 0.0f;
 	p.vib_hz = 5.0f;
 	p.vib_breath = 0.0f;
+	p.instrument = 0.0f;
 	return p;
 }
 
 [[nodiscard]] static inline Params preset_params(int i) {
 	Params p = base_params();
+	p.instrument = (real)(i >= 0 && i < NUM_INSTRUMENTS ? i : 0); // (preset i is instrument i)
 	switch (i) {
 	default:
 	case 0: // clarinet
@@ -430,8 +436,8 @@ static constexpr PresetInfo preset_info[NUM_PRESETS] = {
 // measured tuning correction per preset: samples of extra loop delay at notes 20 + 7k
 #include "voice_wind_tune.h"
 
-[[nodiscard]] static inline real tuning_corr(int preset, real note) {
-	const real* t = CORR[preset];
+[[nodiscard]] static inline real tuning_corr(int instrument, real note) {
+	const real* t = CORR[instrument];
 	real k = clampr((note - 20.0f) * (1.0f / 7.0f), 0.0f, 12.999f);
 	int i = (int)k;
 	real f = k - (real)i;
@@ -474,6 +480,7 @@ struct Engine {
 	strisy::VoiceControls vc[MAX_VOICES];
 	int nvoices;
 	int preset, kind;
+	int instrument;     // e.p.instrument as an index: instruments[], CORR[]
 	LargeMemory* large; // the host's (init)
 	real sr;
 	Params p;  // as set (presets, live edits)
@@ -510,18 +517,29 @@ static inline void reset_voice(Engine& e, int v, bool clear) {
 	}
 }
 
+// the instrument of e.p: its lowest note and tuning; a change of excitation kind silences the voices
+static inline void instrument_changed(Engine& e) {
+	const int k = (int)clampr(e.p.instrument, 0.0f, (real)(NUM_INSTRUMENTS - 1));
+	e.instrument = k;
+	e.low_note = instruments[k].low_note;
+	if (instruments[k].kind != e.kind) {
+		e.kind = instruments[k].kind;
+		for (int v = 0; v < MAX_VOICES; v++) reset_voice(e, v, true);
+	}
+}
+
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
+	e.ps = e.p;
+	instrument_changed(e);
+}
+
 // Select a preset (between blocks, any time). A change of excitation kind silences the voices.
 static inline void set_preset(Engine& e, int i) {
 	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	const int kind = preset_info[i].kind;
-	e.preset = i;
 	e.p = preset_params(i);
-	e.ps = e.p;
-	e.low_note = preset_info[i].low_note;
-	if (kind != e.kind) {
-		e.kind = kind;
-		for (int v = 0; v < MAX_VOICES; v++) reset_voice(e, v, true);
-	}
+	params_loaded(e, i);
 }
 
 // preset after init() (host renders: -DWIND_PRESET=n)
@@ -547,7 +565,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		e.vs[v].note_prev = 69.0f;
 		reset_voice(e, v, true);
 	}
-	e.kind = preset_info[DEFAULT_PRESET < NUM_PRESETS ? DEFAULT_PRESET : 0].kind;
+	e.kind = instruments[(int)preset_params(DEFAULT_PRESET).instrument].kind;
 	set_preset(e, DEFAULT_PRESET);
 }
 
@@ -831,7 +849,7 @@ static inline void process_voice(Engine& e, int v) {
 	}
 
 	// delay lengths: loop delay + filter phase delays + correction = period
-	const real corr = tuning_corr(e.preset, nt);
+	const real corr = tuning_corr(e.instrument, nt);
 	real D1, D2 = 1.0f;
 	if (kind == KIND_CYL) {
 		D1 = clampr(0.5f * P - tau - corr, 2.0f, (real)(MAIN_LEN - 5));
@@ -963,6 +981,7 @@ static constexpr ParamEntry param_table[] = {
     {{"vib", "mod", 0.0f, 0.6f, strisy::ParamKind::continuous}, &Params::vib}, // automatic vibrato, semitones
     {{"vib_hz", "mod", 2.0f, 8.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
     {{"vib_breath", "mod", 0.0f, 0.3f, strisy::ParamKind::continuous}, &Params::vib_breath},
+    {{"instrument", "bore", 0.0f, 8.0f, strisy::ParamKind::steps}, &Params::instrument}, // instruments[]: kind, lowest note, tuning
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
@@ -1045,7 +1064,9 @@ template <> struct EngineParams<wind::Engine> {
 	static constexpr int count = wind::NUM_LIVE_PARAMS;
 	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &wind::param_table[i].d : nullptr; }
 	static float* ptr(wind::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(wind::param_table[i].m)) : nullptr; }
-	static void changed(wind::Engine&, int) {} // the DSP follows e.p through its smoothed copy
+	static void changed(wind::Engine& e, int i) { // the DSP follows e.p through its smoothed copy
+		if (i >= 0 && i < count && wind::param_table[i].m == &wind::Params::instrument) wind::instrument_changed(e);
+	}
 };
 } // namespace strisy
 

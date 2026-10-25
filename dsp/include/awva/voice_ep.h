@@ -555,12 +555,17 @@ static inline void ratio_targets(const Params& P, real& beat, real& boct, real& 
 	tr = clampr(P.tratio, 2.0f, 40.0f);
 }
 
-static inline void set_preset(Engine& e, int i) {
-	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
-	e.p = preset_params(i);
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
 	derive(e);
 	ratio_targets(e.p, e.sm_beat, e.sm_boct, e.sm_bratio, e.sm_tratio);
+}
+
+static inline void set_preset(Engine& e, int i) {
+	if (i < 0 || i >= NUM_PRESETS) i = 0;
+	e.p = preset_params(i);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {

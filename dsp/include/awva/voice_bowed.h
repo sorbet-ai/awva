@@ -450,11 +450,16 @@ static inline void reset_voice(Engine& e, int v) {
 
 // Select a preset; callable between blocks at any time (after init). Sounding voices continue with
 // the new parameters (they glide in through the smoothed copy; every state stays bounded).
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
+	e.live = 0; // (a preset's values glide in as they always have)
+}
+
 static inline void set_preset(Engine& e, int i) {
 	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
 	e.p = preset_params(i);
-	e.live = 0; // (a preset's values glide in as they always have)
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {

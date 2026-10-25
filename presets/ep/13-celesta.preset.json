@@ -1,0 +1,33 @@
+{
+  "format": "awva-preset/1",
+  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "title": "celesta",
+  "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
+  "params": {
+    "hard": 2.2,
+    "vsens": 1.4,
+    "dyn": 0.8,
+    "decay": 2.5,
+    "dkey": 0.6,
+    "prompt": 0.2,
+    "bell": 0.3,
+    "bratio": 4,
+    "bdecay": 0.5,
+    "tick": 0.3,
+    "tratio": 10.7,
+    "beat": 0,
+    "bcents": 1.2,
+    "align": 0.6,
+    "tilt": 0.3,
+    "drive": 0.5,
+    "dig": 0.4,
+    "wurli": 0,
+    "damper": 0.8,
+    "gain": 2.57,
+    "grit": 0,
+    "tone": 14000,
+    "bodyhz": 2000,
+    "body": 0.3,
+    "wobble": 0
+  }
+}

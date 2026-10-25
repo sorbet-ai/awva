@@ -1,0 +1,33 @@
+{
+  "format": "awva-preset/1",
+  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "title": "fm80s",
+  "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
+  "params": {
+    "hard": 1.4,
+    "vsens": 1.4,
+    "dyn": 0.8,
+    "decay": 4.5,
+    "dkey": 0.8,
+    "prompt": 0.4,
+    "bell": 0.45,
+    "bratio": 14,
+    "bdecay": 0.6,
+    "tick": 0,
+    "tratio": 19,
+    "beat": 0.35,
+    "bcents": 7,
+    "align": 0.6,
+    "tilt": 0.3,
+    "drive": 0.6,
+    "dig": 0.2,
+    "wurli": 0,
+    "damper": 0.8,
+    "gain": 3.27,
+    "grit": 0,
+    "tone": 14000,
+    "bodyhz": 250,
+    "body": 0,
+    "wobble": 0
+  }
+}

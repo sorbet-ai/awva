@@ -174,9 +174,12 @@ target_compile_definitions(awva_performances PRIVATE _USE_MATH_DEFINES)
 target_compile_options(awva_performances PRIVATE -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter)
 
 # --- the SDK: MIDI in, MIDI files, the players, the shell ---------------------------------------------
+# sound presets (awva/preset.h): load and save by name; also in every engine's contract program
+add_library(awva_sdk_presets STATIC src/presets.cpp)
+target_link_libraries(awva_sdk_presets PUBLIC awva_sdk_options awva::dsp)
 add_library(awva_sdk STATIC src/midi_voices.cpp src/smf.cpp src/shell.cpp src/performance.cpp)
 target_include_directories(awva_sdk PRIVATE "${AWVA_HARNESS_DIR}")
-target_link_libraries(awva_sdk PUBLIC awva_sdk_options awva_effect_fx)
+target_link_libraries(awva_sdk PUBLIC awva_sdk_options awva_effect_fx awva_sdk_presets)
 
 add_executable(awva_render tools/awva_render.cpp)
 target_link_libraries(awva_render PRIVATE awva_sdk awva_engines awva_performances)
@@ -185,6 +188,10 @@ target_link_libraries(awva_render PRIVATE awva_sdk awva_engines awva_performance
 # the test docs.up_to_date fails when they are stale (run awva_docs on docs/ to update them)
 add_executable(awva_docs tools/awva_docs.cpp)
 target_link_libraries(awva_docs PRIVATE awva_sdk awva_engines)
+
+# the factory presets as files (presets/): awva_presets export presets
+add_executable(awva_presets tools/awva_presets.cpp)
+target_link_libraries(awva_presets PRIVATE awva_sdk awva_engines)
 
 # --- render_custom: one engine and one performance with extra compiler flags ---------------------------
 # (tools/harness/render_strisy.sh configures these). The performance is compiled into the engine's
@@ -260,9 +267,10 @@ include("${AWVA_DOCTEST_DIR}/cmake/doctest.cmake")
 # the contract suite on every engine: one test program per engine, linked to that engine's library
 foreach(v IN LISTS AWVA_ENGINES)
   add_executable(awva_engine_${v}_contract tests/main.cpp tests/contract.cpp)
-  target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v})
+  target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v}
+    "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
   target_include_directories(awva_engine_${v}_contract PRIVATE "${AWVA_DOCTEST_DIR}")
-  target_link_libraries(awva_engine_${v}_contract PRIVATE awva_engine_${v} awva_sdk_options)
+  target_link_libraries(awva_engine_${v}_contract PRIVATE awva_engine_${v} awva_sdk_options awva_sdk_presets)
   doctest_discover_tests(awva_engine_${v}_contract TEST_PREFIX "contract.${v}." PROPERTIES LABELS "contract;unit")
 endforeach()
 

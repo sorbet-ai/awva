@@ -37,6 +37,7 @@ struct EngineEntry {
 	const ParamDesc* (*param_desc)(int);
 	float* (*param)(void*, int);
 	bool (*set_param)(void*, int, float);
+	void (*load_params)(void*, const float* values, int index); // every value, as a preset (adapter.h)
 };
 
 struct EffectEntry {
@@ -97,6 +98,9 @@ public:
 	[[nodiscard]] const ParamDesc* param_desc(int i) const { return e_->param_desc(i); }
 	[[nodiscard]] float* param(int i) { return e_->param(p_, i); }
 	bool set_param(int i, float v) { return e_->set_param(p_, i, v); }
+	// every parameter's value (num_params() of them, clamped already) as a preset sets them: index
+	// is the factory preset, -1 a preset by name (presets.h)
+	void load_params(const float* values, int index) { e_->load_params(p_, values, index); }
 	// the hero parameters of the current preset (its own, or the engine's)
 	[[nodiscard]] const dsp::Heroes& heroes() const { return dsp::heroes_of(*e_->info, preset() >= 0 ? preset_name(preset()) : nullptr); }
 

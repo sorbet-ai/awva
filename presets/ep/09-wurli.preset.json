@@ -1,0 +1,33 @@
+{
+  "format": "awva-preset/1",
+  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "title": "wurli",
+  "heroes": ["wurli", "hard", "decay", "drive", "grit", "tone", "wobble", "dyn"],
+  "params": {
+    "hard": 1.1,
+    "vsens": 1.4,
+    "dyn": 0.8,
+    "decay": 3.2,
+    "dkey": 0.7,
+    "prompt": 0.4,
+    "bell": 0.08,
+    "bratio": 6.4,
+    "bdecay": 0.4,
+    "tick": 0.05,
+    "tratio": 19,
+    "beat": 0,
+    "bcents": 1.2,
+    "align": 0.72,
+    "tilt": 0.3,
+    "drive": 2,
+    "dig": 0.4,
+    "wurli": 1,
+    "damper": 1.4,
+    "gain": 2.8,
+    "grit": 0.2,
+    "tone": 6500,
+    "bodyhz": 1100,
+    "body": 0.7,
+    "wobble": 0
+  }
+}

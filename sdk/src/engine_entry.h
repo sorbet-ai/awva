@@ -35,6 +35,7 @@ template <dsp::VoiceEngine E> [[nodiscard]] const EngineEntry& entry_of(const ch
 	    [](int i) { return E::param_desc(i); },
 	    [](void* p, int i) { return static_cast<Box*>(p)->e.param(i); },
 	    [](void* p, int i, float v) { return static_cast<Box*>(p)->e.set_param(i, v); },
+	    [](void* p, const float* v, int index) { static_cast<Box*>(p)->e.load_params(v, index); },
 	};
 	return entry;
 }

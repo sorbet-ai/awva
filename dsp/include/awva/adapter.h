@@ -38,7 +38,8 @@
 #define AWVA_ENGINE_PRESETS(ns) \
 	static constexpr int num_presets = ::ns::NUM_PRESETS; \
 	[[nodiscard]] static const char* preset_name(int i) { return ::ns::preset_name(i); } \
-	static void set_preset(Engine& e, int i) { ::ns::set_preset(e, i); }
+	static void set_preset(Engine& e, int i) { ::ns::set_preset(e, i); } \
+	static void params_loaded(Engine& e, int i) { ::ns::params_loaded(e, i); }
 
 namespace awva {
 
@@ -153,6 +154,19 @@ template <class T> struct Adapter {
 	[[nodiscard]] int preset() const {
 		if constexpr (has_presets) return e.preset;
 		else return -1;
+	}
+
+	// every parameter's value at once (values[num_params], in their order), as a preset does: no
+	// glide from the last values where the engine glides a preset in, the preset index (-1: a
+	// preset by name, preset.h). The values are taken as they are (the caller clamps them).
+	void load_params(const float* values, int index) {
+		for (int k = 0; k < Params::count; k++) *Params::ptr(e, k) = values[k];
+		if constexpr (has_presets) {
+			T::params_loaded(e, index);
+		} else {
+			(void)index;
+			for (int k = 0; k < Params::count; k++) Params::changed(e, k);
+		}
 	}
 
 	static constexpr int num_params = Params::count;

@@ -1,0 +1,33 @@
+{
+  "format": "awva-preset/1",
+  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "title": "dyno",
+  "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
+  "params": {
+    "hard": 1.6,
+    "vsens": 1.4,
+    "dyn": 0.8,
+    "decay": 7,
+    "dkey": 0.65,
+    "prompt": 0.35,
+    "bell": 0.25,
+    "bratio": 7,
+    "bdecay": 1.1,
+    "tick": 0.15,
+    "tratio": 19,
+    "beat": 0.1,
+    "bcents": 2.5,
+    "align": 0.62,
+    "tilt": 0.3,
+    "drive": 0.9,
+    "dig": 0.4,
+    "wurli": 0,
+    "damper": 1,
+    "gain": 2.62,
+    "grit": 0.05,
+    "tone": 12000,
+    "bodyhz": 3200,
+    "body": 0.5,
+    "wobble": 0
+  }
+}

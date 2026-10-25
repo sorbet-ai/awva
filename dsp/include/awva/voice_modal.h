@@ -60,7 +60,7 @@ struct Partial {
 	float t60;   // decay time (s) at note 60
 	float bow;   // rubbed level (wine glass only)
 };
-struct Preset {
+struct Model {
 	const char* name;
 	int n;         // number of partials
 	float alpha;   // T60 ~ (f/f_C4)^-alpha over the keyboard
@@ -73,7 +73,9 @@ struct Preset {
 
 static constexpr int NUM_PRESETS = 6;
 
-static constexpr Preset presets[NUM_PRESETS] = {
+// the instrument models: the partials, their tuning and decays; the parameter model picks one
+static constexpr int NUM_MODELS = 6;
+static constexpr Model models[NUM_MODELS] = {
     {// aluminium bar tuned 1 : 4 : 10, resonator tube; weak torsional and higher bending modes
         "vibraphone", 7, 0.8f, 0.87f, 1.0f, 1.0f, 0.0f, {{1.000f, 1.00f, 0.0f, 9.0f, 0}, {4.000f, 0.32f, 1.2f, 2.2f, 0}, {10.00f, 0.11f, 2.0f, 0.7f, 0}, {2.760f, 0.025f, 1.5f, 0.5f, 0}, {6.250f, 0.025f, 2.0f, 0.30f, 0}, {13.50f, 0.02f, 2.5f, 0.15f, 0}, {17.80f, 0.03f, 2.5f, 0.15f, 0}}},
     {// rosewood bar tuned 1 : 3.96 : 9.86 (Rossing, E3 bar), resonator; short woody torsional modes
@@ -90,7 +92,7 @@ static constexpr Preset presets[NUM_PRESETS] = {
 };
 
 [[nodiscard]] static inline const char* preset_name(int i) {
-	return (i >= 0 && i < NUM_PRESETS) ? presets[i].name : presets[0].name;
+	return (i >= 0 && i < NUM_PRESETS) ? models[i].name : models[0].name;
 }
 
 // preset after init() (host renders: -DMODAL_PRESET=n)
@@ -154,6 +156,7 @@ struct Params {
 	float tremthr;   // trem: key pressure where the pressure tremolo starts
 	float rub;       // rub: rubbed level per unit pressure (wine glass; 0 = off)
 	float rubnoise;  // rub: noise share of the rubbed excitation
+	float model;     // model: the instrument (models[]: its partials and decays)
 };
 static constexpr int NUM_PARAMS = (int)(sizeof(Params) / sizeof(float));
 
@@ -178,6 +181,7 @@ static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
     {"tremthr", "trem", 0.2f, 1.2f, strisy::ParamKind::continuous},
     {"rub", "rub", 0.0f, 1.0f, strisy::ParamKind::continuous},
     {"rubnoise", "rub", 0.0f, 0.3f, strisy::ParamKind::continuous},
+    {"model", "model", 0.0f, 5.0f, strisy::ParamKind::steps},
 };
 
 struct VoiceState {
@@ -203,7 +207,7 @@ struct Engine {
 	strisy::VoiceControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	const Preset* pr;
+	const Model* pr;
 	real sr, inv_sr, w_hz;   // w_hz = 2 pi / sr
 	Params prm;              // live parameters
 	real inv_span, inv_lift; // derived from prm
@@ -290,41 +294,56 @@ static inline void params_changed(Engine& e) {
 	}
 	e.inv_span = 1.0f / e.prm.span;
 	e.inv_lift = 1.0f / e.prm.lift;
-	const Preset& P = *e.pr;
+	e.pr = &models[(int)e.prm.model];
+	const Model& P = *e.pr;
 	for (int k = 0; k < NMODES; k++)
 		e.sig_ref[k] = k < P.n ? 6.9077553f * (1.0f + e.prm.hfdamp * (P.p[k].ratio - 1.0f)) / (P.p[k].t60 * e.prm.decay) : 0.0f;
 }
 
 // Select a preset (sets all parameters); callable between blocks at any time. Sounding voices fade
 // out over one block (their partials would otherwise jump to the new instrument's ratios).
-static inline void set_preset(Engine& e, int i) {
+// preset i's parameters: model i at its own level, decay tracking, damper, tremolo and rub
+[[nodiscard]] static inline Params preset_params(int i) {
 	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
-	e.pr = &presets[i];
-	const Preset& P = *e.pr;
-	e.prm.level = P.gain;
-	e.prm.thresh = 0.03f;
-	e.prm.span = 0.7f;
-	e.prm.hard = 0.6f;
-	e.prm.hardvel = 0.4f;
-	e.prm.tilt = 0.2f;
-	e.prm.mute = 0.3f;
-	e.prm.upper = 1.0f;
-	e.prm.decay = 1.0f;
-	e.prm.keytrack = P.alpha;
-	e.prm.hfdamp = 0.0f;
-	e.prm.damper = P.damper;
-	e.prm.lift = 0.15f;
-	e.prm.pedal = 1.0f;
-	e.prm.trem = P.tremolo > 0.0f ? 1.0f : 0.0f;
-	e.prm.tremrate = 5.0f;
-	e.prm.tremdepth = 0.6f;
-	e.prm.tremthr = 0.7f;
-	e.prm.rub = P.rub;
-	e.prm.rubnoise = 0.05f;
+	const Model& P = models[i];
+	Params q;
+	q.level = P.gain;
+	q.thresh = 0.03f;
+	q.span = 0.7f;
+	q.hard = 0.6f;
+	q.hardvel = 0.4f;
+	q.tilt = 0.2f;
+	q.mute = 0.3f;
+	q.upper = 1.0f;
+	q.decay = 1.0f;
+	q.keytrack = P.alpha;
+	q.hfdamp = 0.0f;
+	q.damper = P.damper;
+	q.lift = 0.15f;
+	q.pedal = 1.0f;
+	q.trem = P.tremolo > 0.0f ? 1.0f : 0.0f;
+	q.tremrate = 5.0f;
+	q.tremdepth = 0.6f;
+	q.tremthr = 0.7f;
+	q.rub = P.rub;
+	q.rubnoise = 0.05f;
+	q.model = (float)i;
+	return q;
+}
+
+// e.prm, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name):
+// sounding voices fade out over one block
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
 	params_changed(e);
 	for (int v = 0; v < MAX_VOICES; v++)
 		if (e.vs[v].active) e.vs[v].fade = 1;
+}
+
+static inline void set_preset(Engine& e, int i) {
+	if (i < 0 || i >= NUM_PRESETS) i = 0;
+	e.prm = preset_params(i);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {
@@ -410,7 +429,7 @@ static inline void run_modes(VoiceState& s, const real* __restrict__ x, real* __
 static inline void process_voice(Engine& e, int v, real trem_lfo) {
 	VoiceState& s = e.vs[v];
 	const strisy::VoiceControls c = e.vc[v];
-	const Preset& P = *e.pr;
+	const Model& P = *e.pr;
 	real* __restrict__ out = e.out;
 	const real pres = clampr(c.pres, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
@@ -684,7 +703,14 @@ template <> struct EngineParams<modal::Engine> {
 	static constexpr int count = modal::NUM_PARAMS;
 	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &modal::param_desc[i] : nullptr; }
 	static float* ptr(modal::Engine& e, int i) { return (i >= 0 && i < count) ? &e.prm.level + i : nullptr; }
-	static void changed(modal::Engine& e, int) { modal::params_changed(e); }
+	static void changed(modal::Engine& e, int) {
+		const modal::Model* was = e.pr;
+		modal::params_changed(e);
+		if (e.pr != was) { // another instrument: the sounding voices fade out (their partials would jump)
+			for (int v = 0; v < modal::MAX_VOICES; v++)
+				if (e.vs[v].active) e.vs[v].fade = 1;
+		}
+	}
 };
 } // namespace strisy
 

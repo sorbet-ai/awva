@@ -1,0 +1,29 @@
+{
+  "format": "awva-preset/1",
+  "engine": {"id": "modal", "params_hash": "77b3f666"},
+  "title": "marimba",
+  "heroes": ["hard", "decay", "upper", "keytrack", "hfdamp", "damper", "tremdepth", "rub"],
+  "params": {
+    "level": 1.83,
+    "thresh": 0.03,
+    "span": 0.7,
+    "hard": 0.6,
+    "hardvel": 0.4,
+    "tilt": 0.2,
+    "mute": 0.3,
+    "upper": 1,
+    "decay": 1,
+    "keytrack": 0.9,
+    "hfdamp": 0,
+    "damper": 0.6,
+    "lift": 0.15,
+    "pedal": 1,
+    "trem": 0,
+    "tremrate": 5,
+    "tremdepth": 0.6,
+    "tremthr": 0.7,
+    "rub": 0,
+    "rubnoise": 0.05,
+    "model": 1
+  }
+}
