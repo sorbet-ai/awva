@@ -55,6 +55,15 @@
  *              a little flatter, the edge offset moves), back rolls out
  *   tilt sideways  pitch bend (the firmware moves the note; the pipe follows)
  *   shake      breath vibrato
+ *   ob_amt     (0 by default) overblowing: above ob_thr of the breath the player stops shortening the
+ *              lip-to-edge distance as the jet speeds up, its travel time falls and the next mode of
+ *              the pipe takes over (an octave from the first register), with the jet's hysteresis
+ *
+ * The range (v3): inside [range_lo, range_hi] the player is the fitted one, unchanged. Outside it
+ * the player keeps the pressure, jet phase and bore losses of the range's edge; above it the note
+ * plays on the fundamental of a short pipe, the jet's growth set for the loop's real losses (the
+ * delay lines' interpolations) with g_out of margin, its level out_db to meet the edge. Past the
+ * pipe's longest (G2) and the jet's highest (6 kHz) the tone fades into the breath over 3 semitones.
  *
  * Every element is passive or bounded: the jet flow is bounded by 2 b H U, the pipe loop gain is
  * < 0.98, the window flow is solved implicitly; a per-voice guard resets a voice whose state is
@@ -108,9 +117,11 @@ static constexpr real JMAX = (real)(JLEN - 3);
 static constexpr real RHO = 1.2f;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
-static constexpr real CP = 0.4f;       // jet convection velocity re U
-static constexpr real SM = 1.0e-4f;    // embouchure window area (m^2)
-static constexpr real NOTE_LO = 43.0f; // below: an octave up (the pipe's delay lines)
+static constexpr real CP = 0.4f;        // jet convection velocity re U
+static constexpr real SM = 1.0e-4f;     // embouchure window area (m^2)
+static constexpr real NOTE_LO = 43.0f;  // the longest pipe the delay lines hold
+static constexpr real NOTE_HI = 114.4f; // the highest tone the jet and the pipe make (6 kHz)
+static constexpr real LIMIT_ST = 3.0f;  // beyond either, the tone fades into the breath over this
 
 struct LargeMemory {
 	alignas(32) float bore[MAX_VOICES][2][BLEN];
@@ -159,6 +170,15 @@ struct Params {
 	// fingering
 	real low_note; // the instrument's lowest note (first register from here)
 	real overblow; // 1: second and third octaves overblown, 0: every note on the fundamental
+	real range_lo; // the instrument's range: inside it the player as fitted; outside it the player
+	real range_hi; // keeps the pressure, jet phase and bore losses of the range's edge, the notes
+	               // above play on the fundamental of a short pipe, and the jet's growth is set for
+	               // the loop's real losses (the delay lines' interpolation) with g_out of margin
+	real g_out;    // the loop gain at the lightest touch above the range (below it: g_soft)
+	real out_db;   // the level above the range re the fitted player's (dB), to meet the range's edge
+	real ob_amt;   // overblowing: above ob_thr of the breath the player stops shortening the lip
+	real ob_thr;   // distance with the jet's speed, the jet's travel time falls and the next mode
+	               // takes over (0: the player always follows, as fitted)
 	// radiation
 	real mouth;   // radiation from the embouchure hole
 	real end;     // from the open end / tone holes
@@ -221,6 +241,12 @@ static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only f
 	p.cover_hz = -0.3f;
 	p.low_note = 60.0f;
 	p.overblow = 1.0f;
+	p.range_lo = 59.0f;
+	p.range_hi = 98.0f;
+	p.g_out = 3.0f;
+	p.out_db = -11.0f;
+	p.ob_amt = 0.0f;
+	p.ob_thr = 0.7f;
 	p.mouth = 1.0f;
 	p.end = 0.013091f;
 	p.dipole = 1.4672f;
@@ -250,6 +276,9 @@ static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only f
 	Params p = flute_params();
 	p.bore_mm = 13.0f;
 	p.low_note = 55.0f;
+	p.range_lo = 55.0f;
+	p.range_hi = 93.0f;
+	p.out_db = -5.0f;
 	p.p_soft = 463.326f;
 	p.p_loud = 2162.83f;
 	p.p_reg = 0.968871f;
@@ -298,6 +327,8 @@ static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only f
 	Params p = flute_params();
 	p.bore_mm = 5.4f;
 	p.low_note = 74.0f;
+	p.range_lo = 74.0f;
+	p.range_hi = 103.0f; // (its top notes, to C8, outside: they speak at the lightest touch so)
 	p.jet_w *= 0.6f;
 	p.jet_h *= 0.7f;
 	p.cut_hz = rmin(p.cut_hz * 1.6f, 12000.0f);
@@ -508,6 +539,11 @@ static inline void set_preset(Engine& e, int i) {
 	if (i < 0 || i >= NUM_PRESETS) i = 0;
 	e.preset = i;
 	e.p = preset_params(i);
+#ifdef FLUTE_RANGE_ALL
+	// (proof builds: every note inside the range, the v2 engine's behaviour everywhere)
+	e.p.range_lo = 0.0f;
+	e.p.range_hi = 132.0f;
+#endif
 	e.ps = e.p;
 	update_derived(e);
 }
@@ -565,6 +601,13 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	real note = clampr(cc.note, 0.0f, 132.0f);
+	// outside the range, past the pipe's and the jet's limits the tone fades into the breath (the
+	// pitch kept); a range wider than the pipe plays an octave up below it, as v2 did
+	real lim = 1.0f;
+	if (note < P.range_lo || note > P.range_hi) {
+		lim = clampr((note - NOTE_LO) * (1.0f / LIMIT_ST), 0.0f, 1.0f) * clampr((NOTE_HI - note) * (1.0f / LIMIT_ST), 0.0f, 1.0f);
+		note = clampr(note, NOTE_LO, NOTE_HI + LIMIT_ST);
+	}
 	while (note < NOTE_LO) note += 12.0f;
 	const bool held = pres > 0.0f;
 	bool start = false;
@@ -622,9 +665,15 @@ static inline void process_voice(Engine& e, int vi) {
 	int mode;
 	real bnote;
 	fingering(note, P.low_note, P.overblow >= 0.5f, mode, bnote);
-	const real fs = rmin(note_freq(note), 0.3f * e.sr);  // sounding
-	const real f1 = rmin(note_freq(bnote), 0.3f * e.sr); // the bore's fundamental
-	const real oct = (note - 72.0f) * (1.0f / 12);       // octaves re C5
+	// outside the instrument's range: the edge's player; above it the fundamental of a short pipe
+	const bool outr = note < P.range_lo || note > P.range_hi;
+	if (note > P.range_hi) {
+		mode = 1;
+		bnote = note;
+	}
+	const real fs = rmin(note_freq(note), 0.3f * e.sr);                                            // sounding
+	const real f1 = rmin(note_freq(bnote), 0.3f * e.sr);                                           // the bore's fundamental
+	const real oct = ((outr ? clampr(note, P.range_lo, P.range_hi) : note) - 72.0f) * (1.0f / 12); // octaves re C5
 	const real P1 = e.sr / f1;
 	// bore: the open end's reflection (low-pass at the lattice cutoff, the round-trip loss) and the
 	// end corrections' allpass
@@ -662,7 +711,8 @@ static inline void process_voice(Engine& e, int vi) {
 
 	// radiation
 	const strisy::SvfCoef tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 500.0f, 16000.0f), clampr(P.tone_q, 0.5f, 4.0f));
-	const real gain = clampr(P.gain, 0.0f, 100.0f) * 1e-3f;
+	real gain = clampr(P.gain, 0.0f, 100.0f) * 1e-3f;
+	if (note > P.range_hi) gain *= exp2s(clampr(P.out_db, -24.0f, 6.0f) * (1.0f / 6.0206f));
 
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
 	if (vpres > 0.1f) s.vneg = 0.0f;
@@ -732,7 +782,13 @@ static inline void process_voice(Engine& e, int vi) {
 	const real th0 = clampr(P.theta * exp2s(P.theta_reg * oct) - ph_j, 0.02f, 2.0f);
 	const real Wj = clampr(th0 / fs * CP * Umid, 0.0005f, 0.03f); // the lip-to-edge distance
 	const real uratio = Umid / U;
-	const real th = clampr(th0 * exp2s((1.0f - clampr(P.w_track, 0.0f, 1.0f)) * log2s(rmax(uratio, 1e-3f))), 0.02f, 3.0f);
+	real th = clampr(th0 * exp2s((1.0f - clampr(P.w_track, 0.0f, 1.0f)) * log2s(rmax(uratio, 1e-3f))), 0.02f, 3.0f);
+	if (P.ob_amt > 0.0f) {
+		// overblowing: above ob_thr the lip distance stays, the faster jet's travel shortens
+		const real pth = p_lo + (p_hi - p_lo) * clampr(P.ob_thr, 0.0f, 1.5f);
+		const real Uth = fsqrt(2.0f * pth / RHO) + 0.05f;
+		if (U > Uth) th = clampr(th * exp2s(-2.0f * clampr(P.ob_amt, 0.0f, 1.0f) * log2s(U / Uth)), 0.02f, 3.0f);
+	}
 	const real tau = th / fs; // seconds
 	const real jd_t = clampr(tau * e.sr, 1.0f, JMAX);
 	// the deflection at the edge follows the acoustic displacement at the lips (Fletcher), grown
@@ -755,6 +811,17 @@ static inline void process_voice(Engine& e, int vi) {
 		const real yres = (1.0f + ge) / ((1.0f - ge) * zw);
 		const real unit = RHO * 1.2732395f * fsqrt(2.0f * hlo * Wj) / SM * (0.4f * hlo * Hj * Ulo) * sech2 * (0.5f / (0.4f * hlo)) * hjet * yres;
 		growth = clampr(P.g_soft, 0.1f, 50.0f) / rmax(unit, 1e-9f) * exp2s(clampr(P.amp_loud, -3.0f, 3.0f) * rmin(breath, 1.0f));
+		if (outr) {
+			// the delay lines' linear interpolations lose |1 - f + f e^{-iw}| at the note; the margin g_out
+			const real cw = (1.0f - ts * ts) / (1.0f + ts * ts);
+			auto il = [cw](real d) {
+				const real fr = d - (real)(int)d;
+				return fsqrt(rmax(1.0f - 2.0f * fr * (1.0f - fr) * (1.0f - cw), 1e-4f));
+			};
+			const real loss = il(jd_t) * il(d1t) * il(d2t);
+			const real gt = note > P.range_hi ? rmax(P.g_out, P.g_soft) : P.g_soft;
+			growth *= gt / clampr(P.g_soft, 0.1f, 50.0f) / loss * lim;
+		}
 		growth *= 1.0f + clampr(P.att_gain, 0.0f, 40.0f) * s.att;
 		growth = rmin(growth, 1e6f);
 	}
@@ -1012,6 +1079,12 @@ static constexpr ParamEntry param_table[] = {
     {{"cover_hz", "bore", -2.0f, 2.0f, C_}, &Params::cover_hz},
     {{"low_note", "fingering", 24.0f, 96.0f, C_}, &Params::low_note},
     {{"overblow", "fingering", 0.0f, 1.0f, T_}, &Params::overblow},
+    {{"range_lo", "fingering", 24.0f, 96.0f, C_}, &Params::range_lo},
+    {{"range_hi", "fingering", 48.0f, 120.0f, C_}, &Params::range_hi},
+    {{"g_out", "fingering", 1.0f, 6.0f, C_}, &Params::g_out},
+    {{"out_db", "fingering", -24.0f, 6.0f, C_}, &Params::out_db},
+    {{"ob_amt", "jet", 0.0f, 1.0f, C_}, &Params::ob_amt},
+    {{"ob_thr", "jet", 0.0f, 1.5f, C_}, &Params::ob_thr},
     {{"mouth", "radiation", 0.0f, 4.0f, C_}, &Params::mouth},
     {{"end", "radiation", 0.0f, 4.0f, C_}, &Params::end},
     {{"dipole", "radiation", 0.0f, 4.0f, C_}, &Params::dipole},
