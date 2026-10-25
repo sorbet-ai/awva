@@ -48,7 +48,10 @@ public:
 	// MIDI 2.0 in: a UMP packet (type 4, or MIDI 1.0 in UMP, type 2), the same way
 	bool ump(const uint32_t* words, int offset = 0, int32_t note_id = -1);
 	// the host's ids of the notes that ended (released, then the engine's tail passed or it went
-	// idle, or another note took their key): how many were written, at most max
+	// idle, or another note took their key): how many were written, at most max. Every Note On's
+	// id comes back exactly once if this is called after each process() until it returns less
+	// than max, with at most TimedMidi::MAX_EVENTS messages between two process() calls
+	// (timed_midi.h)
 	int ended_notes(int32_t* ids, int max);
 
 	// or the key signals directly (a Striso over USB, OSC, a test): from now on these, not MIDI;

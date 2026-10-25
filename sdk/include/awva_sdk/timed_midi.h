@@ -13,6 +13,17 @@
 // -1: none). The note is tracked by (channel, key) until it has ended: released and then either
 // its tail (the engine's tail_seconds) has passed or the engine is idle, or another note took
 // its key. ended() hands out the ids of the notes that ended (CLAP NOTE_END).
+//
+// Every Note On's id comes back from ended() exactly once (ids on other events are ignored; a
+// MIDI 1.0 Note On of velocity 0 is a Note Off). The table and the list below are fixed, so:
+// - NOTES notes are tracked at once. A Note On with an id when all are taken ends the oldest
+//   tracked note (the oldest released one, else the oldest held one: MIDI in holds 16 notes, so
+//   by then that one has long been dropped) and its id goes to the ended list at once.
+// - A Note On with an id that can't be queued (the queue is full) ends at once the same way.
+// - The ended list holds ENDED ids; it can't fill if the host calls ended() after each block
+//   until it returns less than max, and gives at most MAX_EVENTS events a block (a block feeds
+//   at most QUEUE events, so at most QUEUE + MAX_EVENTS ids go to it between two calls). Past
+//   that (a host that doesn't drain it) further ids are lost, never written out of bounds.
 #ifndef AWVA_SDK_TIMED_MIDI_H_
 #define AWVA_SDK_TIMED_MIDI_H_
 
@@ -29,8 +40,10 @@ namespace awva::sdk {
 
 class TimedMidi {
 public:
-	static constexpr int QUEUE = 1024; // events waiting for their step
-	static constexpr int NOTES = 64;   // notes with a host id, tracked until they end
+	static constexpr int QUEUE = 1024;               // events waiting for their step
+	static constexpr int NOTES = 64;                 // notes with a host id, tracked until they end
+	static constexpr int MAX_EVENTS = 1024;          // events a block, for the guarantee above
+	static constexpr int ENDED = QUEUE + MAX_EVENTS; // ids ended at once, until ended() hands them out
 
 	explicit TimedMidi(int voices, int sample_rate) :
 	    midi_(voices), sr_(sample_rate) {}
@@ -69,6 +82,10 @@ public:
 	// engine has no voice sounding
 	int ended(int32_t* ids, int max, uint64_t tail_frames, bool idle) {
 		int n = 0;
+		for (; n < max && done_n_ > 0; done_n_--) { // the ones ended at once, first
+			ids[n++] = done_[done_head_];
+			done_head_ = (done_head_ + 1) % ENDED;
+		}
 		for (Note& t : notes_) {
 			if (n >= max) break;
 			if (t.id < 0 || !t.released) continue;
@@ -96,12 +113,30 @@ private:
 		uint8_t channel = 0, key = 0;
 		bool released = false, taken = false;
 		uint64_t released_at = 0;
+		uint64_t age = 0; // (its Note On's order)
 	};
 
 	bool push(const Event& e) {
-		if (queued_ == QUEUE) return false;
+		if (queued_ == QUEUE) {
+			if (e.note_id >= 0 && starts_note(e)) end_now(e.note_id); // (it will never sound)
+			return false;
+		}
 		queue_[queued_++] = e;
 		return true;
+	}
+
+	// a sounding Note On (MIDI 1.0 bytes, MIDI 1.0 in UMP, MIDI 2.0)
+	static bool starts_note(const Event& e) {
+		if (e.len > 0) return (e.bytes[0] & 0xf0) == 0x90 && e.len > 2 && e.bytes[2] > 0;
+		if ((e.w[0] >> 28) == 2) return ((e.w[0] >> 20) & 0xf) == 0x9 && (e.w[0] & 0x7f) > 0;
+		return ((e.w[0] >> 20) & 0xf) == 0x9;
+	}
+
+	// an id to hand out at the next ended()
+	void end_now(int32_t id) {
+		if (done_n_ == ENDED) return; // (the host doesn't drain the list: see above)
+		done_[(done_head_ + done_n_) % ENDED] = id;
+		done_n_++;
 	}
 
 	void feed(const Event& e) {
@@ -141,12 +176,20 @@ private:
 					}
 				}
 		}
-		if (on && e.note_id >= 0)
+		if (on && e.note_id >= 0) {
+			Note* slot = nullptr;
 			for (Note& t : notes_)
 				if (t.id < 0) {
-					t = Note{e.note_id, ch, d1, false, false, 0};
+					slot = &t;
 					break;
 				}
+			if (!slot) { // all taken: the oldest released note ends now, else the oldest held one
+				for (Note& t : notes_)
+					if (!slot || (t.released && !slot->released) || (t.released == slot->released && t.age < slot->age)) slot = &t;
+				end_now(slot->id);
+			}
+			*slot = Note{e.note_id, ch, d1, false, false, 0, ages_++};
+		}
 	}
 
 	MidiVoices midi_;
@@ -155,6 +198,9 @@ private:
 	int queued_ = 0;
 	uint64_t steps_ = 0, now_ = 0;
 	Note notes_[NOTES];
+	uint64_t ages_ = 0;
+	int32_t done_[ENDED];
+	int done_head_ = 0, done_n_ = 0;
 };
 
 } // namespace awva::sdk

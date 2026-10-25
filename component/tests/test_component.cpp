@@ -368,3 +368,92 @@ TEST_CASE("ended: a note's host id comes back once it has ended (its tail, or th
 	REQUIRE(c.ended(dll.in.state, ids, 8) == 1);
 	CHECK(ids[0] == 102);
 }
+
+namespace {
+
+// the notes' host ids that come back: ended() drained after every block, as the guarantee asks
+struct Ids {
+	std::vector<int> count; // by id
+	explicit Ids(int n) :
+	    count(static_cast<size_t>(n), 0) {}
+	int drain(const nsc_component& c, void* state) {
+		int32_t ids[64];
+		int got = 0, n = 0;
+		do {
+			n = c.ended(state, ids, 64);
+			for (int i = 0; i < n; i++) {
+				REQUIRE(ids[i] >= 0);
+				REQUIRE(ids[i] < static_cast<int>(count.size()));
+				count[static_cast<size_t>(ids[i])]++;
+			}
+			got += n;
+		} while (n == 64);
+		return got;
+	}
+	[[nodiscard]] bool each_once() const {
+		return std::all_of(count.begin(), count.end(), [](int k) { return k == 1; });
+	}
+};
+
+nsc_event ump_note(uint32_t frame, bool on, int i, int32_t id) {
+	const uint32_t ch = static_cast<uint32_t>(i % 16), key = static_cast<uint32_t>(i / 16);
+	return {frame, id, {(on ? 0x40900000u : 0x40800000u) | ch << 16 | key << 8, on ? 0xc0000000u : 0x40000000u, 0, 0}};
+}
+
+} // namespace
+
+TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked at once: every id back exactly once") {
+	Loaded dll("va"); // (its tail is long: the released notes stay tracked, the table overflows)
+	const nsc_component& c = dll.c();
+	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	constexpr int N = 200, EVERY = 6, HOLD = 600; // a note every 6 blocks, held 600: 100 at once
+	static_assert(N > NSC_MAX_NOTE_IDS && HOLD / EVERY > NSC_MAX_NOTE_IDS);
+	Ids back(N);
+	float buf[NSC_BLOCK];
+	float* o[1] = {buf};
+	int early = 0;
+	const int last = (N - 1) * EVERY + HOLD;
+	for (int b = 0; b <= last + 15 * SR / NSC_BLOCK; b++) {
+		std::vector<nsc_event> ev;
+		if (b % EVERY == 0 && b / EVERY < N) ev.push_back(ump_note(static_cast<uint32_t>(b % NSC_BLOCK), true, b / EVERY, b / EVERY));
+		if (b >= HOLD && (b - HOLD) % EVERY == 0 && (b - HOLD) / EVERY < N) ev.push_back(ump_note(3, false, (b - HOLD) / EVERY, -1));
+		c.process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+		const int got = back.drain(c, dll.in.state);
+		if (b < HOLD) early += got;
+		if (b > last && c.active_voices(dll.in.state) == 0 && back.each_once()) break;
+	}
+	CHECK(early > 0); // (the overflow: the oldest ended before any release)
+	CHECK(back.each_once());
+	CHECK(back.drain(c, dll.in.state) == 0);
+}
+
+TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest once each") {
+	Loaded dll("va");
+	const nsc_component& c = dll.c();
+	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	constexpr int Q = 1024, MORE = 500; // the queue's size, then more than it takes
+	Ids back(Q + MORE);
+	float buf[NSC_BLOCK];
+	float* o[1] = {buf};
+	std::vector<nsc_event> ev;
+	for (int i = 0; i < Q; i++) ev.push_back(ump_note(31, true, i, i)); // block 0, frame 31: waits for the step at 96
+	c.process(dll.in.state, ev.data(), Q, o);
+	CHECK(back.drain(c, dll.in.state) == 0);
+	ev.clear();
+	for (int i = Q; i < Q + MORE; i++) ev.push_back(ump_note(31, true, i, i)); // block 1: the queue is full
+	c.process(dll.in.state, ev.data(), MORE, o);
+	CHECK(back.drain(c, dll.in.state) == MORE); // (they will never sound)
+	for (int b = 2; b < 8; b++) {
+		c.process(dll.in.state, nullptr, 0, o); // the step at 96 takes the 1024: all but 64 end at once
+		back.drain(c, dll.in.state);
+	}
+	ev.clear();
+	for (int i = 0; i < Q; i++) ev.push_back(ump_note(0, false, i, -1));
+	c.process(dll.in.state, ev.data(), Q, o);
+	for (int b = 0; b < 15 * SR / NSC_BLOCK && !back.each_once(); b++) {
+		back.drain(c, dll.in.state);
+		c.process(dll.in.state, nullptr, 0, o);
+	}
+	back.drain(c, dll.in.state);
+	CHECK(back.each_once());
+}

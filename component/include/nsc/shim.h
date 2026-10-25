@@ -36,6 +36,7 @@ namespace dsp = awva;
 static_assert(sizeof(nsc_voice) == sizeof(dsp::VoiceControls) && offsetof(nsc_voice, release) == offsetof(dsp::VoiceControls, release),
     "nsc_voice is dsp::VoiceControls");
 static_assert(sizeof(nsc_globals) == sizeof(dsp::GlobalControls), "nsc_globals is dsp::GlobalControls");
+static_assert(NSC_MAX_EVENTS == awva::sdk::TimedMidi::MAX_EVENTS && NSC_MAX_NOTE_IDS == awva::sdk::TimedMidi::NOTES, "ended()'s guarantee is TimedMidi's");
 
 [[nodiscard]] constexpr uint32_t fnv1a(const char* s, uint32_t h = 2166136261u) {
 	for (; *s; s++) h = (h ^ static_cast<uint8_t>(*s)) * 16777619u;

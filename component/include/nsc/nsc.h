@@ -46,6 +46,8 @@ extern "C" {
 #define NSC_ABI 2
 #define NSC_MAGIC 0x3143534eu /* "NSC1" */
 #define NSC_BLOCK 32          /* frames per process() */
+#define NSC_MAX_EVENTS 1024   /* events per process() for ended()'s guarantee */
+#define NSC_MAX_NOTE_IDS 64   /* notes with a host id tracked at once (see ended()) */
 #define NSC_MAX_HEROES 8
 
 #if defined(_WIN32)
@@ -132,7 +134,13 @@ typedef struct nsc_component {
 	/* after process(): the host's note ids (nsc_event.note_id) of the notes that ended since the
 	 * last call: released, then the engine's tail passed or it went idle, or another note took
 	 * their key (CLAP NOTE_END). Returns how many (at most max) were written; call again while it
-	 * returns max. */
+	 * returns max.
+	 * The guarantee: every Note On's id comes back from ended() exactly once (ids on other events
+	 * are ignored; a MIDI 1.0 Note On of velocity 0 is a Note Off), provided the host calls it
+	 * after each process() until it returns less than max and passes at most NSC_MAX_EVENTS
+	 * events a block. NSC_MAX_NOTE_IDS notes are tracked at once; a Note On with an id beyond
+	 * that ends the oldest tracked note (the oldest released one, else the oldest held one) at
+	 * once, and a Note On that can't be queued ends at once itself. */
 	int32_t (*ended)(void* state, int32_t* note_ids, int32_t max);
 	int32_t (*voices)(const void* state);
 	int32_t (*preset)(const void* state); /* -1: none */

@@ -5,6 +5,8 @@
 #   MODE=twice     run CMD twice: it must succeed (a non-silent, finite render) with the same hash,
 #                  and print EXPECT (a regex) if given
 #   MODE=renderer  mpe_file writes its demo, renders it, and its hash must be awva_render's
+#   HASH           the hash both must give, on every OS (CI showed Linux, macOS and Windows agree;
+#                  a change to the engine or the example that changes the sound updates it here)
 file(MAKE_DIRECTORY "${OUT}")
 
 function(run_hash out_var)
@@ -43,4 +45,7 @@ elseif(MODE STREQUAL "renderer")
   endif()
 else()
   message(FATAL_ERROR "MODE?")
+endif()
+if(DEFINED HASH AND NOT a STREQUAL HASH)
+  message(FATAL_ERROR "hash ${a}, pinned ${HASH} (examples/CMakeLists.txt)")
 endif()
