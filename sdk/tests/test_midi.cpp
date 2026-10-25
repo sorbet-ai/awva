@@ -127,7 +127,7 @@ TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Re
 	ump(0x40903c00u, 0xc0000000u); // note 60, channel 1
 	ump(0x40904000u, 0xc0000000u); // note 64, channel 1
 	ump(0x40103c04u, 0xc0000000u); // APNC 4 (y) of note 60: +0.5
-	ump(0x40004074u, 0x40000000u); // RPNC 74 (brightness) of note 64: -0.5
+	ump(0x4000404au, 0x40000000u); // RPNC 74 (0x4a, brightness) of note 64: -0.5
 	m.step();
 	float y60 = 9, y64 = 9;
 	for (int v = 0; v < m.num_voices(); v++) {
