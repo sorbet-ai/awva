@@ -298,7 +298,9 @@ foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va 
   set_tests_properties(awva_render.refuses_${name} PROPERTIES LABELS unit WILL_FAIL TRUE)
 endforeach()
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
+# (the docs are this repository's engines: a project that includes the SDK, like the firmware, may
+# add engines of its own, so only a build of the SDK itself checks them)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
   add_test(NAME docs.up_to_date COMMAND awva_docs "${CMAKE_CURRENT_SOURCE_DIR}/../docs" --check)
   set_tests_properties(docs.up_to_date PROPERTIES LABELS unit)
 endif()
