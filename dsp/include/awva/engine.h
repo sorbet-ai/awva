@@ -207,6 +207,7 @@ struct EngineInfo {
 	int num_preset_heroes;
 	const char* title = nullptr;  // a title for people ("Electric Piano"); nullptr: name
 	Conformance conformance = {}; // what the conformance checks allow it (the defaults unless its traits say)
+	int min_rate = 11025;         // the lowest sample rate it is made for (a component refuses lower ones)
 };
 
 // the hero parameters of a preset, by its name (the engine's own if it has none, or for nullptr)
