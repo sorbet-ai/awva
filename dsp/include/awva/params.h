@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Live parameters: what a parameter is (ParamDesc), the per-engine table (EngineParams<Engine>,
 // which an engine with parameters specializes) and the one rule for writing a value (write_param:
-// the firmware's apply_params and every host use it).
+// every host uses it).
 #ifndef AWVA_PARAMS_H_
 #define AWVA_PARAMS_H_
 
@@ -10,11 +10,11 @@
 
 namespace strisy {
 
-// Live-editable parameters (tools/app). An engine with parameters specializes
+// Live-editable parameters. An engine with parameters specializes
 // strisy::EngineParams<its Engine>; the default here means "no parameters".
 // ptr() returns the live value, changed() is called (in the synth thread) after it was written,
 // so the engine can recompute derived values. Values are clamped to [min, max] before writing.
-// What a parameter's values mean; the number is what the USB console reports (tools/striso.py).
+// What a parameter's values mean; the number is the kind's stable code.
 enum class ParamKind : uint8_t {
 	continuous = 0, // any value in [min, max]
 	steps = 1,      // integers (writes are rounded)
@@ -35,7 +35,7 @@ template <class E> struct EngineParams {
 	static void changed(E&, int) {}
 };
 
-// A write as the firmware applies it: NaN is ignored, the value is clamped to [min, max] and
+// A write as every host applies it: NaN is ignored, the value is clamped to [min, max] and
 // rounded unless the parameter is continuous. Returns false (nothing written) for NaN or a missing
 // parameter; the caller then calls EngineParams<E>::changed().
 [[nodiscard]] inline bool write_param(const ParamDesc* d, float* p, float value) {

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 /**
- * va: expressive virtual analog voice. Build with `make VOICE=va`.
+ * va: expressive virtual analog voice. Traits: engines/va.h.
  *
  * Per voice:
  *   oscillators: A = band-limited saw + pulse (PWM) + square sub one octave down (all from one phase)
@@ -251,7 +251,7 @@ static inline void process_voice(Engine& e, int v) {
 	const Params& P = e.ps;
 	const strisy::VoiceControls c = e.vc[v];
 	const real pres = rmin(rmax(c.pres, 0.0f), 1.5f);
-	// after a release the firmware leaves the last vpres in place: a positive leftover (sensor noise)
+	// after a release a host may leave the last vpres in place: a positive leftover (sensor noise)
 	// must not strike or hold a released voice; negative values still set the release speed
 	const real vpres = rmin(rmax(c.vpres, -1.0f), pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
@@ -585,8 +585,8 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	process_global(e);
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;
 	for (int v = 0; v < e.nvoices; v++) process_voice(e, v);
-	// master: DC blocker, then a gentle soft clip with a ceiling of 4.2 (the board plays x0.25 and
-	// hard clips at 1 at the usual volume, so this keeps even stress playing out of hard clipping)
+	// master: DC blocker, then a gentle soft clip with a ceiling of 4.2 (a host typically plays x0.25 and
+	// hard clips at 1, so this keeps even stress playing out of hard clipping)
 	real dc = e.dc;
 	const real dcc = e.dc_c;
 	for (int n = 0; n < BLOCK; n++) {
@@ -598,7 +598,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Live parameters (tools/app): every Params field, with ranges that are safe at both ends.
+// Live parameters: every Params field, with ranges that are safe at both ends.
 // Writes go to e.p; the DSP follows through the smoothed copy e.ps, so edits never step or click.
 
 struct ParamEntry {

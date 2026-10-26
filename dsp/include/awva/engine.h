@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// The sound engine contract (doc/engines.md): what every voice engine and every effect offers its
-// host, the board's synth thread (src/synth/synth_strisy.cpp) or a program on the PC (sdk/: the
-// renderer, the tests, a plugin). Namespace awva. No HAL, no ChibiOS, no heap, no globals:
+// The sound engine contract (docs/README.md): what every voice engine and every effect offers its
+// host, an embedded device's synth thread or a program on the PC (sdk/: the renderer, the tests, a
+// plugin). Namespace awva. No HAL, no OS, no heap, no globals:
 // an engine is a plain-data object plus the memory regions its host gives it.
 //
 //   VoiceEngine   a polyphonic sound engine: per-voice controls in, a block of audio out
@@ -36,7 +36,7 @@
 
 namespace awva {
 
-// (the contract was striso::dsp; code that says dsp:: inside awva:: still finds it)
+// (code that says dsp:: inside awva:: finds the contract)
 namespace dsp = ::awva;
 
 inline constexpr int BLOCK = strisy::BLOCK; // samples per process() call
@@ -45,34 +45,34 @@ using strisy::GlobalControls;
 using strisy::ParamDesc;
 using strisy::ParamKind;
 
-// The controls of one voice, as a key or a note gives them. The first five are the board's key
-// signals (strisy::VoiceControls: controls.h has their ranges); gate, strike and release are the
-// same key seen as a note (a MIDI host has them directly; on the board track_key() derives them).
+// The controls of one voice, as a note gives them. The first five are its continuous signals
+// (strisy::VoiceControls: controls.h has their ranges); gate, strike and release are the same
+// note's events (track_key() derives them from the signals).
 struct VoiceControls {
 	float note;    // pitch in semitones, MIDI numbering (69 = A4), fractional
 	float pres;    // pressure, 0 (released) .. 1 (firm), up to ~1.5
 	float vpres;   // pressure velocity, about -1 .. 1: > 0 striking, < 0 releasing
-	float but_x;   // tilt along the row, -1 .. 1
-	float but_y;   // tilt across the row, -1 .. 1
-	float gate;    // 1 while the key is held (pres > 0), else 0
+	float but_x;   // tilt sideways, -1 .. 1
+	float but_y;   // tilt forward/back, -1 .. 1
+	float gate;    // 1 while the note is held (pres > 0), else 0
 	float strike;  // velocity of the strike that opened the gate, 0 .. 1 (kept until the next)
 	float release; // velocity of the release that closed it, 0 .. 1 (kept until the next)
 };
 
-// the key signals of a voice (what the engines written for the board read)
+// the continuous signals of a voice (what the engines' process() reads)
 [[nodiscard]] constexpr strisy::VoiceControls key_controls(const VoiceControls& c) {
 	return {c.note, c.pres, c.vpres, c.but_x, c.but_y};
 }
 
-// a voice at rest: note 69, no pressure, no tilt (what the board starts with)
+// a voice at rest: note 69, no pressure, no tilt
 inline constexpr VoiceControls voice_at_rest = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-// the instrument at rest: accelerometer 1 g down, no rotation, pedal 3/16 (the board's default)
+// the instrument at rest: accelerometer 1 g down, no rotation, pedal 3/16
 inline constexpr GlobalControls globals_at_rest = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
 
-// Gate, strike and release from the key signals, once per block after they were written: the
-// gate opens when pres rises above 0 and closes when it returns to 0; strike is the highest vpres
-// seen while the gate is open (the key's speed going down), release the highest -vpres since it
-// closed. The board's keys only give pres and vpres; a MIDI host sets all three itself.
+// Gate, strike and release from the signals, once per block after they were written: the gate
+// opens when pres rises above 0 and closes when it returns to 0; strike is the highest vpres seen
+// while the gate is open (how fast the pressure rose), release the highest -vpres since it closed.
+// A pressure sensor gives only pres and vpres; a host that has the note events may set all three.
 constexpr void track_key(VoiceControls& c) {
 	const auto clip = [](float x) { return x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x); };
 	if (c.pres > 0.0f) {
@@ -109,17 +109,17 @@ enum Input : uint32_t {
 
 // Where a host puts an engine's memory. The engine object itself is always Placement::tcm.
 enum class Placement : uint8_t {
-	tcm,   // tightly coupled, zero wait states: the hot state (the board: DTCM, 128 KB shared by all)
-	fast,  // FastMemory: large, touched every sample (the board: AHB SRAM1/2, 256 KB)
-	large, // LargeMemory: large, any RAM (the board: AXI SRAM, 512 KB)
+	tcm,   // tightly coupled, zero wait states: the hot state (e.g. a Cortex-M7's DTCM, 128 KB)
+	fast,  // FastMemory: large, touched every sample (e.g. AHB SRAM, 256 KB)
+	large, // LargeMemory: large, any RAM (e.g. AXI SRAM, 512 KB)
 };
 
 // What running the engine costs (hints for hosts; budgets.max_voices is a hard limit)
 struct Budget {
 	int max_voices;           // voices it can run
-	uint32_t instr_per_block; // worst preset, QEMU instructions per block (10 voices, the default
-	                          // performance: tools/target_render/profile.sh); the board runs a block
-	                          // in 480 MHz / 48828 Hz * 32 = 314k cycles
+	uint32_t instr_per_block; // worst preset, Cortex-M7 instructions per block counted under QEMU
+	                          // (10 voices, the default performance); a 480 MHz M7 at 48828 Hz has
+	                          // 480 MHz / 48828 Hz * 32 = 314k cycles per block
 	float tail_seconds;       // after the last release it is silent and idle within this time
 };
 
@@ -139,7 +139,7 @@ struct PresetHeroes {
 };
 
 struct EngineInfo {
-	const char* name;    // the firmware's name for it ('v' console command), e.g. "va"
+	const char* name;    // the engine's short name, e.g. "va"
 	const char* summary; // one line for people
 	int channels;        // 1: mono, 2: stereo out
 	uint32_t inputs;     // Input bits
@@ -176,7 +176,7 @@ struct EffectInfo {
 };
 
 // The memory of an engine as one object, for hosts that don't place the regions separately (the
-// PC); the board puts FastMemory and LargeMemory in different RAMs (engine_set.h).
+// PC); an embedded host may put FastMemory and LargeMemory in different RAMs (engine_set.h).
 template <class E> struct Memory {
 	AWVA_NO_UNIQUE_ADDRESS typename E::FastMemory fast;
 	AWVA_NO_UNIQUE_ADDRESS typename E::LargeMemory large;
@@ -194,7 +194,7 @@ concept PlainData = std::is_trivially_default_constructible_v<T> && std::is_triv
 //                                             until the next init (voices <= budget.max_voices)
 //   reset()             back to silence, keeping the preset and the live parameter values
 //   process(vc, g, out) one block: vc[voices()] controls, g the globals, out[0..channels) BLOCK
-//                       samples each (full scale about +-4: the board's volume is x0.25)
+//                       samples each (full scale about +-4: hosts typically play it x0.25)
 //   active_voices()     voices sounding now; voices() the count init() set
 //   presets: num_presets() (static), preset_name(i), set_preset(i) (any time, between blocks),
 //            preset() (-1 without presets)

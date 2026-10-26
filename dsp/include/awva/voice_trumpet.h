@@ -3,7 +3,7 @@
 /**
  * trumpet: a physical model of the trumpet. Stage 1: one instrument, fitted to sound and respond like
  * the brass engine's "trumpet" (the hybrid); real bore profiles, valves and partials, mutes and the
- * other instruments come later, on top of the same parts. Build with `VOICE=trumpet`.
+ * other instruments come later, on top of the same parts. Traits: engines/trumpet.h.
  *
  * Every voice is a player blowing a horn; nothing sets the pitch but the lips and the bore together:
  *
@@ -52,7 +52,7 @@
  *              scoops up onto the note) and a "t"; soft = "d"; none = a breath attack
  *   release    the breath stops, the bore rings out (pedal lengthens the release)
  *   tilt fwd/back  embouchure: forward firmer (brighter), back looser (darker)
- *   tilt sideways  pitch bend (the firmware moves the note; the horn follows)
+ *   tilt sideways  pitch bend (the host moves the note; the horn follows)
  *   shake      flutter tongue
  *
  * Cost (QEMU Cortex-M7 instruction counts, 10 voices at ff, notes jumping every 0.25 s): the engine
@@ -107,7 +107,7 @@ static constexpr real DC_HZ = 2.0f;
 #endif
 
 // the bore delay lines, 8 KB per voice, placed by the host (engine SDK): the first NFAST voices' in
-// FastMemory (AHB SRAM1/2 on the board), the others' in LargeMemory (AXI SRAM); with VOICE=all
+// FastMemory (e.g. AHB SRAM), the others' in LargeMemory (e.g. AXI SRAM); in an EngineSet
 // neither region has room for all 80 KB
 static constexpr int NFAST = 8;
 struct FastMemory {
@@ -483,14 +483,14 @@ static inline void block_coefs(Engine& e) {
 	k.flut_inc = P.flut_hz * e.ctrl_dt;
 }
 
-// (out of line: inlined into process, the board build carried two copies of it, twice the code for
+// (out of line: inlined into process, the Cortex-M7 build carried two copies of it, twice the code for
 // the I-cache)
 __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	VoiceState& s = e.vs[vi];
 	const Params& P = e.ps;
 	const strisy::VoiceControls cc = e.vc[vi];
 	const real pres = clampr(cc.pres, 0.0f, 1.5f);
-	// after a release the firmware leaves the last vpres in place: a positive leftover must not
+	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
 	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);

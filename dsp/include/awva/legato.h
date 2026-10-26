@@ -4,13 +4,13 @@
 // that voice over without a new attack (the engine sees the pitch change with the gate held: a
 // physical model plays it as a slur). Releasing the newest note returns to the newest one still
 // held, again without an attack (last-note priority); with nothing held a new note is a normal
-// attack. Pure: no HAL, no heap. The board (synth_control.cpp) hands the voice to top() with
-// VoiceAllocator::take and writes it what signals() gives.
+// attack. Pure: no HAL, no heap. The host hands the voice to top() with VoiceAllocator::take and
+// writes it what signals() gives.
 //
 // What the voice plays: the pitch and the tilt of the newest held note (the note being played),
 // the pressure and its velocity of the most strongly pressed held note (the dynamic): pressing
-// the next key while the last one is still down keeps the level, and as the old key lifts its
-// pressure hands over to the new one's, so the dynamic carries over and the new key's own strike
+// the next note while the last one is still held keeps the level, and as the old note lifts its
+// pressure hands over to the new one's, so the dynamic carries over and the new note's own strike
 // doesn't tongue the slur.
 #ifndef AWVA_LEGATO_H_
 #define AWVA_LEGATO_H_

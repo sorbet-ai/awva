@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // MIDI in: the notes that MIDI in plays on the internal synth (NoteInput) and the instrument's
 // messages (InstrumentInput, below). NoteInput is the up-converter: MIDI 1.0 and MPE, and standard
-// MIDI 2.0 (an edge), into the Striso UMP profile (ump.h), whose decoder then plays the engines
-// like every other source. The one copy: the board's synth_control.cpp (MIDI in from USB and from
-// the virtual board) and the SDK's hosts (sdk/: the shell, the renderer's MIDI files) both run it.
+// MIDI 2.0 (an edge), into awva's UMP profile (ump.h), whose decoder then plays the engines
+// like every other source. The one copy: an embedded host's MIDI in and the SDK's hosts (sdk/: the
+// shell, the renderer's MIDI files, the component) all run it.
 // Pure: no HAL, no heap; the voices (voice_allocator.h) and the echo filter are the host's.
 //
 // - MPE: the lower zone, member channels 2 .. 1 + members() (an MCM on channel 1 sets it with
@@ -19,7 +19,7 @@
 //   drops to 0. Note-off velocity -> the release (vpres < 0).
 // - With all NOTES slots held, a new note takes the oldest one.
 // - Standard MIDI 2.0 (message2): the same with its resolution: 16-bit velocities, 32-bit
-//   pressures and controllers (full scale = the Striso's full press, 1.0), CC74 and pitch bends
+//   pressures and controllers (full scale = the engine scale's full pressure, 1.0), CC74 and pitch bends
 //   bipolar by the spec (the centre exact), Registered Per-Note Controller 3 (Pitch 7.25: the
 //   note's absolute pitch), per-note y (Assignable Per-Note Controller 4 or Registered 74: the
 //   note's own, which CC74 then leaves alone) and x (Assignable 3), the Registered Controllers 0
@@ -27,7 +27,7 @@
 // A note in slot s is the profile's note id_base() + s.
 //
 // The host (any type with these members; the calls are templates, inlined):
-//   void ump(const ump::Packet&)    a packet of the Striso profile, for the decoder
+//   void ump(const ump::Packet&)    a packet of awva's profile, for the decoder
 //   bool echoed(int channel)        the host's own notes went out on this channel lately (an echo
 //                                   of them is not played)
 //   float bend_range()              the notes' pitch bend range, semitones (RPN 0)
@@ -41,7 +41,7 @@
 
 namespace awva::midi {
 
-inline constexpr int NOTES = 16; // notes held at once (the board's MIDI_IN_NOTES)
+inline constexpr int NOTES = 16; // notes held at once
 using ump::NoteSignals;
 using ump::TICK_SECONDS;
 
@@ -83,7 +83,7 @@ private:
 
 class NoteInput {
 public:
-	// the profile's note id of slot 0 (the board: after its keys)
+	// the profile's note id of slot 0 (e.g. after a host's own sensors' ids)
 	void set_id_base(int base) { base_ = base; }
 	[[nodiscard]] int id_base() const { return base_; }
 
@@ -310,7 +310,7 @@ private:
 // is the host's (the host, any type with these members, besides NoteInput's):
 //   bool zone_master(int channel)          an RPN 0 on this channel is the zone master's own range
 //   void set_bend_range(float semitones)   the notes' new bend range
-//   void zone_configured(int channel, int members)  an MCM came (the board: its MIDI out's mode)
+//   void zone_configured(int channel, int members)  an MCM came (e.g. a host's MIDI out follows it)
 //   void set_pedal(float)                  0 .. 1
 //   bool bends_out_on(int channel)         the host sends its own notes' bends on this channel (a
 //                                          pitch bend from it is an echo, not the instrument's)

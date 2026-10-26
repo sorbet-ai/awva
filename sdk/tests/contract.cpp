@@ -51,7 +51,7 @@ using dsp::VoiceControls;
 
 constexpr int SR = 48000;
 constexpr float SILENT = 1e-4f;       // the render checks' silence
-constexpr float PEAK_PLAYING = 32.0f; // every voice at full pressure (the board clips at 4 after its x0.25 volume)
+constexpr float PEAK_PLAYING = 32.0f; // every voice at full pressure (a host at x0.25 volume clips at 4)
 constexpr float PEAK_FUZZ = 64.0f;    // extreme but legal parameters may be loud: only blow-ups fail
 
 [[nodiscard]] const sdk::EngineEntry& entry() { return AWVA_ENGINE_ENTRY(); }
@@ -241,12 +241,12 @@ TEST_CASE("info: the declaration is complete") {
 	CHECK((in.channels == 1 || in.channels == 2));
 	CHECK(in.budget.max_voices >= 1);
 	CHECK(in.budget.instr_per_block > 0);
-	CHECK(in.budget.instr_per_block < 314000); // a block's cycles on the board (480 MHz, 48828 Hz)
+	CHECK(in.budget.instr_per_block < 314000); // a block's cycles on a 480 MHz Cortex-M7 at 48828 Hz
 	CHECK(in.budget.tail_seconds > 0.0f);
 	CHECK(in.budget.tail_seconds <= 30.0f);
 	CHECK((in.inputs & dsp::in_pressure) != 0);
 	CHECK(in.state_bytes > 0);
-	CHECK(in.state_bytes < 128 * 1024); // the board's DTCM, for everything
+	CHECK(in.state_bytes < 128 * 1024); // a Cortex-M7's 128 KB DTCM, for everything
 	CHECK(in.num_presets >= 0);
 	CHECK(in.num_params >= 0);
 	sdk::Engine e(entry());
@@ -804,7 +804,7 @@ TEST_CASE("cpu: the worst case runs much faster than real time on the PC") {
 	const Stats s = play(e, k, blocks(2.0), nullptr, [&](int b) { phrase(k, b % blocks(1.4)); });
 	const double host = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
 	const double rt = host / 2.0;
-	MESSAGE(std::string(info().name) << ": " << e.voices() << " voices at full pressure: " << 100.0 * rt << " % of real time on this PC (the board: "
+	MESSAGE(std::string(info().name) << ": " << e.voices() << " voices at full pressure: " << 100.0 * rt << " % of real time on this PC (a 480 MHz Cortex-M7: "
 	                                 << 100.0 * info().budget.instr_per_block / 314000 << " % declared)");
 	CHECK(s.nonfinite == 0);
 #ifndef __SANITIZE_ADDRESS__

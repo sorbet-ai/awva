@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <vector>
 
-#include "harness_util.h" // tools/harness: load_recording, the board's replay of a key stream
+#include "harness_util.h" // tools/harness: load_recording, the replay of a recorded stream
 #include "awva_sdk/midi_voices.h"
 #include "awva_sdk/smf.h"
 
@@ -59,7 +59,7 @@ public:
 	Keys(std::string path, std::vector<harness::RecEvent> ev, int sample_rate) :
 	    path_(std::move(path)), ev_(std::move(ev)), sr_(sample_rate) {}
 	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls&) override {
-		// the last event of each voice up to this block (the board's controls between messages)
+		// the last event of each voice up to this block (the controls hold between messages)
 		const double t = static_cast<double>(b) * dsp::BLOCK / sr_;
 		for (; k_ < ev_.size() && ev_[k_].t <= t; k_++) {
 			const harness::RecEvent& x = ev_[k_];

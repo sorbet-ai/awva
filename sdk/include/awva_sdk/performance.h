@@ -3,9 +3,9 @@
 // What plays an engine: a Player gives the controls of every block. Three kinds:
 //   scripted   a performance compiled in from tools/harness (performance.h: "default",
 //              perf_stale.h: "stale", perf_<name>.h: "<name>"), deterministic
-//   keys       a recorded key stream (tools/record_keys.py CSV), replayed as the board's
-//              synth_control would play it (tools/harness/harness_util.h: load_recording)
-//   midi       a Standard MIDI File through the board's MIDI/MPE mapping (midi_voices.h)
+//   keys       a recorded stream of per-note sensor values (CSV), replayed per voice
+//              (tools/harness/harness_util.h: load_recording)
+//   midi       a Standard MIDI File through the MIDI/MPE mapping (midi_voices.h)
 // Each says what it is and where it came from (describe()), for the renderer's log.
 #ifndef AWVA_SDK_PERFORMANCE_H_
 #define AWVA_SDK_PERFORMANCE_H_
@@ -36,8 +36,8 @@ struct ScriptedPerformance {
 class Player {
 public:
 	virtual ~Player() = default;
-	// the key signals of block b (blocks in order from 0): writes what changes, the rest stays;
-	// gate, strike and release follow from them (dsp::track_key, as on the board)
+	// the voice signals of block b (blocks in order from 0): writes what changes, the rest stays;
+	// gate, strike and release follow from them (dsp::track_key)
 	virtual void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) = 0;
 	// its natural length in seconds (a render's default)
 	[[nodiscard]] virtual double seconds() const = 0;

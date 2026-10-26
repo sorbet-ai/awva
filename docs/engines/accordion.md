@@ -110,12 +110,12 @@ Physically modelled free reeds, with registers, musette tuning, reed chambers, a
 - **The free reed** (Millot & Baumann 2007; Ricot, Causse & Misdariis 2005; Cottingham 2011): a tongue vibrating through a slot in a plate, blown closed. Its pitch is its own (no air column): a lightly damped, nearly sinusoidal oscillator, slightly flatter at high pressure. The sound comes from the air it lets through, through a section that is open above the plate, shut while the tongue is inside the slot (except a clearance gap that rounds the corners), and open again below it. Small amplitudes stay above the slot (soft is dark); larger ones cross it and cut the flow into pulses (loud is bright). The radiated sound is the flow's derivative (a monopole), summed per reed bank.
 - **The amplitude** follows the self-excited oscillator's amplitude equation per block: growth above the threshold pressure (slower for big low reeds), decay below it, and a lower sustain threshold than onset threshold (the free reed's inverse bifurcation). The phase is a phasor at the reed's frequency, so the tuning is exact, minus the pressure flattening and the pallet bend.
 - **Chambers:** one resonance per reed bank, the optional cassotto (a second chamber: darker, smoother), and the grille/body.
-- **Bellows:** each key opens its pallet, and the pressure behind the pallets mixes each key's own pressure with a shared bellows pressure (the strongest key, smoothed): 0 is per-note expression, 1 a real accordion. A bellows reversal makes the pressure dip through zero, and the other reed of each pair (with its own tuning error) speaks.
+- **Bellows:** each note opens its pallet, and the pressure behind the pallets mixes each note's own pressure (its per-note pressure) with a shared bellows pressure (the strongest note, smoothed): 0 is per-note expression, 1 a real accordion. A bellows reversal makes the pressure dip through zero, and the other reed of each pair (with its own tuning error) speaks.
 - **Musette:** the second 8' reed is sharp and the third flat by `beat` Hz at A4, either the same beat rate across the range (as tuners do) or constant cents.
 
 ## Playing
 
-- **pressure:** the bellows and pallet: below the threshold only air; then the reeds speak, louder, brighter and a little flatter. With `bellows` up, the strongest key sets the pressure for the whole chord.
+- **pressure:** the bellows and pallet: below the threshold only air; then the reeds speak, louder, brighter and a little flatter. With `bellows` up, the strongest note sets the pressure for the whole chord.
 - **tilt forward/back:** the reed voicing: forward a little brighter, back softer.
-- **pedal:** a bellows reversal. **shake:** a bellows shake.
+- **pedal:** a bellows reversal. **shake** (the instrument's motion, a global input): a bellows shake.
 - The strike isn't read: the attack follows the pressure rise itself.

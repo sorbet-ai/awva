@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * ep: physically inspired electric piano (Rhodes first, Wurlitzer and friends as presets).
- * Build with `make VOICE=ep`; presets with set_preset() (host renders: -DEP_PRESET=n).
+ * Traits: engines/ep.h; presets with set_preset() (host renders: -DEP_PRESET=n).
  *
  * Per voice:
  *   tine     four damped modal resonators (coupled form, exact frequency, stable for any decay):
@@ -26,7 +26,7 @@
  *   damper   on release a felt damper engages (smoothed, stronger on the upper modes); the
  *            pedal lifts it (sustain pedal).
  * Master: body EQ (band-pass boost/cut), amp grit (asymmetric soft clip), tone low-pass, DC
- * blocker, soft safety ceiling at 4.0 (full scale on the board at the usual volume). Optional tape wobble (wow + flutter) on all voices.
+ * blocker, soft safety ceiling at 4.0 (full scale at the usual x0.25 output volume). Optional tape wobble (wow + flutter) on all voices.
  *
  * Playing:
  *   strike (vpres at key-down)  velocity: soft = warm and round, hard = bright, barking
@@ -436,7 +436,7 @@ static inline void process_voice(Engine& e, int v) {
 
 	const real pres = clampr(c.pres, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
-	// after a release the firmware leaves the last vpres in place: ignore positive values then
+	// after a release a host may leave the last vpres in place: ignore positive values then
 	const real vp = clampr(c.vpres, -1.0f, held ? 1.5f : 0.0f);
 	const real note = clampr(c.note, 0.0f, 135.0f);
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f; // reassigned to a new key

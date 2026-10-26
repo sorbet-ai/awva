@@ -1,8 +1,8 @@
 /* SPDX-FileCopyrightText: 2026 Sorbet AI
  * SPDX-License-Identifier: Apache-2.0
  *
- * The engine component (ABI 2): one sound engine as a C ABI, for a plugin, the virtual board or
- * any host that loads it from a DLL / dylib (and later the board, from a module). UMP in, audio
+ * The engine component (ABI 2): one sound engine as a C ABI, for a plugin or any host that loads
+ * it from a DLL / dylib / .so (and later an embedded host, from a module). UMP in, audio
  * out, parameters by stable id and name, factory presets, and what the host needs to know first:
  * a title, a colour, the heroes, the sample rates, the budget, the memory and the stack.
  * (docs/writing_a_host.md walks through a host.)
@@ -16,7 +16,7 @@
  * Time, in integer frames: process() renders one block of NSC_BLOCK frames. Its events are UMP
  * packets with their frame, counted from the block's start: 0 .. NSC_BLOCK - 1, or negative (down
  * to -NSC_BLOCK) for an event that arrived after its block was rendered. MIDI is taken in 2 ms
- * steps, as the board takes it: step k is at frame ceil(k sr / 500), and an event is taken at the
+ * steps: step k is at frame ceil(k sr / 500), and an event is taken at the
  * first step at or after its frame; before each block, every step due by its start runs. So a late
  * event lands where it would have on time, at every rate, with no added latency (in the first
  * block, a negative frame is frame 0).
@@ -26,7 +26,7 @@
  * or it went idle, or another note took their key (CLAP NOTE_END).
  *
  * Input: MIDI 2.0 channel voice messages (UMP type 4) in their standard meaning (pressure full
- * scale = the Striso's full press, 16-bit velocities, Pitch 7.25, bipolar controllers centred;
+ * scale = the engine scale's full pressure, 16-bit velocities, Pitch 7.25, bipolar controllers centred;
  * per-note y as Assignable Per-Note Controller 4 or Registered 74, per-note x as Assignable 3), and
  * MIDI 1.0 channel voice messages in UMP (type 2, including MPE); the other types are ignored, and
  * every group is taken as one. Inside, the component runs the one decoder (awva/ump.h), the voice
@@ -37,7 +37,7 @@
  * (its value after init()). After set_preset() every parameter may have changed.
  *
  * process_voices() is the other way in: the host allocates the voices itself and gives each its
- * controls (the board's synth_control does so today), and the component only renders.
+ * controls (e.g. an embedded instrument with its own sensors), and the component only renders.
  *
  * Map to CLAP: desc->uid is the plugin id (com.sorbet-ai.awva.<id>), name (a title) / summary /
  * version its descriptor; process() is clap_plugin.process with its note and MIDI 2.0 events
@@ -73,13 +73,13 @@ extern "C" {
 #define NSC_EXPORT __attribute__((visibility("default")))
 #endif
 
-/* one voice's controls for process_voices(), as the board's key logic gives them */
+/* one voice's controls for process_voices(), as the host's voice logic gives them */
 typedef struct nsc_voice {
 	float note;    /* pitch in semitones (69 = A4), fractional */
 	float pres;    /* pressure: 0 released, 1 the full press */
 	float vpres;   /* pressure velocity: > 0 striking, < 0 releasing */
-	float but_x;   /* tilt along the row, -1 .. 1 */
-	float but_y;   /* tilt across the row, -1 .. 1 */
+	float but_x;   /* tilt sideways, -1 .. 1 */
+	float but_y;   /* tilt forward/back, -1 .. 1 */
 	float gate;    /* 1 while held */
 	float strike;  /* the strike that opened the gate, 0 .. 1 */
 	float release; /* the release that closed it, 0 .. 1 */
@@ -118,7 +118,7 @@ typedef struct nsc_preset {
 
 typedef struct nsc_desc {
 	uint32_t magic, abi;  /* NSC_MAGIC, NSC_ABI */
-	const char* id;       /* "accordion": the engine's short name (the board's voice list) */
+	const char* id;       /* "accordion": the engine's short name */
 	const char* uid;      /* "com.sorbet-ai.awva.accordion": the plugin / package id */
 	const char* name;     /* a title for people ("Electric Piano"; the id when the engine has none) */
 	const char* summary;  /* one line */
@@ -126,13 +126,13 @@ typedef struct nsc_desc {
 	uint32_t schema_hash; /* FNV-1a over the parameters' ids, ranges and kinds: a change breaks stored values */
 	uint32_t inputs;      /* the Input bits of engine.h (pressure, velocity, x, y, pedal, motion) */
 	int32_t channels;     /* 1 or 2 */
-	uint32_t led;         /* its colour, 0xrrggbb (a voice key's on the board); 0: none, the host's default */
+	uint32_t led;         /* its colour, 0xrrggbb (e.g. for a host's LED or UI); 0: none, the host's default */
 	int32_t max_voices;
-	uint32_t instr_per_block; /* the budget: QEMU instructions per block, worst preset, 10 voices */
+	uint32_t instr_per_block; /* the budget: Cortex-M7 instructions per block (QEMU), worst preset, 10 voices */
 	float tail_seconds;
 	int32_t min_rate, max_rate;                    /* the sample rates it supports (init() refuses others) */
 	uint32_t state_bytes, fast_bytes, large_bytes; /* the regions init() takes */
-	uint32_t stack_bytes;                          /* the deepest process() stack measured on the board (0: not measured) */
+	uint32_t stack_bytes;                          /* the deepest process() stack measured on a Cortex-M7 (0: not measured) */
 	int32_t num_params, num_presets;
 	const nsc_param* params;
 	const nsc_preset* presets;

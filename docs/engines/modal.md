@@ -14,7 +14,7 @@ Header `dsp/include/awva/voice_modal.h`, traits `dsp/include/awva/engines/modal.
 |---|---|---|
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
 | pressure | `pres`, 0 released .. 1 a firm press (up to ~1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
-| strike | `vpres`, the pressure's velocity: > 0 while the key goes down, < 0 coming up | note-on velocity (a strike that fades), note-off velocity (the release) |
+| strike | `vpres`, the pressure's velocity: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
 | tilt y | `but_y`, forward/back tilt -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: CC74 (bipolar) |
 | rotation | `rot_x`, `rot_y`, `rot_z`, about -1 .. 1 | the instrument's gyroscope (not from MIDI) |
 | pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
@@ -92,7 +92,7 @@ Every voice has a NaN/energy guard, the decay changes are smoothed, and the mast
 
 - **strike:** the loudness; a harder strike is also a little brighter (the upper partials grow with mallet hardness). Nothing changes the pitch.
 - **tilt forward/back at the strike:** a harder (forward) or softer (back) mallet.
-- **holding and release:** the note rings with its natural decay; lifting the key engages the damper gradually.
+- **holding and release:** the note rings with its natural decay; releasing the note engages the damper gradually.
 - **pedal:** the sustain pedal (it lifts the damper).
 - **pressure:** the vibraphone's motor tremolo when pressed harder than a normal hold; the wine glass is rubbed by held pressure (a sustained singing tone); the other presets ignore pressure after the strike.
 - **rotation:** the vibraphone's tremolo too.

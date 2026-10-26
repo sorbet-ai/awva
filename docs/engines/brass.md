@@ -14,7 +14,7 @@ Header `dsp/include/awva/voice_brass.h`, traits `dsp/include/awva/engines/brass.
 |---|---|---|
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
 | pressure | `pres`, 0 released .. 1 a firm press (up to ~1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
-| strike | `vpres`, the pressure's velocity: > 0 while the key goes down, < 0 coming up | note-on velocity (a strike that fades), note-off velocity (the release) |
+| strike | `vpres`, the pressure's velocity: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
 | tilt y | `but_y`, forward/back tilt -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: CC74 (bipolar) |
 | shake | `acc_abs`, the accelerometer's magnitude in g (1 at rest) | the instrument's motion sensor (not from MIDI) |
 | pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
@@ -118,7 +118,7 @@ A hybrid: a lip source sets the pitch, and a physical bore shapes it.
 ## Playing
 
 - **pressure:** breath, dynamics and brightness together (pp mellow, ff blaring).
-- **strike:** tonguing. A hard strike gives a bright blat, an accent, a slight scoop and a "t"; re-striking a held key re-tongues.
+- **strike:** tonguing. A hard strike gives a bright blat, an accent, a slight scoop and a "t"; re-striking a held note re-tongues.
 - **release:** the lips stop and the bore rings out briefly; the pedal lengthens the tail a little.
 - **tilt forward/back:** open presets are brighter or darker (lips and bell; the horn's hand). In the mute presets it is a wah (harmon: forward opens; plunger: back closes).
 - **shake:** flutter tongue.

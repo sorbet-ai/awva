@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // mpe_file: a standard MIDI file, MPE or plain, through an awva engine with the SDK's MIDI in
-// (awva_sdk/timed_midi.h over midi_voices.h: the up-converter, the decoder and the voice allocator
-// the board runs, on its 2 ms steps).
+// (awva_sdk/timed_midi.h over midi_voices.h: the up-converter, the decoder and the voice allocator,
+// in 2 ms steps).
 //
 //   mpe_file IN.mid OUT.wav [ENGINE [PRESET]]   render (32-bit float WAV, mono); prints the hash
 //   mpe_file --demo OUT.mid                     write a short MPE demo file to play
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
 	engine.init(SR, NV);
 	if (argc > 4) engine.set_preset(std::atoi(argv[4]));
 
-	// MIDI in, as the board takes it, in integer frames (awva_sdk/timed_midi.h): each message
+	// MIDI in, in integer frames (awva_sdk/timed_midi.h): each message
 	// queued at its frame, and every 2 ms (96 frames at 48 kHz) a step runs the ones due
 	auto midi = std::make_unique<sdk::TimedMidi>(NV, SR); // (some kilobytes: on the heap)
 	std::vector<awva::VoiceControls> vc(NV, awva::voice_at_rest);

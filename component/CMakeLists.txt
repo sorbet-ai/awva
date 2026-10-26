@@ -9,7 +9,7 @@
 #   tests: component.* every component loads, its manifest matches, and it renders bit for bit
 #                      as the engine linked in (process_voices) and as the SDK's MIDI player (process)
 # Built with the SDK's flags (awva_sdk_options: -O2, no FMA contraction), so a component's samples
-# are the SDK's, and the virtual board's when it is built with them.
+# are the SDK's, and an including project's when it is built with them.
 set(_cgen "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(AWVA_COMPONENT_DIR "${CMAKE_BINARY_DIR}/components" CACHE PATH "where the component libraries go")
 # AWVA_VERSION: the version the components report (nsc_desc.version). Given (-DAWVA_VERSION=...),

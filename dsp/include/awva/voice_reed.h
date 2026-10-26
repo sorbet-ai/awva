@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * Reed: physically modelled single-reed woodwind, from clarinet to saxophone.
- * Build with `make VOICE=reed` (API: see the comment at the top of synth_strisy.cpp).
+ * Traits: engines/reed.h (API: the voice_<name>.h shape, engine.h and adapter.h).
  *
  * Model (per voice):
  *
@@ -44,7 +44,7 @@
  *          High notes (above ~E5) are pulled towards the middle of the morph.
  *   note   pitch, including vibrato/bends (sideways tilt)
  *   shake  (acc_abs > ~1.15) adds growl
- * The per-sample loop has no divisions and no libm: one hardware vsqrt per sample on the board.
+ * The per-sample loop has no divisions and no libm: one hardware vsqrt per sample on a Cortex-M7.
  */
 #ifndef VOICE_REED_H_
 #define VOICE_REED_H_
@@ -247,7 +247,7 @@ struct VoiceState {
 };
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
-// engines/reed.h; the board: AXI SRAM, outside the DTCM Engine)
+// engines/reed.h; e.g. AXI SRAM, outside the DTCM Engine)
 struct LargeMemory {
 	float main[MAX_VOICES][MAIN_LEN];
 	float tube[MAX_VOICES][SHORT_LEN]; // the short tube
@@ -306,7 +306,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (!(pres == pres)) pres = 0.0f;
 	real vp = clampr(c.vpres - 0.02f, 0.0f, 1.0f);
 	if (!(vp == vp)) vp = 0.0f;
-	// velocity only counts while the key is pressed: the firmware leaves the last vpres on a
+	// velocity only counts while the note is held: a host may leave the last vpres on a
 	// released voice, which must neither wake it nor keep it (and its tongue noise) alive
 	const real vplev = pres > 0.0f ? vp / (0.3f + vp) : 0.0f;
 

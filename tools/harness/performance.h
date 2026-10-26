@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// Scripted, deterministic Striso performance shared by the Faust and C++ renderers.
+// Scripted, deterministic performance shared by the renderers.
 #ifndef PERFORMANCE_H_
 #define PERFORMANCE_H_
 #include <math.h>
@@ -13,7 +13,7 @@
 
 // ---------------------------------------------------------------------------------------------
 // Scripted performance. Everything is a deterministic function of time, evaluated once per block
-// (the firmware updates controls asynchronously at ~1.3 kHz, close to the 1.5 kHz block rate).
+// (an embedded host may update controls asynchronously at ~1.3 kHz, close to the 1.5 kHz block rate).
 
 struct Ctl { float note, pres, vpres, but_x, but_y; };
 
@@ -60,7 +60,7 @@ static const Note notes[] = {
 };
 
 static void controls(double t, Ctl* v, int nv, float* g) {
-	// released voices keep their last pitch while decaying, as in the firmware
+	// released voices keep their last pitch while decaying, as a host does
 	static float last_note[NVOICES_MAX] = {69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69};
 	for (int i = 0; i < nv; i++) v[i] = {last_note[i], 0, 0, 0, 0};
 	for (const Note& n : notes) {

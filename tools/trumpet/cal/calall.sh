@@ -4,7 +4,7 @@
 # Calibration of voice_trumpet.h (trumpet_cal.h): per preset and note, the lip setting, the slide trim the note settles at
 # and the threshold mouth pressure, measured with the engine itself (tt.cpp, a single-note driver; cal.py does the search).
 # Needs a dev container named $TRUMPET_DEV (default trumpet-dev) from the build image with this worktree at /src, e.g.
-#   docker run -d --name trumpet-dev -v <worktree>:/src <striso-fw image> sleep infinity
+#   docker run -d --name trumpet-dev -v <worktree>:/src <a build image with g++ and python3> sleep infinity
 # Run from this directory: tools/trumpet/cal/calall.sh   (PRESETS="3 4" for some presets; REUSE_PTHR=1 for the second
 # pass, which re-runs the search at the measured thresholds). ~2 min per pass on 32 cores. Then rebuild + update goldens.
 # Helpers: grid.py (notes x pressures x parameter sets), tab.py / score.py (the acceptance test: early level within 6 dB,

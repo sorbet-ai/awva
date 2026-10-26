@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// Shared helpers of the host renderers and tests: WAV output (scaled like the board), a hash of a
-// render (for golden checksums), parameter writes through the firmware's path, and the replay of
-// recorded key streams (tools/record_keys.py CSV) as the board's synth_control.cpp would play them.
+// Shared helpers of the host renderers and tests: WAV output (x0.25, the usual output volume), a
+// hash of a render (for golden checksums), parameter writes by the hosts' rule, and the replay of
+// recorded streams of per-note sensor values (CSV, below).
 #ifndef AWVA_HARNESS_UTIL_H_
 #define AWVA_HARNESS_UTIL_H_
 
@@ -21,7 +21,7 @@
 
 namespace harness {
 
-// 16 bit WAV, x0.25 and hard clipped like the board at the usual volume ((volume/127)^2 ~ 0.25)
+// 16 bit WAV, x0.25 and hard clipped (the usual output volume, (volume/127)^2 ~ 0.25)
 [[nodiscard]] inline bool write_wav(const char* path, std::span<const float> x, int channels, int sample_rate) {
 	FILE* f = std::fopen(path, "wb");
 	if (!f) return false;
@@ -65,7 +65,7 @@ namespace harness {
 	return h;
 }
 
-// a parameter write as the firmware applies it (synth_strisy.cpp apply_params): NaN ignored,
+// a parameter write as every host applies it (params.h, write_param): NaN ignored,
 // clamped to [min, max], rounded unless continuous, then changed()
 template <class E> inline void param_write(E& e, int i, float value) {
 	using P = strisy::EngineParams<E>;
@@ -78,10 +78,10 @@ template <class E> inline void param_write(E& e, int i, float value) {
 	P::changed(e, i);
 }
 
-// --- recorded key streams ------------------------------------------------------------------------
-// tools/record_keys.py CSV (t,src,id,pres,velo,x,y; raw 14 bit values) to per-voice control events,
-// as tools/harness/out/bowed_rec.py did: note = 62 + 12*c0 + 7*c1 + bend*x^3 (bend 0.5),
-// voices by get_voice() (same button, else a free voice, else the earliest released one),
+// --- recorded sensor streams ---------------------------------------------------------------------
+// CSV rows t,src,id,pres,velo,x,y (raw 14 bit values; sensor ids 0 .. 67 on a two-axis
+// isomorphic layout) to per-voice control events: note = 62 + 12*c0 + 7*c1 + bend*x^3 (bend 0.5),
+// voices by get_voice() (same sensor, else a free voice, else the earliest released one),
 // velo clipped at +-8191 in the stream reconstructed from the pressure slope.
 struct RecEvent {
 	double t;
@@ -112,7 +112,7 @@ struct RecEvent {
 	std::fclose(f);
 	std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.t < b.t; });
 	if (rows.empty()) return {};
-	// pressure slope per button, fit velo = k * slope on unclipped rising samples
+	// pressure slope per sensor, fit velo = k * slope on unclipped rising samples
 	std::vector<double> slope(rows.size());
 	std::map<int, size_t> last;
 	for (size_t j = 0; j < rows.size(); j++) {
@@ -131,7 +131,7 @@ struct RecEvent {
 	const double k = num / std::max(den, 1e-9);
 	std::vector<int> voices(static_cast<size_t>(nvoices), -1);
 	std::vector<double> rel_time(static_cast<size_t>(nvoices), -1e9);
-	std::map<int, int> state; // button -> voice while held
+	std::map<int, int> state; // sensor -> voice while held
 	std::vector<RecEvent> out;
 	const double t0 = rows[0].t;
 	for (size_t j = 0; j < rows.size(); j++) {

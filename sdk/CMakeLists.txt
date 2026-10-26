@@ -1,10 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
-# The sound engine SDK for the PC (doc/engines.md): every engine as its own library, a generic
+# The sound engine SDK for the PC (docs/README.md): every engine as its own library, a generic
 # contract test suite that runs on each of them, the renderer and the host shell. It needs only
 # dsp/ (the engines), tools/harness/ (the scripted performances and the key-stream replay) and
-# third_party/doctest: no firmware, no ChibiOS. Built as part of the firmware repository's host
-# presets, or on its own:  cmake -S sdk -B build/sdk && cmake --build build/sdk && ctest --test-dir build/sdk
+# third_party/doctest: no OS, no device. Built as part of an including project, or on its own:  cmake -S sdk -B build/sdk && cmake --build build/sdk && ctest --test-dir build/sdk
 #
 #   awva_engine_<name>       one engine (dsp/include/awva/engines/<name>.h): its EngineEntry,
 #                              awva_engine_<name>()
@@ -14,7 +13,7 @@
 #   awva_sdk                 the MIDI/MPE mapping, the MIDI file reader, the players, the shell
 #   awva_render              the renderer (sdk/tools/awva_render.cpp)
 #   render_custom              the renderer with one engine and performance compiled with extra
-#                              flags (AWVA_RENDER_*: tools/harness/render_strisy.sh)
+#                              flags (AWVA_RENDER_*)
 #   tests: contract.<name>.*   the contract suite on each engine (tests/contract.cpp)
 #          sdk.*               the shared helpers, the MIDI mapping and files, the shell
 #          awva_render.*     the renderer's log names its engine, preset and input; bad inputs fail
@@ -194,9 +193,9 @@ add_executable(awva_presets tools/awva_presets.cpp)
 target_link_libraries(awva_presets PRIVATE awva_sdk awva_engines)
 
 # --- render_custom: one engine and one performance with extra compiler flags ---------------------------
-# (tools/harness/render_strisy.sh configures these). The performance is compiled into the engine's
+# (configured with -DAWVA_RENDER_VOICE=<engine> and the rest). The performance is compiled into the engine's
 # translation unit, so its test hooks (BOWED_TEST_HOOK and the like) reach the engine.
-set(AWVA_RENDER_VOICE "strisy" CACHE STRING "render_custom: engine")
+set(AWVA_RENDER_VOICE "" CACHE STRING "render_custom: engine (empty: no render_custom)")
 set(AWVA_RENDER_PERF "performance.h" CACHE STRING "render_custom: performance header")
 set(AWVA_RENDER_PERF_DIR "" CACHE PATH "render_custom: extra directory searched for the performance header first")
 set(AWVA_RENDER_FLAGS "" CACHE STRING "render_custom: extra compiler flags")
@@ -253,7 +252,7 @@ std::span<const awva::sdk::ScriptedPerformance* const> awva::sdk::performances()
   target_link_libraries(render_custom PRIVATE awva_sdk)
   target_compile_definitions(render_custom PRIVATE _USE_MATH_DEFINES)
   target_compile_options(render_custom PRIVATE ${_custom_flags})
-else()
+elseif(AWVA_RENDER_VOICE)
   message(WARNING "AWVA_RENDER_VOICE=${AWVA_RENDER_VOICE} is not an engine (${AWVA_ENGINES})")
 endif()
 
@@ -311,7 +310,7 @@ foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va 
   set_tests_properties(awva_render.refuses_${name} PROPERTIES LABELS unit WILL_FAIL TRUE)
 endforeach()
 
-# (the docs are this repository's engines: a project that includes the SDK, like the firmware, may
+# (the docs are this repository's engines: a project that includes the SDK may
 # add engines of its own, so only a build of the SDK itself checks them)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
   add_test(NAME docs.up_to_date COMMAND awva_docs "${CMAKE_CURRENT_SOURCE_DIR}/../docs" --check)

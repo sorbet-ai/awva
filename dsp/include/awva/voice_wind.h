@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 /**
- * Wind: physically modelled woodwinds with presets (make VOICE=wind, -DWIND_PRESET=n on the host).
- * API: see the comment at the top of synth_strisy.cpp; live parameters: strisy::EngineParams.
+ * Wind: physically modelled woodwinds with presets (traits: engines/wind.h, -DWIND_PRESET=n on the host).
+ * API: the voice_<name>.h shape (engine.h, adapter.h); live parameters: strisy::EngineParams.
  *
  * Presets (realistic separate instruments, level matched):
  *   0 clarinet       B-flat clarinet: hollow chalumeau (odd harmonics), clear clarion
@@ -261,7 +261,7 @@ struct VoiceState {
 };
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
-// engines/wind.h; the board: AXI SRAM)
+// engines/wind.h; e.g. AXI SRAM)
 struct LargeMemory {
 	float main[MAX_VOICES][MAIN_LEN];
 	float tube[MAX_VOICES][SHORT_LEN]; // the short tube
@@ -550,7 +550,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (!(pres == pres)) pres = 0.0f;
 	real vp = clampr(c.vpres - 0.02f, 0.0f, 1.0f);
 	if (!(vp == vp)) vp = 0.0f;
-	// velocity only while pressed (the firmware leaves a stale vpres on released voices)
+	// velocity only while held (a host may leave a stale vpres on released voices)
 	const real vplev = pres > 0.0f ? vp / (0.3f + vp) : 0.0f;
 	bool wake = false;
 	if (!s.active) {

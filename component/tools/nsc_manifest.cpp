@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // nsc_manifest <component library> [<out.json>]: loads a component (nsc/load.h) and writes its
-// manifest, the descriptor as JSON: what a host or the app lists before loading it.
+// manifest, the descriptor as JSON: what a host lists before loading it.
 #include <cstdio>
 #include <string>
 

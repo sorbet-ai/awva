@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * Accordion: physically modelled free reeds with registers, musette tuning, reed chambers,
- * cassotto and a shared bellows (make VOICE=accordion, -DACCORDION_PRESET=n on the host).
- * API: see the comment at the top of synth_strisy.cpp; live parameters: strisy::EngineParams.
+ * cassotto and a shared bellows (traits: engines/accordion.h; -DACCORDION_PRESET=n on the host).
+ * API: the voice_<name>.h shape (engine.h, adapter.h); live parameters: strisy::EngineParams.
  *
  * Presets (level matched):
  *   0 clarinet   one 8' reed
@@ -45,13 +45,14 @@
  * (stable at low pressure, a few cents flat when pushed hard; more on the 16') and the pallet
  * bend (a strong bellows on a barely open pallet bends the note down, as accordionists do).
  *
- * Bellows: the Striso has a pressure per key, the accordion one bellows. Each key opens its
- * pallet (throttling the reed's pressure while barely open); the pressure behind the pallets is
- *   (1 - bellows) * own pressure + bellows * shared bellows pressure (the strongest key, smoothed)
- * so 0 is per-note expression and 1 a real accordion (one bellows, keys only open pallets).
- * Bellows reversal: on a pedal press (and on a vigorous shake: the bellows shake) the pressure
- * dips through zero and the other reed of each pair (pull instead of push: its own tuning
- * error) starts speaking.
+ * Bellows: the engine gets a pressure per note (MIDI 2.0 or MPE per-note pressure), the accordion
+ * has one bellows. Each note opens its pallet (throttling the reed's pressure while barely open);
+ * the pressure behind the pallets is
+ *   (1 - bellows) * own pressure + bellows * shared bellows pressure (the strongest note, smoothed)
+ * so 0 is per-note expression and 1 a real accordion (one bellows, notes only open pallets).
+ * Bellows reversal: on a pedal press (and on a vigorous shake of the instrument, a global motion
+ * input: the bellows shake) the pressure dips through zero and the other reed of each pair (pull
+ * instead of push: its own tuning error) starts speaking.
  *
  * Musette: the second 8' reed is sharp and the third flat by `beat` Hz at A4, with
  * beat_track 0 the same beat rate across the range (as tuners do), 1 constant cents.
@@ -59,10 +60,12 @@
  * How to play:
  *   pres   bellows/pallet: below the threshold only air; then the reeds speak, growing louder
  *          and brighter and a little flatter with pressure. With `bellows` up, the strongest
- *          key sets the pressure for the whole chord and light keys just open their pallets.
- *   but_y  tilt: the reed voicing, forward a little brighter, back softer.
+ *          note sets the pressure for the whole chord and light notes just open their pallets.
+ *   but_y  tilt forward/back (a per-note controller): the reed voicing, forward a little
+ *          brighter, back softer.
  *   note   pitch and bends (reeds follow exactly).
- *   pedal  press: bellows reversal. Shaking the Striso: bellows shake.
+ *   pedal  press: bellows reversal.
+ *   acc_abs  the instrument's motion (a global input): shaking it gives the bellows shake.
  *   vpres  unused (the attack follows the pressure rise itself).
  * No libm; no divisions or square roots in the sample loops.
  */

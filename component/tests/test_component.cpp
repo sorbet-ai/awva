@@ -250,7 +250,7 @@ TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (
 	}
 }
 
-TEST_CASE("parameters by index and id, the board's write rule, reset and sample rates") {
+TEST_CASE("parameters by index and id, the write rule, reset and sample rates") {
 	Loaded dll("accordion");
 	const nsc_component& c = dll.c();
 	CHECK(c.init(dll.in.state, dll.in.fast, dll.in.large, 8000, NV) == -1); // (outside min_rate .. max_rate)

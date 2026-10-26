@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * Minimal example voice engine: one sine per voice, amplitude following pressure.
- * Build with `make VOICE=sine`. It shows the API every voice_<name>.h provides (see the comment at
- * the top of synth_strisy.cpp) and a couple of patterns that matter on the Cortex-M7:
+ * Traits: engines/sine.h. It shows the API every voice_<name>.h provides (engine.h, adapter.h)
+ * and a couple of patterns that matter on the Cortex-M7:
  * - no sinf/expf/divisions per sample: block-rate coefficients, per-sample multiply-adds
  * - no libm at all (sinf, cosf, expf, powf, tanf...): newlib on this toolchain does parts of them
  *   in software double precision, which is slow and makes tools/build.sh reject the build. Use

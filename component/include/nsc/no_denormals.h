@@ -8,7 +8,7 @@
 // silent cost on a tail of subnormals that no one hears).
 //   x86-64     MXCSR FTZ (flush results) and DAZ (subnormal inputs read as 0)
 //   AArch64    FPCR.FZ (both)
-//   elsewhere  nothing: the board (32-bit Arm) keeps its IEEE mode, so its samples and the target
+//   elsewhere  nothing: 32-bit Arm (e.g. Cortex-M7) keeps its IEEE mode, so its samples and the target
 //              goldens are unchanged
 // What it changes: only samples that would have been subnormal (|x| < 2^-126, about 1.2e-38)
 // come out as 0, and nothing that depends on a subnormal.

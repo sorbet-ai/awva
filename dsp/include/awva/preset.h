@@ -16,7 +16,7 @@
 //   }
 //
 // One format everywhere: the factory presets (presets/<engine>/*.preset.json, compiled into the
-// engines), the SDK and the component, the board's preset store and its console. Pure: no heap,
+// engines), the SDK and the component, an embedded host's preset store. Pure: no heap,
 // no libc, fixed capacities (a parse that doesn't fit fails), constexpr (the factory presets are
 // read at compile time). The writer prints a float with the fewest digits that read back as the
 // same float, so a preset written and read again is bit for bit the same.
@@ -94,7 +94,7 @@ struct Preset {
 	int num_modes = 0;
 
 	// empty again, in place (a Preset is 5 KB: `p = Preset()` would build one on the stack first,
-	// and the board's stacks are 1 KB)
+	// and embedded stacks may be 1 KB)
 	constexpr void clear() {
 		engine.set("");
 		version.set("");
@@ -321,8 +321,8 @@ public:
 	}
 
 	// any value (skipped)
-	// one value of any kind skipped, nested up to 32 deep: without recursion (the board parses on
-	// 1 KB stacks, and a preset may come from anywhere)
+	// one value of any kind skipped, nested up to 32 deep: without recursion (an embedded host may
+	// parse on 1 KB stacks, and a preset may come from anywhere)
 	constexpr bool skip_value() {
 		uint32_t objects = 0; // bit d: level d is an object (else an array)
 		int depth = 0;

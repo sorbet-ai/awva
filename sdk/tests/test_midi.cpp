@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// MIDI in on the PC (midi_voices.h: the board's mapping, awva/midi_in.h, with this host's
+// MIDI in on the PC (midi_voices.h: the mapping of awva/midi_in.h, with this host's
 // voices) and the MIDI file reader (smf.h).
 #include <array>
 #include <cmath>
@@ -28,7 +28,7 @@ void send(sdk::MidiVoices& m, std::initializer_list<std::array<uint8_t, 3>> msgs
 
 } // namespace
 
-TEST_CASE("midi in: a note on and off, as the board maps them") {
+TEST_CASE("midi in: a note on and off, as midi_in.h maps them") {
 	sdk::MidiVoices m(10);
 	send(m, {{0x90, 60, 100}}); // master channel: not an MPE member
 	const int v = voice_of(m, 60.0f);

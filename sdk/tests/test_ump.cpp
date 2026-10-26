@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// The Striso UMP profile (awva/ump.h) on its own: every value the board and MIDI 1.0 give
+// awva's UMP profile (awva/ump.h) on its own: every value a 13-bit sensor and MIDI 1.0 give
 // arrives exactly (in the scale, or as an exact value), the decoder's callbacks and their order,
 // the touch factors, the strike fade.
 #include <cstdint>
@@ -36,8 +36,8 @@ struct Host {
 
 } // namespace
 
-TEST_CASE("ump: every board code is exact in the Striso scale") {
-	// the key thread's floats: code / 8191 (synth_control.cpp int2float), int16 codes
+TEST_CASE("ump: every sensor code is exact in the engine scale") {
+	// a sensor's floats: code / 8191, int16 codes
 	int escaped_pres = 0;
 	for (int code = -32768; code <= 32767; code++) {
 		const float x = static_cast<float>(code) / 0x1fff;
@@ -49,13 +49,13 @@ TEST_CASE("ump: every board code is exact in the Striso scale") {
 			REQUIRE(((p.w0 >> 20) & 0xf) == ump::poly_pressure);
 			REQUIRE(same(ump::pres_of(p.w1), x));
 		} else {
-			escaped_pres++; // (a negative pressure, which no key gives: an exact value)
+			escaped_pres++; // (a negative pressure, which no sensor gives: an exact value)
 		}
 	}
 	CHECK(escaped_pres == 32768);
 }
 
-TEST_CASE("ump: MIDI 1.0's values and MPE's pitches are exact in the Striso scale") {
+TEST_CASE("ump: MIDI 1.0's values and MPE's pitches are exact in the engine scale") {
 	for (int v = 0; v < 128; v++) {
 		const float x = static_cast<float>(v) * (1.0f / 127.0f);
 		CHECK(ump::pres_of(ump::pres_value(x)) == x);
@@ -131,7 +131,7 @@ TEST_CASE("ump: the decoder calls its host once per changed note, in the order t
 	CHECK(h.log.empty());
 }
 
-TEST_CASE("ump: the touch factors, in the board's float expressions") {
+TEST_CASE("ump: the touch factors, in the decoder's float expressions") {
 	ump::Decoder<8> d;
 	Host h;
 	h.t = {1.3f, 0.7f, 2.0f};

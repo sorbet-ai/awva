@@ -12,8 +12,8 @@ enable_language(C)
 add_executable(c_host c_host/c_host.c)
 set_target_properties(c_host PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON)
 target_include_directories(c_host PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../component/include")
-# awva_host_options as every host target: an including project's sanitizer build (the firmware's
-# host-asan) loads sanitized component libraries, which need the runtime in the program too
+# awva_host_options as every host target: an including project's sanitizer build (e.g. an
+# ASan host build) loads sanitized component libraries, which need the runtime in the program too
 target_link_libraries(c_host PRIVATE awva_host_options ${CMAKE_DL_LIBS})
 if(UNIX)
   target_link_libraries(c_host PRIVATE m)

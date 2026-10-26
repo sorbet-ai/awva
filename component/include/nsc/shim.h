@@ -5,8 +5,8 @@
 // state region holds the engine object and the component's MIDI side (awva_sdk/midi_voices.h:
 // the up-converter for MIDI 1.0 in UMP, the decoder, the voice allocator, mono legato) and its
 // event queue; the fast and large regions are the engine's. process_voices() is the engine's own
-// process() on the host's controls, so a host that gives the board's controls gets the board's
-// samples, bit for bit.
+// process() on the host's controls, so a host that gives an engine's controls gets the same
+// samples as the engine compiled in, bit for bit.
 #ifndef NSC_SHIM_H_
 #define NSC_SHIM_H_
 
@@ -235,7 +235,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		const float* p = const_cast<E&>(st(state).engine).param(i);
 		return p ? *p : 0.0f;
 	}
-	// the board's rule (synth_strisy.cpp apply_params): NaN ignored, steps rounded, the engine clamps
+	// the write rule (params.h, write_param): NaN ignored, steps rounded, the engine clamps
 	static int32_t set_param(void* state, int32_t i, float v) {
 		if (i == NP && !std::isnan(v)) {
 			st(state).output = v < 0.0f ? 0.0f : (v > 2.0f ? 2.0f : v);

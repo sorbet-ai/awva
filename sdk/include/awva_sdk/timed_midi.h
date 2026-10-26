@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // MIDI with time, in integer frames: the one step rule of the component (component/include/nsc),
-// the Shell and the renderer's MIDI player. MIDI is taken in 2 ms steps, as the board takes it:
+// the Shell and the renderer's MIDI player. MIDI is taken in 2 ms steps:
 // step k is at frame ceil(k sr / 500) (at 48 kHz every 96 frames, at 44.1 kHz 88 or 89, never
 // drifting); before a block that starts at frame f, every step at or before f runs, each with the
 // events whose frame is at or before the step's. An event is UMP (MIDI 2.0 channel voice, type 4;
