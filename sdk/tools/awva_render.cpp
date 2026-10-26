@@ -21,7 +21,8 @@
 //   --tail S          seconds after the input's own length (default 0)
 //   --settle S        seconds of silence rendered before the input and not written (default 0):
 //                     the parameter glide of --set has arrived when the input starts
-//   --legato          (--midi, --ump) the MIDI mapping in mono legato
+//   --legato          (--midi, --ump, --rec) mono legato: one voice, a note pressed while another is held
+//                     slurs to it (the MIDI mapping's mode; for --rec, the keys the same way)
 //   --nv N            voices (default 10)
 //   --rate HZ         sample rate (default: the performance's, 48000); the block is always 32
 //   --set NAME=V      a live parameter, written with its rule (clamped) after the preset; repeatable
@@ -428,7 +429,7 @@ int main(int argc, char** argv) {
 
 	// the input: exactly one
 	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --rec, --midi, --ctl or --ump");
-	if (legato && !midi && !ump) fail("--legato: the MIDI mapping's mode (--midi or --ump)");
+	if (legato && !midi && !ump && !rec) fail("--legato: mono legato for --midi, --ump or --rec");
 	const bool default_input = !perf && !rec && !midi && !ctl && !ump;
 	if (listen) use_fx = true; // a render for ears goes through the effects
 	if (default_input) perf = "default";
@@ -468,7 +469,7 @@ int main(int argc, char** argv) {
 		if (cp) ctl_blocks = cp->blocks();
 		player = std::move(cp);
 	} else {
-		player = rec ? sdk::key_player(rec, nv, sr, &error) :
+		player = rec ? sdk::key_player(rec, nv, sr, &error, legato) :
 		    midi     ? sdk::midi_player(midi, nv, sr, &error, legato) :
 		    ump      ? sdk::ump_player(ump, nv, sr, legato, &error) :
 		               sdk::scripted_player(perf, nv, sr, &error);
