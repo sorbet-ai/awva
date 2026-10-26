@@ -1244,6 +1244,64 @@
      "track": "Dataset/39_Jerusalem_vn_vn_va_sax_db/AuSep_5_db_39_Jerusalem.wav"
     }
    ]
+  },
+  "english_horn": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_eh__p02",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_eh__p04",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_eh__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__02_eh__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_DieHelleSonnLeuchtJetztHerfuer__02_eh__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__02_eh__p06",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__02_eh__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_DieHelleSonnLeuchtJetztHerfuer__02_eh__p01",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/02_eh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Gesius_DuFriedensfuerstHerrJesuChrist/tracks/02_eh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_DieHelleSonnLeuchtJetztHerfuer/tracks/02_eh.wav"
+    }
+   ]
   }
  }
 }

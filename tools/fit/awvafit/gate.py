@@ -98,7 +98,8 @@ MODS = (('mod_slow', 4, 20), ('mod_mid', 20, 80), ('mod_fast', 80, 300))
 INSTRUMENTS = {
     'trumpet': ('Trumpet', 'Trumpet'), 'flugelhorn': ('Flugelhorn', None), 'trombone': ('Trombone', 'Trombone'),
     'horn': ('French horn', 'French horn'), 'tuba': ('Tuba', 'Tuba'), 'sax': ('Alto Saxophone', 'Saxophone'),
-    'clarinet': ('Clarinet', 'Clarinet'), 'oboe': ('Oboe', 'Oboe'), 'flute': ('Flute', 'Flute'),
+    'clarinet': ('Clarinet', 'Clarinet'), 'oboe': ('Oboe', 'Oboe'), 'english_horn': ('English horn', None),
+    'flute': ('Flute', 'Flute'),
     'bassoon': (None, 'Bassoon'), 'violin': (None, 'Violin'), 'viola': (None, 'Viola'), 'cello': (None, 'Cello'),
     'bass': (None, 'Double bass'),
 }
