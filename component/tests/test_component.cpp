@@ -555,7 +555,7 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 			linked.set_preset(i);
 			for (int k = 0; k < e->info->num_params; k++) {
 				const float a = c.param(dll.in.state, k), b = *linked.param(k);
-				CHECK(std::memcmp(&a, &b, sizeof a) == 0);
+				CHECK(std::bit_cast<uint32_t>(a) == std::bit_cast<uint32_t>(b));
 			}
 		}
 		// edited, saved by the component, loaded by the SDK: exact, the same values
@@ -576,7 +576,7 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 		CHECK(rep.exact);
 		for (int k = 0; k < e->info->num_params; k++) {
 			const float a = c.param(dll.in.state, k), b = *linked.param(k);
-			CHECK(std::memcmp(&a, &b, sizeof a) == 0);
+			CHECK(std::bit_cast<uint32_t>(a) == std::bit_cast<uint32_t>(b));
 		}
 		// refused: another engine's, and not a preset; nothing changed
 		const std::string other = std::strcmp(e->info->name, "va") == 0 ? factory_file("ep", 0) : factory_file("va", 0);

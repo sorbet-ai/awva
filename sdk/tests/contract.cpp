@@ -19,6 +19,7 @@
 //   cpu               a smoke check: the worst case (every voice, full pressure) runs much faster
 //                     than real time on the PC
 #include <algorithm>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -550,7 +551,7 @@ TEST_CASE("presets: each factory preset is its file, by name, bit for bit") {
 		CHECK(r.missing.empty());
 		for (int p = 0; p < a.num_params(); p++) {
 			CAPTURE(std::string(a.param_desc(p)->name));
-			CHECK(std::memcmp(a.param(p), b.param(p), sizeof(float)) == 0);
+			CHECK(std::bit_cast<uint32_t>(*a.param(p)) == std::bit_cast<uint32_t>(*b.param(p)));
 		}
 		CHECK(same_floats(render_phrase(a), render_phrase(b)));
 		// the title is the preset's name; the heroes are the engine's for it (engines/<name>.h)
@@ -588,7 +589,7 @@ TEST_CASE("presets: saved, written, read and loaded again, the same values and s
 		CHECK(r.exact);
 		for (int i = 0; i < a.num_params(); i++) {
 			CAPTURE(std::string(a.param_desc(i)->name));
-			CHECK(std::memcmp(a.param(i), b.param(i), sizeof(float)) == 0);
+			CHECK(std::bit_cast<uint32_t>(*a.param(i)) == std::bit_cast<uint32_t>(*b.param(i)));
 		}
 		// both from the same values as presets: the same sound
 		sdk::Engine c = fresh(presets().front());
