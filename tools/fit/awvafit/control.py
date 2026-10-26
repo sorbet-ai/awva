@@ -25,7 +25,9 @@ ms later (a near-silent gap); most tongued notes strike at 0.7-1.0. Here the str
      played as a second strike (clicks in the clarinets at 0.05-0.08)
   legato: a connected change (the next onset < CONNECT after this note's end, another pitch) keeps the
      breath: the next key goes down at its onset with a slurred strike (SLUR_STRIKE) on another key, the
-     last one lets go `overlap` s later; repeated pitches and gaps re-tongue (released 20 ms before)
+     last one lets go `overlap` s later; repeated pitches and gaps re-tongue (released 20 ms before).
+     From 50 ms before the note's end the old key's pressure follows the recording's dip down, as fast
+     as it falls (a falling pressure is a negative velocity: no strike), with no 12 dB limit
   strikes: every note's strike from strike.calibrate (the recording's own attack overshoot), the slurred
      ones too: a tongued legato re-attacks on the held breath as far as the recording does; a slur whose
      recording shows no attack keeps a soft press (the choice nearest SLUR_STRIKE within 0.5 dB)
@@ -55,6 +57,7 @@ FLOOR_X = 1.25
 FLOOR_DB = 30.0   # the floor is also where the engine's level is within this of its loudest
 HOLD_DIP = 12.0   # dB a held note's pressure may follow the recording's level under the note's own
 SLEW = 1.5        # /s: the fastest a held note's pressure moves (the scanner's velocity <= K * SLEW = 0.05)
+DIP_LEAD = 0.05   # s before a slurred note's end from which its key follows the recording's dip down
 ENV_SMOOTH = 0.07  # s: the recording's 10 ms level, smoothed over this before the pressure follows it
 
 
@@ -244,8 +247,11 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
         lvl_j = lv[j] if math.isfinite(lv[j]) else Lmed
         low = (lvl_j - Lmed) - HOLD_DIP  # a held note's pressure stays within HOLD_DIP dB of its own level
 
-        def target(t, c=c, low=low):
-            return pressure_for(c, L_anchor + max(float(np.interp(t / 0.01, te, e)) - Lmed, low))
+        dip_from = b - DIP_LEAD if conn_out else math.inf  # into a slur: the old key follows the recording's dip
+
+        def target(t, c=c, low=low, dip_from=dip_from):
+            lo = -math.inf if t >= dip_from else low
+            return pressure_for(c, L_anchor + max(float(np.interp(t / 0.01, te, e)) - Lmed, lo))
 
         P0 = pressure_for(c, L_anchor + (lvl_j - Lmed))
         v = SLUR_STRIKE if conn_in else (strikes[j] if strikes and j in strikes else TONGUE_STRIKE)
@@ -257,7 +263,9 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
         y = np.empty(len(ug))
         y[0] = P0
         for k in range(1, len(ug)):
-            y[k] = y[k - 1] + float(np.clip(target(a + tr + ug[k]) - y[k - 1], -SLEW * keys.DT, SLEW * keys.DT))
+            tk = a + tr + ug[k]
+            down = math.inf if tk >= dip_from else SLEW * keys.DT  # falling: a negative velocity, never a strike
+            y[k] = y[k - 1] + float(np.clip(target(tk) - y[k - 1], -down, SLEW * keys.DT))
         avoid = (last_kid,) if conn_in and last_kid is not None else ()
         s.press(a - t_first + 0.3, v, P0, hold, note=lay[j], avoid=avoid, shape=lambda u, ug=ug, y=y, P0=P0: float(np.interp(u, ug, y)) / P0)
         last_kid = s.notes[-1]['kid']
