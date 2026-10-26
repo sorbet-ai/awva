@@ -143,3 +143,60 @@ TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Re
 		if (m.voices()[v].pitch == 64.0f) CHECK(m.voices()[v].timbre == y64);
 	}
 }
+
+// TimedMidi::reset() on a thread whose stack the test owns, painted beforehand: how deep it went is
+// how much of the paint is gone. An embedded host resets an engine on a small audio-thread stack,
+// so reset() must not build its kilobytes of MIDI state as a temporary. (POSIX threads, and not
+// under the sanitizers, whose frames are of another size.)
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define AWVA_TEST_ASAN 1
+#endif
+#endif
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__SANITIZE_ADDRESS__) && !defined(AWVA_TEST_ASAN)
+#include <pthread.h>
+
+#include <memory>
+#include <vector>
+
+#include "awva_sdk/timed_midi.h"
+
+namespace {
+// the bytes of a stack of its own that a thread running f(arg) used (its start included: the C
+// library keeps its thread data at the stack's top)
+size_t stack_used(void* (*f)(void*), void* arg) {
+	constexpr size_t SIZE = 256 * 1024; // (above PTHREAD_STACK_MIN everywhere)
+	std::vector<uint8_t> stack(SIZE, 0xa5);
+	pthread_attr_t attr;
+	REQUIRE(pthread_attr_init(&attr) == 0);
+	REQUIRE(pthread_attr_setstack(&attr, stack.data(), SIZE) == 0);
+	pthread_t t;
+	REQUIRE(pthread_create(&t, &attr, f, arg) == 0);
+	REQUIRE(pthread_join(t, nullptr) == 0);
+	pthread_attr_destroy(&attr);
+	size_t untouched = 0; // (the stack grows down: from its low end, the paint left)
+	while (untouched < SIZE && stack[untouched] == 0xa5) untouched++;
+	return SIZE - untouched;
+}
+} // namespace
+
+TEST_CASE("timed midi: reset() uses little stack (its MIDI state rebuilt in place)") {
+	static_assert(sizeof(sdk::MidiVoices) > 4096, "the state a temporary would put on the stack");
+	auto midi = std::make_unique<sdk::TimedMidi>(10, 48000);
+	const uint8_t on[3] = {0x90, 60, 100};
+	(void)midi->midi1(0, on, 3, 7);
+	midi->advance(96);
+	const size_t start = stack_used([](void*) -> void* { return nullptr; }, nullptr);
+	const size_t with_reset = stack_used(
+	    [](void* m) -> void* {
+		    static_cast<sdk::TimedMidi*>(m)->reset();
+		    return nullptr;
+	    },
+	    midi.get());
+	const size_t used = with_reset > start ? with_reset - start : 0;
+	MESSAGE("reset(): " << used << " bytes of stack (a thread's start: " << start << ")");
+	CHECK(used < 1024); // (a temporary MidiVoices alone is sizeof(MidiVoices))
+	int32_t ids[4];
+	CHECK(midi->ended(ids, 4, 0, true) == 1); // (and it did reset: the note's id ended)
+}
+#endif
