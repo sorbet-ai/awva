@@ -7,7 +7,7 @@
   res = r.render('trumpet', 2, ctl='in.ctl', out='o.f32', sets={'gain': 12.0}, manifest='o.json')
   res.x, res.manifest['hash']
 
-An input is one of rec= (a key stream CSV, through the key path), ctl= (engine controls), midi= (a
+An input is one of ump= (a MIDI 2.0 performance, UMP text), rec= (a key stream CSV, through the key path), ctl= (engine controls), midi= (a
 Standard MIDI File, MPE or plain: up-converted to MIDI 2.0) or perf= (a scripted performance).
 The settings: rate, voices (nv), seconds or tail, settle (silence before, not written: the glide of
 the overrides arrives), transpose, notes (each new press takes the next), fx. The block is always 32.
@@ -95,14 +95,14 @@ class Renderer:
             t[f[0]] = Param(f[1], float(f[2]), float(f[3]), float(f[4]))
         return t
 
-    def render(self, engine, preset=None, *, out, rec=None, ctl=None, midi=None, perf=None, sets=None, transpose=0.0,
+    def render(self, engine, preset=None, *, out, rec=None, ctl=None, midi=None, perf=None, ump=None, sets=None, transpose=0.0,
                notes=None, settle=0.0, tail=0.0, seconds=None, nv=None, rate=None, fx=False, ctl_out=None, wav=None,
-               manifest=None, check=False, max_peak=None):
+               manifest=None, check=False, max_peak=None, listen=False, lufs=None, true_peak=None):
         """one render; raises RenderError on a failure (exit 2: bad arguments or input)"""
         a = ['--engine', engine]
         if preset is not None:
             a += ['--preset', str(preset)]
-        inputs = [(k, v) for k, v in (('--rec', rec), ('--ctl', ctl), ('--midi', midi), ('--perf', perf)) if v is not None]
+        inputs = [(k, v) for k, v in (('--rec', rec), ('--ctl', ctl), ('--midi', midi), ('--perf', perf), ('--ump', ump)) if v is not None]
         if len(inputs) > 1:
             raise RenderError('one input only')
         for k, v in inputs:
@@ -125,6 +125,8 @@ class Renderer:
             a += ['--rate', str(rate)]
         if fx:
             a += ['--fx']
+        if listen:
+            a += ['--listen'] + (['--lufs', repr(float(lufs))] if lufs is not None else []) + (['--true-peak', repr(float(true_peak))] if true_peak is not None else [])
         if check:
             a += ['--check'] + (['--max-peak', str(max_peak)] if max_peak is not None else [])
         a += ['--out', out]

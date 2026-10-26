@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Sorbet AI
+# SPDX-License-Identifier: Apache-2.0
+# The musical test performances' golden hashes on main's engines (sdk/CMakeLists.txt: awva_render.musical.*).
+# <performance> <engine> <preset number> <hash of the dry render>. Update: tools/fit/regress/goldens.py
+brass/brass_legato.ump brass 0 b299f2227d0d2242
+brass/brass_swell.ump brass 0 a6484bc63d804a3c
+brass/brass_tongued.ump brass 0 59ded48c5bc2282c
+clarinet/clarinet_legato.ump wind 0 5293bd37e852b525
+clarinet/clarinet_swell.ump wind 0 4937451bee97ea8b
+clarinet/clarinet_tongued.ump wind 0 4f854460dd51ebd1
+doublereed/doublereed_legato.ump wind 6 4ec64acbe9f8eb17
+doublereed/doublereed_swell.ump wind 6 0e78463be5f1da64
+doublereed/doublereed_tongued.ump wind 6 7731cbe8d8714436
+flute/flute_legato.ump wind 8 cd8eddc84ae24828
+flute/flute_swell.ump wind 8 91221d2b87b7f320
+flute/flute_tongued.ump wind 8 2cca627549fe0fd7
+sax/sax_legato.ump wind 3 f1fa154095c5eb67
+sax/sax_swell.ump wind 3 aff370272e96873e
+sax/sax_tongued.ump wind 3 3267e6ec123863d3

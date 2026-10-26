@@ -227,3 +227,76 @@ def build(config, out, renderers, workers=5, log=print):
     os.rmdir(work)
     log(f'pack: {out}, {len(jobs)} renders')
     return manifest
+
+
+# --- the musical test performances against their recordings ----------------------------------------
+
+
+def _tp_db(x):
+    from scipy.signal import resample_poly
+    return 20 * math.log10(max(np.abs(resample_poly(x, 4, 1, axis=0)).max(), 1e-12))
+
+
+def _fade(x, fin=0.005, fout=0.02):
+    x = x.copy()
+    a, b = int(fin * SR), int(fout * SR)
+    x[:a] *= np.linspace(0, 1, a)[:, None]
+    x[-b:] *= np.linspace(1, 0, b)[:, None]
+    return x
+
+
+def build_performances(out, renderers, paths=None, versions=None, target=-23.0, ceiling=-1.0, log=print):
+    """A/B files of the musical test performances: each the recording, 1 s of silence, our render
+    (awva_render --listen: through the effects at `target` LUFS, its true peak checked), 24-bit
+    stereo, the recording at the same loudness; and index.md with the gate (level, true peak, clicks).
+    versions: [(label, renderer name, engine or None, preset or None)] (default: the performance's
+    own engine and preset on renderers['main'])."""
+    from .features.transients import clicks, split
+    from .perform import read_perf
+    from .smoke import performances
+    os.makedirs(out, exist_ok=True)
+    paths = paths or performances()
+    versions = versions or [('main', 'main', None, None)]
+    rows = []
+    for p in paths:
+        meta, score, _ = read_perf(p)
+        x, sr = read(sources.path(meta['source'], meta['reference']), np.float64)
+        a, b = int(float(meta['reference_start_s']) * sr), int(float(meta['reference_end_s']) * sr)
+        rec = resample(x[max(a, 0):b], sr, SR)
+        rec = np.stack([rec, rec], 1)
+        for label, rname, eng, pre in versions:
+            eng, pre = eng or meta['engine'], pre if pre is not None else meta['preset']
+            stem = os.path.join(out, '_work', f"{os.path.splitext(os.path.basename(p))[0]}__{slug(label)}")
+            os.makedirs(os.path.dirname(stem), exist_ok=True)
+            res = Renderer(renderers[rname]).render(eng, pre, ump=p, out=stem + '.f32', listen=True, lufs=target, true_peak=ceiling)
+            ren = res.x.astype(np.float64).reshape(-1, 2)
+            A = rec * 10 ** ((target - lufs(rec, SR)) / 20)
+            if _tp_db(A) > ceiling:
+                raise ValueError(f'{p}: the recording would pass {ceiling} dBTP at {target} LUFS')
+            A, B = _fade(A), _fade(ren)
+            full = np.concatenate([A, np.zeros((SR, 2)), B])
+            fn = f"{meta['family']}/{os.path.splitext(os.path.basename(p))[0]}__{slug(label)}.wav"
+            os.makedirs(os.path.join(out, meta['family']), exist_ok=True)
+            write_wav(os.path.join(out, fn), full, SR, bits=24)
+            ck, tr = split(clicks(B, SR), [on for on, *_ in score])
+            row = dict(file=fn, performance=os.path.basename(p), version=label, engine=f'{eng}:{pre}', lufs_rec=lufs(A, SR), lufs_render=lufs(B, SR),
+                       tp_dbtp=_tp_db(full), peak=float(np.abs(full).max()), clicks=ck, onset_transients=tr, reference=meta['reference'],
+                       ok=abs(lufs(A, SR) - target) <= 1 and abs(lufs(B, SR) - target) <= 1 and _tp_db(full) <= ceiling and not ck)
+            rows.append(row)
+            log(fn, 'OK' if row['ok'] else 'PROBLEM', f"{row['lufs_rec']:.2f}/{row['lufs_render']:.2f} LUFS, {row['tp_dbtp']:.2f} dBTP, clicks {ck}")
+    for fn in os.listdir(os.path.join(out, '_work')):
+        os.remove(os.path.join(out, '_work', fn))
+    os.rmdir(os.path.join(out, '_work'))
+    L = ['# The musical test performances against their recordings', '',
+         'Each file: the recording, 1 s of silence, our render. The performances are MIDI 2.0 (tools/fit/performances), derived from '
+         'ChoraleBricks recordings (CC BY 4.0): notes, pitch (with glides), pressure and articulation inferred from each recording. '
+         f'The render: awva_render --listen, through the master effects at {target:g} LUFS (ITU-R BS.1770), its true peak checked; the recording at the same loudness. 24-bit stereo.', '',
+         f"Gate: {sum(r['ok'] for r in rows)} of {len(rows)} files pass (both halves within 1 LU of {target:g} LUFS, true peak at or under {ceiling:g} dBTP, no click).", '',
+         '| file | engine | recording LUFS | render LUFS | true peak dBTP | clicks | onset transients | gate |', '|---|---|---|---|---|---|---|---|']
+    L += [f"| `{r['file']}` | {r['engine']} | {r['lufs_rec']:.2f} | {r['lufs_render']:.2f} | {r['tp_dbtp']:.2f} | {len(r['clicks'])} | {len(r['onset_transients'])} | {'pass' if r['ok'] else 'FAIL'} |" for r in rows]
+    L += ['', '## Sources', '', f"- {sources.SOURCES['choralebricks']['citation']}", '']
+    with open(os.path.join(out, 'index.md'), 'w', encoding='utf-8') as f:
+        f.write('\n'.join(L))
+    with open(os.path.join(out, 'index.json'), 'w', encoding='utf-8') as f:
+        json.dump(rows, f, indent=1)
+    return rows
