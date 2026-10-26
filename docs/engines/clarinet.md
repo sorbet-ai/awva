@@ -87,7 +87,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | tail | silent and idle within 2 s of the last release |
 | engine object | 2.625 KB (2688 bytes) (on a 64-bit host) |
 | FastMemory | none |
-| LargeMemory | 25 KB |
+| LargeMemory | 100 KB |
 
 <!-- awva_docs: end -->
 

@@ -52,7 +52,8 @@
  * resets a voice whose state is non-finite or absurd; the master has a DC blocker and a soft ceiling.
  * Cost: about 34k QEMU instructions per block (10 voices, the default performance); per voice-sample
  * one square root and ~90 FP operations, per block the bore's impedance at the note (a few complex
- * evaluations). Memory: the bore delay lines, 2.5 KB per voice (LargeMemory, 25.6 KB).
+ * evaluations). Memory: the bore delay lines, 10 KB per voice, as long as 192 kHz needs (LargeMemory,
+ * 102.4 KB). Below 44.1 kHz the bass clarinet's reed squeals (engines/clarinet.h min_rate).
  */
 #ifndef VOICE_CLARINET_H_
 #define VOICE_CLARINET_H_
@@ -80,9 +81,10 @@ static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
 static_assert(BLOCK % CTRL == 0, "CTRL must divide BLOCK");
-static constexpr int ALEN = 64; // section A (mouthpiece -> register hole), each direction
+// the delay lines are as long as 192 kHz needs (4x 48 kHz: the same bores at every rate)
+static constexpr int ALEN = 256; // section A (mouthpiece -> register hole), each direction
 static constexpr uint32_t AMASK = ALEN - 1;
-static constexpr int BLEN = 256; // section B (register hole -> lattice), each direction
+static constexpr int BLEN = 1024; // section B (register hole -> lattice), each direction
 static constexpr uint32_t BMASK = BLEN - 1;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
@@ -207,6 +209,7 @@ struct Engine {
 	Params ps;          // smoothed copy used by the DSP
 	LargeMemory* large; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt;
+	real r48; // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
 	real low_note;
 	strisy::SvfCoef lv_c, ty_c, tone_c;
 	real t1, t2; // tone filter (shared: every voice plays the same preset)
@@ -389,6 +392,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dt = 1.0f / sr;
 	e.pi_sr = PI / sr;
 	e.ctrl_dt = (real)CTRL / sr;
+	e.r48 = 48000.0f / sr;
 	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.t1 = e.t2 = 0.0f;
 	e.dc = 0.0f;
@@ -606,18 +610,22 @@ static inline void process_voice(Engine& e, int vi) {
 		if (jump) s.DB = clampr(Deff - b.dA2, lim_lo, 2.0f * lim_hi); // the first guess
 		const int iters = jump ? 4 : 1;
 		real DB = s.DB;
-		Cx gin = gamma_in(b, DB);
-		for (int it = 0; it < iters; it++) {
-			const real mag = fsqrt(gin.re * gin.re + gin.im * gin.im);
-			const real opm = 1.0f + mag;
-			const real phi_t = clampr(-yri * opm * opm / (2.0f * rmax(mag, 0.05f)), -0.5f, 0.5f);
-			const real f = wrapp(atan2s(gin.im, gin.re) - phi_t);
-			const Cx g2 = gamma_in(b, DB + 0.5f);
-			real der = wrapp(atan2s(g2.im, g2.re) - atan2s(gin.im, gin.re)) * 2.0f;
-			if (der > -0.2f * w0) der = -w0;
-			DB = clampr(DB - clampr(f / der, -0.1f * Dfing, 0.1f * Dfing), lim_lo, 2.0f * lim_hi);
+		Cx gin;
+		auto solve = [&](int n) {
 			gin = gamma_in(b, DB);
-		}
+			for (int it = 0; it < n; it++) {
+				const real mag = fsqrt(gin.re * gin.re + gin.im * gin.im);
+				const real opm = 1.0f + mag;
+				const real phi_t = clampr(-yri * opm * opm / (2.0f * rmax(mag, 0.05f)), -0.5f, 0.5f);
+				const real f = wrapp(atan2s(gin.im, gin.re) - phi_t);
+				const Cx g2 = gamma_in(b, DB + 0.5f);
+				real der = wrapp(atan2s(g2.im, g2.re) - atan2s(gin.im, gin.re)) * 2.0f;
+				if (der > -0.2f * w0) der = -w0;
+				DB = clampr(DB - clampr(f / der, -0.1f * Dfing, 0.1f * Dfing), lim_lo, 2.0f * lim_hi);
+				gin = gamma_in(b, DB);
+			}
+		};
+		solve(iters);
 		s.DB = DB;
 		if (jump) {
 			s.DBp = DB;
@@ -686,6 +694,7 @@ static inline void process_voice(Engine& e, int vi) {
 	float* __restrict__ Bu = e.large->b_up[vi];
 	real x1 = s.x1, x2 = s.x2, pe = s.pe, q = s.q, aprev = s.aprev, l1 = s.l1, l2 = s.l2, l3 = s.l3, l4 = s.l4, lsv = s.ls, rprev = s.rprev, um = s.um;
 	real gam = s.gam;
+	const real k_um = 0.002f * e.r48, k_xhp = 0.004f * e.r48; // (time constants made at 48 kHz)
 	uint32_t w = s.w, nr = s.nrng;
 	const uint32_t dA = (uint32_t)s.dA, nbu = (uint32_t)s.nbu;
 	// section B's downward (fractional) delay ramps over the block
@@ -726,7 +735,7 @@ static inline void process_voice(Engine& e, int vi) {
 			u = Pd < 0.0f ? -u : u;
 			nr = nr * 1664525u + 1013904223u;
 			const real nz = (real)(int32_t)nr * 4.656613e-10f;
-			um += 0.002f * (u - um);
+			um += k_um * (u - um);
 			u += nz * br * (u - um);
 #ifdef CLARINET_TEST_HOOK
 			if (clarinet_dbg_imp && vi == 0) u = clarinet_dbg_n == 0 ? 1.0f : 0.0f;
@@ -742,7 +751,7 @@ static inline void process_voice(Engine& e, int vi) {
 #endif
 			pe = p - gam - tpush + lay * rmax(-1.0f - x, 0.0f);
 			xlp += a_lp * (p - xlp);
-			xhp += 0.004f * (xlp - xhp);
+			xhp += k_xhp * (xlp - xhp);
 			{
 				const real xc = xlp - xhp;
 				if (xprev < 0.0f && xc >= 0.0f) {
@@ -811,7 +820,7 @@ static inline void process_voice(Engine& e, int vi) {
 	s.nrng = nr;
 	s.um = um;
 	s.DBp = s.DB;
-	s.hole += 0.2f * (s.hole_t - s.hole);
+	s.hole += rmin(0.2f * e.r48, 1.0f) * (s.hole_t - s.hole);
 	s.xlp = xlp;
 	s.xhp = xhp;
 	s.xprev = xprev;
@@ -845,7 +854,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 		for (int i = 0; i < NPARAMS; i++) {
 			const real d = pt[i] - ps[i];
 			// (the snap is relative: a large value's last steps would be below its float resolution)
-			ps[i] = fabsf(d) <= 1e-5f * rmax(fabsf(pt[i]), 1.0f) ? pt[i] : ps[i] + 0.05f * d;
+			ps[i] = fabsf(d) <= 1e-5f * rmax(fabsf(pt[i]), 1.0f) ? pt[i] : ps[i] + rmin(0.05f * e.r48, 1.0f) * d;
 		}
 	}
 	e.tone_c = strisy::svf_pade(e.pi_sr * clampr(e.ps.tone_hz, 500.0f, 0.45f * e.sr), clampr(e.ps.tone_q, 0.5f, 2.0f));
