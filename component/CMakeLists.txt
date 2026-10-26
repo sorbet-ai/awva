@@ -6,8 +6,10 @@
 #                      .dylib / .so, and its manifest <name>.json (id, name, summary, ABI, version,
 #                      schema, sizes) written by nsc_manifest from the built library itself
 #   nsc_manifest       loads a component and prints its manifest (also the loader the tests use)
+#   awva_conformance   the ABI's conformance checks on any component library (conformance/)
 #   tests: component.* every component loads, its manifest matches, and it renders bit for bit
 #                      as the engine linked in (process_voices) and as the SDK's MIDI player (process)
+#          conformance.<name>.*  awva_conformance on each engine's library
 # Built with the SDK's flags (awva_sdk_options: -O2, no FMA contraction), so a component's samples
 # are the SDK's, and an including project's when it is built with them.
 set(_cgen "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -23,6 +25,9 @@ if(NOT _nsc_version)
   if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../.git")
     execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}/.." describe --always --dirty
       OUTPUT_VARIABLE _nsc_version OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  endif()
+  if(NOT _nsc_version) # (a .git that git can't read: a copied worktree, a container)
+    set(_nsc_version "unknown")
   endif()
 endif()
 
@@ -84,6 +89,13 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
     "AWVA_REC_DIR=\"${AWVA_HARNESS_DIR}/rec\"" "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
   add_dependencies(nsc_component_tests nsc_components)
   doctest_discover_tests(nsc_component_tests TEST_PREFIX "component." PROPERTIES LABELS unit)
+  # the ABI's conformance checks on every engine's library (conformance/, docs/conformance.md),
+  # with the engine's known failures (sdk/tests/known_failures.cmake)
+  include("${CMAKE_CURRENT_SOURCE_DIR}/conformance/conformance.cmake")
+  foreach(v IN LISTS AWVA_ENGINES)
+    awva_conformance_tests("conformance.${v}." "${AWVA_COMPONENT_DIR}/${v}${CMAKE_SHARED_LIBRARY_SUFFIX}" KNOWN ${AWVA_KNOWN_${v}} ${AWVA_KNOWN_COMPONENT} LABELS "conformance;unit")
+  endforeach()
+  add_dependencies(awva_conformance nsc_components)
   # awva_add_component from a project outside awva: everything in its own build directory. It builds
   # with this build's toolchain (not the environment's default compiler)
   add_test(NAME component.add_component_from_outside COMMAND "${CMAKE_COMMAND}" "-DAWVA=${CMAKE_CURRENT_SOURCE_DIR}/.."

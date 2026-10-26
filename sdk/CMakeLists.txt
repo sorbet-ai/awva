@@ -14,7 +14,7 @@
 #   awva_render              the renderer (sdk/tools/awva_render.cpp)
 #   render_custom              the renderer with one engine and performance compiled with extra
 #                              flags (AWVA_RENDER_*)
-#   tests: contract.<name>.*   the contract suite on each engine (tests/contract.cpp)
+#   tests: contract.<name>.*   the contract suite on each engine (tests/contract*.cpp, docs/conformance.md)
 #          sdk.*               the shared helpers, the MIDI mapping and files, the shell
 #          awva_render.*     the renderer's log names its engine, preset and input; bad inputs fail
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -263,10 +263,13 @@ if(NOT EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
 endif()
 include("${AWVA_DOCTEST_DIR}/cmake/doctest.cmake")
 
-# the contract suite on every engine: one test program per engine, linked to that engine's library
+# the contract suite on every engine (docs/conformance.md): one test program per engine, linked to
+# that engine's library, with its known failures (tests/known_failures.cmake: AWVA_KNOWN_<engine>)
+include("${CMAKE_CURRENT_SOURCE_DIR}/tests/known_failures.cmake")
 foreach(v IN LISTS AWVA_ENGINES)
   add_executable(awva_engine_${v}_contract tests/main.cpp tests/contract.cpp)
-  target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v}
+  list(JOIN AWVA_KNOWN_${v} "," _known)
+  target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v} "AWVA_KNOWN_FAILURES=\"${_known}\""
     "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
   target_include_directories(awva_engine_${v}_contract PRIVATE "${AWVA_DOCTEST_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../component/include")
   target_link_libraries(awva_engine_${v}_contract PRIVATE awva_engine_${v} awva_sdk_options awva_sdk_presets)

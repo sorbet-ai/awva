@@ -6,6 +6,7 @@ awva's engines are per-note sound engines: each note gets a pitch and its own co
 
 - **[Playing with MIDI 2.0 and MPE](midi.md):** how MIDI 2.0, MPE and plain MIDI 1.0 reach the engines' controls.
 - **The engine contract:** `dsp/include/awva/engine.h` (the `VoiceEngine` concept, `EngineInfo`, the memory regions). The SDK's contract suite (`sdk/tests/contract.cpp`) checks every engine against it.
+- **[Conformance](conformance.md):** the checks every engine gets, at the engine contract and at the component ABI (`awva_conformance`, for any component and any host's CI), how a new engine opts in, and the known failures.
 - **The component ABI:** [`component/README.md`](../component/README.md), each engine as its own library through a C interface.
 - **Using an engine in your own program:** from plain C or through the SDK, with the examples in [`examples/`](../examples/): the repository's [README](../README.md#use-an-engine-in-your-own-program).
 - **Building and testing:** the repository's [README](../README.md).

@@ -10,4 +10,4 @@ B="${1:-build/sdk}"
 cmake -S sdk -B "$B" -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null
 cmake --build "$B" > /dev/null
 RT="${RUN_CLANG_TIDY:-$(command -v run-clang-tidy-15 || command -v run-clang-tidy)}"
-"$RT" -quiet -p "$B" $(ls sdk/src/*.cpp sdk/tools/*.cpp sdk/tests/*.cpp "$B"/generated/engine_*.cpp $(ls component/tools/*.cpp component/tests/*.cpp 2>/dev/null))
+"$RT" -quiet -p "$B" $(ls sdk/src/*.cpp sdk/tools/*.cpp sdk/tests/*.cpp "$B"/generated/engine_*.cpp $(ls component/tools/*.cpp component/tests/*.cpp component/conformance/*.cpp 2>/dev/null))
