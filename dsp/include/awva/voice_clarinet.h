@@ -53,7 +53,7 @@
  * resets a voice whose state is non-finite or absurd; the master has a DC blocker and a soft ceiling.
  * Cost: about 41k QEMU instructions per block (10 voices, the default performance); per voice-sample
  * one square root and ~100 FP operations, per block the bore's impedance at the note (a few complex
- * evaluations). Memory: the bore delay lines, 10 KB per voice, as long as 192 kHz needs (LargeMemory,
+ * evaluations). Memory: the bore delay lines, 10 KB per voice, as long as 192 kHz needs (BulkMemory,
  * 102.4 KB). Below 44.1 kHz the bass clarinet's reed squeals (engines/clarinet.h min_rate).
  */
 #ifndef VOICE_CLARINET_H_
@@ -94,7 +94,7 @@ static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
 
 // the bore delay lines, placed by the host (engine SDK)
-struct LargeMemory {
+struct BulkMemory {
 	alignas(32) float a_dn[MAX_VOICES][ALEN];
 	alignas(32) float a_up[MAX_VOICES][ALEN];
 	alignas(32) float b_dn[MAX_VOICES][BLEN];
@@ -168,7 +168,7 @@ static constexpr real instrument_low[NUM_INSTRUMENTS] = {
 
 // the factory presets: presets/clarinet/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 2;
-[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static constexpr const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef CLARINET_PRESET
@@ -222,7 +222,7 @@ struct Engine {
 	int preset;
 	Params p;           // as set (preset, live edits)
 	Params ps;          // smoothed copy used by the DSP
-	LargeMemory* large; // the host's (init): the bore delay lines
+	BulkMemory* bulk; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt;
 	real r48;            // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
 	real kj, kd, sj, sd; // the breath fluctuations' per-block rates and their noise scales (any rate)
@@ -357,8 +357,8 @@ struct Cx {
 // setup
 
 static inline void clear_lines(Engine& e, int v) {
-	for (int i = 0; i < ALEN; i++) e.large->a_dn[v][i] = e.large->a_up[v][i] = 0.0f;
-	for (int i = 0; i < BLEN; i++) e.large->b_dn[v][i] = e.large->b_up[v][i] = 0.0f;
+	for (int i = 0; i < ALEN; i++) e.bulk->a_dn[v][i] = e.bulk->a_up[v][i] = 0.0f;
+	for (int i = 0; i < BLEN; i++) e.bulk->b_dn[v][i] = e.bulk->b_up[v][i] = 0.0f;
 }
 
 static inline void reset_voice(Engine& e, VoiceState& s, int v) {
@@ -745,10 +745,10 @@ static inline void process_voice(Engine& e, int vi) {
 	}
 
 	// ---- audio rate: reed, bore, register hole, lattice, radiation -------------------------------
-	float* __restrict__ Ad = e.large->a_dn[vi];
-	float* __restrict__ Au = e.large->a_up[vi];
-	float* __restrict__ Bd = e.large->b_dn[vi];
-	float* __restrict__ Bu = e.large->b_up[vi];
+	float* __restrict__ Ad = e.bulk->a_dn[vi];
+	float* __restrict__ Au = e.bulk->a_up[vi];
+	float* __restrict__ Bd = e.bulk->b_dn[vi];
+	float* __restrict__ Bu = e.bulk->b_up[vi];
 	real x1 = s.x1, x2 = s.x2, pe = s.pe, q = s.q, aprev = s.aprev, l1 = s.l1, l2 = s.l2, lsv = s.ls, rprev = s.rprev;
 	real gam = s.gam, pk = s.pk, tcl = s.tcl - (real)BLOCK, um = s.um, nl = s.nl;
 	const real k_xhp = 0.004f * e.r48, k_um = 0.002f * e.r48;
@@ -1027,11 +1027,11 @@ namespace clarinet {
 #include "presets/clarinet.inc"
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/clarinet/: a file per preset");
 
-[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+[[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
 	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
-[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+[[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
 
 [[nodiscard]] static inline Params preset_params(int i) {
 	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);

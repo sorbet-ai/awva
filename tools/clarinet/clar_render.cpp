@@ -20,7 +20,7 @@
 
 namespace {
 constexpr int SR = 48000;
-clarinet::LargeMemory mem;
+clarinet::BulkMemory mem;
 clarinet::Engine eng;
 
 bool set_param(const char* nv) {
@@ -49,7 +49,7 @@ float smooth(float s) { return s <= 0 ? 0 : s >= 1 ? 1 : s * s * (3 - 2 * s); }
 
 void render(const Job& j, int preset, const std::vector<std::string>& sets) {
 	eng = clarinet::Engine{};
-	eng.large = &mem;
+	eng.bulk = &mem;
 	clarinet::init(eng, SR, 1);
 	clarinet::set_preset(eng, preset);
 	for (const auto& s : sets) set_param(s.c_str());

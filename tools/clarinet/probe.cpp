@@ -9,12 +9,12 @@
 #include <string>
 #include <vector>
 #include "voice_clarinet.h"
-static clarinet::LargeMemory mem;
+static clarinet::BulkMemory mem;
 static clarinet::Engine eng;
 int main(int argc, char** argv) {
 	const int preset = std::atoi(argv[1]);
 	const float note = std::strtof(argv[2], nullptr), pres = std::strtof(argv[3], nullptr);
-	eng.large = &mem;
+	eng.bulk = &mem;
 	clarinet::init(eng, 48000, 1);
 	clarinet::set_preset(eng, preset);
 	using EP = strisy::EngineParams<clarinet::Engine>;

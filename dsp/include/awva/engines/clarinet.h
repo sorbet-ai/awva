@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // The clarinet engine (voice_clarinet.h) as a awva::VoiceEngine: awva::engines::clarinet.
-// Its bore delay lines (102.4 KB, as long as 192 kHz needs): LargeMemory.
+// Its bore delay lines (102.4 KB, as long as 192 kHz needs): BulkMemory.
 #ifndef AWVA_ENGINES_CLARINET_H_
 #define AWVA_ENGINES_CLARINET_H_
 
@@ -13,16 +13,18 @@ namespace traits {
 struct clarinet {
 	AWVA_ENGINE_FUNCTIONS(clarinet)
 	AWVA_ENGINE_PRESETS(clarinet)
-	using FastMemory = NoMemory;
-	using LargeMemory = ::clarinet::LargeMemory;
-	// init() writes every byte of its LargeMemory (every voice's four delay lines): no zeroing on a switch (engine.h)
+	using StreamMemory = NoMemory;
+	using BulkMemory = ::clarinet::BulkMemory;
+	// init() writes every byte of its BulkMemory (every voice's four delay lines): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "clarinet";
 	static constexpr const char* title = "Clarinet";
 	static constexpr const char* summary = "physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets)";
 	// pressure the breath, pressure_rate the tongue, timbre the embouchure; sustain lengthens the release
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_sustain;
-	static constexpr Budget budget = {::clarinet::MAX_VOICES, 42000, 2.0f}; // profile.sh 40688 (the B-flat; the bass clarinet 34728); silent ~0.25 s after the release
+	static constexpr int max_voices = ::clarinet::MAX_VOICES;
+	static constexpr float tail_seconds = 2.0f; // silent ~0.25 s after the release
+	static constexpr Cost cost = {131.25f};    // measured 127.2 (40688 a block: the B-flat; the bass clarinet 34728)
 	// below about 40 kHz the bass clarinet's reed (3.9 kHz) squeals: its coupling to the flow, one
 	// sample late, lags too far at the reed's frequency (22050 Hz: the notes go up 15-45 semitones)
 	static constexpr int min_rate = 44100;
