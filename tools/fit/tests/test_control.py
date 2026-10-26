@@ -368,6 +368,49 @@ class Voicing(unittest.TestCase):
         self.assertLess(lv[True], lv[False] - 20)  # legato: it is gone
 
 
+class FitSets(unittest.TestCase):
+    """no gate on a candidate fitted on held-out recordings"""
+
+    def setUp(self):
+        from awvafit import gate_set
+        self.gs = gate_set
+        self.held = sorted(gate_set.held_out())
+        self.assertTrue(self.held)
+        self.free = ('choralebricks', 'no/such/track.wav')
+
+    def write(self, entries):
+        p = os.path.join(TMP, f'fit_{len(entries)}.json')
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump({'items': entries}, f)
+        return p
+
+    def test_an_overlap_is_named(self):
+        s, t = self.held[0]
+        p = self.write([dict(set=s, track=t), dict(set=self.free[0], track=self.free[1])])
+        tracks, over = self.gs.check(p)
+        self.assertEqual(over, [(s, t)])
+        self.assertEqual(len(tracks), 2)
+        self.assertEqual(self.gs.check(self.write([dict(set=self.free[0], track=self.free[1])]))[1], [])
+
+    def test_the_gate_refuses_an_overlapping_fit_set(self):
+        from awvafit import env, gate
+        s, t = self.held[0]
+        p = self.write([dict(set=s, track=t)])
+        with self.assertRaises(env.EnvError) as e:
+            gate.main(['--inst', 'trumpet', '--candidate', 'brass:trumpet', '--baseline', 'brass:trumpet', '--fit-set', p])
+        self.assertIn(t, str(e.exception))
+        with self.assertRaises(SystemExit):  # a fit set, or --no-fit: said, not assumed
+            gate.main(['--inst', 'trumpet', '--candidate', 'brass:trumpet', '--baseline', 'brass:trumpet'])
+
+    def test_fit_tracks_allowed(self):
+        s, t = self.held[0]
+        items = [types.SimpleNamespace(source=s, ref_path=t), types.SimpleNamespace(source=self.free[0], ref_path=self.free[1]),
+                 dict(set=s, track=t), (self.free[0], self.free[1])]
+        ok = self.gs.fit_tracks_allowed(items)
+        self.assertEqual(len(ok), 2)
+        self.assertTrue(all(self.gs._pair(x) == self.free for x in ok))
+
+
 class Bursts(unittest.TestCase):
     def test_a_bright_burst_in_a_held_note(self):
         from awvafit.features.transients import hf_bursts

@@ -3,7 +3,10 @@
 """The listening gate: is a candidate build measurably closer to the recordings than its baseline, before
 anyone listens? Nothing goes to a listener unless it passes.
 
-  python -m awvafit gate --inst I --candidate X --baseline Y [--out gate.json] [--workers N]
+  python -m awvafit gate --inst I --candidate X --baseline Y (--fit-set <manifest> | --no-fit) [--out gate.json]
+
+--fit-set names what the candidate was fitted on; the gate refuses it, naming them, if it uses any
+held-out recording (awvafit.gate_set: fit_tracks_allowed() builds a fit set that can't).
 
 Voicing: the recordings are one instrument playing one line, so by default the builds play the keys in
 mono legato (awva_render --rec --legato: one voice, a key pressed while one is held slurs to it, as a
@@ -201,7 +204,7 @@ def held_out(inst):
         return json.load(f)['instruments'][inst]['phrases']
 
 
-def held_out_tracks(inst=None):
+def held_out_tracks(inst=None):  # (gate_set.held_out() for every instrument at once)
     """the recordings no fit may use (any phrase of them): [(set, track)], of one instrument or all"""
     with open(GATE_SET, encoding='utf-8') as f:
         ins = json.load(f)['instruments']
@@ -608,6 +611,9 @@ def table(res):
             lines.append(f"| | {m} | {f(v['cand'])} | {f(v['base'])} | {f(v['between'])} | {f(v['floor'])} |")
     lines.append(f"| **total** | | **{f(res['total']['cand'])}** | **{f(res['total']['base'])}** | | |")
     lines += ['', f"better on: {', '.join(res['better_groups']) or 'none'}; worse by more than a floor on: {', '.join(res['worse_groups']) or 'none'}"]
+    if res.get('fit_set'):
+        fs = res['fit_set']
+        lines.append(f"fit set: {fs['declared']}" + (f" ({len(fs['tracks'])} recordings, none held out)" if 'tracks' in fs else ''))
     if res.get('range'):
         nm = lambda m: labels.name(m)  # noqa: E731
         for who in ('candidate', 'baseline'):
@@ -635,10 +641,24 @@ def main(argv=None):
     p.add_argument('--voicing', choices=('mono', 'poly'), default='mono',
                    help='mono (default): the keys in mono legato, as the recordings are played; poly: a voice per key, for a build '
                         'that cannot play mono legato (its baseline too), onsets measured only where no old voice overlaps them')
+    fit = p.add_mutually_exclusive_group(required=True)
+    fit.add_argument('--fit-set', help='the fit set the candidate was fitted on (a manifest: awvafit.gate_set.read_fit_set); '
+                                       'refused if it uses any held-out recording')
+    fit.add_argument('--no-fit', action='store_true', help='the candidate fitted no recordings (said, not assumed)')
     p.add_argument('--reuse', action='store_true', help='reuse the calibrated streams of an earlier run with the same build labels (only for the same builds: a rebuilt engine under the same label needs them calibrated again)')
     a = p.parse_args(argv)
+    fit = dict(declared='no fit (--no-fit)')
+    if a.fit_set:
+        from . import gate_set
+        tracks, over = gate_set.check(a.fit_set)
+        if over:
+            raise env.EnvError(f'{a.fit_set}: the fit used {len(over)} held-out recordings, so this gate would measure what the fit '
+                               'learnt from: ' + '; '.join(f'{s_} {t}' for s_, t in over)
+                               + ' (build the fit set with awvafit.gate_set.fit_tracks_allowed)')
+        fit = dict(declared=os.path.abspath(a.fit_set), tracks=[f'{s_} {t}' for s_, t in tracks])
     work = env.workdir('gate')
     res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=a.reuse, voicing=a.voicing)
+    res['fit_set'] = fit
     print(table(res))
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
