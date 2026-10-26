@@ -36,7 +36,7 @@ between the phrase's two halves), so a difference under it is not a difference. 
 its distance from R in floors (the median over the phrases); a group's is its measures' mean; the total
 is the groups' mean.
 
-The range check (awvafit.range_check): every note of the instrument's range, soft and loud, must speak,
+The range check (awvafit.range_check): every note of the instrument's range, soft, mid, loud and short, must speak,
 sit on its partial within 15 cents, not flip and start within 150 ms; a candidate with a failing note
 fails, whatever its phrases say.
 

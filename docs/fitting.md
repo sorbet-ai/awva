@@ -219,7 +219,7 @@ Measured, on the audition builds' dry output:
 - **Builds:** `<engine>:<preset>` (through `awva_render --rec`), or `cmd[label]:<command>` for any other player of key streams. The command gets `{csv}`, `{out}`, `{octave}` and `{transpose}`, and writes the dry output to `{out}`.
 - **Held out:** a third of each set's performances of the instrument (`awvafit/gate_set.json`, `gate.held_out_tracks()`), the lowest-pitched one among them. URMP files one recording under several pieces, so its tracks are grouped into performances by their level envelope's fingerprint. **No fit may use any phrase of these tracks.**
 - **Phrases:** from those performances, up to 8 ChoraleBricks and 8 URMP legato lines per instrument, a quarter of each from the low register, the rest in SHA-1 order, with the listening kits' phrases left out. Each phrase is played through a stream calibrated on that very build (`awvafit.control`), so the comparison is the engine's.
-- **The range check** (`awvafit.range_check`): every note of the instrument's practical range, soft and loud, as an isolated press. Each must:
+- **The range check** (`awvafit.range_check`): every note of the instrument's practical range, held soft, mid and loud and pressed short, each an isolated press. Each must:
   - speak (periodic, within 25 dB of the median note);
   - sit on its partial: YIN's pitch, searched a twelfth either side, within ±15 c;
   - not flip: off its median by more than 50 c for at most 5 % of the sustain, and never 30 ms in a row;
