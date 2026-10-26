@@ -129,11 +129,11 @@ static constexpr real REACH_RATE = 48828.0f;
 static constexpr real RHO = 1.2f;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
-static constexpr real CP = 0.4f;        // jet convection velocity re U
-static constexpr real SM = 1.0e-4f;     // embouchure window area (m^2)
-static constexpr real NOTE_LO = 43.0f;  // the longest pipe the delay lines hold
-static constexpr real NOTE_HI = 114.4f; // the highest tone the jet and the pipe make (6 kHz)
-static constexpr real LIMIT_ST = 3.0f;  // beyond either, the tone fades into the breath over this
+static constexpr real CP = 0.4f;         // jet convection velocity re U
+static constexpr real SM = 1.0e-4f;      // embouchure window area (m^2)
+static constexpr real NOTE_LO = 43.0f;   // the longest pipe the delay lines hold
+static constexpr real NOTE_HI = 114.4f;  // the highest tone the jet and the pipe make (6 kHz)
+static constexpr real LIMIT_ST = 3.0f;   // beyond either, the tone fades into the breath over this
 static constexpr real RESTRIKE_V = 0.3f; // a re-strike within a held note: vpres at least this (v5)
 static constexpr real RESTRIKE_P = 0.1f; // and a pressure of at least this
 
