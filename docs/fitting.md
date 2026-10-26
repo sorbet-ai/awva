@@ -244,6 +244,13 @@ Measured, on the audition builds' dry output:
   - *identical*: the two builds are within a floor of each other on every measure, so there is nothing to hear and no kit is made;
   - *pass*: the candidate's total is lower, it is better on most groups, and it is worse on no group by more than a floor;
   - *fail*: anything else.
+- **Fit on what the gate scores:** `awvafit.gate.objective(build, fit_set, voicing='mono')` scores one build exactly as the gate does: the same features, R's floors, per-measure medians over the phrases, group means and their mean. It returns `dict(total, groups, measures, phrases)` in floors, lower closer.
+  - `build` is a `factory(item) -> render(csv)`, or a gate spec.
+  - `fit_set` is phraseset Items or a fit-set manifest. A fit set that uses any held-out recording is refused.
+  - Pass the same `streams={}` dict on every call of a fit, so each phrase is calibrated once and reused. Empty it to calibrate again.
+  - R's features are computed once per process.
+
+  A lane's own objective can disagree with the gate: the double reed v3 fit scored well on its own measures and lost to v2 at the gate. So fit on this.
 - **The rule:** a listening kit is made only after a pass, and every lane runs the gate before handing a kit on. The recordings and the renders are high-passed alike, below min(60 Hz, 0.8 × the phrase's lowest note), to remove URMP's rumble.
 
 ## The Good-sounds back-test

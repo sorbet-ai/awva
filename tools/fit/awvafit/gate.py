@@ -61,6 +61,7 @@ Recordings are high-passed under min(60 Hz, 0.8 x the phrase's lowest note) befo
 rumble); the renders the same way.
 """
 import argparse
+import copy
 import hashlib
 import json
 import math
@@ -499,7 +500,6 @@ def _render_notes(item, stream):
 
 
 def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, voicing='mono'):
-    from .phraseset import reference
     items = items_for(inst)
     if not items:
         raise env.EnvError(f'no held-out phrases on disk for {inst} (gate_set.json; AWVA_REFS)')
@@ -535,14 +535,11 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, v
         feats = list(ex.map(lambda j: one(*j), jobs))
     per_item = []
     for k, it in enumerate(items):
-        rec, _ = reference(it)
-        rn = control.rec_notes(it)
-        R = features(rec, rn)
-        fl = floors(rec, rn)
+        R, fl = reference_features(it)
         (C, xn), (B, _) = feats[2 * k], feats[2 * k + 1]
         if voicing == 'poly':
             clean = clean_onsets(xn)
-            R, C, B = (mask_onsets(F, clean) for F in (R, C, B))
+            R, C, B = (mask_onsets(F, clean) for F in (copy.deepcopy(R), C, B))
         per_item.append(dict(id=it.id, floor=fl, cand=distance(R, C), base=distance(R, B), between=distance(C, B)))
     ranges = None
     if inst in range_check.RANGES:
@@ -563,15 +560,17 @@ def _med(v):
     return float(np.median(v)) if v else None
 
 
+def score(per_item, key, m):
+    """a measure's score: the median over the phrases of its distance (per_item[k][key][m]) in floors"""
+    return _med([p[key][m] / p['floor'][m] if p[key][m] is not None else None for p in per_item])
+
+
 def verdict(inst, candidate, baseline, per_item, ranges=None):
     measures = [m for g in GROUPS.values() for m in g]
     z = {}
     for m in measures:
-        fl = [p['floor'][m] for p in per_item]
-        zc = _med([p['cand'][m] / f if p['cand'][m] is not None else None for p, f in zip(per_item, fl)])
-        zb = _med([p['base'][m] / f if p['base'][m] is not None else None for p, f in zip(per_item, fl)])
-        zx = _med([p['between'][m] / f if p['between'][m] is not None else None for p, f in zip(per_item, fl)])
-        z[m] = dict(cand=zc, base=zb, between=zx, floor=_med(fl))
+        z[m] = dict(cand=score(per_item, 'cand', m), base=score(per_item, 'base', m), between=score(per_item, 'between', m),
+                    floor=_med([p['floor'][m] for p in per_item]))
     groups = {}
     for g, ms in GROUPS.items():
         c = [z[m]['cand'] for m in ms if z[m]['cand'] is not None and z[m]['base'] is not None]
@@ -604,6 +603,101 @@ def verdict(inst, candidate, baseline, per_item, ranges=None):
                 range=dict(candidate=ranges[0]['failures'], baseline=ranges[1]['failures'],
                            notes=dict(candidate=ranges[0]['notes'], baseline=ranges[1]['notes'])) if ranges else None,
                 phrases=[p['id'] for p in per_item], per_phrase=per_item)
+
+
+_R = {}  # the recordings' features and floors, per phrase: they don't depend on the build
+_R_LOCK = threading.Lock()
+
+
+def reference_features(item):
+    """(R's features, R's floors) of a phrase, computed once per process"""
+    from .phraseset import reference
+    with _R_LOCK:
+        if item.id in _R:
+            return _R[item.id]
+    rec, _ = reference(item)
+    rn = control.rec_notes(item)
+    v = (features(rec, rn), floors(rec, rn))
+    with _R_LOCK:
+        _R[item.id] = v
+    return v
+
+
+def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=None, workers=4, log=None):
+    """The gate's own score of one build, for fitting on: dict(total, groups, measures, phrases).
+
+    build_render_fn  a build: factory(item) -> render(csv) -> the dry output (mono float, 48 kHz, time 0 =
+                     the stream's first row), or a spec as the gate takes (<engine>:<preset>, cmd[...]:...)
+    fit_set          the phrases to score on: phraseset Items, or a fit-set manifest (gate_set.read_fit_set's
+                     format, phrases by id); refused if any is from a held-out recording
+    voicing          'mono' (the gate's default: the keys in mono legato) or 'poly' (onsets only where clean)
+    streams          {phrase id: calibrated stream}: pass the same dict on every call of a fit to calibrate
+                     each phrase once (on the first build that plays it) and reuse it; empty it to calibrate
+                     again (the gate itself calibrates every build: recalibrate before a gate run's verdict)
+    Scores as the gate does (features, R's floors, per-measure medians over the phrases, group means, the
+    mean of the groups), lower is closer to the recordings; R's features are computed once per process.
+    """
+    from . import gate_set
+    if isinstance(fit_set, (str, os.PathLike)):
+        from .phraseset import load
+        pairs = set(gate_set.read_fit_set(fit_set))
+        with open(fit_set, encoding='utf-8') as f:
+            d = json.load(f)
+        if isinstance(d, dict):
+            d = next(d[k] for k in ('items', 'fit', 'phrases', 'tracks') if k in d)
+        ids = {x if isinstance(x, str) else x.get('id') for x in d if isinstance(x, (str, dict))}
+        ids.discard(None)
+        items = [it for s_ in gate_set.SETS for it in _safe_load(load, s_) if it.id in ids]
+        if not items:
+            raise env.EnvError(f'{fit_set}: no phrases (the objective scores phrases, by id) found on disk')
+    else:
+        items = list(fit_set)
+        pairs = {gate_set._pair(it) for it in items}
+    over = gate_set.overlap(pairs)
+    if over:
+        raise env.EnvError('the fit set uses held-out recordings (the gate would measure what the fit learnt from): '
+                           + '; '.join(f'{s_} {t}' for s_, t in over))
+    workdir = workdir or env.workdir('objective')
+    factory = renderer(build_render_fn, workdir, voicing)[1] if isinstance(build_render_fn, str) else build_render_fn
+    streams = {} if streams is None else streams
+    cache = control.SweepCache(control.sweep_notes_for(items))
+    lock = threading.Lock()
+
+    def one(item):
+        render = factory(item)
+        with lock:
+            path = streams.get(item.id)
+        if not path or not os.path.exists(path):
+            d = os.path.join(workdir, hashlib.sha1(f'{id(streams)} {item.id}'.encode()).hexdigest()[:12])
+            path, _ = control.calibrated(item, render, d, log=lambda m: None, cache=cache)
+            with lock:
+                streams[item.id] = path
+        x = render(path)
+        xn = _render_notes(item, path)
+        R, fl = reference_features(item)
+        F = features(x, xn)
+        if voicing == 'poly':
+            clean = clean_onsets(xn)
+            R, F = mask_onsets(copy.deepcopy(R), clean), mask_onsets(F, clean)
+        if log:
+            log(f'  objective: {item.id}')
+        return dict(id=item.id, floor=fl, cand=distance(R, F))
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        per_item = list(ex.map(one, items))
+    measures = {m: score(per_item, 'cand', m) for g in GROUPS.values() for m in g}
+    groups = {g: (float(np.mean([measures[m] for m in ms if measures[m] is not None]))
+                  if any(measures[m] is not None for m in ms) else None) for g, ms in GROUPS.items()}
+    ok = [v for v in groups.values() if v is not None]
+    return dict(total=float(np.mean(ok)) if ok else math.nan, groups=groups, measures=measures,
+                phrases=[p['id'] for p in per_item], voicing=voicing)
+
+
+def _safe_load(load, set_name):
+    try:
+        return load(set_name)
+    except Exception:  # the set isn't on disk
+        return []
 
 
 def table(res):
