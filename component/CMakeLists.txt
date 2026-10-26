@@ -84,8 +84,12 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
     "AWVA_REC_DIR=\"${AWVA_HARNESS_DIR}/rec\"" "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
   add_dependencies(nsc_component_tests nsc_components)
   doctest_discover_tests(nsc_component_tests TEST_PREFIX "component." PROPERTIES LABELS unit)
-  # awva_add_component from a project outside awva: everything in its own build directory
+  # awva_add_component from a project outside awva: everything in its own build directory. It builds
+  # with this build's toolchain (not the environment's default compiler)
   add_test(NAME component.add_component_from_outside COMMAND "${CMAKE_COMMAND}" "-DAWVA=${CMAKE_CURRENT_SOURCE_DIR}/.."
-    "-DOUT=${CMAKE_CURRENT_BINARY_DIR}/external" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/external/check.cmake")
+    "-DOUT=${CMAKE_CURRENT_BINARY_DIR}/external" "-DGENERATOR=${CMAKE_GENERATOR}" "-DGENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}"
+    "-DGENERATOR_TOOLSET=${CMAKE_GENERATOR_TOOLSET}" "-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}" "-DC_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DTOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}" "-DBUILD_TYPE=$<CONFIG>"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/external/check.cmake")
   set_tests_properties(component.add_component_from_outside PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "from outside: ok")
 endif()
