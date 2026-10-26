@@ -3,7 +3,8 @@
 #
 # awva CI: build the SDK and the components, run their tests (Linux, macOS universal, Windows),
 # run the examples (examples/: from plain C and through the SDK; non-silent, deterministic, and the
-# MPE render the same as awva_render's), and check the format (clang-format 15).
+# MPE render the same as awva_render's), the fitting toolkit's tests (tools/fit), and check the format
+# (clang-format 15).
 name: ci
 on: [push, pull_request]
 jobs:
@@ -36,6 +37,17 @@ jobs:
         run: | # the factory presets' .inc files written again on this OS: the same bytes as in the repository
           cmake -P tools/presets_inc.cmake
           git diff --exit-code -- dsp/include/awva/presets
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: fitting toolkit (tools/fit, on a synthetic reference, no download)
+        shell: bash
+        run: |
+          python -m venv .venv-fit
+          py=.venv-fit/bin/python; exe=build/sdk/awva_render
+          if [ "$RUNNER_OS" = Windows ]; then py=.venv-fit/Scripts/python.exe; exe=$(cygpath -w "$PWD/build/sdk/awva_render.exe"); else exe=$PWD/$exe; fi
+          $py -m pip install -q -r tools/fit/requirements.txt
+          AWVA_RENDER="$exe" $py -m unittest discover -s tools/fit/tests -v
   format:
     runs-on: ubuntu-22.04
     steps:

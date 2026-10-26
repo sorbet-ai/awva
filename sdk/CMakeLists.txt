@@ -17,7 +17,8 @@
 #   tests: contract.<name>.*   the contract suite on each engine (tests/contract*.cpp, docs/conformance.md;
 #                              contract.<name>.soak: the label soak, not run by default)
 #          sdk.*               the shared helpers, the MIDI mapping and files, the shell
-#          awva_render.*     the renderer's log names its engine, preset and input; bad inputs fail
+#          awva_render.*     the renderer's log names its engine, preset and input; bad inputs fail;
+#                            the fitting tools' options (--params, the controls round trip)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.25)
   project(awva_sdk DESCRIPTION "awva sound engine SDK" LANGUAGES CXX)
@@ -310,7 +311,9 @@ endif()
 foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va --preset nosuch"
                    "unknown_performance;--engine va --perf nosuch" "missing_recording;--engine va --rec /nonexistent.csv"
                    "missing_midi;--engine va --midi /nonexistent.mid" "two_inputs;--engine va --perf default --rec x.csv"
-                   "too_many_voices;--engine trumpet --nv 64")
+                   "too_many_voices;--engine trumpet --nv 64" "unknown_parameter;--engine va --set nosuch=1"
+                   "bad_set;--engine va --set cut_base" "missing_controls;--engine va --ctl /nonexistent.ctl"
+                   "ctl_and_rec;--engine va --ctl x.ctl --rec x.csv" "bad_notes;--engine va --notes 60,x")
   list(GET t 0 name)
   list(GET t 1 args)
   separate_arguments(args)
@@ -320,6 +323,15 @@ endforeach()
 
 # (the docs are this repository's engines: a project that includes the SDK may
 # add engines of its own, so only a build of the SDK itself checks them)
+# the fitting tools' options: the live parameters, and the controls round trip (tools/fit)
+add_test(NAME awva_render.params COMMAND awva_render --engine va --preset 0 --set cut_base=40.5 --params)
+set_tests_properties(awva_render.params PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "cut_base filter -20 80 40.5")
+if(EXISTS "${_rec}")
+  add_test(NAME awva_render.ctl_round_trip COMMAND "${CMAKE_COMMAND}" -DRENDER=$<TARGET_FILE:awva_render> -DREC=${_rec}
+    -DOUT=${CMAKE_CURRENT_BINARY_DIR}/render_ctl -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/render_ctl.cmake")
+  set_tests_properties(awva_render.ctl_round_trip PROPERTIES LABELS unit)
+endif()
+
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
   add_test(NAME docs.up_to_date COMMAND awva_docs "${CMAKE_CURRENT_SOURCE_DIR}/../docs" --check)
   set_tests_properties(docs.up_to_date PROPERTIES LABELS unit)

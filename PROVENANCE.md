@@ -16,6 +16,7 @@ This records where each file of this repository comes from. The repository was s
 | `dsp/include/awva/fx.h` | the master effects (drive, phaser, chorus, tremolo, delay, Dattorro plate, limiter). |
 | `sdk/`, `tools/harness/` (performances, `harness_util.h`, `rec/` recorded performances) | the SDK, its tests, the renderer, the scripted performances |
 | `tools/trumpet/` | the trumpet's bore fits, calibration and warm-start table generators |
+| `tools/fit/`, `docs/fitting.md` | the fitting toolkit, consolidated from the instrument lanes' tools (all written for this project), and the distances tested against listener verdicts. `tools/fit/awvafit/sources.json` lists recordings by URL and hash; no recording is in the repository |
 | `docs/`, `sdk/tools/awva_docs.cpp` | the documentation: reference tables generated from the engines' EngineInfo, the engines' accounts written from their headers' own comments |
 | `examples/` | programs that use an engine: from plain C through the component ABI (`c_host`), and a MIDI file through the SDK's MIDI in (`mpe_file`) |
 
