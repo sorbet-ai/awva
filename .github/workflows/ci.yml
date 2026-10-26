@@ -7,7 +7,10 @@
 # under AddressSanitizer and UndefinedBehaviorSanitizer (Linux, the soak too), and check the format
 # (clang-format 15).
 name: ci
-on: [push, pull_request]
+on: [push] # every branch is in this repository, so a pull request shows its branch's push run
+concurrency: # a newer push to a branch cancels the run it supersedes (main's runs all finish)
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   test:
     strategy:
