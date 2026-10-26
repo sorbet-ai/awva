@@ -296,17 +296,22 @@ def _f0(seg, f0n):
     if not m.any():
         return f0n
     i = np.where(m)[0][np.argmax(S[m])]
+    k = float(i)
     if 0 < i < len(S) - 1:
         a, b, c = np.log(S[i - 1:i + 2] + 1e-30)
         d = a - 2 * b + c
-        return (i + (0.5 * (a - c) / d if d != 0 else 0)) * SR / n
-    return f[i]
+        if d < 0:  # a true peak: refine it (a flat or silent spectrum keeps the bin)
+            k += float(np.clip(0.5 * (a - c) / d, -1.0, 1.0))
+    # within the search band always: a silent or noisy note must not give a wild period
+    return float(np.clip(k * SR / n, f0n * 0.94, f0n * 1.06))
 
 
 def comb_split(x, f0, chunk_s=0.02):
     """(residual, tone, phase): x minus itself one period back (the period refined per 20 ms), / sqrt 2"""
-    T0 = SR / f0
     L = int(chunk_s * SR)
+    if not (np.isfinite(f0) and f0 > 0):
+        return np.zeros(0), np.zeros(0), np.zeros(0)
+    T0 = SR / f0
     res, tone, ph = [], [], []
     idx = np.arange(len(x))
     for a in range(int(T0 * 1.1) + 2, len(x) - L, L):
