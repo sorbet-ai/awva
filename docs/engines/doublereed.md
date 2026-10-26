@@ -102,7 +102,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 90.63 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2.5 s of the last release |
-| hot (the engine object) | 3.07031 KB (3144 bytes) (on a 64-bit host) |
+| hot (the engine object) | 3.22656 KB (3304 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | none |
 | bulk (BulkMemory) | 40 KB |
 

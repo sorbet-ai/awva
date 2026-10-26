@@ -20,6 +20,8 @@
  *            rate) and att_noise (the "t"); the sustain's texture (breath, jitter, the player's
  *            wander) doesn't follow the strike. A strike counts while the note starts (STRIKE_WIN
  *            after a start or a new note): inside a held note a swell of the pressure is breath
+ *   slur     a step of the held note (a slur in mono legato) changes the fingering over GLIDE_S
+ *            (15 ms, note_glide.h): at once, the bore would change in one block and the reed slap shut
  *   REED     two blades as one mechanical mode, blown closed (the mouth pressure pushes them
  *            shut; Fletcher 1979, Vergez et al. 2003): resonance and Q (the lips' damping), the tip
  *            opening at rest and the closing pressure (the blades' stiffness), contact stiffness and
@@ -88,6 +90,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "note_glide.h"
 #include "preset.h"
 #include "svf.h"
 
@@ -111,6 +114,7 @@ static constexpr real PI = 3.14159265f;
 static constexpr real NOTE_LO = 31.5f;    // below: an octave up (the delay line's length)
 static constexpr real NOTE_HI = 100.0f;   // above: an octave down
 static constexpr real STRIKE_WIN = 0.05f; // s: a strike counts while the note starts
+static constexpr real GLIDE_S = 0.015f;   // a slur's fingering change (note_glide.h)
 
 // the bore delay lines, placed by the host (engine SDK): BulkMemory (on an embedded target, its slower SRAM)
 struct BulkMemory {
@@ -232,6 +236,7 @@ struct VoiceState {
 	real jn, dr;             // embouchure jitter, slow wander
 	real wb1, wb2, wl1, wl2; // the breath's and the lips' wander (2-pole low-passed noise)
 	real flut_ph;            //
+	awva::NoteGlide glide;   // the fingering: a slur's step of the note over GLIDE_S
 	real note_prev;          //
 	real vneg;               // release speed latch
 	uint32_t rng, nrng;
@@ -252,6 +257,7 @@ struct Engine {
 	Params ps;        // smoothed copy used by the DSP
 	BulkMemory* bulk; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt, block_dt;
+	int glide_n; // a slur's fingering change, in blocks (GLIDE_S)
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
 	real dc, dc_c;
@@ -409,6 +415,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.pi_sr = PI / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
+	e.glide_n = awva::NoteGlide::blocks_for(GLIDE_S, sr, BLOCK);
 	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.shake_pk = e.shake = 0.0f;
 	e.dc = 0.0f;
@@ -424,6 +431,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s.flut_ph = 0.31f * (real)v;
 		s.flut_ph -= (real)(int)s.flut_ph;
 		s.note_prev = 69.0f;
+		s.glide = {};
 		s.active = 0;
 	}
 	for (int v = 0; v < e.nvoices; v++) e.vc[v] = awva::note_at_rest;
@@ -451,14 +459,16 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vrlev = rmin(rmax(P.att_rate, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vnlev = rmin(rmax(P.att_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
-	real note = clampr(cc.pitch, 0.0f, 132.0f);
-	while (note > NOTE_HI) note -= 12.0f;
-	while (note < NOTE_LO) note += 12.0f;
+	real target = clampr(cc.pitch, 0.0f, 132.0f); // the host's note (a slur's articulation follows it)
+	while (target > NOTE_HI) target -= 12.0f;
+	while (target < NOTE_LO) target += 12.0f;
 	const bool held = pres > 0.0f;
+	// a slur changes the fingering over GLIDE_S (note_glide.h: at once, the reed slaps shut once)
+	const real note = s.glide.next(target, held, e.glide_n);
 	bool start = false;
 	if (!s.active) {
 		if (!held && vplev <= 0.0f) {
-			s.note_prev = note;
+			s.note_prev = target;
 			return;
 		}
 		s.active = 1;
@@ -471,7 +481,7 @@ static inline void process_voice(Engine& e, int vi) {
 	s.was_held = held;
 
 	// ---- block rate: the player and the instrument for this note ----------------------------------
-	const bool jump = start || fabsf(note - s.note_prev) >= 1.0f;
+	const bool jump = start || fabsf(target - s.note_prev) >= 1.0f;
 	if (jump && !start && held) {
 		s.acc = rmax(s.acc, P.slur); // legato change: a small articulation
 		s.racc = rmax(s.racc, P.slur);
@@ -484,7 +494,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vstrike = striking ? vplev : 0.0f; // the accent's strike
 	const real vrate = striking ? vrlev : 0.0f;   // the attack rate's
 	const real vnoise = striking ? vnlev : 0.0f;  // the attack noise's
-	s.note_prev = note;
+	s.note_prev = target;
 	if (start) {
 		// from silence: the reed at rest, the bore quiet
 		s.y = s.yv = s.p = s.ic = s.ul = s.um = 0.0f;
