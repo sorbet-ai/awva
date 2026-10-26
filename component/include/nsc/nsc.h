@@ -157,7 +157,7 @@ typedef struct nsc_component {
 	const nsc_desc* desc;
 	/* 0; -1: a sample rate outside min_rate .. max_rate (nothing done) */
 	int32_t (*init)(void* state, void* fast, void* large, int32_t sample_rate, int32_t voices);
-	void (*reset)(void* state);                                 /* silence, the parameters and the preset kept */
+	void (*reset)(void* state);                                 /* silence, the parameters and the preset kept; the notes' ids end (ended()) */
 	int32_t (*mode)(void* state, int32_t which, int32_t value); /* 1 done, 0 not supported */
 	void (*process)(void* state, const nsc_event* events, int32_t num_events, float* const* out);
 	void (*process_voices)(void* state, const nsc_voice* voices, const nsc_globals* globals, float* const* out);

@@ -20,9 +20,11 @@
 //   tracked note (the oldest released one, else the oldest held one: MIDI in holds 16 notes, so
 //   by then that one has long been dropped) and its id goes to the ended list at once.
 // - A Note On with an id that can't be queued (the queue is full) ends at once the same way.
+// - reset() ends every tracked note and every queued Note On at once: at most NOTES + QUEUE ids.
 // - The ended list holds ENDED ids; it can't fill if the host calls ended() after each block
 //   until it returns less than max, and gives at most MAX_EVENTS events a block (a block feeds
-//   at most QUEUE events, so at most QUEUE + MAX_EVENTS ids go to it between two calls). Past
+//   at most QUEUE events, so at most QUEUE + MAX_EVENTS ids go to it between two calls; with a
+//   reset() between them, NOTES + QUEUE from it and MAX_EVENTS from the block after it). Past
 //   that (a host that doesn't drain it) further ids are lost, never written out of bounds.
 #ifndef AWVA_SDK_TIMED_MIDI_H_
 #define AWVA_SDK_TIMED_MIDI_H_
@@ -40,13 +42,31 @@ namespace awva::sdk {
 
 class TimedMidi {
 public:
-	static constexpr int QUEUE = 1024;               // events waiting for their step
-	static constexpr int NOTES = 64;                 // notes with a host id, tracked until they end
-	static constexpr int MAX_EVENTS = 1024;          // events a block, for the guarantee above
-	static constexpr int ENDED = QUEUE + MAX_EVENTS; // ids ended at once, until ended() hands them out
+	static constexpr int QUEUE = 1024;                       // events waiting for their step
+	static constexpr int NOTES = 64;                         // notes with a host id, tracked until they end
+	static constexpr int MAX_EVENTS = 1024;                  // events a block, for the guarantee above
+	static constexpr int ENDED = QUEUE + MAX_EVENTS + NOTES; // ids ended at once, until ended() hands them out
 
 	explicit TimedMidi(int voices, int sample_rate) :
-	    midi_(voices), sr_(sample_rate) {}
+	    midi_(voices), sr_(sample_rate), voices_(voices) {}
+
+	// Back to the start, as a fresh TimedMidi (a host's reset: the engine goes silent), mono legato
+	// kept. The guarantee holds through it: every tracked note's id, and the id of every queued Note
+	// On that will now never sound, ends here and comes back from the next ended(), after the ids
+	// that had ended before and were not handed out yet.
+	void reset() {
+		for (Note& t : notes_)
+			if (t.id >= 0) end_now(t.id);
+		for (int i = 0; i < queued_; i++)
+			if (queue_[i].note_id >= 0 && starts_note(queue_[i])) end_now(queue_[i].note_id);
+		const bool legato = midi_.legato();
+		midi_ = MidiVoices(voices_);
+		midi_.set_legato(legato);
+		queued_ = 0;
+		steps_ = now_ = 0;
+		for (Note& t : notes_) t = Note{};
+		ages_ = 0;
+	}
 
 	// a UMP packet at a frame (frames don't go back; 1 or 2 words of a type 2 / 4 packet)
 	bool ump(uint64_t frame, const uint32_t* words, int32_t note_id = -1) {
@@ -193,7 +213,7 @@ private:
 	}
 
 	MidiVoices midi_;
-	int sr_;
+	int sr_, voices_;
 	Event queue_[QUEUE];
 	int queued_ = 0;
 	uint64_t steps_ = 0, now_ = 0;

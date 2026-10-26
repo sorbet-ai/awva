@@ -170,9 +170,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	}
 	static void reset(void* state) {
 		State& s = st(state);
-		const bool legato = s.midi.midi().legato();
-		new (&s.midi) awva::sdk::TimedMidi(s.voices, s.sample_rate);
-		s.midi.midi().set_legato(legato);
+		s.midi.reset(); // (afresh, legato kept; the notes' ids end: ended() hands them out)
 		for (auto& c : s.vc) c = dsp::voice_at_rest;
 		s.g = dsp::globals_at_rest;
 		s.frame = 0;

@@ -9,11 +9,6 @@
 # the engine's owner fixes it; the warning says when it passes again, and then the line goes.
 # Each entry says what fails, with its numbers, and who fixes it. Keep the list short.
 
-# every component (the shim, component/include/nsc/shim.h): the note ids' owner
-#   note_ids.reset  reset() starts the MIDI side afresh and drops the ids it tracks: the ids of the
-#                   notes sounding at a reset never come back from ended() (68 of 260 in the check)
-set(AWVA_KNOWN_COMPONENT note_ids.reset)
-
 # ep: its owner
 #   tuning:pianet  the low notes sharp: +64 c at note 48, +36 c at 54/55, +9 c at 60
 # modal: its owner

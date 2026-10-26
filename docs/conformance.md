@@ -44,7 +44,7 @@ An engine whose `init()` writes every byte of its regions declares `init_writes_
 
 A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`, with its numbers and its owner. Both levels report it as a warning instead of failing, so the suite stays green while the owner fixes it. The warning also says when the check passes again; the entry then goes.
 
-- **The tag** names a check (`note_ids.reset`) or a check on one preset (`tuning:flute`).
+- **The tag** names a check (`silence`) or a check on one preset (`tuning:flute`).
 - **The scope** is one engine: `set(AWVA_KNOWN_<engine> <tag>...)`. `AWVA_KNOWN_COMPONENT` applies to every component, for the shim.
 - **The current list** is in the file itself. Keep it short.
 
