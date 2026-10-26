@@ -31,8 +31,11 @@ namespace nsc {
 
 // the parameters' declared defaults: their values after init() (the engine's first preset),
 // measured at build time by awva_defaults (component/CMakeLists.txt) into a header that sets this
-// for the engine to its constant array (num_params of them)
+// for the engine to its constant array, and defaults_count_v to how many it holds (num_params; -1:
+// no header; the count, not the pointer, is what's checked: a pointer compared at compile time
+// isn't a constant expression under every compiler's sanitizers)
 template <class E> inline constexpr const float* defaults_v = nullptr;
+template <class E> inline constexpr int defaults_count_v = -1;
 
 namespace dsp = awva;
 
@@ -75,7 +78,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	// The descriptor and its tables are constant data, made at compile time (no static is written
 	// at run time, nothing runs before main: the component is plain read-only data and code)
 	static constexpr int NP = E::info.num_params; // the engine's; then "output"
-	static_assert(NP == 0 || defaults_v<E> != nullptr, "the declared defaults (awva_defaults, NSC_DEFAULTS_HEADER) are compiled in");
+	static_assert(NP == 0 || defaults_count_v<E> == NP, "the declared defaults (awva_defaults, NSC_DEFAULTS_HEADER) are compiled in, one per parameter");
 	struct Params {
 		nsc_param p[NP + 1];
 	};
@@ -99,7 +102,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		Presets r{};
 		for (int i = 0; i < E::info.num_presets; i++) {
 			r.p[i].name = E::preset_name(i);
-			const dsp::Heroes& h = dsp::heroes_of(E::info, r.p[i].name);
+			const dsp::Heroes& h = dsp::heroes_of_named(E::info, r.p[i].name);
 			for (int k = 0; k < NSC_MAX_HEROES; k++) r.p[i].heroes[k] = h.name[k];
 		}
 		return r;
