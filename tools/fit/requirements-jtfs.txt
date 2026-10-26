@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Sorbet AI
+# SPDX-License-Identifier: Apache-2.0
+# Optional: the JTFS distance (awvafit.features.ranking.jtfs) and the back-test's JTFS column.
+# Large (torch); a GPU makes it seconds per note, the CPU works. Install into the same venv:
+#   .venv-fit/bin/pip install -r tools/fit/requirements-jtfs.txt
+torch>=2.1         # BSD-3-Clause
+# kymatio's joint time-frequency scattering is on its main branch, not in a release (0.3 has none)
+kymatio @ git+https://github.com/kymatio/kymatio@50d7461db6111eb4b20d32e670a5556d4da6134f   # BSD-3-Clause

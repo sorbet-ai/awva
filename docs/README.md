@@ -9,6 +9,7 @@ awva's engines are per-note sound engines: each note gets a pitch and its own co
 - **The component ABI:** [`component/README.md`](../component/README.md), each engine as its own library through a C interface.
 - **Using an engine in your own program:** from plain C or through the SDK, with the examples in [`examples/`](../examples/): the repository's [README](../README.md#use-an-engine-in-your-own-program).
 - **Building and testing:** the repository's [README](../README.md).
+- **[Fitting engines to recordings](fitting.md):** the workflow, the licence rules, which distances to trust, the regression proof.
 
 ## The engines
 

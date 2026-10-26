@@ -1,34 +1,54 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// awva_render: any engine and preset, played by a scripted performance, a recorded key stream or
-// a MIDI file, to a WAV (and raw float32). It says on stderr exactly which engine, preset and
-// input it used (the input file's absolute path, size and checksum), and refuses anything it can't
-// find rather than falling back to something else.
+// awva_render: any engine and preset, played by a scripted performance, a recorded key stream, a
+// MIDI file or captured engine controls, to a WAV (and raw float32). It says on stderr exactly which
+// engine, preset and input it used (the input file's absolute path, size and checksum), and refuses
+// anything it can't find rather than falling back to something else. It is also the renderer of
+// the fitting tools (tools/fit): parameter overrides, a transposition, a note list, the controls
+// the engine got and a JSON manifest of the render.
 //
 // Usage: awva_render --engine NAME [--preset N|NAME] [input] [options]
 //   input (one of; default --perf default):
 //     --perf NAME       a scripted performance compiled in (--list shows them)
-//     --rec FILE.csv    a recorded stream of per-note sensor values (CSV, harness_util.h)
-//     --midi FILE.mid   a Standard MIDI File, through the MIDI/MPE mapping (awva/midi_in.h)
-//   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s)
+//     --rec FILE.csv    a recorded key stream (CSV t,src,id,pres,velo,x,y), through the key path
+//     --midi FILE.mid   a Standard MIDI File, MIDI 1.0 or MPE, through the MIDI/MPE mapping
+//                       (awva/midi_in.h: up-converted to MIDI 2.0)
+//     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (note, pres, vpres, x, y),
+//                       then the 8 globals (what --ctl-out writes, or an embedded host's capture)
+//   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s, a MIDI
+//                     file's length + 2 s, a controls file's blocks), plus --tail
+//   --tail S          seconds after the input's own length (default 0)
+//   --settle S        seconds of silence rendered before the input and not written (default 0):
+//                     the parameter glide of --set has arrived when the input starts
 //   --nv N            voices (default 10)
-//   --rate HZ         sample rate (default: the performance's, 48000)
+//   --rate HZ         sample rate (default: the performance's, 48000); the block is always 32
+//   --set NAME=V      a live parameter, written with its rule (clamped) after the preset; repeatable
+//   --transpose T     every note the engine gets moved by T semitones (an octave shift)
+//   --notes N1,N2,..  every new press takes the next note of the list, in turn
+//   --params          the live parameters after --preset and --set: "name group min max value", and exit
 //   --fx              through the master effects (default parameters): stereo
 //   --out FILE.f32    the render as float32 (mono, or L R interleaved)
-//   --wav FILE.wav    16 bit WAV, x0.25 and clipped; its INFO chunk names the
+//   --wav FILE.wav    16 bit WAV, x0.25 and clipped (an embedded host at its usual level); its INFO chunk names the
 //                     engine, preset and input
+//   --ctl-out FILE    the controls the engine got, float32 per block (the --ctl layout)
+//   --manifest FILE   a JSON record of the render: engine, preset, parameters, input, settings,
+//                     outputs, peak and hash
 //   --check           fail (exit 1) on non-finite output, a peak over --max-peak (default 8), or
 //                     with --silent-after T any sample above 1e-4 after T s or voices still active
 //   --expect HASH     fail unless the render's hash (FNV-1a 64 of the float bits) is HASH
 //   --golden-name N   with AWVA_GOLDEN_OUT=<dir>: write the hash to <dir>/N.hash instead
 //   --list            the engines, their presets and the performances, and exit
-// stdout: "hash <hex>". Exit 2: bad arguments or an input that can't be read.
+// stdout: "hash <hex>". Exit 2: bad arguments or an input that can't be read; exit 1: --check or
+// --expect failed.
+// Renders are deterministic: the engines seed their noise in init(), the same input and settings
+// give the same hash on every run.
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -39,6 +59,8 @@ namespace sdk = awva::sdk;
 namespace dsp = awva;
 
 namespace {
+
+constexpr int CTL_VOICES = 10, CTL_WIDTH = CTL_VOICES * 5 + 8;
 
 [[noreturn]] void fail(const std::string& msg) {
 	std::fprintf(stderr, "awva_render: %s\n", msg.c_str());
@@ -63,7 +85,14 @@ void list() {
 	return h;
 }
 
-// 16 bit WAV, x0.25 and hard clipped (the usual output volume), with a LIST/INFO chunk
+[[nodiscard]] bool write_f32(const char* path, const std::vector<float>& v) {
+	FILE* f = std::fopen(path, "wb");
+	if (!f) return false;
+	const bool ok = std::fwrite(v.data(), sizeof(float), v.size(), f) == v.size();
+	return std::fclose(f) == 0 && ok;
+}
+
+// 16 bit WAV, x0.25 and hard clipped (an embedded host at its usual volume), with a LIST/INFO chunk
 [[nodiscard]] bool write_wav(const char* path, const std::vector<float>& x, int channels, int sample_rate, const std::string& comment) {
 	FILE* f = std::fopen(path, "wb");
 	if (!f) return false;
@@ -106,14 +135,112 @@ void list() {
 	return std::fclose(f) == 0;
 }
 
+// captured engine controls (the --ctl layout): the key signals and the globals of every block
+class ControlsPlayer final : public sdk::Player {
+public:
+	ControlsPlayer(std::string path, std::vector<float> c, int voices, int sample_rate) :
+	    path_(std::move(path)), c_(std::move(c)), nv_(voices), sr_(sample_rate) {}
+	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+		if (static_cast<size_t>(b) >= blocks()) return; // past the end: everything stays
+		const float* c = &c_[static_cast<size_t>(b) * CTL_WIDTH];
+		for (int v = 0; v < nv_ && v < CTL_VOICES; v++) {
+			vc[v].note = c[5 * v];
+			vc[v].pres = c[5 * v + 1];
+			vc[v].vpres = c[5 * v + 2];
+			vc[v].but_x = c[5 * v + 3];
+			vc[v].but_y = c[5 * v + 4];
+		}
+		const float* gg = c + CTL_VOICES * 5;
+		g = {gg[0], gg[1], gg[2], gg[3], gg[4], gg[5], gg[6], gg[7]};
+	}
+	[[nodiscard]] double seconds() const override { return static_cast<double>(blocks()) * dsp::BLOCK / sr_; }
+	[[nodiscard]] std::string describe() const override {
+		return "engine controls " + sdk::file_identity(path_.c_str()) + ": " + std::to_string(blocks()) + " blocks";
+	}
+	[[nodiscard]] size_t blocks() const { return c_.size() / CTL_WIDTH; }
+
+private:
+	std::string path_;
+	std::vector<float> c_;
+	int nv_, sr_;
+};
+
+[[nodiscard]] std::unique_ptr<ControlsPlayer> controls_player(const char* path, int voices, int sample_rate, std::string* error) {
+	FILE* f = std::fopen(path, "rb");
+	if (!f) {
+		*error = std::string("cannot read the controls file ") + path;
+		return nullptr;
+	}
+	std::fseek(f, 0, SEEK_END);
+	const long n = std::ftell(f);
+	std::fseek(f, 0, SEEK_SET);
+	std::vector<float> c(n > 0 ? static_cast<size_t>(n) / 4 : 0);
+	const bool ok = std::fread(c.data(), 4, c.size(), f) == c.size();
+	std::fclose(f);
+	if (!ok || c.size() < static_cast<size_t>(CTL_WIDTH) || n % (4 * CTL_WIDTH) != 0) {
+		*error = std::string("the controls file ") + path + " is not whole blocks of " + std::to_string(CTL_WIDTH) + " floats";
+		return nullptr;
+	}
+	return std::make_unique<ControlsPlayer>(path, std::move(c), voices, sample_rate);
+}
+
+[[nodiscard]] std::vector<float> parse_notes(const std::string& s) {
+	std::vector<float> v;
+	size_t a = 0;
+	while (a <= s.size()) {
+		size_t b = s.find(',', a);
+		if (b == std::string::npos) b = s.size();
+		if (b > a) {
+			char* end = nullptr;
+			const std::string t = s.substr(a, b - a);
+			v.push_back(static_cast<float>(std::strtod(t.c_str(), &end))); // (as atof: the double, then the float)
+			if (!end || *end) fail("--notes: \"" + t + "\" is not a number");
+		}
+		a = b + 1;
+	}
+	if (v.empty()) fail("--notes: no notes");
+	return v;
+}
+
+[[nodiscard]] std::string json_string(const std::string& s) {
+	std::string o = "\"";
+	for (const char ch : s) {
+		const unsigned char u = static_cast<unsigned char>(ch);
+		if (ch == '"' || ch == '\\') {
+			o += '\\';
+			o += ch;
+		} else if (u < 0x20) {
+			char b[8];
+			std::snprintf(b, sizeof b, "\\u%04x", u);
+			o += b;
+		} else o += ch;
+	}
+	return o + "\"";
+}
+
+[[nodiscard]] std::string json_number(double v) {
+	if (!std::isfinite(v)) return "null";
+	char b[40];
+	std::snprintf(b, sizeof b, "%.9g", v);
+	return b;
+}
+
+struct Set {
+	std::string name;
+	float value;
+};
+
 } // namespace
 
 int main(int argc, char** argv) {
-	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr;
-	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr;
-	double seconds = -1, max_peak = 8.0, silent_after = -1;
+	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr;
+	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr, *ctl_out = nullptr, *manifest = nullptr;
+	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0;
 	int nv = 10, rate = 0;
-	bool use_fx = false, check = false;
+	float transpose = 0.0f;
+	bool use_fx = false, check = false, list_params = false;
+	std::vector<Set> sets;
+	std::vector<float> notes;
 	for (int a = 1; a < argc; a++) {
 		const std::string s = argv[a];
 		const auto next = [&]() -> const char* {
@@ -125,12 +252,27 @@ int main(int argc, char** argv) {
 		else if (s == "--perf") perf = next();
 		else if (s == "--rec") rec = next();
 		else if (s == "--midi") midi = next();
+		else if (s == "--ctl") ctl = next();
 		else if (s == "--seconds") seconds = std::atof(next());
+		else if (s == "--tail") tail = std::atof(next());
+		else if (s == "--settle") settle = std::atof(next());
 		else if (s == "--nv") nv = std::atoi(next());
 		else if (s == "--rate") rate = std::atoi(next());
+		else if (s == "--set") {
+			const std::string kv = next();
+			const size_t eq = kv.find('=');
+			char* end = nullptr;
+			const float v = eq == std::string::npos ? 0.0f : static_cast<float>(std::strtod(kv.c_str() + eq + 1, &end));
+			if (eq == std::string::npos || eq == 0 || !end || *end || end == kv.c_str() + eq + 1) fail("--set wants name=value, not " + kv);
+			sets.push_back({kv.substr(0, eq), v});
+		} else if (s == "--transpose") transpose = static_cast<float>(std::atof(next()));
+		else if (s == "--notes") notes = parse_notes(next());
+		else if (s == "--params") list_params = true;
 		else if (s == "--fx") use_fx = true;
 		else if (s == "--out") out_path = next();
 		else if (s == "--wav") wav = next();
+		else if (s == "--ctl-out") ctl_out = next();
+		else if (s == "--manifest") manifest = next();
 		else if (s == "--check") check = true;
 		else if (s == "--max-peak") max_peak = std::atof(next());
 		else if (s == "--silent-after") silent_after = std::atof(next());
@@ -156,50 +298,115 @@ int main(int argc, char** argv) {
 		if (preset < 0) fail(std::string("the engine ") + engine_name + " has no preset \"" + preset_arg + "\" (--list shows them)");
 	}
 	if (nv < 1 || nv > entry->info->budget.max_voices) fail("--nv " + std::to_string(nv) + ": the engine runs 1 to " + std::to_string(entry->info->budget.max_voices) + " voices");
+	if (tail < 0 || settle < 0) fail("--tail and --settle are seconds, 0 or more");
 
 	// the input: exactly one
-	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) > 1) fail("one input only: --perf, --rec or --midi");
-	const bool default_input = !perf && !rec && !midi;
+	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) > 1) fail("one input only: --perf, --rec, --midi or --ctl");
+	const bool default_input = !perf && !rec && !midi && !ctl;
 	if (default_input) perf = "default";
 	int sr = rate;
 	if (!sr) {
 		const sdk::ScriptedPerformance* p = sdk::find_performance("default");
 		sr = perf && sdk::find_performance(perf) ? sdk::find_performance(perf)->sample_rate : (p ? p->sample_rate : 48000);
 	}
-	std::string error;
-	std::unique_ptr<sdk::Player> player = rec ? sdk::key_player(rec, nv, sr, &error) :
-	    midi                                  ? sdk::midi_player(midi, nv, sr, &error) :
-	                                            sdk::scripted_player(perf, nv, sr, &error);
-	if (!player) fail(error);
-	if (seconds < 0) seconds = player->seconds();
 
 	sdk::Engine engine(*entry);
 	engine.init(sr, nv);
 	if (preset >= 0) engine.set_preset(preset);
+	std::string sets_desc;
+	for (const Set& st : sets) {
+		int found = -1;
+		for (int i = 0; i < engine.num_params(); i++)
+			if (st.name == engine.param_desc(i)->name) found = i;
+		if (found < 0) fail(std::string("the engine ") + engine_name + " has no live parameter \"" + st.name + "\" (--params shows them)");
+		(void)engine.set_param(found, st.value);
+		char b[96];
+		std::snprintf(b, sizeof b, "%s%s=%g", sets_desc.empty() ? "" : " ", st.name.c_str(), static_cast<double>(*engine.param(found)));
+		sets_desc += b;
+	}
+	if (list_params) {
+		for (int i = 0; i < engine.num_params(); i++) {
+			const dsp::ParamDesc* d = engine.param_desc(i);
+			std::printf("%s %s %g %g %g\n", d->name, d->group, static_cast<double>(d->min), static_cast<double>(d->max), static_cast<double>(*engine.param(i)));
+		}
+		return 0;
+	}
+
+	std::string error;
+	std::unique_ptr<sdk::Player> player;
+	size_t ctl_blocks = 0;
+	if (ctl) {
+		std::unique_ptr<ControlsPlayer> cp = controls_player(ctl, nv, sr, &error);
+		if (cp) ctl_blocks = cp->blocks();
+		player = std::move(cp);
+	} else {
+		player = rec ? sdk::key_player(rec, nv, sr, &error) : midi ? sdk::midi_player(midi, nv, sr, &error) :
+		                                                             sdk::scripted_player(perf, nv, sr, &error);
+	}
+	if (!player) fail(error);
+	const bool own_length = seconds < 0;
+	if (own_length) seconds = player->seconds() + tail;
+
 	const char* pname = engine.preset() >= 0 ? engine.preset_name(engine.preset()) : nullptr;
 	char head[512];
 	std::snprintf(head, sizeof head, "engine %s (%s), preset %s%d%s%s%s, %d voices, %d Hz%s", entry->info->name, entry->header,
 	    preset_arg ? "" : "(its default) ", engine.preset(), pname ? " \"" : "", pname ? pname : "", pname ? "\"" : "", nv, sr,
 	    use_fx ? ", master effects" : "");
-	const std::string input = player->describe() + (default_input ? " [the default input: no --perf, --rec or --midi]" : "");
-	std::fprintf(stderr, "awva_render: %s\nawva_render: input %s\n", head, input.c_str());
+	std::string input = player->describe() + (default_input ? " [the default input: no --perf, --rec or --midi]" : "");
+	std::string shaping;
+	if (!sets_desc.empty()) shaping += ", set " + sets_desc;
+	if (transpose != 0.0f) shaping += ", transposed " + json_number(transpose);
+	if (!notes.empty()) shaping += ", a list of " + std::to_string(notes.size()) + " notes";
+	if (settle > 0) shaping += ", settled " + json_number(settle) + " s";
+	std::fprintf(stderr, "awva_render: %s%s\nawva_render: input %s\n", head, shaping.c_str(), input.c_str());
 
 	sdk::Effect fx(sdk::fx_effect());
 	if (use_fx) fx.init(sr);
 
-	const int nblocks = static_cast<int>(seconds * sr / dsp::BLOCK);
+	// the input's own length in whole blocks for a controls file (no rounding of seconds)
+	const int nblocks = ctl && own_length && tail == 0 ? static_cast<int>(ctl_blocks) : static_cast<int>(seconds * sr / dsp::BLOCK);
 	const int channels = use_fx ? 2 : 1;
 	std::vector<float> out(static_cast<size_t>(nblocks) * dsp::BLOCK * channels);
 	std::vector<dsp::VoiceControls> vc(static_cast<size_t>(nv), dsp::voice_at_rest);
 	dsp::GlobalControls g = dsp::globals_at_rest;
+	// the engine gets a moved copy (the player writes only what changes): transposed, the list's notes
+	const bool moved = transpose != 0.0f || !notes.empty();
+	std::vector<dsp::VoiceControls> ev(static_cast<size_t>(nv));
+	std::vector<float> held(static_cast<size_t>(nv), 0.0f), list_note(static_cast<size_t>(nv), 69.0f), ctl_rec;
+	size_t next_note = 0;
+	if (ctl_out) ctl_rec.reserve(static_cast<size_t>(nblocks) * CTL_WIDTH);
+	// silence first: the parameter glide arrives (nothing of it is written)
+	{
+		float buf[dsp::BLOCK];
+		float* const eo[1] = {buf};
+		const int nsettle = static_cast<int>(settle * sr / dsp::BLOCK);
+		for (int b = 0; b < nsettle; b++) engine.process(vc.data(), g, eo);
+	}
 	double compute_s = 0;
 	for (int b = 0; b < nblocks; b++) {
 		player->block(b, vc.data(), g);
 		for (dsp::VoiceControls& c : vc) dsp::track_key(c);
+		const dsp::VoiceControls* to = vc.data();
+		if (moved) {
+			for (size_t v = 0; v < vc.size(); v++) {
+				if (!notes.empty() && vc[v].pres > 0.0f && held[v] <= 0.0f) list_note[v] = notes[next_note++ % notes.size()];
+				held[v] = vc[v].pres;
+				ev[v] = vc[v];
+				ev[v].note = (notes.empty() ? vc[v].note : list_note[v]) + transpose;
+			}
+			to = ev.data();
+		}
+		if (ctl_out) {
+			for (int v = 0; v < CTL_VOICES; v++) {
+				const dsp::VoiceControls c = v < nv ? to[v] : dsp::voice_at_rest;
+				ctl_rec.insert(ctl_rec.end(), {c.note, c.pres, c.vpres, c.but_x, c.but_y});
+			}
+			ctl_rec.insert(ctl_rec.end(), {g.acc_abs, g.acc_x, g.acc_y, g.acc_z, g.rot_x, g.rot_y, g.rot_z, g.pedal});
+		}
 		const auto t0 = std::chrono::steady_clock::now();
 		float buf[dsp::BLOCK];
 		float* const eo[1] = {buf};
-		engine.process(vc.data(), g, eo);
+		engine.process(to, g, eo);
 		if (use_fx) {
 			float l[dsp::BLOCK], r[dsp::BLOCK];
 			const float* const in[1] = {buf};
@@ -228,19 +435,68 @@ int main(int argc, char** argv) {
 	}
 	if (bad) std::fprintf(stderr, "!! %zu NON-FINITE OUTPUT SAMPLES\n", bad);
 	if (out_path) {
-		FILE* f = std::fopen(out_path, "wb");
-		if (!f) fail(std::string("cannot write ") + out_path);
-		std::fwrite(out.data(), sizeof(float), out.size(), f);
-		std::fclose(f);
+		if (!write_f32(out_path, out)) fail(std::string("cannot write ") + out_path);
 		std::fprintf(stderr, "awva_render: wrote %s\n", sdk::file_identity(out_path).c_str());
 	}
 	if (wav) {
-		if (!write_wav(wav, out, channels, sr, std::string(head) + "; input " + input)) fail(std::string("cannot write ") + wav);
+		if (!write_wav(wav, out, channels, sr, std::string(head) + shaping + "; input " + input)) fail(std::string("cannot write ") + wav);
 		std::fprintf(stderr, "awva_render: wrote %s\n", sdk::file_identity(wav).c_str());
 	}
+	if (ctl_out) {
+		if (!write_f32(ctl_out, ctl_rec)) fail(std::string("cannot write ") + ctl_out);
+		std::fprintf(stderr, "awva_render: wrote %s\n", sdk::file_identity(ctl_out).c_str());
+	}
 	const uint64_t h = hash_samples(out);
-	std::fprintf(stderr, "awva_render: %.1f s audio, host compute %.3f s, peak %.3f\n", seconds, compute_s, peak);
-	std::printf("hash %016llx\n", static_cast<unsigned long long>(h));
+	char hs[32];
+	std::snprintf(hs, sizeof hs, "%016llx", static_cast<unsigned long long>(h));
+	std::fprintf(stderr, "awva_render: %.1f s audio, host compute %.3f s, peak %.3f\n", static_cast<double>(nblocks) * dsp::BLOCK / sr, compute_s, peak);
+	std::printf("hash %s\n", hs);
+
+	if (manifest) {
+		std::string j = "{\n";
+		const auto field = [&j](const char* k, const std::string& v, bool last = false) { j += std::string("  ") + json_string(k) + ": " + v + (last ? "\n" : ",\n"); };
+		field("tool", json_string("awva_render"));
+		field("engine", json_string(entry->info->name));
+		field("engine_header", json_string(entry->header));
+		field("preset", std::to_string(engine.preset()));
+		field("preset_name", pname ? json_string(pname) : "null");
+		std::string ps = "{";
+		for (size_t i = 0; i < sets.size(); i++) {
+			int found = 0;
+			for (int k = 0; k < engine.num_params(); k++)
+				if (sets[i].name == engine.param_desc(k)->name) found = k;
+			ps += (i ? ", " : "") + json_string(sets[i].name) + ": " + json_number(*engine.param(found));
+		}
+		field("set", ps + "}");
+		field("input", json_string(input));
+		field("input_kind", json_string(ctl ? "ctl" : rec ? "rec" :
+		                            midi                  ? "midi" :
+		                                                    "perf"));
+		field("sample_rate", std::to_string(sr));
+		field("block", std::to_string(dsp::BLOCK));
+		field("voices", std::to_string(nv));
+		field("blocks", std::to_string(nblocks));
+		field("seconds", json_number(static_cast<double>(nblocks) * dsp::BLOCK / sr));
+		field("settle", json_number(settle));
+		field("tail", json_number(tail));
+		field("transpose", json_number(transpose));
+		std::string ns = "[";
+		for (size_t i = 0; i < notes.size(); i++) ns += (i ? ", " : "") + json_number(notes[i]);
+		field("notes", ns + "]");
+		field("fx", use_fx ? "true" : "false");
+		field("channels", std::to_string(channels));
+		field("out", out_path ? json_string(sdk::file_identity(out_path)) : "null");
+		field("wav", wav ? json_string(sdk::file_identity(wav)) : "null");
+		field("ctl_out", ctl_out ? json_string(sdk::file_identity(ctl_out)) : "null");
+		field("peak", json_number(peak));
+		field("nonfinite", std::to_string(bad));
+		field("deterministic", "true");
+		field("hash", json_string(hs), true);
+		j += "}\n";
+		FILE* f = std::fopen(manifest, "wb");
+		if (!f || std::fwrite(j.data(), 1, j.size(), f) != j.size()) fail(std::string("cannot write ") + manifest);
+		std::fclose(f);
+	}
 
 	int failed = 0;
 	if (check) {
@@ -270,13 +526,9 @@ int main(int argc, char** argv) {
 		std::fclose(f);
 		expect = nullptr;
 	}
-	if (expect) {
-		char hs[32];
-		std::snprintf(hs, sizeof hs, "%016llx", static_cast<unsigned long long>(h));
-		if (std::strcmp(hs, expect) != 0) {
-			std::fprintf(stderr, "!! render hash %s, expected %s (golden render changed)\n", hs, expect);
-			failed = 1;
-		}
+	if (expect && std::strcmp(hs, expect) != 0) {
+		std::fprintf(stderr, "!! render hash %s, expected %s (golden render changed)\n", hs, expect);
+		failed = 1;
 	}
 	return failed;
 }
