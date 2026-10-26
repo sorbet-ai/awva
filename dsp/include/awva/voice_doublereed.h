@@ -243,8 +243,8 @@ struct VoiceState {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::InstrumentControls g;
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
 	Params p;           // as set (preset, live edits)
@@ -412,7 +412,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * PI * 12.0f / sr;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	for (int v = 0; v < MAX_VOICES; v++) {
 		VoiceState& s = e.vs[v];
 		s = VoiceState();
@@ -424,7 +424,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s.note_prev = 69.0f;
 		s.active = 0;
 	}
-	for (int v = 0; v < e.nvoices; v++) e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+	for (int v = 0; v < e.nvoices; v++) e.vc[v] = awva::note_at_rest;
 	set_preset(e, DEFAULT_PRESET);
 }
 
@@ -440,16 +440,16 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 static inline void process_voice(Engine& e, int vi) {
 	VoiceState& s = e.vs[vi];
 	const Params& P = e.ps;
-	const strisy::VoiceControls cc = e.vc[vi];
-	const real pres = clampr(cc.pres, 0.0f, 1.5f);
+	const awva::NoteControls cc = e.vc[vi];
+	const real pres = clampr(cc.pressure, 0.0f, 1.5f);
 	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
-	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
+	const real vpres = clampr(cc.pressure_rate, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vrlev = rmin(rmax(P.att_rate, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vnlev = rmin(rmax(P.att_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
-	real note = clampr(cc.note, 0.0f, 132.0f);
+	real note = clampr(cc.pitch, 0.0f, 132.0f);
 	while (note > NOTE_HI) note -= 12.0f;
 	while (note < NOTE_LO) note += 12.0f;
 	const bool held = pres > 0.0f;
@@ -490,7 +490,7 @@ static inline void process_voice(Engine& e, int vi) {
 	if (vrate > 0.05f && (start || vrate > s.racc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vrate), 0.0005f), 1.0f);
 	if (start && vrate <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
 
-	const real by = clampr(cc.but_y, -1.0f, 1.0f);
+	const real by = clampr(cc.timbre, -1.0f, 1.0f);
 	if (start) {
 		s.ty1 = 0.0f;
 		s.ty2 = by;
@@ -653,7 +653,7 @@ static inline void process_voice(Engine& e, int vi) {
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
 	if (vpres > 0.1f) s.vneg = 0.0f;
 	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
-	const real ped = clampr(e.g.pedal, 0.0f, 1.0f);
+	const real ped = clampr(e.g.sustain, 0.0f, 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);
 	const real fac_acc = 1.0f - e.ctrl_dt / rmax(P.acc_t, 0.005f);
@@ -865,7 +865,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 		}
 	}
 	{
-		const real sh = clampr(e.g.acc_abs - 1.1f, 0.0f, 1.0f);
+		const real sh = clampr(e.g.motion.accel_g - 1.1f, 0.0f, 1.0f);
 		e.shake_pk = rmax(sh, e.shake_pk * (1.0f - e.block_dt * 2.5f));
 		e.shake += 0.03f * (e.shake_pk - e.shake);
 	}

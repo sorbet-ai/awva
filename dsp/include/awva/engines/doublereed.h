@@ -19,8 +19,8 @@ struct doublereed {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "doublereed";
 	static constexpr const char* summary = "physical double reeds: reed, conical bore and tone holes, a living player (oboe, cor anglais, bassoon)";
-	// pres the breath, vpres the tongue, but_y the embouchure; acc_abs (flutter) and the pedal (release)
-	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_pedal;
+	// pressure the breath, pressure_rate the tongue, timbre the embouchure; motion.accel_g (flutter) and the sustain (release)
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
 	static constexpr Budget budget = {::doublereed::MAX_VOICES, 29000, 2.0f}; // profile.sh: oboe 28440 (the worst preset)
 	// the hero parameters: the reed's opening and stiffness (the embouchure), the lattice's cutoff
 	// (the instrument's colour), the loudest breath, the player's wander (the tone's life), the
