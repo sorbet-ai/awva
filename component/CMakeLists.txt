@@ -94,13 +94,135 @@ list(APPEND AWVA_COMPONENTS nsc_sine_small)
 add_custom_target(nsc_components DEPENDS ${AWVA_COMPONENTS})
 set(AWVA_COMPONENTS "${AWVA_COMPONENTS}" PARENT_SCOPE)
 
+# --- engine packages (.awvapkg, docs/packages.md: the one file an engine ships in) -----------------
+#   package_<id>   <AWVA_PACKAGE_DIR>/<id>-<slug>.awvapkg: the component's library as this PC's
+#                  image, built with AWVA_PACKAGE_MIDI (below; its own target, package_lib_<id>)
+#                  (tools/nsc_pack.py host, from the library and its nsc_manifest JSON) and the
+#                  engine's preset files (presets/<id>), labelled AWVA_PACKAGE_LABEL (default: the
+#                  id) and stamped with AWVA_PACKAGE_AWVA (default: this build's version, when it is
+#                  a commit). Not built by default: cmake --build <dir> --target package_<id>.
+#   packages       every engine's
+# The image's tag is this PC's: x86_64-windows, arm64-macos, x86_64-macos, x86_64-linux, ...
+find_package(Python3 COMPONENTS Interpreter QUIET)
+set(AWVA_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages" CACHE PATH "where package_<id> writes")
+set(AWVA_PACKAGE_LABEL "" CACHE STRING "the label packages are listed by (default: the engine's id)")
+set(AWVA_PACKAGE_SLUG "" CACHE STRING "the file name's part after the id (default: the awva commit)")
+set(AWVA_PACKAGE_AWVA "" CACHE STRING "the awva commit packages say they are built on (default: this build's version)")
+# A package is one file for every host, an embedded host's flash slots and a host's virtual
+# device included, so its libraries are built with the MIDI tables those take (timed_midi.h,
+# midi_voices.h: a block's events, the hosts' note ids, a step's messages); the descriptor says them
+# (max_events, max_note_ids) to every host
+set(AWVA_PACKAGE_MIDI AWVA_MIDI_QUEUE=256 AWVA_NOTE_IDS=16 AWVA_MIDI_STEP_QUEUE=256 CACHE STRING
+  "the MIDI table sizes a package's libraries are built with")
+if(WIN32)
+  set(_pkg_os windows)
+elseif(APPLE)
+  set(_pkg_os macos)
+else()
+  set(_pkg_os linux)
+endif()
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|ARM64|aarch64)$")
+  set(AWVA_PACKAGE_TAG "arm64-${_pkg_os}" CACHE INTERNAL "")
+else()
+  set(AWVA_PACKAGE_TAG "x86_64-${_pkg_os}" CACHE INTERNAL "")
+endif()
+set(AWVA_PACK "${CMAKE_CURRENT_SOURCE_DIR}/tools/nsc_pack.py" CACHE INTERNAL "")
+set(_pkg_awva "${AWVA_PACKAGE_AWVA}")
+if(NOT _pkg_awva AND _nsc_version MATCHES "^[0-9a-f]+$")
+  set(_pkg_awva "${_nsc_version}")
+endif()
+# (the sizes as the descriptor states them, for the packager's check: events, note ids)
+string(REGEX MATCH "AWVA_MIDI_QUEUE=([0-9]+)" _ "${AWVA_PACKAGE_MIDI}")
+set(_pkg_events "${CMAKE_MATCH_1}")
+string(REGEX MATCH "AWVA_NOTE_IDS=([0-9]+)" _ "${AWVA_PACKAGE_MIDI}")
+set(_pkg_midi "${_pkg_events},${CMAKE_MATCH_1}")
+set(_pkg_slug "${AWVA_PACKAGE_SLUG}")
+if(NOT _pkg_slug)
+  set(_pkg_slug "${_nsc_version}")
+endif()
+# awva_add_package(<target> <component target> <id> <out.awvapkg> [LABEL <text>]): a package of
+# a component library built here (its presets: presets/<id>, when the folder is there). The
+# library must be built with AWVA_PACKAGE_MIDI (awva_add_package_library makes one so): the
+# packager refuses another.
+function(awva_add_package target component id out)
+  cmake_parse_arguments(PARSE_ARGV 4 A "" "LABEL" "")
+  if(NOT Python3_Interpreter_FOUND)
+    return()
+  endif()
+  set(_label "${A_LABEL}")
+  if(NOT _label)
+    set(_label "${AWVA_PACKAGE_LABEL}")
+  endif()
+  if(NOT _label)
+    set(_label "${id}")
+  endif()
+  set(_awva "")
+  if(_pkg_awva)
+    set(_awva --awva "${_pkg_awva}")
+  endif()
+  set(_presets "")
+  if(EXISTS "${AWVA_COMPONENT_SOURCE_DIR}/../presets/${id}")
+    set(_presets --presets "${AWVA_COMPONENT_SOURCE_DIR}/../presets/${id}")
+  endif()
+  get_filename_component(_dir "${out}" DIRECTORY)
+  add_custom_command(OUTPUT "${out}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${_dir}"
+    COMMAND nsc_manifest "$<TARGET_FILE:${component}>" "${out}.json"
+    COMMAND "${Python3_EXECUTABLE}" "${AWVA_PACK}" host "$<TARGET_FILE:${component}>" "${out}.json" ${AWVA_PACKAGE_TAG}
+            "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "${out}.nscm" --midi "${_pkg_midi}"
+    COMMAND "${Python3_EXECUTABLE}" "${AWVA_PACK}" package "${out}" --image "${AWVA_PACKAGE_TAG}=${out}.nscm"
+            --manifest "${out}.json" --label "${_label}" ${_awva} ${_presets}
+    DEPENDS ${component} nsc_manifest "${AWVA_PACK}" VERBATIM)
+  add_custom_target(${target} DEPENDS "${out}")
+endfunction()
+set(_all_packages "")
+# a component library for packages: awva_add_component with AWVA_PACKAGE_MIDI
+function(awva_add_package_library target engine)
+  awva_add_component(${target} ${engine} SHARED)
+  target_compile_definitions(${target} PRIVATE ${AWVA_PACKAGE_MIDI})
+  set_target_properties(${target} PROPERTIES OUTPUT_NAME ${engine} PREFIX "" CXX_VISIBILITY_PRESET hidden
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs")
+  if(APPLE)
+    target_link_options(${target} PRIVATE -Wl,-exported_symbol,_nsc_entry)
+  endif()
+  set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL ON)
+endfunction()
+foreach(v IN LISTS AWVA_ENGINES)
+  if(NOT Python3_Interpreter_FOUND)
+    break()
+  endif()
+  awva_add_package_library(package_lib_${v} ${v})
+  awva_add_package(package_${v} package_lib_${v} ${v} "${AWVA_PACKAGE_DIR}/${v}-${_pkg_slug}.awvapkg")
+  if(TARGET package_${v})
+    list(APPEND _all_packages package_${v})
+  endif()
+endforeach()
+if(_all_packages)
+  add_custom_target(packages DEPENDS ${_all_packages})
+endif()
+
 if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
-  add_executable(nsc_component_tests "${CMAKE_CURRENT_SOURCE_DIR}/../sdk/tests/main.cpp" tests/test_component.cpp)
+  add_executable(nsc_component_tests "${CMAKE_CURRENT_SOURCE_DIR}/../sdk/tests/main.cpp" tests/test_component.cpp tests/test_package.cpp)
   target_include_directories(nsc_component_tests PRIVATE "${AWVA_DOCTEST_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${AWVA_HARNESS_DIR}")
   target_link_libraries(nsc_component_tests PRIVATE awva_sdk awva_engines awva_performances ${CMAKE_DL_LIBS})
   target_compile_definitions(nsc_component_tests PRIVATE "NSC_COMPONENT_DIR=\"${AWVA_COMPONENT_DIR}\""
     "AWVA_REC_DIR=\"${AWVA_HARNESS_DIR}/rec\"" "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
   add_dependencies(nsc_component_tests nsc_components)
+  # the packages the tests read (tests/test_package.cpp): sine's, with its presets, and a
+  # presets-only one for the bowed
+  if(Python3_Interpreter_FOUND)
+    set(_tp "${CMAKE_CURRENT_BINARY_DIR}/test_packages")
+    awva_add_package(test_package_va package_lib_va va "${_tp}/va.awvapkg" LABEL "va, a test package")
+    add_custom_command(OUTPUT "${_tp}/bowed_presets.awvapkg"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${_tp}"
+      COMMAND "${Python3_EXECUTABLE}" "${AWVA_PACK}" package "${_tp}/bowed_presets.awvapkg" --engine bowed
+              --label "bowed presets" --presets "${CMAKE_CURRENT_SOURCE_DIR}/../presets/bowed"
+      DEPENDS "${AWVA_PACK}" VERBATIM)
+    add_custom_target(test_package_presets DEPENDS "${_tp}/bowed_presets.awvapkg")
+    add_dependencies(nsc_component_tests test_package_va test_package_presets)
+    target_compile_definitions(nsc_component_tests PRIVATE "NSC_TEST_PACKAGES=\"${_tp}\"" "NSC_PACKAGE_TAG=\"${AWVA_PACKAGE_TAG}\""
+      "NSC_COMPONENT_SUFFIX=\"${CMAKE_SHARED_LIBRARY_SUFFIX}\"" "NSC_PACKAGE_LIBS=\"${CMAKE_CURRENT_BINARY_DIR}/package_libs\"")
+  endif()
   doctest_discover_tests(nsc_component_tests TEST_PREFIX "component." PROPERTIES LABELS unit)
   # (a ';' in a test's name splits it in ctest, which then runs no test and passes)
   add_test(NAME component.names_without_semicolons COMMAND nsc_component_tests --list-test-cases)
