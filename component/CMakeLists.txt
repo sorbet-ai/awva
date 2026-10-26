@@ -91,7 +91,7 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
   doctest_discover_tests(nsc_component_tests TEST_PREFIX "component." PROPERTIES LABELS unit)
   # (a ';' in a test's name splits it in ctest, which then runs no test and passes)
   add_test(NAME component.names_without_semicolons COMMAND nsc_component_tests --list-test-cases)
-  set_tests_properties(component.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
+  set_tests_properties(component.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
   # the ABI's conformance checks on every engine's library (conformance/, docs/conformance.md),
   # with the engine's known failures (sdk/tests/known_failures.cmake)
   include("${CMAKE_CURRENT_SOURCE_DIR}/conformance/conformance.cmake")
@@ -101,7 +101,7 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
   add_dependencies(awva_conformance nsc_components)
   # a ';' in a check's name splits it in ctest, which then runs no check and passes
   add_test(NAME conformance.names_without_semicolons COMMAND awva_conformance --list-test-cases)
-  set_tests_properties(conformance.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
+  set_tests_properties(conformance.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
   # awva_add_component from a project outside awva: everything in its own build directory. It builds
   # with this build's toolchain (not the environment's default compiler)
   add_test(NAME component.add_component_from_outside COMMAND "${CMAKE_COMMAND}" "-DAWVA=${CMAKE_CURRENT_SOURCE_DIR}/.."

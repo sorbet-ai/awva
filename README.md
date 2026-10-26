@@ -2,7 +2,7 @@
 
 # awva
 
-Portable, expressive per-note sound engines for PCs and embedded devices. The DSP is header-only C++ with no heap, no globals and no OS: the same code runs on a Cortex-M7-class MCU and on a desktop. The engines are played by MIDI 2.0 and MPE; MIDI 1.0 is up-converted to MIDI 2.0 on the way in. (github.com/sorbet-ai/awva; ids under com.sorbet-ai.awva.)
+Portable, expressive per-note sound engines for PCs and embedded devices. The DSP is header-only C++ with no heap, no globals and no OS: the same code runs on a Cortex-M7-class MCU and on a desktop. The engines are played by MIDI 2.0 and MPE (and MIDI 1.0): one decoder reads both, each at its own resolution. (github.com/sorbet-ai/awva; ids under com.sorbet-ai.awva.)
 
 Three ways to host them:
 
@@ -39,7 +39,7 @@ Two ways in, each with a small example in `examples/` that the tests build and r
   build/sdk/examples/c_host build/sdk/components va va.wav
   ```
 
-- **From C++, through the SDK.** Link `awva_sdk` and `awva_engines` and use the engines directly, with the SDK's MIDI in (`sdk::TimedMidi` over `sdk::MidiVoices`: MIDI 1.0 and MPE up-converted to MIDI 2.0, decoded, and given voices in 2 ms steps). [`examples/mpe_file/mpe_file.cpp`](examples/mpe_file/mpe_file.cpp) renders a standard MIDI file, MPE or plain, sample for sample as `awva_render --midi` does; `--demo` writes an MPE file to try.
+- **From C++, through the SDK.** Link `awva_sdk` and `awva_engines` and use the engines directly, with the SDK's MIDI in (`sdk::TimedMidi` over `sdk::MidiVoices`: MIDI 2.0, MIDI 1.0 and MPE decoded and given voices in 2 ms steps). [`examples/mpe_file/mpe_file.cpp`](examples/mpe_file/mpe_file.cpp) renders a standard MIDI file, MPE or plain, sample for sample as `awva_render --midi` does; `--demo` writes an MPE file to try.
 
   ```
   build/sdk/examples/mpe_file --demo demo.mid && build/sdk/examples/mpe_file demo.mid demo.wav va

@@ -67,18 +67,18 @@ public:
 			if (legato_on_) {
 				// mono legato (legato.h): the keys are notes on one voice; a key pressed while one is
 				// held slurs to it, as a wind player's fingers do on one breath
-				legato_.note(x.voice, {x.note, x.pres, x.vpres, x.but_x, x.but_y, x.pres > 0.0f});
+				legato_.note(x.voice, {x.note, x.pres, x.vpres, x.but_y, 0.0f, 0.0f, static_cast<uint8_t>(x.pres > 0.0f ? 1 : 0)});
 				NoteControls& c = vc[0];
 				if (legato_.empty()) { // the last key let go: the voice's release
 					c.pressure = x.pres;
 					c.pressure_rate = x.vpres;
 					c.gate = 0;
 				} else {
-					const awva::ump::NoteSignals s = legato_.signals();
-					c.pitch = s.note;
-					c.pressure = s.pres;
-					c.pressure_rate = s.vpres;
-					c.timbre = s.but_y;
+					const NoteControls s = legato_.signals();
+					c.pitch = s.pitch;
+					c.pressure = s.pressure;
+					c.pressure_rate = s.pressure_rate;
+					c.timbre = s.timbre;
 					c.gate = 1;
 				}
 				continue;

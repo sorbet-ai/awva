@@ -12,6 +12,11 @@
 #               (Registered Per-Note Controller 3, Pitch 7.25) and per-note timbre (Registered
 #               Per-Note Controller 74), poly pressure, 16-bit velocities, the bend range as a
 #               Registered Controller
+#   sensor.ump  MIDI 2.0 from a controller with its own sensors: a sensor range of 4 (Assignable
+#               Controller 1), each note's measured pressure rate and timbre (Assignable Per-Note
+#               Controllers 1 and 2) and pitch (Registered Per-Note Controller 3) from a pressure,
+#               a slide and a tilt in 14-bit codes, pressures past MIDI's full scale, motion
+#               (Assignable Controllers 0x10, 0x14 .. 0x16) and the pedal
 # At most 12 notes are held at once (the MIDI mapping holds 16; past that the oldest is stolen).
 # Usage: tools/goldens/make_phrases.py  (writes the files; deterministic)
 import math
@@ -187,7 +192,56 @@ def midi2():
     return p
 
 
+def bip_r(x, r):  # bipolar 32 with a range
+    return bip(x / r)
+
+
+def u32_r(x, r):
+    return u32(x / r)
+
+
+def sensor():
+    p = Phrase("MIDI 2.0 from a controller's own sensors: measured rates and timbres, a sensor range of 4")
+    R = 4.0
+    p.add(0.0, m2(0x3, 0, 0, 1, int(R * (1 << 28))), "sensor range 4 (unsigned 4.28)")
+    code = lambda x: round(x * 8191) / 8191  # (a 14-bit sensor's values)
+    keys = [(0.1, 2.4, 50.0), (0.4, 2.0, 57.0), (0.7, 3.2, 62.25), (1.6, 2.6, 66.5), (2.9, 1.2, 70.0)]
+    for n, (t0, dur, pitch) in enumerate(keys):
+        key = n + 3  # (a note number per key: the key's own, not its pitch)
+        p.add(t0, m2(0x9, 0, key, 0, 0x8000 << 16), "a key down (its velocity a nominal 0.5)")
+        prev = 0.0
+        t = t0
+        i = 0
+        while t < t0 + dur + 0.06:
+            u = t - t0
+            pr = 0.0 if u > dur else min(1.0, u / 0.015) * (0.5 + 0.5 * n / 4 + 0.35 * math.sin(2 * math.pi * 0.7 * u))
+            pr = code(max(0.0, min(1.5, pr)))
+            rate = code(max(-4.0, min(4.0, (pr - prev) / 0.002 * 0.0125)))
+            if pr <= 0.0:
+                rate = min(rate, 0.0)
+            y = code(0.9 * math.sin(2 * math.pi * 0.4 * u + n))
+            bend = 0.5 * (0.6 * math.sin(2 * math.pi * 5.0 * u)) ** 3 if u > 0.5 else 0.0
+            p.add(t, m2(0x1, 0, key, 1, bip_r(rate, R)), "measured pressure rate" if i == 0 else "")
+            p.add(t, m2(0xa, 0, key, 0, u32_r(pr, R)), "pressure (up to 1.5)" if i == 0 else "")
+            p.add(t, m2(0x1, 0, key, 2, bip_r(y, R)), "timbre: a tilt" if i == 0 else "")
+            p.add(t, m2(0x0, 0, key, 3, int(round((pitch + bend) * (1 << 25)))), "pitch with a slide's bend" if i == 0 else "")
+            prev = pr
+            t += 0.002
+            i += 1
+        p.add(t0 + dur + 0.06, m2(0x8, 0, key, 0, 0), "the key up")
+    for i in range(120):
+        t = 0.5 + 0.02 * i
+        s1 = math.sin(2 * math.pi * 3.0 * t)
+        p.add(t, m2(0x3, 0, 0, 0x10, u32(min(1.0, (1.0 + 1.5 * s1 * s1) / 4.0))), "accel_g (u32 x 4)" if i == 0 else "")
+        for a in range(3):
+            p.add(t, m2(0x3, 0, 0, 0x14 + a, bip(0.6 * math.sin(2 * math.pi * (0.9 + 0.4 * a) * t + a))), "spin" if i == 0 and a == 0 else "")
+    p.add(2.2, m2(0xb, 0, 64, 0, u32(1.0)), "the pedal down")
+    p.add(3.6, m2(0xb, 0, 64, 0, 0), "the pedal up")
+    return p
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     mpe().write("mpe.ump")
     midi2().write("midi2.ump")
+    sensor().write("sensor.ump")

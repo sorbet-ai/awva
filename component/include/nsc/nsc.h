@@ -27,7 +27,8 @@
  *
  * Input: MIDI 2.0 channel voice messages (UMP type 4) in their standard meaning (pressure full
  * scale = the engine scale's full pressure, 16-bit velocities, Pitch 7.25, bipolar controllers centred;
- * per-note y as Assignable Per-Note Controller 4 or Registered 74, per-note x as Assignable 3), and
+ * per-note timbre as Registered Per-Note Controller 74; a sensor's rate, timbre and range as
+ * Assignable Per-Note Controllers 1, 2 and Assignable Controller 1: docs/midi.md), and
  * MIDI 1.0 channel voice messages in UMP (type 2, including MPE); the other types are ignored, and
  * every group is taken as one. Inside, the component runs the one decoder (awva/ump.h), the voice
  * allocator and, in NSC_MODE_LEGATO, mono legato.

@@ -184,7 +184,7 @@ private:
 		} else {
 			status = static_cast<uint8_t>(e.w[0] >> 16);
 			d1 = static_cast<uint8_t>((e.w[0] >> 8) & 0x7f);
-			(void)midi_.ump2(e.w[0], e.w[1]);
+			(void)midi_.ump(e.w[0], e.w[1]);
 			on = (status & 0xf0) == 0x90;
 			off = (status & 0xf0) == 0x80;
 		}
