@@ -659,7 +659,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	const real sr = e.sr;
 	const real dt = (real)BLOCK * e.inv_sr;
 	bellows(e, dt);
-	e.casmix += ((q.cassotto > 0.5f ? 1.0f : 0.0f) - e.casmix) * 0.03f;
+	e.casmix = strisy::glide_value(e.casmix, q.cassotto > 0.5f ? 1.0f : 0.0f, 0.03f, 1.0f); // (it arrives)
 
 	for (int b = 0; b < NBUS; b++)
 		for (int n = 0; n < BLOCK; n++) e.bus[b][n] = 0.0f;

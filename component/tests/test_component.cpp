@@ -935,3 +935,58 @@ TEST_CASE("presets as files: a file's heroes that aren't the engine's parameters
 	const std::string factory = saved(dll, "x");
 	CHECK(factory.find("\"heroes\": [\"decay\", \"tone\"]") == std::string::npos);
 }
+
+namespace {
+
+// silence for `seconds` (the time a glide gets), then two seconds of the UMP performance
+std::vector<float> settle_then_play(Loaded& dll, double seconds) {
+	float buf[NSC_BLOCK];
+	float* o[1] = {buf};
+	for (int b = 0; b < static_cast<int>(seconds * SR / NSC_BLOCK); b++) dll.c().process(dll.in.state, nullptr, 0, o);
+	const std::vector<Ev> perf = ump_performance();
+	const int blocks = 2 * SR / NSC_BLOCK;
+	std::vector<float> out(static_cast<size_t>(blocks) * NSC_BLOCK);
+	size_t k = 0;
+	for (int b = 0; b < blocks; b++) {
+		std::vector<nsc_event> ev;
+		const uint64_t start = static_cast<uint64_t>(b) * NSC_BLOCK;
+		for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
+			ev.push_back({static_cast<int32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
+		float* oo[1] = {&out[start]};
+		dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), oo);
+	}
+	return out;
+}
+
+} // namespace
+
+TEST_CASE("glides arrive: an edit after a preset, given its glide's time, sounds as the same values loaded at once") {
+	// (bowed's preset glide is its own change)
+	for (const char* id : {"accordion", "brass", "ep", "modal", "reed", "sine", "trumpet", "va", "wind"}) {
+		const sdk::EngineEntry* e = sdk::find_engine(id);
+		REQUIRE(e != nullptr);
+		const int presets = e->info->num_presets > 0 ? e->info->num_presets : 1;
+		for (int pr = 0; pr < presets; pr++) {
+			INFO(std::string(id) << " preset " << pr);
+			Loaded a(id), b(id);
+			REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
+			REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+			const nsc_desc& d = *a.c().desc;
+			if (e->info->num_presets > 0) a.c().set_preset(a.in.state, pr);
+			uint32_t rng = 1234u + static_cast<uint32_t>(pr);
+			for (int i = 0; i < e->info->num_params; i++) { // (the engine's own: "output" is not a preset's)
+				rng = rng * 1664525u + 1013904223u;
+				// (a free-running oscillator's rate is left alone: its phase is the integral of the rate, so
+				// a glide leaves it shifted for good, as the contract's free_running_rate says)
+				const std::string name = d.params[i].name;
+				if ((std::string(id) == "wind" && name == "vib_hz") || (std::string(id) == "modal" && name == "tremrate")) continue;
+				const float t = static_cast<float>(rng >> 8) / 16777216.0f;
+				(void)a.c().set_param(a.in.state, i, d.params[i].min + (d.params[i].max - d.params[i].min) * t);
+			}
+			std::string file(8192, '\0');
+			file.resize(a.c().save_preset(a.in.state, "x", file.data(), static_cast<uint32_t>(file.size())));
+			REQUIRE(b.c().load_preset(b.in.state, file.data(), static_cast<uint32_t>(file.size()), nullptr) == 1);
+			CHECK(same(settle_then_play(a, 3.0), settle_then_play(b, 3.0)));
+		}
+	}
+}

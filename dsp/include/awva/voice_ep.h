@@ -649,13 +649,15 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	const real wt = wd * (0.8f * sin_turn(e.wph1) + 0.2f * sin_turn(e.wph2));
 	e.wob += 0.2f * (wt - e.wob); // smooth, so depth changes never jump the pitch
 	if (!(fabsf(e.wob) < 2.0f)) e.wob = 0.0f;
-	{ // ~30 ms glide of the frequency-ratio parameters
+	// ~30 ms glide of the frequency-ratio parameters; it arrives (strisy::glide_value, over the
+	// ranges ratio_targets clamps them to)
+	{
 		real tb, to, tbr, ttr;
 		ratio_targets(e.p, tb, to, tbr, ttr);
-		e.sm_beat += 0.02f * (tb - e.sm_beat);
-		e.sm_boct += 0.02f * (to - e.sm_boct);
-		e.sm_bratio += 0.02f * (tbr - e.sm_bratio);
-		e.sm_tratio += 0.02f * (ttr - e.sm_tratio);
+		e.sm_beat = strisy::glide_value(e.sm_beat, tb, 0.02f, 1.0f);
+		e.sm_boct = strisy::glide_value(e.sm_boct, to, 0.02f, 50.0f / 1200.0f);
+		e.sm_bratio = strisy::glide_value(e.sm_bratio, tbr, 0.02f, 30.0f - 1.5f);
+		e.sm_tratio = strisy::glide_value(e.sm_tratio, ttr, 0.02f, 40.0f - 2.0f);
 	}
 
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;
