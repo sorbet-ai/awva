@@ -617,7 +617,7 @@ TEST_CASE("a late frame in the very first block is frame 0 (nothing before the s
 	CHECK(x == y);
 }
 
-TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory regions; the peak, recorded") {
+TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory regions, the peak recorded") {
 	constexpr int RATE = 11025, GUARD = 4096;
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		nsc_library lib{};
