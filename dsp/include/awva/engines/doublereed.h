@@ -18,6 +18,7 @@ struct doublereed {
 	// init() writes every byte of its BulkMemory (reset of every voice): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "doublereed";
+	static constexpr const char* title = "Double Reed";
 	static constexpr const char* short_name = "dreed";
 	static constexpr uint32_t led = 0x004000; // the double reed voice key's colour in the firmware (the wind key's)
 	static constexpr const char* summary = "physical double reeds: reed, conical bore and tone holes, a living player (oboe, cor anglais, bassoon)";
