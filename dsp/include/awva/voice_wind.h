@@ -59,6 +59,7 @@
 #include <type_traits>
 #include <math.h>
 #include "controls.h"
+#include "note_glide.h"
 #include "dspmath.h"
 #include "params.h"
 #include "preset.h"
@@ -68,6 +69,7 @@ namespace wind {
 
 using real = float;
 static constexpr int BLOCK = strisy::BLOCK;
+static constexpr float GLIDE_S = 0.010f; // a slur's fingering change (note_glide.h)
 static constexpr int MAX_VOICES = 10;
 
 // delay lines (AXI SRAM): main bore up to a period (cone, flute) or half a period (cylinder) of
@@ -244,6 +246,7 @@ struct VoiceState {
 	int quiet;
 	uint32_t widx, rng;
 	real note_prev;
+	awva::NoteGlide glide; // the fingering: a slur's step of the note over GLIDE_S
 	real ps;               // smoothed pressure
 	real ty;               // smoothed tilt
 	real tongue;           // articulation envelope
@@ -280,6 +283,7 @@ struct Engine {
 	Params ps; // smoothed copy used by the DSP
 	real low_note;
 	real inv_sr;   // 1 / sample rate
+	int glide_n;   // a slur's fingering change, in blocks (GLIDE_S)
 	real corr_sr;  // sample rate / 48000: CORR is in samples at 48 kHz, of a delay that is a time
 	real kp;       // breath smoothing coefficient (per block)
 	real inv_1mp0; // 1 / (1 - speak)
@@ -346,6 +350,7 @@ static constexpr int DEFAULT_PRESET = 0;
 static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.sr = (real)sample_rate;
 	e.inv_sr = 1.0f / e.sr;
+	e.glide_n = awva::NoteGlide::blocks_for(GLIDE_S, e.sr, BLOCK);
 	e.corr_sr = e.sr / 48000.0f; // (exactly 1 at 48 kHz)
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
 	e.g = awva::instrument_at_rest;
@@ -564,7 +569,8 @@ static inline void process_voice(Engine& e, int v) {
 		s.quiet = 0;
 		wake = true;
 	}
-	real note = c.pitch;
+	// a slur changes the fingering over GLIDE_S (note_glide.h: at once, the reed slaps shut once)
+	real note = s.glide.next(c.pitch, pres > 0.0f, e.glide_n);
 	if (!(note == note)) note = 60.0f;
 	note = clampr(note, NOTE_MIN, NOTE_MAX);
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f;

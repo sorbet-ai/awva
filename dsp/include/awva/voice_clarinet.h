@@ -63,6 +63,7 @@
 #include <stdint.h>
 
 #include "controls.h"
+#include "note_glide.h"
 #include "dspmath.h"
 #include "params.h"
 #include "preset.h"
@@ -88,7 +89,8 @@ static_assert(BLOCK % CTRL == 0, "CTRL must divide BLOCK");
 // the delay lines are as long as 192 kHz needs (4x 48 kHz: the same bores at every rate)
 static constexpr int ALEN = 256; // section A (mouthpiece -> register hole), each direction
 static constexpr uint32_t AMASK = ALEN - 1;
-static constexpr int BLEN = 1024; // section B (register hole -> lattice), each direction
+static constexpr real GLIDE_S = 0.010f; // a slur's fingering change (note_glide.h)
+static constexpr int BLEN = 1024;       // section B (register hole -> lattice), each direction
 static constexpr uint32_t BMASK = BLEN - 1;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
@@ -191,21 +193,22 @@ struct VoiceState {
 	int mode;     // 1 chalumeau and altissimo, 3 clarion
 	uint32_t w;
 	// player
-	real lv1, lv2;   // breath smoother
-	real amp;        // breath level after the release logic
-	real bgate;      // the breath (0 .. 1)
-	real gt;         // the tongue: 0 on the reed, 1 off
-	real gt_rate;    // its release rate (per control step)
-	real acc, tn;    // accent and tongue noise envelopes
-	real spk, spk_t; // the reed speaks (0 .. 1): smoothed, and as measured from the last block
-	real pk, tcl;    // the mouthpiece pressure's oscillation (peak, held over a period), its last clean crossing
-	real um, nl;     // the flow's mean (its positive part), the noise high-pass's low-pass state
-	real accf;       // the accent's pressure
-	real ty1, ty2;   // tilt smoother
-	real gth;        // threshold mouth pressure (gamma)
-	real vneg;       // release speed latch
-	real note_prev;  //
-	real level;      // smoothed peak (activity)
+	real lv1, lv2;         // breath smoother
+	real amp;              // breath level after the release logic
+	real bgate;            // the breath (0 .. 1)
+	real gt;               // the tongue: 0 on the reed, 1 off
+	real gt_rate;          // its release rate (per control step)
+	real acc, tn;          // accent and tongue noise envelopes
+	real spk, spk_t;       // the reed speaks (0 .. 1): smoothed, and as measured from the last block
+	real pk, tcl;          // the mouthpiece pressure's oscillation (peak, held over a period), its last clean crossing
+	real um, nl;           // the flow's mean (its positive part), the noise high-pass's low-pass state
+	real accf;             // the accent's pressure
+	real ty1, ty2;         // tilt smoother
+	real gth;              // threshold mouth pressure (gamma)
+	real vneg;             // release speed latch
+	awva::NoteGlide glide; // the fingering: a slur's step of the note over GLIDE_S
+	real note_prev;        //
+	real level;            // smoothed peak (activity)
 	// the player's ear: the mouthpiece pressure's period from its zero crossings, the bore trimmed
 	// onto the note (cents)
 	real xlp, xhp, xprev, tlast, pprev, trim;
@@ -224,6 +227,7 @@ struct Engine {
 	Params ps;        // smoothed copy used by the DSP
 	BulkMemory* bulk; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt;
+	int glide_n;         // a slur's fingering change, in blocks (GLIDE_S)
 	real r48;            // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
 	real kj, kd, sj, sd; // the breath fluctuations' per-block rates and their noise scales (any rate)
 	real low_note;
@@ -419,6 +423,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.pi_sr = PI / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.r48 = 48000.0f / sr;
+	e.glide_n = awva::NoteGlide::blocks_for(GLIDE_S, sr, BLOCK);
 	// the fluctuations were made at 48 kHz (blocks of 32): the same bandwidth and variance at any
 	// rate (a one-pole's variance is a / (2 - a) of its input's)
 	e.kj = rmin(0.15f * e.r48, 1.0f);
@@ -496,7 +501,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vnlev = rmin(rmax(P.tongue_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real low = e.low_note;
-	real note = clampr(cc.pitch, 0.0f, 132.0f);
+	// a slur changes the fingering over GLIDE_S (note_glide.h: at once, the reed slaps shut once)
+	real note = clampr(s.glide.next(cc.pitch, pres > 0.0f, e.glide_n), 0.0f, 132.0f);
 	while (note > low + 46.0f) note -= 12.0f;
 	while (note < 30.0f) note += 12.0f; // (the delay lines' longest bore)
 	const bool held = pres > 0.0f;

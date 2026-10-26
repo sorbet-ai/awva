@@ -69,6 +69,7 @@
 #include <stdint.h>
 
 #include "controls.h"
+#include "note_glide.h"
 #include "dspmath.h"
 #include "params.h"
 #include "preset.h"
@@ -84,6 +85,7 @@ using strisy::rmax;
 using strisy::rmin;
 
 static constexpr int BLOCK = strisy::BLOCK;
+static constexpr float GLIDE_S = 0.010f; // a slur's valve change (note_glide.h)
 static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
@@ -205,20 +207,21 @@ struct VoiceState {
 	// body
 	real rs, t1, t2;
 	// player
-	real lv1, lv2;  // breath smoother
-	real amp;       // breath level after the release logic
-	real gate;      // tongue / breath gate
-	real gate_rate; // its opening rate (per control step)
-	real acc, tn;   // accent and tongue noise envelopes
-	real accf;      // the accent's pressure, rising with the tongue's release (after the breath smoother)
-	real ty1, ty2;  // tilt smoother
-	real pm_prev;   // mouth pressure at the end of the last block
-	real pthr;      // threshold estimate (Pa)
-	real lre, lim;  // small-signal loop gain at the note (analysis)
-	real jn, dr;    // lip jitter, slow wander
-	real flut_ph;   //
-	real note_prev; //
-	real vneg;      // release speed latch
+	real lv1, lv2;         // breath smoother
+	real amp;              // breath level after the release logic
+	real gate;             // tongue / breath gate
+	real gate_rate;        // its opening rate (per control step)
+	real acc, tn;          // accent and tongue noise envelopes
+	real accf;             // the accent's pressure, rising with the tongue's release (after the breath smoother)
+	real ty1, ty2;         // tilt smoother
+	real pm_prev;          // mouth pressure at the end of the last block
+	real pthr;             // threshold estimate (Pa)
+	real lre, lim;         // small-signal loop gain at the note (analysis)
+	real jn, dr;           // lip jitter, slow wander
+	real flut_ph;          //
+	awva::NoteGlide glide; // the valves: a slur's step of the note over GLIDE_S
+	real note_prev;        //
+	real vneg;             // release speed latch
 	uint32_t rng, nrng;
 	real level; // smoothed peak (activity)
 	// the player's ear: the lips' period from their zero crossings, the bore trimmed onto the note
@@ -237,6 +240,7 @@ struct Engine {
 	StreamMemory* stream; // the host's (init): bore delay lines of voices 0 .. NFAST - 1
 	BulkMemory* bulk;     // the host's (init): the others'
 	real sr, inv_sr, pi_sr, dt, ctrl_dt, block_dt;
+	int glide_n; // a slur's valve change, in blocks (GLIDE_S)
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
 	real dc, dc_c;
@@ -401,6 +405,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dt = 1.0f / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
+	e.glide_n = awva::NoteGlide::blocks_for(GLIDE_S, sr, BLOCK);
 	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.shake_pk = e.shake = 0.0f;
 	e.dc = 0.0f;
@@ -501,7 +506,8 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	const real vpres = clampr(cc.pressure_rate, -1.0f, 1.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
-	real note = clampr(cc.pitch, 0.0f, 132.0f);
+	// a slur changes the valves over GLIDE_S (note_glide.h: at once, the lips slap shut once)
+	real note = clampr(s.glide.next(cc.pitch, pres > 0.0f, e.glide_n), 0.0f, 132.0f);
 	while (note > NOTE_HI) note -= 12.0f;
 	const bool held = pres > 0.0f;
 	bool start = false;
