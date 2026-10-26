@@ -507,7 +507,7 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
         def rng(bi):
             _, factory = builds[bi]
             return range_check.check(lambda o: factory(types.SimpleNamespace(transpose=12.0 * o)), inst,
-                                     os.path.join(workdir, inst, f'b{bi}', 'range'))
+                                     os.path.join(run_dir, f'b{bi}', 'range'))
         with ThreadPoolExecutor(max_workers=2) as ex:
             ranges = list(ex.map(rng, (0, 1)))
         log(f"  {inst} range: candidate {len(ranges[0]['failures'])} failing notes, baseline {len(ranges[1]['failures'])}")
