@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * Bowed string voice engine: a digital waveguide string driven by a friction bow, with a small
- * modal body. Build with `make VOICE=bowed`; presets with set_preset() (host: -DBOWED_PRESET=n).
+ * modal body. Traits: engines/bowed.h; presets with set_preset() (host: -DBOWED_PRESET=n).
  * Presets: violin, viola, cello, double bass, string section, sul ponticello, flautando,
  * con sordino, pizzicato.
  *
@@ -74,8 +74,8 @@ static constexpr int ENS_LEN = 2048; // section delay (42 ms)
 static constexpr uint32_t ENS_MASK = ENS_LEN - 1;
 
 // The host gives the engine its delay lines (engine contract, engines/bowed.h): the strings,
-// touched every sample (100 KB for 10 voices; the board: AHB SRAM1/2), and the section delay of
-// the mix (8 KB, any RAM; the board: AXI SRAM)
+// touched every sample (100 KB for 10 voices; e.g. AHB SRAM), and the section delay of
+// the mix (8 KB, any RAM; e.g. AXI SRAM)
 struct FastMemory {
 	alignas(32) float neck[MAX_VOICES][NECK_LEN];
 	alignas(32) float bridge[MAX_VOICES][BRIDGE_LEN];
@@ -216,7 +216,7 @@ struct Engine {
 	LargeMemory* large; // the host's (init)
 	real sr, inv_sr, c_period, two_pi_sr, pi_sr, hp_k, dc_k, ts_k, block_dt;
 	real shake;    // smoothed accelerometer magnitude
-	Params p;      // live parameters (written by the app / presets)
+	Params p;      // live parameters (written by the host / presets)
 	Params ps;     // smoothed copy used by the DSP
 	uint64_t live; // the parameters written live (changed()) since the last preset: their glide arrives
 	// section
@@ -366,7 +366,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	const Params& p = e.ps;
 	const bool pizz = p.pizz >= 0.5f;
 	const real pres = clampf(c.pres, 0.0f, 2.0f); // (also maps NaN to 0)
-	// pressure velocity only counts while the key is held: after a release the firmware leaves the
+	// pressure velocity only counts while the note is held: after a release a host may leave the
 	// last value in place (a stale positive value must not keep accents, noise or plucks alive)
 	const real vp = pres > 0.0f ? clampf(c.vpres, -1.5f, 1.5f) : rmin(clampf(c.vpres, -1.5f, 1.5f), 0.0f);
 	if (!s.active) {

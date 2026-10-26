@@ -227,7 +227,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 // -DVA_TEST_HOOK [-DVA_LIVE_EVERY=n] [-DVA_LIVE_SEED=s] [-DVA_LIVE_PRESETS]: live parameter test.
 // Called by va::process() every block: runs 10 voices (6..9 are played here, 0..5 by the
 // performance), writes a random in-range value to a random live parameter every n blocks (the way
-// the app does: *ptr = value, then changed()), and with VA_LIVE_PRESETS also switches presets
+// a host does: *ptr = value, then changed()), and with VA_LIVE_PRESETS also switches presets
 // now and then. On the first call it checks the parameter table: unique names, distinct pointers,
 // every preset value inside its range.
 #include <stdio.h>

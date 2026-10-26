@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // The host shell: what a plugin (VST3, CLAP, AU) or a standalone app wraps. One engine and the
-// master effects, played by MIDI/MPE (midi_voices.h: the board's own mapping) or directly by key
+// master effects, played by MIDI/MPE (midi_voices.h) or directly by voice
 // signals, rendering any number of frames per call (the engines run 32-sample blocks, rendered
-// when the previous one is used up). MIDI is taken every 2 ms, as on the board: a message takes
+// when the previous one is used up). MIDI is taken every 2 ms: a message takes
 // effect at the next 2 ms step. Not real-time safe in its constructor and set_engine();
 // process() and midi() don't allocate.
 //
@@ -54,7 +54,7 @@ public:
 	// (timed_midi.h)
 	int ended_notes(int32_t* ids, int max);
 
-	// or the key signals directly (a Striso over USB, OSC, a test): from now on these, not MIDI;
+	// or the voice signals directly (a controller's own sensors, OSC, a test): from now on these, not MIDI;
 	// gate, strike and release follow from them (dsp::track_key)
 	void set_controls(const VoiceControls* vc, const GlobalControls& g);
 

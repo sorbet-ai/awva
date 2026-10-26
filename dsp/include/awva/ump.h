@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// The Striso UMP profile: how the per-note controls the engines read travel as MIDI 2.0 Universal
-// MIDI Packets inside the instrument, and the one decoder from them to the engines' controls
-// (doc/engines.md, "MIDI 2.0"). Everything that plays the internal synth goes this way: the
-// board's keys (synth_control.cpp encodes them), MIDI 1.0 and MPE in (midi_in.h up-converts them),
-// standard MIDI 2.0 in (midi_in.h, NoteInput::message2: an edge, converted to the Striso scale).
+// awva's UMP profile: how the per-note controls the engines read travel as MIDI 2.0 Universal
+// MIDI Packets inside a host, and the one decoder from them to the engines' controls
+// (docs/midi.md). Everything that plays the engines goes this way: a host's own sensors (encoded
+// by the host), MIDI 1.0 and MPE in (midi_in.h up-converts them), standard MIDI 2.0 in (midi_in.h,
+// NoteInput::message2: an edge, converted to the engine scale).
 //
 // Inside, the messages are standard MIDI 2.0 channel voice messages (type 4, group 0, channel 0)
-// with Striso scaling, chosen so the board's values arrive exactly as the engines got them before
-// (bit for bit): pressure 1.0 is the board's calibrated full press (code 8191), with room up to
-// 4.0; velocity, x, y are signed with the same unit; pitch is signed 9.23 semitones (-256 .. 256,
-// so MPE bends past MIDI's 0 .. 128 stay exact). The note number is the host's note id (the
-// board: a key 0 .. 67, a MIDI in note's slot 68 .. 83), not a pitch.
+// in the engine scale, chosen so a 13-bit sensor code arrives exactly (bit for bit): pressure 1.0
+// is full pressure (code 8191), with room up to 4.0; velocity, x, y are signed with the same unit;
+// pitch is signed 9.23 semitones (-256 .. 256, so MPE bends past MIDI's 0 .. 128 stay exact). The
+// note number is the host's note id (e.g. a sensor 0 .. 67, a MIDI in note's slot 68 .. 83), not a
+// pitch.
 //
-//   engine control  message                                    Striso scale (inside)
+//   engine control  message                                    engine scale (inside)
 //   note on/off     Note On 0x9 / Note Off 0x8, velocity 16    attribute 0x02 (profile): bit 0 =
 //                                                              a strike (vpres fades, below)
 //   note (pitch)    Assignable Per-Note Controller 0x1, 1      signed 9.23 semitones
@@ -25,19 +25,18 @@
 //   note dropped    Per-Note Management 0xF, flag S (1)        it ends silently (all notes off)
 //   (exact values)  Assignable Per-Note Controller 0x1, 0x11   the float32's bits, for a value
 //                   .. 0x15: pitch, pres, vpres, x, y          the scale can't hold exactly
-// The board's codes (code / 8191), MIDI 1.0's values and the MPE pitches are all exact in the
-// scale. A value computed from several keys (the portamento and free transpose merges: weighted
+// 13-bit codes (code / 8191), MIDI 1.0's values and the MPE pitches are all exact in the
+// scale. A value a host computes from several notes (e.g. portamento merges: weighted
 // averages) can need more bits than the scale's 32: the encoder sends it as an exact value then,
 // so the engines get what they always got. The edges convert those to the standard scale too.
 // (The globals have their numbers too: the pedal CC64, the accelerometer and gyroscope
-// Assignable Controllers 0x10 .. 0x16; the board writes them directly for now.)
+// Assignable Controllers 0x10 .. 0x16; hosts write them directly for now.)
 //
 // A note whose Note On says "strike" gets its vpres faded by the decoder: x0.6 per tick() (every
-// TICK_SECONDS) while above 0.01, then 0, as the board's MIDI in always did; the board's keys
-// send their measured vpres instead.
+// TICK_SECONDS) while above 0.01, then 0; a pressure sensor sends its measured vpres instead.
 //
-// The decoder applies the host's touch factors per note (the board: its keys' sensitivities,
-// MIDI in notes 1) in the board's float expressions, and calls its host once per changed note at
+// The decoder applies the host's touch factors per note (e.g. per-sensor sensitivities; MIDI in
+// notes 1) in fixed float expressions, and calls its host once per changed note at
 // flush() (the host, any type with these members; the calls are templates, inlined):
 //   Touch touch(int id)                            the note's pres, velo and y factors
 //   void note_started(int id, const NoteSignals&)  a Note On: give it a voice
@@ -51,9 +50,9 @@
 
 namespace awva::ump {
 
-inline constexpr double TICK_SECONDS = 0.002; // the strike fade's step (the board's synth_tick)
+inline constexpr double TICK_SECONDS = 0.002; // the strike fade's step (the host's control tick)
 
-// a note's key signals, as a key gives them (controls.h), and whether it is held
+// a note's continuous signals (controls.h), and whether it is held
 struct NoteSignals {
 	float note, pres, vpres, but_x, but_y;
 	bool on;
@@ -102,7 +101,7 @@ inline constexpr uint16_t ATTR_STRIKE = 1;    // its data, bit 0: the velocity i
 inline constexpr uint8_t PNM_DROP = 1;        // Per-Note Management flags: S
 inline constexpr uint8_t PNM_SILENCE = 2;     //                            D
 
-inline constexpr double PRES_ONE = 8191.0 * 131072.0;  // pres 1.0: the board's code 8191, << 17
+inline constexpr double PRES_ONE = 8191.0 * 131072.0;  // pres 1.0: code 8191, << 17
 inline constexpr double SIGNED_ONE = 8191.0 * 65536.0; // vpres, but_x, but_y 1.0: code 8191, << 16
 inline constexpr double PITCH_ONE = 8388608.0;         // one semitone: 2^23
 
@@ -122,14 +121,14 @@ struct Packet {
 }
 
 // to the nearest integer (ties away from 0) in 32 bits, with one conversion instruction each way
-// on the board's FPU (no 64-bit integer library calls); the callers saturate first
+// on a single-precision MCU FPU (no 64-bit integer library calls); the callers saturate first
 [[nodiscard]] inline uint32_t round_u32(double v) { return (uint32_t)(v + 0.5); }
 [[nodiscard]] inline uint32_t round_s32(double v) { return (uint32_t)(v >= 0 ? (int32_t)(v + 0.5) : (int32_t)(v - 0.5)); }
 [[nodiscard]] inline uint32_t saturate_s32(double v) {
 	return v <= -2147483647.5 ? 0x80000000u : (v >= 2147483646.5 ? 0x7fffffffu : round_s32(v));
 }
 
-// values in the Striso scale (inside): from the engines' floats, and back (one rounding, in double)
+// values in the engine scale (inside): from the engines' floats, and back (one rounding, in double)
 [[nodiscard]] inline uint32_t pres_value(float p) {
 	const double v = (double)p * PRES_ONE;
 	return !(v > 0) ? 0u : (v >= 4294967294.5 ? 0xffffffffu : round_u32(v));
@@ -312,7 +311,7 @@ private:
 
 	[[nodiscard]] static float clampf(float x, float lo, float hi) { return x > hi ? hi : (x < lo ? lo : x); }
 
-	// the engines' controls, as the board computed them: the touch factors on pres, vpres, y
+	// the engines' controls: the touch factors on pres, vpres, y
 	template <class Host> NoteSignals signals(Host& h, int id) const {
 		const Note& n = note_[id];
 		const Touch t = h.touch(id);
@@ -322,7 +321,7 @@ private:
 	Note note_[Ids];
 	uint8_t queue_[Ids] = {};
 	int queued_ = 0;
-	volatile bool fading_ = false; // (read by the board's main loop: synth_tick)
+	volatile bool fading_ = false; // (read by the host's control loop, e.g. from another context)
 };
 
 } // namespace awva::ump

@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// The voice allocator: which note plays which voice of the internal synth. The board's rule
-// (synth_control.cpp, its keys and its MIDI in notes) and the SDK's hosts (sdk/: MIDI in on the
-// PC) both run it. Pure: no HAL, no heap, no MIDI. A note is a number 0 .. Notes-1 the host
-// gives it (the board: a key, or a MIDI in note's slot after the keys); a voice is 0 .. Voices-1.
+// The voice allocator: which note plays which voice of the engine. An embedded host (its own
+// sensors and its MIDI in notes) and the SDK's hosts (sdk/: MIDI in on the PC) all run it. Pure:
+// no HAL, no heap, no MIDI. A note is a number 0 .. Notes-1 the host gives it (e.g. a sensor, or
+// a MIDI in note's slot after the sensors); a voice is 0 .. Voices-1.
 //
 // A note's level is the allocator's estimate of how loud it still is: set when it starts (its
 // pressure plus its strike), raised to its floor whenever the host has a new floor for it,
@@ -12,11 +12,11 @@
 //
 // A new note gets (start): its own voice if it still has it (a repeated note), else a voice no
 // note has had yet, else the quietest released one, else the quietest held one if that is
-// quieter than the new note; else none (-1). Voices below `first` are not given (the board's
-// Mono mode keeps voice 0 for its keys: the host takes it with take()).
+// quieter than the new note; else none (-1). Voices below `first` are not given (e.g. a
+// host's mono mode keeps voice 0 for its own notes: the host takes it with take()).
 //
 // The host (any type with these members; the calls are templates, inlined):
-//   bool held(int note)      the note's key is down (its note is on)
+//   bool held(int note)      the note is on
 //   float floor(int note)    its level now: pres + vpres while held, -1 after the release
 #ifndef AWVA_VOICE_ALLOCATOR_H_
 #define AWVA_VOICE_ALLOCATOR_H_
@@ -25,7 +25,7 @@
 
 namespace awva::voices {
 
-// the level estimate's decay per tick: x 0.998 - 0.0005 (in double, as the board always did)
+// the level estimate's decay per tick: x 0.998 - 0.0005 (in double)
 inline constexpr double LEVEL_DECAY = 0.998, LEVEL_STEP = 0.0005;
 
 template <int Notes, int Voices> class VoiceAllocator {
@@ -93,7 +93,7 @@ public:
 		voice_[note] = (int16_t)v;
 	}
 
-	// the note `from` goes on as `to` (the board's portamento and free transpose hand-overs)
+	// the note `from` goes on as `to` (e.g. a host's portamento hand-overs)
 	void hand_over(int from, int to) {
 		const int v = voice_[from];
 		if (v >= 0 && owner_[v] == from) take(to, v);

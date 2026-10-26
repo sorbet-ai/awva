@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # awva documentation
 
-awva's engines are per-note sound engines: each voice gets a pitch and the continuous controls of one key (pressure, its velocity, two tilts), and the engine gets the instrument's motion and pedal. They are header-only C++ (`dsp/include/awva/`), the same code on the Striso board and on a PC.
+awva's engines are per-note sound engines: each note gets a pitch and its own continuous controls (pressure, the pressure's velocity, two per-note controllers called tilts), and the engine gets global inputs: the instrument's motion and a pedal. They are header-only C++ (`dsp/include/awva/`), the same code on an embedded device and on a PC.
 
 - **[Playing with MIDI 2.0 and MPE](midi.md):** how MIDI 2.0, MPE and plain MIDI 1.0 reach the engines' controls.
 - **The engine contract:** `dsp/include/awva/engine.h` (the `VoiceEngine` concept, `EngineInfo`, the memory regions). The SDK's contract suite (`sdk/tests/contract.cpp`) checks every engine against it.
@@ -31,4 +31,4 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 
 <!-- awva_docs: end -->
 
-- [Writing a host](writing_a_host.md): a plugin or the board, on the engine component (ABI 2).
+- [Writing a host](writing_a_host.md): a plugin or an embedded instrument, on the engine component (ABI 2).

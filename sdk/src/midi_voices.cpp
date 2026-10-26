@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// MIDI in -> voice controls on the PC (midi_voices.h): the board's units, this host's controls.
+// MIDI in -> voice controls on the PC (midi_voices.h): the shared units, this host's controls.
 #include "awva_sdk/midi_voices.h"
 
 #include <algorithm>
@@ -21,7 +21,7 @@ void MidiVoices::set_legato(bool on) {
 		for (int v = 1; v < nv_; v++) vc_[static_cast<size_t>(v)].pres = vc_[static_cast<size_t>(v)].vpres = 0.0f;
 }
 
-// as the board's write_legato_voice: the one voice plays the newest held note at the strongest held
+// mono legato: the one voice plays the newest held note at the strongest held
 // note's pressure; a release returns to the newest still held; the last note's release is the voice's
 void MidiVoices::write_legato(int s, const midi::NoteSignals& n) {
 	legato_.note(s, n);
@@ -65,7 +65,7 @@ bool MidiVoices::ump2(uint32_t w0, uint32_t w1) {
 	return true;
 }
 
-// as the board's main loop: synth_tick (the level decay, the strike fade), then the messages
+// one control step: the tick (the level decay, the strike fade), then the messages
 void MidiVoices::step() {
 	alloc_.tick(*this);
 	if (dec_.fading()) dec_.tick(*this);
@@ -85,7 +85,7 @@ void MidiVoices::apply(uint8_t status, uint8_t d1, uint8_t d2) {
 	(void)instrument_.message(*this, in_, channel, status, d1, d2);
 }
 
-// as the board's Instrument::note_started: held, its level, a voice
+// a note starts: held, its level, a voice
 void MidiVoices::note_started(int s, const midi::NoteSignals& n) {
 	held_[s] = true;
 	alloc_.set_level(s, n.pres + n.vpres); // a new note: no old estimate

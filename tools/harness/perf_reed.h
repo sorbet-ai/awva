@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// Stress performance for the reed voice (tools/harness/render_strisy.sh with PERF=perf_reed.h).
+// Stress performance for the reed voice (render_custom with -DAWVA_RENDER_PERF=perf_reed.h).
 // Same structure as performance.h. 17.5 s:
 //   A 0.0-3.0   breath swell 0 -> 1.4 -> 0 on one note while the tilt sweeps clarinet -> sax
 //   B 3.0-5.5   fast tonguing: 10 strikes/s alternating notes, instant attacks

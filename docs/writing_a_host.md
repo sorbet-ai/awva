@@ -4,9 +4,9 @@
 
 A host loads an engine component (`component/include/nsc/nsc.h`, ABI 2), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
 - **a plugin**, which plays from a DAW's notes;
-- **the board** (the Striso firmware's virtual board today), which plays from its own keys.
+- **an embedded instrument**, which reads its own sensors and allocates voices itself.
 
-They share everything below except the way in: a plugin uses `process()` and the board uses `process_voices()`.
+They share everything below except the way in: a plugin uses `process()` and an instrument uses `process_voices()`.
 
 ## 1. Find and check it
 
@@ -22,7 +22,7 @@ They share everything below except the way in: a plugin uses `process()` and the
 
 ## 2. Give it memory and a rate
 
-- Allocate the regions: `state_bytes`, `fast_bytes`, `large_bytes`, zero-filled and 64-byte aligned. `nsc_instance_new()` in `load.h` does it on the heap. A board without a heap places them in its own memories.
+- Allocate the regions: `state_bytes`, `fast_bytes`, `large_bytes`, zero-filled and 64-byte aligned. `nsc_instance_new()` in `load.h` does it on the heap. An embedded host without a heap places them in its own memories.
 - Call `init(state, fast, large, sample_rate, voices)`, on the main thread. It returns -1 for a rate outside `min_rate` .. `max_rate`; offer only those rates.
 - On a rate change, `init()` again: the regions are reused, nothing carries over, and the notes end. Re-apply your parameter values and preset after it.
 
@@ -34,14 +34,14 @@ They share everything below except the way in: a plugin uses `process()` and the
 - Give a Note On the host's note id (`nsc_event.note_id`, else -1). After each `process()`, drain `ended()` (call it again while it returns `max`) and send each id's note-end (CLAP_EVENT_NOTE_END).
 - Mono legato: `mode(state, NSC_MODE_LEGATO, 1)`.
 
-**The board: `process_voices(state, voices, globals, out)`.** The board allocates voices itself and gives each its controls (`nsc_voice`: note, pressure, velocity, x, y, and the gate, strike and release its key tracking derives). The component only renders, bit for bit as the same engine compiled in. The firmware's virtual board does this with the components in its `engine_dir`, listed after its compiled-in engines. `Stce` reports what it loaded and what it refused.
+**An instrument: `process_voices(state, voices, globals, out)`.** The host allocates voices itself and gives each its controls (`nsc_voice`: note, pressure, velocity, x, y, and the gate, strike and release that `track_key()` derives). The component only renders, bit for bit as the same engine compiled in.
 
 ## 4. Parameters and presets
 
 - Parameters are by index, each with a stable id (`nsc_param.id`, FNV-1a of its name). Store values by id, under `schema_hash`; a host can look an id up with `param_index()`.
 - Each has `min`, `max`, `kind` (continuous, steps, toggle) and a declared default `def`: its value after `init()`.
 - The last parameter is `output`, the output level: 0 .. 2, default 1. At 1 the samples are the engine's, bit for bit.
-- `set_param()` takes the board's rule: NaN is ignored, steps are rounded, and the engine clamps. `set_preset(i)` loads a factory preset; afterwards, rescan every parameter.
+- `set_param()` takes the engines' write rule: NaN is ignored, steps are rounded, and the engine clamps. `set_preset(i)` loads a factory preset; afterwards, rescan every parameter.
 
 ## 5. Threads, level, denormals
 
@@ -55,4 +55,3 @@ They share everything below except the way in: a plugin uses `process()` and the
 
 - `ctest -R component` in awva: every library loads, renders bit for bit as linked in, and the UMP path matches the SDK's renderer.
 - `component.add_component_from_outside` builds a component from a project outside awva.
-- The firmware's `virtual.external engines: ...` tests do the same through the board.

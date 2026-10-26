@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// EngineSet<E...>: a fixed set of VoiceEngines chosen at compile time (the board's VOICE=all
-// firmware runs one of them at a time), as three plain-data objects the host places itself:
+// EngineSet<E...>: a fixed set of VoiceEngines chosen at compile time (a host that runs one of
+// them at a time), as three plain-data objects the host places itself:
 //
-//   EngineSet<...>::State    the engine object they share       (Placement::tcm:   the board's DTCM)
-//   EngineSet<...>::Fast     one FastMemory region they share  (Placement::fast:  AHB SRAM1/2)
-//   EngineSet<...>::Large    one LargeMemory region they share (Placement::large: AXI SRAM)
+//   EngineSet<...>::State    the engine object they share       (Placement::tcm:   e.g. DTCM)
+//   EngineSet<...>::Fast     one FastMemory region they share  (Placement::fast:  e.g. AHB SRAM)
+//   EngineSet<...>::Large    one LargeMemory region they share (Placement::large: e.g. AXI SRAM)
 //
 // Only one engine runs at a time, so the engine object and its memory regions are one arena per
 // class, as large as the largest engine's: while an engine runs, its object is the start of the
@@ -17,7 +17,7 @@
 // preset's parameters anyway).
 //
 // visit(k, f): f(engine k) with engine k's own type, as a chain of compares the compiler inlines
-// (no function pointers: the board's stack check follows every call). Its object's members are
+// (no function pointers: a static stack analysis can follow every call). Its object's members are
 // those of the engine last started; its static members (info, presets, parameter descriptions)
 // are any engine's.
 #ifndef AWVA_ENGINE_SET_H_

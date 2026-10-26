@@ -39,10 +39,10 @@
  * Defaults: chorus 0.25 (a touch of width) and a light plate (mix 0.15, 2 s); unity level.
  *
  * Cost (Cortex-M7, estimated from the -O3 disassembly, ~1.2 cycles per instruction): all stages on
- * ~28k cycles per block (~11% CPU), defaults ~19k (~7%), bypassed ~2k. Tested on the host with
- * tools/harness/fx_suite.sh.
+ * ~28k cycles per block (~11% CPU), defaults ~19k (~7%), bypassed ~2k. Tested on the host by the
+ * effect contract (sdk/tests/contract_effect.cpp).
  * Memory: Engine 5.6 KB (DTCM, includes the chorus line); FastMemory: delay line 64 KB (int16) +
- * pre-delay 16 KB (the board: AHB SRAM1/2); LargeMemory: reverb ring 64 KB (the board: AXI SRAM).
+ * pre-delay 16 KB (e.g. AHB SRAM); LargeMemory: reverb ring 64 KB (e.g. AXI SRAM).
  * No libm, no per-sample divisions or transcendentals: LFOs are polynomials evaluated per block or
  * per 8 samples and interpolated.
  */
@@ -79,7 +79,7 @@ static constexpr int RV_LEN = 16384, RV_MASK = RV_LEN - 1; // reverb ring, half 
 static constexpr float DL_SCALE = 4096.0f;                 // int16 full scale = +-8
 
 // the host gives the effects their memory (engine contract, engines/fx.h): the delay line and the
-// reverb's pre-delay (80 KB; the board: AHB SRAM1/2), the reverb ring (64 KB; the board: AXI SRAM)
+// reverb's pre-delay (80 KB; e.g. AHB SRAM), the reverb ring (64 KB; e.g. AXI SRAM)
 struct FastMemory {
 	alignas(32) int16_t dl[DL_LEN];
 	alignas(32) float pd[PD_LEN];

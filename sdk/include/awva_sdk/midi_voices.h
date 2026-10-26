@@ -1,17 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// MIDI in -> the engines' voice controls on the PC, by the board's own code: the notes
-// (awva/midi_in.h, NoteInput: MIDI 1.0 / MPE and standard MIDI 2.0 up to the Striso UMP
+// MIDI in -> the engines' voice controls on the PC, by the same code an embedded host runs: the
+// notes (awva/midi_in.h, NoteInput: MIDI 1.0 / MPE and standard MIDI 2.0 up to awva's UMP
 // profile), its decoder (awva/ump.h), the instrument's messages (InstrumentInput: the bend
-// range, the MCM, the instrument's bend, the pedal) and the voices (awva/voice_allocator.h),
-// the same units the firmware runs. What the board does beyond them (its MIDI out, its other CCs) a
-// host on the PC doesn't need.
+// range, the MCM, the instrument's bend, the pedal) and the voices (awva/voice_allocator.h).
+// What an instrument does beyond them (its MIDI out, its other CCs) a host on the PC doesn't need.
 //
-// Time: MIDI is taken in steps of awva::midi::TICK_SECONDS (2 ms), as the board's main loop
-// does: message() queues, step() runs one step (the voices' level decay, the strike fade if one
-// is fading, then the messages queued since the last step). The key signals of a voice are in
-// voices(); gate, strike and release follow from them (dsp::track_key, once per block), as on
-// the board.
+// Time: MIDI is taken in fixed steps of awva::midi::TICK_SECONDS (2 ms): message() queues,
+// step() runs one step (the voices' level decay, the strike fade if one is fading, then the
+// messages queued since the last step). The signals of a voice are in voices(); gate, strike and
+// release follow from them (dsp::track_key, once per block).
 #ifndef AWVA_SDK_MIDI_VOICES_H_
 #define AWVA_SDK_MIDI_VOICES_H_
 
@@ -64,7 +62,7 @@ public:
 	[[nodiscard]] bool echoed(int) const { return false; } // (nothing goes out)
 	[[nodiscard]] float bend_range() const { return bend_range_; }
 	// InstrumentInput's host
-	// (as a board in its default MPE mode: channel 1 is the zone master)
+	// (the default MPE lower zone: channel 1 is the zone master)
 	[[nodiscard]] bool zone_master(int channel) const { return channel == 0; }
 	void set_bend_range(float semitones) { bend_range_ = semitones; }
 	void zone_configured(int, int) {}

@@ -19,7 +19,7 @@ struct modal {
 	static constexpr const char* summary = "tuned percussion: banks of damped resonators, struck or rubbed (6 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_rotation | in_pedal;
 	static constexpr Budget budget = {::modal::MAX_VOICES, 18000, 5.0f};
-	// the hero parameters (seeded from Striso Live's hero.dart; the contract suite checks the names)
+	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"hard", "decay", "upper", "keytrack", "hfdamp", "damper", "tremdepth", "rub"}};
 };
 } // namespace traits

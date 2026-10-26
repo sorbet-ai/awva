@@ -52,7 +52,7 @@ struct EffectEntry {
 	bool (*set_param)(void*, int, float);
 };
 
-// the engines linked into this program, in the order of dsp's engine list (strisy first)
+// the engines linked into this program, in the order of dsp's engine list
 [[nodiscard]] std::span<const EngineEntry* const> engines();
 [[nodiscard]] const EngineEntry* find_engine(std::string_view name);
 // the master effects (awva_effect_fx)

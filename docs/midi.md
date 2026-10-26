@@ -10,8 +10,8 @@ Every way of playing an engine ends in one place: a decoder of MIDI 2.0 Universa
 |---|---|
 | `note` | the pitch in semitones, fractional (69 = A4), with bends and tunings included |
 | `pres` | pressure: 0 released, 1 a firm press, up to about 1.5 |
-| `vpres` | the pressure's velocity: above 0 while the key goes down (the strike), below 0 while it comes up (the release) |
-| `but_x`, `but_y` | the key's tilt sideways and forward/back, -1 .. 1 |
+| `vpres` | the pressure's velocity: above 0 while the note is struck, below 0 while it is released |
+| `but_x`, `but_y` | two per-note controllers, the tilts: sideways and forward/back, -1 .. 1 |
 | `gate`, `strike`, `release` | derived once per block: held or not, and the velocities of the strike that opened the note and of the release that ended it |
 
 The globals are `acc_abs`, `acc_x/y/z` (the accelerometer, in g), `rot_x/y/z` (the gyroscope) and `pedal` (0 .. 1). Each engine page lists which of them the engine reads.
@@ -48,7 +48,7 @@ With every note slot held (16), a new note takes the oldest.
 The same mapping, at MIDI 2.0's resolution:
 
 - **Velocities** are 16 bits (v / 65535).
-- **Pressures and controllers** are 32 bits; full scale is the Striso's full press, `pres` = 1.0.
+- **Pressures and controllers** are 32 bits; full scale is the engine scale's full pressure, `pres` = 1.0.
 - **Pitch bend and CC74** are bipolar by the specification: the centre 0x80000000 is exactly 0, and each side is scaled to its own end.
 - **Registered Per-Note Controller 3** (Pitch 7.25) sets a note's own absolute pitch.
 - **Registered Controllers** 0 and 6 are the bend range and the MCM; CC64 is the pedal.
@@ -57,13 +57,13 @@ Where MPE can carry a value, the engines get the same float from MPE and from MI
 
 ## Not from MIDI
 
-- **`but_x`, the sideways tilt:** the Striso key's own. As a pitch bend it is already in `note`; an engine that reads `but_x` itself declares it.
-- **The motion sensor and the gyroscope:** the instrument writes them. The profile has numbers reserved for them (Assignable Controllers 0x10 .. 0x16), but MIDI in doesn't take them yet.
+- **`but_x`, the sideways tilt:** MIDI 1.0 and MPE don't carry it (a sideways pitch bend is already in `note`); MIDI 2.0 can send it as Assignable Per-Note Controller 3. An engine that reads `but_x` itself declares it.
+- **The motion sensor and the gyroscope:** global inputs that a host with such sensors writes. The profile has numbers reserved for them (Assignable Controllers 0x10 .. 0x16), but MIDI in doesn't take them yet.
 - **Per-note `but_y`:** in MPE it is per channel, so per note. A plain MIDI 2.0 host currently sets it per channel (CC74); a per-note controller for it is planned (see the component README).
 
-## Inside the instrument
+## awva's UMP profile
 
-On the Striso the keys themselves travel as packets of the same profile: standard MIDI 2.0 channel voice messages (type 4, group 0, channel 0) with the Striso's scaling, so the board's values arrive exactly. The note number is the host's note id, not a pitch.
+A host with its own sensors (an embedded instrument) can send its notes directly as packets of awva's profile: standard MIDI 2.0 channel voice messages (type 4, group 0, channel 0) in the engine scale, in which a 13-bit sensor code (code / 8191) arrives exactly. The note number is the host's note id, not a pitch.
 
 | control | message |
 |---|---|

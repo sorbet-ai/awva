@@ -13,16 +13,16 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
   - id, title, summary, version (the repository commit) and the ABI;
   - the parameters (stable id, name, group, range, kind);
   - the factory presets, by name, each with its hero parameters, and the engine's own heroes;
-  - the budget: QEMU instructions per block, max voices, tail;
+  - the budget: Cortex-M7 instructions per block (counted under QEMU), max voices, tail;
   - the three memory regions and the stack.
 - **Memory** is the host's. It provides state, fast and large regions, zero-filled and 64-byte aligned. No call allocates, blocks or throws, and nothing is global.
-- **`process(events)`** takes UMP events at frames within the 32-frame block and renders one block. Inside the component, as on the board, are:
+- **`process(events)`** takes UMP events at frames within the 32-frame block and renders one block. Inside the component are:
   - the decoder (`ump.h`);
   - the up-converter for MIDI 1.0 in UMP, which is what an MPE host sends;
   - the voice allocator;
   - mono legato (`mode(NSC_MODE_LEGATO, 1)`).
 - **Presets as text.** `load_preset(json)` takes an `awva-preset/1` file (`awva/preset.h`) by name. The report counts what was clamped, skipped (names this engine lacks) and missing (set to their values after `init()`). Another engine's preset, or text that isn't a preset, is refused with nothing changed. `save_preset(title)` writes the current values as such a file. ABI 2 added these two calls.
-- **`process_voices(controls)`** is for a host that allocates voices itself. The board does today, and the virtual board's loaded engines use it: the engine's own `process()` on the host's controls.
+- **`process_voices(controls)`** is for a host that allocates voices itself, such as an embedded instrument: the engine's own `process()` on the host's controls.
 
 ## The plugin lane's findings (ABI 2)
 
@@ -43,7 +43,7 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 | 3 | voice-ended callback with the host's note id | `nsc_event.note_id` carries the host's id on a Note On (-1: none). `ended(state, ids, max)`, polled after `process()`, hands out the ids of the notes that ended: released, then either the engine's `tail_seconds` passed, or the engine went idle, or another note took their key. |
 | 4 | note ids end to end | The host's id goes in with the Note On (`note_id`) and comes back from `ended()`. Inside, a note is (channel, key) → a slot, as before. |
 | 5 | per-note y without a channel per note | The up-converter (`midi_in.h`) takes MIDI 2.0 per-note y: Assignable Per-Note Controller 4, or Registered Per-Note Controller 74 (brightness), bipolar. A note with its own y keeps it; the channel's CC74 moves only the others. Assignable Per-Note Controller 3 is x. One channel carries every note. |
-| 6 | denormals | `process()` and `process_voices()` run with subnormals flushed (`nsc/no_denormals.h`: MXCSR FTZ+DAZ on x86-64, FPCR.FZ on AArch64; the host's mode saved and restored around the call, as JUCE's ScopedNoDenormals). Several engines' decaying states otherwise reach the subnormal range and stay there, which costs a PC 10 to 50 times an idle block. Only tails far below hearing change (under 1e-34 on the engines here), and nothing at all in 24-bit PCM (the contract's FTZ guard case checks that on every engine). On 32-bit Arm (the board) the guard does nothing: its samples and the target goldens are unchanged. The host needn't set anything. |
+| 6 | denormals | `process()` and `process_voices()` run with subnormals flushed (`nsc/no_denormals.h`: MXCSR FTZ+DAZ on x86-64, FPCR.FZ on AArch64; the host's mode saved and restored around the call, as JUCE's ScopedNoDenormals). Several engines' decaying states otherwise reach the subnormal range and stay there, which costs a PC 10 to 50 times an idle block. Only tails far below hearing change (under 1e-34 on the engines here), and nothing at all in 24-bit PCM (the contract's FTZ guard case checks that on every engine). On 32-bit Arm the guard does nothing: its samples and the target goldens are unchanged. The host needn't set anything. |
 | 7a | parameter ids | Each `nsc_param.id` is FNV-1a of its name, frozen. A renamed parameter keeps its old id: the engine then declares it explicitly (ABI 2 adds an `id` override to the engine's table). `schema_hash` covers ids, ranges and kinds. |
 | 7b | defaults | Declared: `nsc_param.def` is the value after `init()`, measured from the engine at build time (`component/tools/awva_defaults.cpp`) and checked bit for bit by the tests. |
 | 7c | "a preset rewrote the parameters" | After `set_preset()` every parameter may have changed: the host rescans (CLAP: `rescan(CLAP_PARAM_RESCAN_VALUES)`). |
@@ -65,5 +65,3 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 - every library loads, and its descriptor and manifest match the engine's;
 - accordion and trumpet from their libraries render bit for bit as linked in, through every preset, the scripted performances and the key takes;
 - `process()` with a MIDI 2.0 performance renders bit for bit what the SDK's `MidiVoices` driving the linked engine renders, polyphonic and mono legato, on accordion, trumpet and va.
-
-The virtual board's run (the firmware) checks the same libraries loaded from a folder against its compiled-in engines.

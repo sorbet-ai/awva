@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Small numeric helpers for the engines: the sample type, 2^x and tan(x) approximations, and
-// min/max that compile to single instructions. The board's libm does much of expf/powf/tanf in
-// double precision in software, so the hot paths use these instead. PROVENANCE.md has the sources.
+// min/max that compile to single instructions. An MCU libm (e.g. on a Cortex-M7) may do much of
+// expf/powf/tanf in double precision in software, so the hot paths use these instead. PROVENANCE.md has the sources.
 #ifndef AWVA_DSPMATH_H_
 #define AWVA_DSPMATH_H_
 
@@ -47,7 +47,7 @@ using real = float;
 	return ((0.2033f * sq + 0.31755f) * sq + 1.0f) * a;
 }
 
-// max and min: fmaxf/fminf compile to one vmaxnm/vminnm each on the board (a compare and select
+// max and min: fmaxf/fminf compile to one vmaxnm/vminnm each on Cortex-M7 (a compare and select
 // needs vcmp and vmrs); the same results for the numbers used here (no NaNs)
 [[nodiscard]] static inline real rmax(real a, real b) { return sizeof(real) == sizeof(float) ? (real)fmaxf((float)a, (float)b) : (real)fmax(a, b); }
 [[nodiscard]] static inline real rmin(real a, real b) { return sizeof(real) == sizeof(float) ? (real)fminf((float)a, (float)b) : (real)fmin(a, b); }

@@ -8,14 +8,14 @@
 // Usage: awva_render --engine NAME [--preset N|NAME] [input] [options]
 //   input (one of; default --perf default):
 //     --perf NAME       a scripted performance compiled in (--list shows them)
-//     --rec FILE.csv    a recorded key stream (tools/record_keys.py), as the board plays it
-//     --midi FILE.mid   a Standard MIDI File, through the board's MIDI/MPE mapping (awva/midi_in.h)
+//     --rec FILE.csv    a recorded stream of per-note sensor values (CSV, harness_util.h)
+//     --midi FILE.mid   a Standard MIDI File, through the MIDI/MPE mapping (awva/midi_in.h)
 //   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s)
-//   --nv N            voices (default 10, the board's)
+//   --nv N            voices (default 10)
 //   --rate HZ         sample rate (default: the performance's, 48000)
 //   --fx              through the master effects (default parameters): stereo
 //   --out FILE.f32    the render as float32 (mono, or L R interleaved)
-//   --wav FILE.wav    16 bit WAV, x0.25 and clipped like the board; its INFO chunk names the
+//   --wav FILE.wav    16 bit WAV, x0.25 and clipped; its INFO chunk names the
 //                     engine, preset and input
 //   --check           fail (exit 1) on non-finite output, a peak over --max-peak (default 8), or
 //                     with --silent-after T any sample above 1e-4 after T s or voices still active
@@ -63,7 +63,7 @@ void list() {
 	return h;
 }
 
-// 16 bit WAV, x0.25 and hard clipped like the board at the usual volume, with a LIST/INFO chunk
+// 16 bit WAV, x0.25 and hard clipped (the usual output volume), with a LIST/INFO chunk
 [[nodiscard]] bool write_wav(const char* path, const std::vector<float>& x, int channels, int sample_rate, const std::string& comment) {
 	FILE* f = std::fopen(path, "wb");
 	if (!f) return false;
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
 	    preset_arg ? "" : "(its default) ", engine.preset(), pname ? " \"" : "", pname ? pname : "", pname ? "\"" : "", nv, sr,
 	    use_fx ? ", master effects" : "");
 	const std::string input = player->describe() + (default_input ? " [the default input: no --perf, --rec or --midi]" : "");
-	std::fprintf(stderr, "awva_render: %s\nstriso_render: input %s\n", head, input.c_str());
+	std::fprintf(stderr, "awva_render: %s\nawva_render: input %s\n", head, input.c_str());
 
 	sdk::Effect fx(sdk::fx_effect());
 	if (use_fx) fx.init(sr);

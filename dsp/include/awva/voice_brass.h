@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * brass: lip-reed brass voice (trumpet, flugelhorn, trombone, horn, euphonium, tuba, muted brass).
- * Build with `make VOICE=brass`; presets with set_preset() (host renders: -DBRASS_PRESET=n).
+ * Traits: engines/brass.h; presets with set_preset() (host renders: -DBRASS_PRESET=n).
  *
  * A hybrid of a lip source that sets the pitch and a physical bore that shapes it:
  *
@@ -122,7 +122,7 @@ using strisy::rmax;
 using strisy::rmin;
 
 // the bore delay lines, 8 KB per voice: the host gives them to the engine (engine contract,
-// engines/brass.h; the board: AXI SRAM)
+// engines/brass.h; e.g. AXI SRAM)
 struct LargeMemory {
 	float bore[MAX_VOICES][2][BLEN];
 };
@@ -540,7 +540,7 @@ static inline void process_voice(Engine& e, int v) {
 	const Params& P = e.ps;
 	const strisy::VoiceControls cc = e.vc[v];
 	const real pres = rmin(rmax(cc.pres, 0.0f), 1.5f);
-	// after a release the firmware leaves the last vpres in place: a positive leftover must not
+	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
 	const real vpres = rmin(rmax(cc.vpres, -1.0f), pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
@@ -912,7 +912,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Live parameters (tools/app): every Params field, with ranges that are safe at both ends.
+// Live parameters: every Params field, with ranges that are safe at both ends.
 // Writes go to e.p; the DSP follows through the smoothed copy e.ps, so edits never step or click.
 
 struct ParamEntry {

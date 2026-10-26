@@ -175,7 +175,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 
 #ifdef BOWED_TEST_HOOK
 // Called by bowed::process() every block: writes a random in-range value to a random live
-// parameter every BOWED_LIVE_EVERY blocks (*ptr = value, then changed(), as the app does), and
+// parameter every BOWED_LIVE_EVERY blocks (*ptr = value, then changed(), as a host does), and
 // with BOWED_LIVE_PRESETS also switches presets now and then. On the first call it checks the
 // parameter table: unique names, distinct pointers, every preset value inside its range.
 #include <stdio.h>

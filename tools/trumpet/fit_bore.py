@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Design the real-time bore of voice_trumpet.h from the TMM physics (bore.py).
 
-Real-time model at FS = 96 kHz (2x the board rate):
+Real-time model at FS = 96 kHz (2x a 48 kHz host rate):
   lips -> cup compliance -> front end: a Kelly-Lochbaum ladder of short cylinders (throat, backbore,
   leadpipe; integer sample delays) -> cylinder: forward/backward delay lines (valves and the tuning
   slide change their length; the forward line steepens) -> bell: reflection = decimate by 8 -> FIR at

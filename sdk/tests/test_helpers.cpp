@@ -135,8 +135,8 @@ TEST_CASE("engine_set: visit reaches each engine with its own type and memory") 
 }
 
 namespace {
-// bowed without its init_writes_memory: the arena's zeroing path (every engine with regions in
-// the board's set says its init writes them, test_engine_memory.cpp proves it)
+// bowed without its init_writes_memory: the arena's zeroing path (every engine with regions
+// says its init writes them, and the engine_set test proves it)
 struct bowed_zeroed : dsp::engines::bowed {
 	static constexpr bool init_writes_memory = false;
 };

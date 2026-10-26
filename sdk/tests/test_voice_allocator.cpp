@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// The voice allocator (awva/voice_allocator.h): the board's rule for which note plays
+// The voice allocator (awva/voice_allocator.h): the rule for which note plays
 // which voice, on its own.
 #include <cmath>
 
@@ -61,7 +61,7 @@ TEST_CASE("voice allocator: first voice, hand-over, the level decay, fewer voice
 	Alloc a;
 	Host h;
 	h.press(a, 0, 1.0f);
-	CHECK(a.start(h, 0, 1) == 1); // voice 0 is the host's (the board's Mono mode)
+	CHECK(a.start(h, 0, 1) == 1); // voice 0 is the host's (e.g. its mono mode)
 	a.take(7, 0);
 	CHECK(a.voice(7) == 0);
 	a.hand_over(0, 6); // 0's note goes on as 6

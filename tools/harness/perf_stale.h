@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// Stale vpres test: the firmware leaves a released voice's last vpres in place (pres = 0 but
+// Stale vpres test: a host may leave a released voice's last vpres in place (pres = 0 but
 // vpres stays positive). A voice must go silent and idle anyway.
 // Voice 0 plays note 60 for 1 s, then is released with vpres stuck at 0.25 for the rest.
 #ifndef PERFORMANCE_H_

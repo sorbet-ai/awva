@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * Modal voice: tuned percussion (vibraphone, marimba, glockenspiel, church bell, kalimba, wine glass).
- * Build with `make VOICE=modal`; presets with set_preset() (host renders: -DMODAL_PRESET=n).
+ * Traits: engines/modal.h; presets with set_preset() (host renders: -DMODAL_PRESET=n).
  *
  * Every voice is a bank of up to NMODES damped resonators, one per partial of the instrument:
  *   z[n+1] = r*e^(jw) * z[n] (+ b*noise[n] when rubbed),  output Im(z)
@@ -121,7 +121,7 @@ static constexpr real CLIP = 7.5f;
 #endif
 
 // ---------------------------------------------------------------------------------------------
-// Live parameters (tools/app, strisy::EngineParams below). A preset sets all of them; writes can
+// Live parameters (strisy::EngineParams below). A preset sets all of them; writes can
 // arrive between any two blocks. None of them moves a partial frequency: mallet and tone values act
 // at the next strike, decay/damper values change decay rates (smoothed), tremolo and rub change
 // amplitudes only.
@@ -395,7 +395,7 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 	real* __restrict__ out = e.out;
 	const real pres = clampr(c.pres, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
-	// strikes only while a key is held: after release the firmware leaves the last vpres in place
+	// strikes only while a note is held: after release a host may leave the last vpres in place
 	const Params& Q = e.prm;
 	const real starget = held ? clampr((c.vpres - Q.thresh) * e.inv_span, 0.0f, 1.0f) : 0.0f;
 
@@ -659,7 +659,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 
 } // namespace modal
 
-// live parameters for the app (see params.h)
+// live parameters for the host (see params.h)
 namespace strisy {
 template <> struct EngineParams<modal::Engine> {
 	static constexpr int count = modal::NUM_PARAMS;

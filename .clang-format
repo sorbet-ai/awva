@@ -1,8 +1,7 @@
-# Style of our C++ (dsp/, src/synth/synth_strisy.cpp, src/usb/usb_audio*, tools/harness,
-# tools/target_render, tests): what the code already looked like, written down. Tabs, no column
-# limit (lines are never re-wrapped), short functions/ifs/loops may stay on one line, includes
-# keep their order (ChibiOS headers must come first). Piers' C files and third-party code are not
-# formatted (tools/format.sh lists the files). clang-format 15 (Docker image).
+# Style of our C++ (dsp/, sdk/, component/, examples/, tools/harness): what the code already
+# looked like, written down. Tabs, no column limit (lines are never re-wrapped), short
+# functions/ifs/loops may stay on one line, includes keep their order. Third-party code is not
+# formatted (tools/format.sh lists the files). clang-format 15.
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: c++20

@@ -52,8 +52,8 @@ struct InputDoc {
 };
 constexpr InputDoc INPUTS[] = {
     {dsp::in_pressure, "pressure", "`pres`, 0 released .. 1 a firm press (up to ~1.5)", "MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1)"},
-    {dsp::in_velocity, "strike", "`vpres`, the pressure's velocity: > 0 while the key goes down, < 0 coming up", "note-on velocity (a strike that fades), note-off velocity (the release)"},
-    {dsp::in_tilt_x, "tilt x", "`but_x`, sideways tilt -1 .. 1 (the pitch bend is already in `note`)", "not from standard MIDI (the Striso key's own)"},
+    {dsp::in_velocity, "strike", "`vpres`, the pressure's velocity: > 0 while the note is struck, < 0 while it is released", "note-on velocity (a strike that fades), note-off velocity (the release)"},
+    {dsp::in_tilt_x, "tilt x", "`but_x`, sideways tilt -1 .. 1 (the pitch bend is already in `note`)", "MIDI 2.0: Assignable Per-Note Controller 3 (not in MIDI 1.0 or MPE)"},
     {dsp::in_tilt_y, "tilt y", "`but_y`, forward/back tilt -1 .. 1", "MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: CC74 (bipolar)"},
     {dsp::in_note_events, "note events", "`gate`, `strike`, `release`", "note on and off"},
     {dsp::in_shake, "shake", "`acc_abs`, the accelerometer's magnitude in g (1 at rest)", "the instrument's motion sensor (not from MIDI)"},
