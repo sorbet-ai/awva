@@ -269,7 +269,7 @@ foreach(v IN LISTS AWVA_ENGINES)
   add_executable(awva_engine_${v}_contract tests/main.cpp tests/contract.cpp)
   target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v}
     "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
-  target_include_directories(awva_engine_${v}_contract PRIVATE "${AWVA_DOCTEST_DIR}")
+  target_include_directories(awva_engine_${v}_contract PRIVATE "${AWVA_DOCTEST_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../component/include")
   target_link_libraries(awva_engine_${v}_contract PRIVATE awva_engine_${v} awva_sdk_options awva_sdk_presets)
   doctest_discover_tests(awva_engine_${v}_contract TEST_PREFIX "contract.${v}." PROPERTIES LABELS "contract;unit")
 endforeach()

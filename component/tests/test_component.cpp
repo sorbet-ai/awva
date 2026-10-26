@@ -21,6 +21,7 @@
 
 #include "doctest/doctest.h"
 #include "nsc/load.h"
+#include "nsc/no_denormals.h"
 #include "awva_sdk/engines.h"
 #include "awva_sdk/midi_voices.h"
 #include "awva_sdk/performance.h"
@@ -85,7 +86,10 @@ void render_both(const char* id, int preset, sdk::Player& player, double seconds
 		gb = ga;
 		float* oa[1] = {&a[static_cast<size_t>(k) * NSC_BLOCK]};
 		float* ob[1] = {&b[static_cast<size_t>(k) * NSC_BLOCK]};
-		linked.process(va.data(), ga, oa);
+		{
+			const nsc::ScopedNoDenormals nd; // (as the library runs it: no_denormals.h)
+			linked.process(va.data(), ga, oa);
+		}
 		dll.c().process_voices(dll.in.state, reinterpret_cast<const nsc_voice*>(vb.data()), reinterpret_cast<const nsc_globals*>(&gb), ob);
 	}
 	INFO(id << " preset " << preset << " " << player.describe());
@@ -223,7 +227,10 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 			dsp::track_key(vc[v]);
 		}
 		float* o[1] = {&out[start]};
-		e.process(vc.data(), mv->globals(), o);
+		{
+			const nsc::ScopedNoDenormals nd; // (as the library runs it)
+			e.process(vc.data(), mv->globals(), o);
+		}
 	}
 	return out;
 }
@@ -696,7 +703,8 @@ std::vector<sdk::MidiEvent> late_performance() {
 	return ev;
 }
 
-// awva_render --midi: the file through the SDK's MIDI player and the engine linked in
+// awva_render --midi: the file through the SDK's MIDI player and the engine linked in (with the
+// library's FTZ guard: the renderer's own output differs from it only below -600 dBFS)
 std::vector<float> render_midi_file(const char* id, const std::string& path, int sr, int frames) {
 	std::string err;
 	auto player = sdk::midi_player(path.c_str(), NV, sr, &err);
@@ -711,7 +719,10 @@ std::vector<float> render_midi_file(const char* id, const std::string& path, int
 		for (dsp::VoiceControls& c : vc) dsp::track_key(c);
 		float buf[NSC_BLOCK];
 		float* o[1] = {buf};
-		e.process(vc.data(), g, o);
+		{
+			const nsc::ScopedNoDenormals nd; // (as the library runs it)
+			e.process(vc.data(), g, o);
+		}
 		for (int i = 0; i < NSC_BLOCK && b * NSC_BLOCK + i < frames; i++) out[static_cast<size_t>(b * NSC_BLOCK + i)] = buf[i];
 	}
 	return out;

@@ -18,6 +18,7 @@
 #include <new>
 
 #include "nsc/nsc.h"
+#include "nsc/no_denormals.h"
 #include "awva/engine.h"
 #include "awva/preset.h"
 #include "awva_sdk/timed_midi.h"
@@ -183,6 +184,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		return 1;
 	}
 	static void process(void* state, const nsc_event* ev, int32_t n, float* const* out) {
+		const ScopedNoDenormals no_denormals; // (no_denormals.h: the host's FPU mode, restored on return)
 		State& s = st(state);
 		for (int i = 0; i < n; i++) {
 			// (a late event, before this block: at its own frame, whose step hasn't run yet)
@@ -206,6 +208,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		s.frame += NSC_BLOCK;
 	}
 	static void process_voices(void* state, const nsc_voice* vc, const nsc_globals* g, float* const* out) {
+		const ScopedNoDenormals no_denormals;
 		st(state).engine.process(reinterpret_cast<const dsp::VoiceControls*>(vc), *reinterpret_cast<const dsp::GlobalControls*>(g), out);
 		level(st(state), out);
 	}

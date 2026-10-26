@@ -18,6 +18,8 @@
 //   inputs            an input it doesn't declare makes no difference to its output
 //   cpu               a smoke check: the worst case (every voice, full pressure) runs much faster
 //                     than real time on the PC
+//   FTZ guard         with the host's denormal guard (nsc/no_denormals.h): finite, silent after
+//                     the release, and 24-bit PCM the same as without it
 #include <algorithm>
 #include <bit>
 #include <chrono>
@@ -36,6 +38,7 @@
 #include "doctest/doctest.h"
 #include "awva_sdk/engines.h"
 #include "awva_sdk/presets.h"
+#include "nsc/no_denormals.h"
 
 const awva::sdk::EngineEntry& AWVA_ENGINE_ENTRY();
 
@@ -807,4 +810,111 @@ TEST_CASE("cpu: the worst case runs much faster than real time on the PC") {
 #ifndef __SANITIZE_ADDRESS__
 	CHECK(rt < 0.5); // (no timing under the sanitizers)
 #endif
+}
+
+namespace {
+
+// The host's FTZ guard (component/include/nsc/no_denormals.h: the component runs process() with
+// subnormals flushed): the same playing with and without it. Notes being played (strikes, slurs,
+// pressures to 1.5, tilts, shake, pedal, staccato) for 4 s, then everything released (8 s, or the
+// declared tail and a second), where decaying states reach the subnormal range.
+struct GuardRender {
+	std::vector<float> out;
+	int playing_samples = 0;
+};
+GuardRender guard_render(int preset, bool guarded) {
+	sdk::Engine e = fresh(preset);
+	const int nv = e.voices();
+	std::vector<VoiceControls> vc(static_cast<size_t>(nv), dsp::voice_at_rest);
+	GlobalControls g = dsp::globals_at_rest;
+	std::vector<float> target(static_cast<size_t>(nv), 0.0f), rate(static_cast<size_t>(nv), 0.0f);
+	uint32_t rng = 0x9e3779b9u + static_cast<uint32_t>(preset + 1);
+	const auto u = [&rng]() {
+		rng = rng * 1664525u + 1013904223u;
+		return static_cast<float>(rng >> 8) * (1.0f / 16777216.0f);
+	};
+	GuardRender r;
+	const int playing = blocks(4.0), total = playing + blocks(std::max(8.0, info().budget.tail_seconds + 1.0));
+	r.playing_samples = playing * dsp::BLOCK;
+	r.out.reserve(static_cast<size_t>(total) * dsp::BLOCK);
+	for (int b = 0; b < total; b++) {
+		const double t = static_cast<double>(b) * dsp::BLOCK / SR;
+		for (int i = 0; i < nv; i++) {
+			VoiceControls& c = vc[static_cast<size_t>(i)];
+			float& tg = target[static_cast<size_t>(i)];
+			float& rt = rate[static_cast<size_t>(i)];
+			if (b < playing) {
+				if (u() < 0.02f || b == 0) { // a new event on this voice
+					const float x = u();
+					if (x < 0.15f) tg = 0.0f;
+					else {
+						if (c.pres == 0.0f || x < 0.5f) c.note = 24.0f + 84.0f * u();
+						tg = 1.5f * u();
+					}
+					rt = u() < 0.4f ? 10.0f : 0.002f + 0.2f * u(); // a strike in one block, or a slope
+				}
+				if (b > playing - blocks(0.6) && b % 8 == 0) tg = tg > 0.0f ? 0.0f : 1.0f; // staccato
+				c.but_x = std::clamp(c.but_x + 0.2f * (u() - 0.5f), -1.0f, 1.0f);
+				c.but_y = std::clamp(c.but_y + 0.2f * (u() - 0.5f), -1.0f, 1.0f);
+			} else {
+				tg = 0.0f;
+				rt = 0.01f;
+			}
+			const float before = c.pres, d = tg - c.pres;
+			c.pres = std::max(0.0f, std::fabs(d) <= rt ? tg : c.pres + (d > 0 ? rt : -rt));
+			c.vpres = std::clamp((c.pres - before) * (static_cast<float>(SR) / dsp::BLOCK) * 0.0125f, -1.0f, 1.0f);
+			dsp::track_key(c);
+		}
+		if (b < playing) {
+			const double s = std::sin(2.0 * 3.14159265358979 * 6.0 * t);
+			g.acc_abs = static_cast<float>(t > 2.0 ? 1.0 + 1.5 * s * s : 1.0);
+			g.pedal = static_cast<float>(0.5 + 0.5 * std::sin(0.7 * t));
+		} else {
+			g = dsp::globals_at_rest;
+		}
+		float out[dsp::BLOCK];
+		float* const o[1] = {out};
+		if (guarded) {
+			const nsc::ScopedNoDenormals nd;
+			e.process(vc.data(), g, o);
+		} else {
+			e.process(vc.data(), g, o);
+		}
+		r.out.insert(r.out.end(), out, out + dsp::BLOCK);
+	}
+	return r;
+}
+
+// a sample as a 24-bit PCM file or DAC gets it (the deepest output a host gives)
+int32_t pcm24(float x) {
+	const double c = std::clamp(static_cast<double>(x), -1.0, 1.0 - 1.0 / 8388608.0);
+	return static_cast<int32_t>(std::lrint(c * 8388608.0));
+}
+
+} // namespace
+
+TEST_CASE("the host's FTZ guard: finite, silent after the release, the same in 24-bit PCM") {
+	for (int p : presets()) {
+		CAPTURE(std::string(info().name));
+		CAPTURE(p);
+		const GuardRender ieee = guard_render(p, false), ftz = guard_render(p, true);
+		REQUIRE(ieee.out.size() == ftz.out.size());
+		const size_t quiet = static_cast<size_t>(ieee.playing_samples) + static_cast<size_t>(blocks(info().budget.tail_seconds + 0.2)) * dsp::BLOCK; // (the release takes up to 0.1 s)
+		long nonfinite = 0, loud_after = 0, pcm = 0, changed = 0;
+		double max_diff = 0.0;
+		for (size_t i = 0; i < ftz.out.size(); i++) {
+			const float a = ieee.out[i], b = ftz.out[i];
+			if (!std::isfinite(b)) nonfinite++;
+			if (i >= quiet && std::fabs(b) > SILENT) loud_after++;
+			if (pcm24(a) != pcm24(b)) pcm++;
+			if (std::bit_cast<uint32_t>(a) != std::bit_cast<uint32_t>(b)) {
+				changed++;
+				max_diff = std::max(max_diff, std::fabs(static_cast<double>(a) - b));
+			}
+		}
+		if (changed > 0) MESSAGE(std::string(info().name) << " preset " << p << ": " << changed << " samples changed, the largest by " << max_diff);
+		CHECK(nonfinite == 0);
+		CHECK(loud_after == 0); // silent once the declared tail has passed
+		CHECK(pcm == 0);        // 24-bit PCM: byte for byte
+	}
 }
