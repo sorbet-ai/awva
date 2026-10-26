@@ -181,7 +181,9 @@ function(awva_add_package_library target engine)
   awva_add_component(${target} ${engine} SHARED)
   target_compile_definitions(${target} PRIVATE ${AWVA_PACKAGE_MIDI})
   set_target_properties(${target} PROPERTIES OUTPUT_NAME ${engine} PREFIX "" CXX_VISIBILITY_PRESET hidden
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs")
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs"
+    # (Windows: its import library too, apart from nsc_<id>'s of the same name)
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/package_libs")
   if(APPLE)
     target_link_options(${target} PRIVATE -Wl,-exported_symbol,_nsc_entry)
   endif()
