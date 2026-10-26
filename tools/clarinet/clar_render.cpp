@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // Renders single clarinet notes (one voice) for the fit: synthetic key controls, the engine
-// header compiled in directly (no SDK, no virtual board).
+// header compiled in directly (no SDK).
 //
 //   clar_render --preset N [--set name=value ...] --job out.f32 note pres strike rise hold tail [tilt]
 //               [--job ...] [--legato out.f32 note1 note2 pres strike rise hold1 hold2 tail]

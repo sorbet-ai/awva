@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 /**
- * clarinet: a physical model of the clarinet family (B-flat clarinet, bass clarinet). Build with
- * `VOICE=clarinet`. Nothing sets the pitch but the reed and the bore together. The presets' physics
- * is fitted (CMA-ES) to recordings of real instruments, the University of Iowa MIS scales (pp, mf
- * and ff, note by note): per note and dynamic the sustained harmonic spectrum, the level, the noise
- * between the harmonics, the attack's rise, centroid and harmonics, and the pitch. The keys' pp, mf
- * and ff stand for pressure 0.12, 0.35 and 0.7 with strikes 0.15, 0.4 and 0.7.
+ * clarinet: a physical model of the clarinet family (B-flat clarinet, bass clarinet). Nothing sets
+ * the pitch but the reed and the bore together. The presets' physics is fitted (CMA-ES) to recordings
+ * of real instruments, the University of Iowa MIS scales (pp, mf and ff, note by note): per note and
+ * dynamic the sustained harmonic spectrum, the level, the noise between the harmonics, the attack's
+ * rise, centroid and harmonics, and the pitch. In the fit, pp, mf and ff are a pressure of 0.12,
+ * 0.35 and 0.7 with strikes of 0.15, 0.4 and 0.7.
  *
  *   REED     a single reed on a mouthpiece: one mechanical mode (resonance reed_hz, damping reed_q
  *            by the lip), pushed closed by the pressure difference across it, beating on the lay
@@ -45,7 +45,7 @@
  *   release    the breath stops, the bore rings out (the pedal lengthens the release)
  *   tilt fwd/back  embouchure: forward firmer (a smaller reed opening: brighter, a little sharp),
  *              back looser (darker, flatter)
- *   tilt sideways  pitch bend (the firmware moves the note; the bore follows)
+ *   tilt sideways  pitch bend (the host moves the note; the bore follows)
  *
  * Every element is passive or bounded: the jet only draws on the mouth pressure, the bore loop has
  * gain < 1, the register hole is a passive shunt; the reed's excursion is clamped; a per-voice guard
@@ -87,7 +87,7 @@ static constexpr uint32_t BMASK = BLEN - 1;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
 
-// the bore delay lines, placed by the host (engine SDK): AXI SRAM on the board
+// the bore delay lines, placed by the host (engine SDK)
 struct LargeMemory {
 	alignas(32) float a_dn[MAX_VOICES][ALEN];
 	alignas(32) float a_up[MAX_VOICES][ALEN];
@@ -455,7 +455,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const Params& P = e.ps;
 	const strisy::VoiceControls cc = e.vc[vi];
 	const real pres = clampr(cc.pres, 0.0f, 1.5f);
-	// after a release the firmware leaves the last vpres in place: a positive leftover must not
+	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
 	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
