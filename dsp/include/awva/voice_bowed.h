@@ -556,7 +556,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 		// (narrower than the bridge segment: the pulse and its inverted reflection would cancel)
 		const real width = clampf(0.06f / clampf(p.pizz_bright, 0.2f, 5.0f) * L, rmin(6.0f, 0.8f * beta * L), rmin(300.0f, 0.8f * beta * L));
 		s.pzn = (int)width;
-		const real dw = 3.14159265f / (real)s.pzn;
+		const real dw = 3.14159265f / (real)(s.pzn > 0 ? s.pzn : 1); // (no pulse when under a sample: pzn 0)
 		s.pzcw = cos_poly(dw);
 		s.pzsw = sin_poly(dw);
 		s.pzc = 1.0f;
