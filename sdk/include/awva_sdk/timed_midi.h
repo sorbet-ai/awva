@@ -31,6 +31,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <new>
 
 #include "awva_sdk/midi_voices.h"
 
@@ -60,7 +61,9 @@ public:
 		for (int i = 0; i < queued_; i++)
 			if (queue_[i].note_id >= 0 && starts_note(queue_[i])) end_now(queue_[i].note_id);
 		const bool legato = midi_.legato();
-		midi_ = MidiVoices(voices_);
+		// (in place: a MidiVoices is kilobytes, which a temporary would put on the caller's stack)
+		midi_.~MidiVoices();
+		new (&midi_) MidiVoices(voices_);
 		midi_.set_legato(legato);
 		queued_ = 0;
 		steps_ = now_ = 0;
