@@ -186,14 +186,14 @@ std::vector<Ev> ump_performance() {
 }
 
 // (hz: the control rate, NSC_MODE_CONTROL_HZ; 0: every block, the default)
-std::vector<float> render_ump(const char* id, bool legato, bool from_library, int hz = 0) {
+std::vector<float> render_ump(const char* id, bool mono, bool from_library, int hz = 0) {
 	const std::vector<Ev> perf = ump_performance();
 	const int blocks = 2 * SR / NSC_BLOCK;
 	std::vector<float> out(static_cast<size_t>(blocks) * NSC_BLOCK);
 	if (from_library) {
 		Loaded dll(id);
 		dll.c().init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
-		if (legato) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_LEGATO, 1) == 1);
+		if (mono) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_MONO, 1) == 1);
 		if (hz) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_CONTROL_HZ, hz) == 1);
 		size_t k = 0;
 		for (int b = 0; b < blocks; b++) {
@@ -210,7 +210,8 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library, in
 	sdk::Engine e(*sdk::find_engine(id));
 	e.init(SR, NV);
 	auto mv = std::make_unique<sdk::MidiVoices>(NV);
-	mv->set_legato(legato);
+	mv->set_mono(mono);
+	mv->set_mono_style(awva::voices::MonoStyle::of(sdk::find_engine(id)->info->mono)); // (as the component: the engine's family)
 	mv->set_step(sdk::step_seconds(SR, hz));
 	size_t k = 0;
 	uint64_t steps = 0;
@@ -232,7 +233,7 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library, in
 
 } // namespace
 
-TEST_CASE("flute from its library renders bit for bit as linked in (every preset, the performances, the takes, UMP in poly and legato)") {
+TEST_CASE("flute from its library renders bit for bit as linked in (every preset, the performances, the takes, UMP in poly and mono)") {
 	const char* id = "flute";
 	const sdk::EngineEntry* e = sdk::find_engine(id);
 	REQUIRE(e != nullptr);
@@ -250,9 +251,9 @@ TEST_CASE("flute from its library renders bit for bit as linked in (every preset
 		REQUIRE(pa != nullptr);
 		render_both(id, -1, *pa, 8.0);
 	}
-	for (bool legato : {false, true}) {
-		INFO(id << (legato ? " legato" : " poly"));
-		const std::vector<float> a = render_ump(id, legato, false), b = render_ump(id, legato, true);
+	for (bool mono : {false, true}) {
+		INFO(id << (mono ? " mono" : " poly"));
+		const std::vector<float> a = render_ump(id, mono, false), b = render_ump(id, mono, true);
 		CHECK(same(a, b));
 		double e2 = 0;
 		for (float x : b) e2 += static_cast<double>(x) * x;
@@ -260,12 +261,12 @@ TEST_CASE("flute from its library renders bit for bit as linked in (every preset
 	}
 }
 
-TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (polyphonic and mono legato, every block and 500 Hz)") {
+TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (polyphonic and mono, every block and 500 Hz)") {
 	for (const char* id : {"accordion", "trumpet", "va", "clarinet"}) {
 		for (const int hz : {0, 500})
-			for (bool legato : {false, true}) {
-				INFO(id << (legato ? " legato" : " poly") << " at " << hz << " Hz");
-				const std::vector<float> a = render_ump(id, legato, false, hz), b = render_ump(id, legato, true, hz);
+			for (bool mono : {false, true}) {
+				INFO(id << (mono ? " mono" : " poly") << " at " << hz << " Hz");
+				const std::vector<float> a = render_ump(id, mono, false, hz), b = render_ump(id, mono, true, hz);
 				CHECK(same(a, b));
 				double e2 = 0;
 				for (float x : b) e2 += static_cast<double>(x) * x;

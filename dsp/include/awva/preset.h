@@ -12,7 +12,7 @@
 //     "tags": ["accordion", "folk"],
 //     "heroes": ["detune", "reeds", "bellows"],
 //     "params": {"detune": 0.35, "reeds": 3, "bellows": 0.8},
-//     "modes": {"legato": false}
+//     "modes": {"mono": false}
 //   }
 //
 // One format everywhere: the factory presets (presets/<engine>/*.preset.json, compiled into the

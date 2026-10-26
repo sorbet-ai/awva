@@ -32,7 +32,7 @@
  * Assignable Per-Note Controllers 1, 2 and Assignable Controller 1: docs/midi.md), and
  * MIDI 1.0 channel voice messages in UMP (type 2, including MPE); the other types are ignored, and
  * every group is taken as one. Inside, the component runs the one decoder (awva/ump.h), the voice
- * allocator and, in NSC_MODE_LEGATO, mono legato.
+ * allocator and, in NSC_MODE_MONO, mono (one voice, played by every held key).
  *
  * Parameters: the engine's own, then "output" (the output level, 0 .. 2, default 1: at 1 the
  * engine's samples bit for bit). Each has a stable id (FNV-1a of its name) and a declared default
@@ -175,7 +175,7 @@ typedef struct nsc_preset_report {
 } nsc_preset_report;
 
 enum nsc_mode {
-	NSC_MODE_LEGATO = 1,     /* value 1: mono legato (one voice, slurs), 0: polyphonic (the default) */
+	NSC_MODE_MONO = 1,       /* value 1: mono (one voice played by every held key: the player slurs or re-articulates by the keys' pressures), 0: polyphonic (the default) */
 	NSC_MODE_CONTROL_HZ = 2, /* value: the control rate MIDI is taken at, Hz (0, the default: every
 	                          * NSC_BLOCK frames; an embedded host's scan, e.g. 500), at most the
 	                          * sample rate; from the next step on */

@@ -20,7 +20,7 @@
  *            rate) and att_noise (the "t"); the sustain's texture (breath, jitter, the player's
  *            wander) doesn't follow the strike. A strike counts while the note starts (STRIKE_WIN
  *            after a start or a new note): inside a held note a swell of the pressure is breath
- *   slur     a step of the held note (a slur in mono legato) changes the fingering over GLIDE_S
+ *   slur     a step of the held note (a slur in mono) changes the fingering over GLIDE_S
  *            (15 ms, note_glide.h): at once, the bore would change in one block and the reed slap shut
  *   REED     two blades as one mechanical mode, blown closed (the mouth pressure pushes them
  *            shut; Fletcher 1979, Vergez et al. 2003): resonance and Q (the lips' damping), the tip

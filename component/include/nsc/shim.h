@@ -3,7 +3,7 @@
 //
 // nsc::component<E>(): any awva::VoiceEngine as an nsc_component (nsc.h), unchanged. The
 // state region holds the engine object and the component's MIDI side (awva_sdk/midi_voices.h:
-// the decoder of MIDI 2.0 and MIDI 1.0 in UMP, the voice allocator, mono legato) and its
+// the decoder of MIDI 2.0 and MIDI 1.0 in UMP, the voice allocator, mono) and its
 // event queue; the fast and large regions are the engine's. process_voices() is the engine's own
 // process() on the host's controls, so a host that gives an engine's controls gets the same
 // samples as the engine compiled in, bit for bit.
@@ -180,21 +180,22 @@ template <dsp::VoiceEngine E> struct Shim {
 		if (sr < E::info.min_rate || sr > MAX_RATE) return -1;
 		State* s = new (state) State(nv, sr);
 		s->g = dsp::instrument_at_rest;
+		s->midi.midi().set_mono_style(awva::voices::MonoStyle::of(E::info.mono)); // (mono: the engine's family)
 		s->engine.init(*static_cast<typename E::StreamMemory*>(fast), *static_cast<typename E::BulkMemory*>(large), sr, nv);
 		for (int i = 0; i < E::info.num_params; i++) s->defaults[i] = *s->engine.param(i);
 		return 0;
 	}
 	static void reset(void* state) {
 		State& s = st(state);
-		s.midi.reset(); // (afresh, legato kept; the notes' ids end: ended() hands them out)
+		s.midi.reset(); // (afresh, mono kept; the notes' ids end: ended() hands them out)
 		s.g = dsp::instrument_at_rest;
 		s.frame = 0;
 		s.engine.reset();
 	}
 	static int32_t mode(void* state, int32_t which, int32_t value) {
 		State& s = st(state);
-		if (which == NSC_MODE_LEGATO) {
-			s.midi.midi().set_legato(value != 0);
+		if (which == NSC_MODE_MONO) {
+			s.midi.midi().set_mono(value != 0);
 			return 1;
 		}
 		if (which == NSC_MODE_CONTROL_HZ) {

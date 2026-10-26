@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 //
-// A fingering change takes time. A host's note steps at once (a slur in mono legato, a new MIDI
-// note on a held voice); a bore engine that followed in one block would change its whole bore at
-// once, and a beating reed or lip slaps shut once (an isolated, click-like pulse). NoteGlide gives
-// such an engine the note it plays: a step of the held note of STEP semitones or more is followed
-// linearly over a few blocks, the way tone holes and valves move; smaller changes (bends,
-// vibrato) and the first block of every note pass straight through.
+// A bore can't change at once. A host may step a held note's pitch in one block (a bend that
+// jumps, a controls file); a bore engine that followed would change its whole bore at once, and a
+// beating reed or lip slaps shut once (an isolated, click-like pulse). NoteGlide gives such an
+// engine the note it plays: a step of the held note of STEP semitones or more in one block is
+// followed linearly over a few blocks, the way tone holes and valves move; smaller changes (bends,
+// vibrato) and the first block of every note pass straight through. (Mono's slurs, mono.h, move
+// the pitch slower than STEP a block on these engines' families: this guard doesn't act on them.)
 #ifndef AWVA_NOTE_GLIDE_H_
 #define AWVA_NOTE_GLIDE_H_
 

@@ -10,13 +10,9 @@
 # Each entry says what fails, with its numbers, and who fixes it. Keep the list short.
 
 # trumpet: its owner
-#   slur           5 clicks in 48 slurs (by -7 and +12, 4 to 7 ms after the press), with its 10 ms valve
-#                  change (note_glide.h); the lips' and the loop delay's reset on a new note
-#                  (voice_trumpet.h: jump) is the next suspect
-# reed: its owner
-#   slur           2 clicks in 48 slurs, on the octave slur up, at the press (it has no fingering change yet)
-# modal: its owner
-#   slur:wine glass  2 clicks in 48 slurs (firm, by +5 and +1), at the press
-set(AWVA_KNOWN_trumpet slur)
-set(AWVA_KNOWN_reed slur)
-set(AWVA_KNOWN_modal "slur:wine glass")
+#   slur           4 clicks in 48 gentle slurs (the first by -7, 46 ms after the press: as the held key
+#                  lets go), through mono's player (mono.h, a fingered family's 15 ms+ pitch move);
+#                  the lips' and the loop delay's reset on a new note (voice_trumpet.h: jump) is the
+#                  next suspect
+#   roll           1 click in 24 rolls (the fast octave down)
+set(AWVA_KNOWN_trumpet slur roll)

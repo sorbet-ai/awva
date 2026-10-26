@@ -32,7 +32,7 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - An event is a UMP packet with its frame, counted from the block's start. An event that arrives after its block was rendered gets a negative frame, down to -32; it lands where it would have on time. The component takes MIDI in control steps on an integer-frame grid (every block; `NSC_MODE_CONTROL_HZ` sets another rate, e.g. an embedded host's 500 Hz scan), so place events by frame and nothing more.
 - Send MIDI 2.0 (UMP type 4) in its standard meaning, or MIDI 1.0 in UMP (type 2, MPE included). One channel can carry every note: per-note timbre as Registered Per-Note Controller 74, per-note pitch as Pitch 7.25 (docs/midi.md has the table, a sensor's controllers included).
 - Give a Note On the host's note id (`nsc_event.note_id`, else -1). After each `process()`, drain `ended()` (call it again while it returns `max`) and send each id's note-end (CLAP_EVENT_NOTE_END). Pass at most `desc->max_events` events a block; `desc->max_note_ids` notes are tracked at once (a build's sizes: `AWVA_MIDI_QUEUE`, `AWVA_NOTE_IDS`).
-- Mono legato: `mode(state, NSC_MODE_LEGATO, 1)`.
+- Mono: `mode(state, NSC_MODE_MONO, 1)`: one voice, played by every held key (`mono.h`: the player slurs or re-articulates by the keys' pressures, the engine's `EngineInfo::mono` family says how its pitch moves).
 
 **An instrument: `process_voices(state, voices, globals, out)`.** The host allocates voices itself and gives each its controls (`nsc_voice`: pitch, pressure, pressure rate, timbre, the velocities and the gate, as `awva::NoteControls`). The component only renders, bit for bit as the same engine compiled in.
 

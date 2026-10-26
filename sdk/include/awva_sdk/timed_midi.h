@@ -85,8 +85,8 @@ public:
 	}
 	[[nodiscard]] int control_hz() const { return hz_; }
 
-	// Back to the start, as a fresh TimedMidi (a host's reset: the engine goes silent), mono legato
-	// kept. The guarantee holds through it: every tracked note's id, and the id of every queued Note
+	// Back to the start, as a fresh TimedMidi (a host's reset: the engine goes silent), mono and
+	// its style kept. The guarantee holds through it: every tracked note's id, and the id of every queued Note
 	// On that will now never sound, ends here and comes back from the next ended(), after the ids
 	// that had ended before and were not handed out yet.
 	void reset() {
@@ -94,12 +94,14 @@ public:
 			if (t.id >= 0) end_now(t.id);
 		for (int i = 0; i < queued_; i++)
 			if (queue_[i].note_id >= 0 && starts_note(queue_[i])) end_now(queue_[i].note_id);
-		const bool legato = midi_.legato();
+		const bool mono = midi_.mono();
+		const voices::MonoStyle style = midi_.mono_style();
 		// (in place: a MidiVoices is kilobytes, which a temporary would put on the caller's stack)
 		midi_.~MidiVoices();
 		new (&midi_) MidiVoices(voices_);
 		midi_.set_step(step_seconds(sr_, hz_));
-		midi_.set_legato(legato);
+		midi_.set_mono(mono);
+		midi_.set_mono_style(style);
 		queued_ = 0;
 		steps_ = now_ = base_ = 0;
 		for (Note& t : notes_) t = Note{};

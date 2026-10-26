@@ -68,6 +68,11 @@ template <class T> constexpr int min_rate() {
 	if constexpr (requires { T::min_rate; }) return T::min_rate;
 	return EngineInfo{}.min_rate;
 }
+// the traits' mono family, if they say (finger otherwise: a fingered wind or brass)
+template <class T> constexpr MonoFamily mono() {
+	if constexpr (requires { T::mono; }) return T::mono;
+	return MonoFamily::finger;
+}
 
 template <class Native, class StreamMemory, class BulkMemory>
 inline void attach(Native& e, StreamMemory& f, BulkMemory& l) {
@@ -239,7 +244,8 @@ template <class T> struct Adapter {
 	    .conformance = detail::conformance<T>(),
 	    .min_rate = detail::min_rate<T>(),
 	    .short_name = T::short_name,
-	    .led = T::led};
+	    .led = T::led,
+	    .mono = detail::mono<T>()};
 	static_assert(detail::length(T::short_name) >= 1 && detail::length(T::short_name) <= 6, "an engine declares a short name of 1 to 6 characters (traits short_name)");
 	static_assert(T::led != 0 && T::led <= 0xffffffu, "an engine declares its colour (traits led, 0xrrggbb, not 0)");
 };

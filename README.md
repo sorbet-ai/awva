@@ -12,7 +12,7 @@ Three ways to host them:
 
 | | |
 |---|---|
-| `dsp/` | the engines, header only: the contract (`engine.h`), the shared helpers, the UMP profile and decoder, MIDI in, the voice allocator, mono legato, the preset format (`preset.h`); `engines/<name>.h` traits, `effects/fx.h` |
+| `dsp/` | the engines, header only: the contract (`engine.h`), the shared helpers, the UMP profile and decoder, MIDI in, the voice allocator, mono (the player), the preset format (`preset.h`); `engines/<name>.h` traits, `effects/fx.h` |
 | `sdk/` | one library per engine, the contract suite, the renderer (`awva_render`), the docs generator (`awva_docs`), the shell, MIDI files |
 | `presets/` | the factory presets, one file each: `<engine>/NN-<name>.preset.json` (below) |
 | `docs/` | the engines' reference pages and how they work, and playing them with MIDI 2.0 and MPE: [docs/README.md](docs/README.md) |
@@ -55,6 +55,6 @@ A preset survives an engine's versions by name, with no migration code. A value 
 
 The factory presets are the files in `presets/`, and nothing else: each engine reads its files at compile time (`dsp/include/awva/presets/<engine>.inc`, their texts). A file that lacks a parameter or has one out of range doesn't compile. To change one, edit the file, then run `cmake -P tools/presets_inc.cmake`; the test `presets_inc` fails if that was forgotten. The contract proves that each file, loaded by name, plays bit for bit as the engine's preset.
 
-The golden renders (`sdk/tests/goldens/renders.txt`, the tests `golden.*`) hash every engine and preset on the scripted performances and the recorded takes, and every engine on an MPE and a MIDI 2.0 phrase (also in mono legato): a change of any engine's output, or of the MIDI mapping, fails them. After an intended change, `tools/goldens/update.sh <build dir>` rewrites the file, and `awva_render --compare <old.f32>` says by how much the sound moved.
+The golden renders (`sdk/tests/goldens/renders.txt`, the tests `golden.*`) hash every engine and preset on the scripted performances and the recorded takes, and every engine on an MPE and a MIDI 2.0 phrase (also in mono): a change of any engine's output, or of the MIDI mapping, fails them. After an intended change, `tools/goldens/update.sh <build dir>` rewrites the file, and `awva_render --compare <old.f32>` says by how much the sound moved.
 
 Licence: Apache-2.0 (`LICENSE`, `NOTICE`). `PROVENANCE.md` says where each file comes from. Apache-2.0 code can be included in GPL-3.0 projects (the FSF lists Apache-2.0 as GPLv3-compatible), not the other way round.

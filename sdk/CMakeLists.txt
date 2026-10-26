@@ -305,7 +305,7 @@ doctest_discover_tests(awva_effect_fx_contract TEST_PREFIX "contract.fx." PROPER
 add_test(NAME contract.fx.names_without_semicolons COMMAND awva_effect_fx_contract --list-test-cases) # (a ';' splits a name in ctest)
 set_tests_properties(contract.fx.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
 
-add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp tests/test_legato.cpp
+add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp tests/test_mono.cpp
   tests/test_presets.cpp)
 target_include_directories(awva_sdk_tests PRIVATE "${AWVA_DOCTEST_DIR}")
 target_link_libraries(awva_sdk_tests PRIVATE awva_sdk awva_engines awva_performances)
@@ -337,16 +337,16 @@ foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va 
                    "bad_set;--engine va --set cut_base" "missing_controls;--engine va --ctl /nonexistent.ctl"
                    "ctl_and_rec;--engine va --ctl x.ctl --rec x.csv" "bad_notes;--engine va --notes 60,x"
                    "missing_ump;--engine va --ump /nonexistent.ump"
-                   "legato_without_midi;--engine va --legato" "two_inputs_ump;--engine va --ump x.ump --midi x.mid")
+                   "mono_without_midi;--engine va --mono" "two_inputs_ump;--engine va --ump x.ump --midi x.mid")
   list(GET t 0 name)
   list(GET t 1 args)
   separate_arguments(args)
   add_test(NAME awva_render.refuses_${name} COMMAND awva_render ${args})
   set_tests_properties(awva_render.refuses_${name} PROPERTIES LABELS unit WILL_FAIL TRUE)
 endforeach()
-add_test(NAME awva_render.log_names_ump COMMAND awva_render --engine va --ump "${CMAKE_CURRENT_SOURCE_DIR}/tests/goldens/midi2.ump" --legato --seconds 0.5)
+add_test(NAME awva_render.log_names_ump COMMAND awva_render --engine va --ump "${CMAKE_CURRENT_SOURCE_DIR}/tests/goldens/midi2.ump" --mono --seconds 0.5)
 set_tests_properties(awva_render.log_names_ump PROPERTIES LABELS unit
-  PASS_REGULAR_EXPRESSION "input UMP file [^\n]*midi2.ump \\([0-9]+ bytes, fnv [0-9a-f]+\\): [0-9]+ packets, [0-9.]+ s, mono legato")
+  PASS_REGULAR_EXPRESSION "input UMP file [^\n]*midi2.ump \\([0-9]+ bytes, fnv [0-9a-f]+\\): [0-9]+ packets, [0-9.]+ s, mono")
 # --compare: a render against an earlier one, the same (nothing differs) and another (by how much)
 set(_cmp "${CMAKE_CURRENT_BINARY_DIR}/compare_va.f32")
 add_test(NAME awva_render.compare_reference COMMAND awva_render --engine va --seconds 1 --out "${_cmp}")
@@ -401,7 +401,7 @@ endif()
 
 # The golden renders (sdk/tests/goldens/renders.txt): every engine and preset on the scripted
 # performances and the recorded takes, and every engine on the MIDI phrases (MPE, MIDI 2.0, a
-# sensor's; also in mono legato; at the default control rate and at 500 Hz), each checked against its FNV-1a 64 hash: a change of any engine's output or of the
+# sensor's; also in mono; at the default control rate and at 500 Hz), each checked against its FNV-1a 64 hash: a change of any engine's output or of the
 # MIDI mapping fails here. Only a build of the SDK itself (a project that includes it may add engines
 # of its own). After an intended change: tools/goldens/update.sh <build dir> (and say so).
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -460,9 +460,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # the MIDI phrases at the default control rate (every block) and at an embedded host's 500 Hz
     foreach(ph IN ITEMS mpe midi2 sensor)
       _golden(golden.${v}.${ph} --engine ${v} --ump "${_golden_dir}/${ph}.ump")
-      _golden(golden.${v}.${ph}.legato --engine ${v} --ump "${_golden_dir}/${ph}.ump" --legato)
+      _golden(golden.${v}.${ph}.mono --engine ${v} --ump "${_golden_dir}/${ph}.ump" --mono)
       _golden(golden.${v}.${ph}.500hz --engine ${v} --ump "${_golden_dir}/${ph}.ump" --control-hz 500)
-      _golden(golden.${v}.${ph}.legato.500hz --engine ${v} --ump "${_golden_dir}/${ph}.ump" --legato --control-hz 500)
+      _golden(golden.${v}.${ph}.mono.500hz --engine ${v} --ump "${_golden_dir}/${ph}.ump" --mono --control-hz 500)
     endforeach()
   endforeach()
   _golden(golden.va.p5.fx --engine va --preset 5 --perf default --fx)

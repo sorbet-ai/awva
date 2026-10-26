@@ -46,6 +46,13 @@ struct InstrumentControls {
 // the instrument at rest: no sustain (a host without a pedal has none), 1 g, no spin
 inline constexpr InstrumentControls instrument_at_rest = {0.0f, {1.0f, {0.0f, 0.0f, 0.0f}}};
 
+// How an engine's one voice goes from note to note in a host's mono mode (mono.h): its pitch
+// slides with the keys' pressures (glide: strings, synths), its fingering switches over and the
+// pitch moves at the speed of the roll (finger: winds, brass), or the new key strikes (struck)
+enum class MonoFamily : uint8_t { glide,
+	finger,
+	struck };
+
 } // namespace awva
 
 #endif // AWVA_CONTROLS_H_

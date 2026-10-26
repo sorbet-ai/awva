@@ -97,7 +97,7 @@ class Renderer:
 
     def render(self, engine, preset=None, *, out, rec=None, ctl=None, midi=None, perf=None, ump=None, sets=None, transpose=0.0,
                notes=None, settle=0.0, tail=0.0, seconds=None, nv=None, rate=None, fx=False, ctl_out=None, wav=None,
-               manifest=None, check=False, max_peak=None, listen=False, lufs=None, true_peak=None, legato=False):
+               manifest=None, check=False, max_peak=None, listen=False, lufs=None, true_peak=None, mono=False):
         """one render; raises RenderError on a failure (exit 2: bad arguments or input)"""
         a = ['--engine', engine]
         if preset is not None:
@@ -125,8 +125,8 @@ class Renderer:
             a += ['--rate', str(rate)]
         if fx:
             a += ['--fx']
-        if legato:
-            a += ['--legato']
+        if mono:
+            a += ['--mono']
         if listen:
             a += ['--listen'] + (['--lufs', repr(float(lufs))] if lufs is not None else []) + (['--true-peak', repr(float(true_peak))] if true_peak is not None else [])
         if check:
