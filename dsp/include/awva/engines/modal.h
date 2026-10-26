@@ -21,6 +21,13 @@ struct modal {
 	static constexpr Budget budget = {::modal::MAX_VOICES, 18000, 5.0f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"hard", "decay", "upper", "keytrack", "hfdamp", "damper", "tremdepth", "rub"}};
+	// the presets inharmonic by design (voice_modal.h models): no period to compare with the note,
+	// so the tuning check measures the partial tuned to the note, which the model sets exactly
+	// (measured 2026-10-26: within 0.01 c for the bell, 0.11 c for the glass)
+	static constexpr PresetTuning preset_tuning[] = {
+	    {"bell", {.cents = 2.0f, .partial = 1.0f, .why = "a church bell's partials are inharmonic (hum 0.5, prime 1, tierce 1.183, quint 1.506, nominal 2, ...): the prime is the note"}},
+	    {"wine glass", {.cents = 2.0f, .partial = 1.0f, .why = "a glass's (m,0) modes are inharmonic (1, 2.32, 4.25, 6.63, 9.4): the first is the note"}},
+	};
 };
 } // namespace traits
 
