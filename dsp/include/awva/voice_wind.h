@@ -602,7 +602,9 @@ static inline void process_voice(Engine& e, int v) {
 	// loop filter cutoff: lattice, opening with breath and forward embouchure, at least 2 f0
 	real fc = q.lattice * pow2(q.lat_breath * (ps - 0.5f) + 0.5f * ebr - 0.3f * sub);
 	if (kind == KIND_JET) {
-		fc = rmax(fc, 3.0f * f0);
+		// at least 3 f0 (its 2nd and 3rd harmonics), at most 7 f0: a jet half a period long drives
+		// the 3rd mode as well as the 1st, and a loop that passes it as freely overblows the low notes
+		fc = rmin(rmax(fc, 3.0f * f0), 7.0f * f0);
 		const real cp = pow2(-fc * (6.2831853f * 1.442695f) * isr);
 		b.cbs = 1.0f - cp;
 		b.gs = 0.995f; // DC blocker pole

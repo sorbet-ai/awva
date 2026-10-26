@@ -29,6 +29,12 @@ struct ep {
 	static constexpr PresetHeroes preset_heroes[] = {
 	    {"wurli", {{"wurli", "hard", "decay", "drive", "grit", "tone", "wobble", "dyn"}}},
 	};
+	// the pianet's reed is nearly a sine with an inharmonic bell (6.3 times the note) a dozen dB
+	// below it on the low notes: a period read off the wave locks onto that mix, so the tuning
+	// check measures the fundamental itself (a spectral peak), which the model sets exactly
+	static constexpr PresetTuning preset_tuning[] = {
+	    {"pianet", {.cents = 2.0f, .partial = 1.0f, .why = "a reed nearly sinusoidal with an inharmonic bell at 6.3x: the fundamental is the note"}},
+	};
 };
 } // namespace traits
 

@@ -411,8 +411,8 @@ golden.wind.p7.take_2026-10-22_a abb97a9b55254486
 golden.wind.p7.take_2026-10-22_legato 57e78a1da0e537f2
 golden.wind.p7.take_2026-10-22_moderate d4f08e4989f2d252
 golden.wind.p7.take_2026-10-22_staccato cc7dc0763416be36
-golden.wind.p8.default 209c2f534561b896
-golden.wind.p8.take_2026-10-22_a 49f3034fe97e31cd
-golden.wind.p8.take_2026-10-22_legato 6219ce04577b0134
-golden.wind.p8.take_2026-10-22_moderate dec317c1f664784b
-golden.wind.p8.take_2026-10-22_staccato 7814c5666d84f0d6
+golden.wind.p8.default 1a09315116e8f8fa
+golden.wind.p8.take_2026-10-22_a d169ae5801a30e78
+golden.wind.p8.take_2026-10-22_legato 21bd82c371f9603d
+golden.wind.p8.take_2026-10-22_moderate 6725be2ebaa384f6
+golden.wind.p8.take_2026-10-22_staccato 8e9700be28916767
