@@ -226,7 +226,7 @@ Measured, on the audition builds' dry output:
   - not flip: off its median by more than 50 c for at most 5 % of the sustain, and never 30 ms in a row;
   - start within 150 ms.
 
-  A candidate with any failing note fails, whatever its phrases say.
+  A candidate that breaks a note its baseline plays fails, whatever its phrases say. A failing note the baseline shares is reported ("both fail ..."), not counted as a regression.
 - **Measures** (`awvafit.gate`, the clarinet and double reed lanes' analyses together):
 
 | group | measures |
@@ -240,7 +240,7 @@ Measured, on the audition builds' dry output:
 
 - **Floors:** every measure's floor is the recording's own spread, either between its notes of the same pitch or between the phrase's halves. A measure's score is its distance from the recording in floors. A group's score is the mean of its measures, and the total is the mean of the groups.
 - **Verdicts:**
-  - *fail* first, if the range check fails;
+  - *fail* first, if the candidate breaks a note the baseline plays;
   - *identical*: the two builds are within a floor of each other on every measure, so there is nothing to hear and no kit is made;
   - *pass*: the candidate's total is lower, it is better on most groups, and it is worse on no group by more than a floor;
   - *fail*: anything else.

@@ -159,6 +159,19 @@ class Gate(unittest.TestCase):
         return [dict(id='x', floor=fl, cand={m: cand * fl[m] for m in fl}, base={m: base * fl[m] for m in fl},
                      between={m: between * fl[m] for m in fl})]
 
+    def test_a_shared_range_fail_is_no_regression(self):
+        from awvafit import gate
+        c7 = dict(midi=96, dyn='loud', why=['off by -410 c'])
+        e2 = dict(midi=40, dyn='soft', why=['flips'])
+        rng = lambda c, b: [dict(failures=c, notes=[]), dict(failures=b, notes=[])]  # noqa: E731
+        r = gate.verdict('t', 'c', 'b', self.per_item(1.0, 1.2, 0.5), rng([c7], [c7]))
+        self.assertEqual(r['verdict'], 'identical')
+        self.assertIn('both builds fail C7 loud', gate.table(r))
+        r = gate.verdict('t', 'c', 'b', self.per_item(1.0, 2.0, 1.5), rng([c7, e2], [c7]))
+        self.assertEqual(r['verdict'], 'fail')
+        self.assertEqual([f['midi'] for f in r['range_new']], [40])
+        self.assertEqual(gate.verdict('t', 'c', 'b', self.per_item(1.0, 2.0, 1.5), rng([], [e2]))['verdict'], 'pass')
+
     def test_the_verdicts(self):
         from awvafit import gate
         self.assertEqual(gate.verdict('t', 'c', 'b', self.per_item(1.0, 2.0, 1.5))['verdict'], 'pass')
