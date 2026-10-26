@@ -329,9 +329,9 @@ class GateRuns(unittest.TestCase):
             return cal(*a, **k)
         control.calibrated = counting
         streams = {}
-        near = g.objective(self.spec(0.5), items, workdir=os.path.join(TMP, 'obj'), streams=streams)
-        far = g.objective(self.spec(0.9), items, workdir=os.path.join(TMP, 'obj'), streams=streams)
-        self.assertEqual(len(calls), len(items))  # calibrated once, reused by the second build
+        near = g.objective(self.spec(0.5), items, workdir=os.path.join(TMP, 'obj'), streams=streams, streams_frozen=True)
+        far = g.objective(self.spec(0.9), items, workdir=os.path.join(TMP, 'obj'), streams=streams, streams_frozen=True)
+        self.assertEqual(len(calls), len(items))  # frozen: calibrated once, reused by the second build
         self.assertLess(near['groups']['harmonics'], far['groups']['harmonics'])  # the recordings roll off as 0.5 per harmonic
         self.assertTrue(math.isfinite(near['total']))
         self.assertEqual(set(near['groups']), set(g.GROUPS))
@@ -340,6 +340,44 @@ class GateRuns(unittest.TestCase):
         for m, v in near['measures'].items():  # the same scores as the gate's candidate column
             if v is not None and res['measures'][m]['cand'] is not None:
                 self.assertAlmostEqual(v, res['measures'][m]['cand'], places=6)
+
+    def test_the_objective_calibrates_each_build_on_itself_unless_frozen(self):
+        """the calibration depends on the build that plays it (here: the stream's pressures set so the build
+        reaches one level, as control.calibrated sets the breath): by default each call calibrates on its own
+        build, so a build's score doesn't depend on what was scored before it; frozen streams carry the
+        first build's calibration into the next build's score (the trap)"""
+        g = self.gate
+        items = [it for it, _ in self.items]
+        calls = []
+        cal = control.calibrated
+
+        def levelled(item, render, workdir, **kw):  # the stream, its pressures set by this build's level
+            calls.append(1)
+            p, rep = cal(item, render, workdir, **kw)
+            peak = float(np.max(np.abs(render(p))))
+            with open(p[:-4] + '.notes.json', encoding='utf-8') as f:
+                notes = json.load(f)
+            for n in notes:
+                n['P'] *= 0.2 / peak
+            with open(p[:-4] + '.notes.json', 'w', encoding='utf-8') as f:
+                json.dump(notes, f)
+            return p, rep
+        control.calibrated = levelled
+        try:
+            w = os.path.join(TMP, 'objc')
+            own = g.objective(self.spec(0.9), items, workdir=w)
+            g.objective(self.spec(0.3), items, workdir=w)
+            again = g.objective(self.spec(0.9), items, workdir=w)
+            self.assertEqual(len(calls), 3 * len(items))  # every call calibrated on its own build
+            self.assertEqual(json.dumps(own['measures'], sort_keys=True), json.dumps(again['measures'], sort_keys=True))
+            self.assertEqual([x for x in os.listdir(w) if x.startswith('cal_')], [])  # its calibration deleted
+            streams = {}
+            g.objective(self.spec(0.3), items, workdir=w, streams=streams, streams_frozen=True)
+            frozen = g.objective(self.spec(0.9), items, workdir=w, streams=streams, streams_frozen=True)
+            self.assertEqual(len(calls), 4 * len(items))  # the second build reused the first's calibration
+            self.assertNotEqual(json.dumps(own['measures'], sort_keys=True), json.dumps(frozen['measures'], sort_keys=True))
+        finally:
+            control.calibrated = cal
 
     def test_the_objective_refuses_held_out_recordings(self):
         from awvafit import env, gate_set
