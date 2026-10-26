@@ -96,7 +96,7 @@ build/conformance/awva_conformance path/to/engine.so -r=junit > conformance.xml
 
 - **`--known=TAG,...`:** the component's known failures, reported instead of failed.
 - **`--expect=HASH`:** pin the render hash.
-- **A host's own CMake** can include `component/conformance/conformance.cmake` and call `awva_conformance_tests(<prefix> <library> [KNOWN <tag>...])`, which registers one ctest per check.
+- **A host's own CMake** can call `awva_conformance_tests(<prefix> <library> [KNOWN <tag>...] [LABELS <label>...])` from any of its directories, once awva's `component/` is part of its build or it includes `component/conformance/conformance.cmake`. The call registers one ctest per check, named `<prefix><check>`. `<library>` may be a generator expression such as `$<TARGET_FILE:...>`. The checks are listed when ctest runs, so the library and `awva_conformance` only need to be built by then. A plugin built with `awva_add_component` can check its own component this way, as `component/tests/external` does.
 - **Configured on its own,** `-DAWVA_CONFORMANCE_LIBRARIES=a.so;b.so` does the same.
 
 | check | what it guarantees |

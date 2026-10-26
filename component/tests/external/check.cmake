@@ -3,8 +3,9 @@
 #
 # cmake -DAWVA=<awva> -DOUT=<a build directory> [the parent build's toolchain] -P check.cmake: the
 # outside project configures and builds, its component's generated sources are in its own build
-# directory, and this run wrote nothing at a filesystem root (as an unset path would:
-# /awva_components, D:\awva_...; what an older build left there doesn't count).
+# directory, the conformance checks it registers on its own component library are listed as tests
+# (one per check) and pass, and this run wrote nothing at a filesystem root (as an unset path
+# would: /awva_components, D:\awva_...; what an older build left there doesn't count).
 #
 # The toolchain is the build's that runs the test, so the outside project builds as it does
 # whatever the environment's default compiler is (component/CMakeLists.txt passes them):
@@ -42,7 +43,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B "${
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "the outside project doesn't configure (${cfg}):\n${log}")
 endif()
-set(build --build "${OUT}" --target external_va)
+set(build --build "${OUT}" --target external_va external_va_lib awva_conformance)
 if(BUILD_TYPE)
   list(APPEND build --config "${BUILD_TYPE}")
 endif()
@@ -53,6 +54,23 @@ endif()
 if(NOT EXISTS "${OUT}/awva_components/external_va/component.cpp")
   message(FATAL_ERROR "the component's sources are not in the outside project's build directory")
 endif()
+
+# the conformance checks, registered from this outside project, one ctest per check, and passing
+set(ctest_cfg "")
+if(BUILD_TYPE)
+  set(ctest_cfg -C "${BUILD_TYPE}")
+endif()
+execute_process(COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${OUT}" ${ctest_cfg} -N -L "^external$" RESULT_VARIABLE rc OUTPUT_VARIABLE log ERROR_VARIABLE log)
+string(REGEX MATCHALL "Test +#[0-9]+: external\\.va\\.[^\n]+" checks "${log}")
+list(LENGTH checks n)
+if(NOT rc EQUAL 0 OR n LESS 10 OR log MATCHES "NOT_BUILT")
+  message(FATAL_ERROR "the conformance checks registered from outside aren't listed as tests (${n}):\n${log}")
+endif()
+execute_process(COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${OUT}" ${ctest_cfg} -L "^external$" -j 8 RESULT_VARIABLE rc OUTPUT_VARIABLE log ERROR_VARIABLE log)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "the conformance checks registered from outside fail:\n${log}")
+endif()
+message("awva_conformance_tests from outside: ${n} checks, every one a test, passed")
 
 awva_root_snapshot(after ${roots})
 awva_root_written(written "${before}" "${after}")
