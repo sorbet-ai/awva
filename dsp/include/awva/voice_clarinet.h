@@ -51,8 +51,8 @@
  * Every element is passive or bounded: the jet only draws on the mouth pressure, the bore loop has
  * gain < 1, the register hole is a passive shunt; the reed's excursion is clamped; a per-voice guard
  * resets a voice whose state is non-finite or absurd; the master has a DC blocker and a soft ceiling.
- * Cost: about 32k QEMU instructions per block (10 voices, the default performance); per voice-sample
- * one square root and ~90 FP operations, per block the bore's impedance at the note (a few complex
+ * Cost: about 41k QEMU instructions per block (10 voices, the default performance); per voice-sample
+ * one square root and ~100 FP operations, per block the bore's impedance at the note (a few complex
  * evaluations). Memory: the bore delay lines, 10 KB per voice, as long as 192 kHz needs (LargeMemory,
  * 102.4 KB). Below 44.1 kHz the bass clarinet's reed squeals (engines/clarinet.h min_rate).
  */
