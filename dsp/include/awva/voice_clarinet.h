@@ -220,8 +220,8 @@ struct Engine {
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	Params p;           // as set (preset, live edits)
-	Params ps;          // smoothed copy used by the DSP
+	Params p;         // as set (preset, live edits)
+	Params ps;        // smoothed copy used by the DSP
 	BulkMemory* bulk; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt;
 	real r48;            // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
