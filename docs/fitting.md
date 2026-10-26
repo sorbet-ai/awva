@@ -217,7 +217,15 @@ Measured, on the audition builds' dry output:
 `python -m awvafit gate --inst I --candidate X --baseline Y` decides, before anyone listens, whether a new build is closer to the recordings than the one before it.
 
 - **Builds:** `<engine>:<preset>` (through `awva_render --rec`), or `cmd[label]:<command>` for any other player of key streams. The command gets `{csv}`, `{out}`, `{octave}` and `{transpose}`, and writes the dry output to `{out}`.
-- **Phrases:** the instrument's held-out set (`awvafit/gate_set.json`): 3 ChoraleBricks and 2 URMP legato lines per instrument, picked in SHA-1 order with the listening kits' phrases left out. **No fit may use them.** Each phrase is played through a stream calibrated on that very build (`awvafit.control`), so the comparison is the engine's.
+- **Held out:** a third of each set's performances of the instrument (`awvafit/gate_set.json`, `gate.held_out_tracks()`), the lowest-pitched one among them. URMP files one recording under several pieces, so its tracks are grouped into performances by their level envelope's fingerprint. **No fit may use any phrase of these tracks.**
+- **Phrases:** from those performances, up to 8 ChoraleBricks and 8 URMP legato lines per instrument, a quarter of each from the low register, the rest in SHA-1 order, with the listening kits' phrases left out. Each phrase is played through a stream calibrated on that very build (`awvafit.control`), so the comparison is the engine's.
+- **The range check** (`awvafit.range_check`): every note of the instrument's practical range, soft and loud, as an isolated press. Each must:
+  - speak (periodic, within 25 dB of the median note);
+  - sit on its partial: YIN's pitch, searched a twelfth either side, within ±15 c;
+  - not flip: off its median by more than 50 c for at most 5 % of the sustain, and never 30 ms in a row;
+  - start within 150 ms.
+
+  A candidate with any failing note fails, whatever its phrases say.
 - **Measures** (`awvafit.gate`, the clarinet and double reed lanes' analyses together):
 
 | group | measures |
@@ -231,6 +239,7 @@ Measured, on the audition builds' dry output:
 
 - **Floors:** every measure's floor is the recording's own spread, either between its notes of the same pitch or between the phrase's halves. A measure's score is its distance from the recording in floors. A group's score is the mean of its measures, and the total is the mean of the groups.
 - **Verdicts:**
+  - *fail* first, if the range check fails;
   - *identical*: the two builds are within a floor of each other on every measure, so there is nothing to hear and no kit is made;
   - *pass*: the candidate's total is lower, it is better on most groups, and it is worse on no group by more than a floor;
   - *fail*: anything else.

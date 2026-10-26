@@ -1,245 +1,1249 @@
 {
- "about": "The listening gate's held-out phrases (awvafit.gate.choose_set: legato lines of 6-30 notes, 4-14 s, distinct tracks, in SHA-1 order of their ids; the listening kits' phrases left out). No fit may use them.",
+ "about": "The listening gate's held-out set (awvafit.gate.choose_set). tracks: a third of each set's performances of the instrument (URMP's duplicate files of one performance grouped by level-envelope fingerprint), the lowest-pitched among them; no fit may use any phrase of them (gate.held_out_tracks()). phrases: from those, legato lines of 6-30 notes, 4-14 s, up to 8 from ChoraleBricks and 8 from URMP, a quarter of each from the low register, the rest in SHA-1 order of their ids; the listening kits' phrases left out.",
  "instruments": {
-  "trumpet": [
-   {
-    "set": "choralebricks",
-    "id": "Gesius_BefiehlDuDeineWege__02_tp__p04"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Bach_IchStehAnDeinerKrippe__01_tp__p02"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Anonymous_AusMeinesHerzensGrunde__02_tp__p01"
-   },
-   {
-    "set": "urmp",
-    "id": "42_Arioso_tpt_tpt_hn_tbn_tba__1_tpt_42_Arioso__p36"
-   },
-   {
-    "set": "urmp",
-    "id": "20_Pavane_tpt_vn_vc__1_tpt_20_Pavane__p08"
-   }
-  ],
-  "flugelhorn": [
-   {
-    "set": "choralebricks",
-    "id": "Crueger_AufAufMeinHerzMitFreuden__02_fh__p08"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Crueger_AufAufMeinHerzMitFreuden__01_fh__p03"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Bach_IchStehAnDeinerKrippe__02_fh__p01"
-   }
-  ],
-  "trombone": [
-   {
-    "set": "choralebricks",
-    "id": "Drese_JesuGehVoran__04_tb__p02"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Bach_IchStehAnDeinerKrippe__04_tb__p06"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Gesius_BefiehlDuDeineWege__03_tb__p02"
-   },
-   {
-    "set": "urmp",
-    "id": "43_Chorale_tpt_tpt_hn_tbn_tba__4_tbn_43_Chorale__p03"
-   },
-   {
-    "set": "urmp",
-    "id": "22_Rejouissance_sax_tbn_tba__2_tbn_22_Rejouissance__p09"
-   }
-  ],
-  "horn": [
-   {
-    "set": "choralebricks",
-    "id": "Gesius_BefiehlDuDeineWege__03_fho__p07"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Gesius_BefiehlDuDeineWege__02_fho__p07"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Gesius_DuFriedensfuerstHerrJesuChrist__02_fho__p02"
-   },
-   {
-    "set": "urmp",
-    "id": "31_Slavonic_tpt_tpt_hn_tbn__3_hn_31_Slavonic__p18"
-   },
-   {
-    "set": "urmp",
-    "id": "33_Elise_tpt_tpt_hn_tbn__3_hn_33_Elise__p04"
-   }
-  ],
-  "tuba": [
-   {
-    "set": "choralebricks",
-    "id": "Telemann_DerLiebenSonneLichtUndPracht__04_tba__p08"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Gesius_BefiehlDuDeineWege__04_tba__p05"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Crueger_AufAufMeinHerzMitFreuden__04_tba__p08"
-   },
-   {
-    "set": "urmp",
-    "id": "42_Arioso_tpt_tpt_hn_tbn_tba__5_tba_42_Arioso__p33"
-   },
-   {
-    "set": "urmp",
-    "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p06"
-   }
-  ],
-  "sax": [
-   {
-    "set": "choralebricks",
-    "id": "Bach_IchStehAnDeinerKrippe__01_as__p05"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Jan_DuGrosserSchmerzensmann__01_as__p07"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Vulpius_ChristusDerIstMeinLeben__01_as__p02"
-   },
-   {
-    "set": "urmp",
-    "id": "39_Jerusalem_vn_vn_va_sax_db__4_sax_39_Jerusalem__p11"
-   },
-   {
-    "set": "urmp",
-    "id": "23_Rejouissance_cl_sax_tba__2_sax_23_Rejouissance__p12"
-   }
-  ],
-  "clarinet": [
-   {
-    "set": "choralebricks",
-    "id": "Crueger_AufAufMeinHerzMitFreuden__01_cl__p03"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Jan_DuGrosserSchmerzensmann__02_cl__p04"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Anonymous_AusMeinesHerzensGrunde__01_cl__p02"
-   },
-   {
-    "set": "urmp",
-    "id": "37_Rondeau_fl_vn_va_cl__4_cl_37_Rondeau__p02"
-   },
-   {
-    "set": "urmp",
-    "id": "19_Pavane_cl_vn_vc__1_cl_19_Pavane__p03"
-   }
-  ],
-  "oboe": [
-   {
-    "set": "choralebricks",
-    "id": "Anonymous_AusMeinesHerzensGrunde__01_ob__p06"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Telemann_DerLiebenSonneLichtUndPracht__01_ob__p03"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Vulpius_DieHelleSonnLeuchtJetztHerfuer__01_ob__p01"
-   },
-   {
-    "set": "urmp",
-    "id": "30_Fugue_fl_fl_ob_sax__3_ob_30_Fugue__p05"
-   },
-   {
-    "set": "urmp",
-    "id": "11_Maria_ob_vc__1_ob_11_Maria__p05"
-   }
-  ],
-  "flute": [
-   {
-    "set": "choralebricks",
-    "id": "Bach_IchStehAnDeinerKrippe__01_fl__p01"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Anonymous_AusMeinesHerzensGrunde__01_fl__p02"
-   },
-   {
-    "set": "choralebricks",
-    "id": "Crueger_AufAufMeinHerzMitFreuden__01_fl__p08"
-   },
-   {
-    "set": "urmp",
-    "id": "17_Nocturne_vn_fl_cl__2_fl_17_Nocturne__p03"
-   },
-   {
-    "set": "urmp",
-    "id": "37_Rondeau_fl_vn_va_cl__1_fl_37_Rondeau__p11"
-   }
-  ],
-  "bassoon": [
-   {
-    "set": "urmp",
-    "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p04"
-   },
-   {
-    "set": "urmp",
-    "id": "41_Miserere_fl_fl_ob_sax_bn__5_bn_41_Miserere__p03"
-   }
-  ],
-  "violin": [
-   {
-    "set": "urmp",
-    "id": "09_Jesus_tpt_vn__2_vn_09_Jesus__p07"
-   },
-   {
-    "set": "urmp",
-    "id": "32_Fugue_vn_vn_va_vc__1_vn_32_Fugue__p02"
-   }
-  ],
-  "viola": [
-   {
-    "set": "urmp",
-    "id": "44_K515_vn_vn_va_va_vc__3_va_44_K515__p16"
-   },
-   {
-    "set": "urmp",
-    "id": "44_K515_vn_vn_va_va_vc__4_va_44_K515__p10"
-   }
-  ],
-  "cello": [
-   {
-    "set": "urmp",
-    "id": "38_Jerusalem_vn_vn_va_vc_db__4_vc_38_Jerusalem__p02"
-   },
-   {
-    "set": "urmp",
-    "id": "26_King_vn_vn_va_vc__4_vc_26_King__p25"
-   }
-  ],
-  "bass": [
-   {
-    "set": "urmp",
-    "id": "39_Jerusalem_vn_vn_va_sax_db__5_db_39_Jerusalem__p04"
-   },
-   {
-    "set": "urmp",
-    "id": "38_Jerusalem_vn_vn_va_vc_db__5_db_38_Jerusalem__p03"
-   }
-  ]
+  "trumpet": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_tp__p02",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__02_tp__p04",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_BefiehlDuDeineWege__02_tp__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__01_tp__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Jan_DuGrosserSchmerzensmann__01_tp__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_BefiehlDuDeineWege__02_tp__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Jan_DuGrosserSchmerzensmann__02_tp__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__02_tp__p03",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "09_Jesus_tpt_vn__1_tpt_09_Jesus__p16",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "18_Nocturne_vn_fl_tpt__3_tpt_18_Nocturne__p10",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "05_Entertainer_tpt_tpt__1_tpt_05_Entertainer__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "09_Jesus_tpt_vn__1_tpt_09_Jesus__p12",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__2_tpt_43_Chorale__p06",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "34_Fugue_tpt_tpt_hn_tbn__1_tpt_34_Fugue__p09",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "34_Fugue_tpt_tpt_hn_tbn__1_tpt_34_Fugue__p19",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "33_Elise_tpt_tpt_hn_tbn__1_tpt_33_Elise__p09",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/01_tp.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/02_tp.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Gesius_BefiehlDuDeineWege/tracks/02_tp.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Jan_DuGrosserSchmerzensmann/tracks/01_tp.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Jan_DuGrosserSchmerzensmann/tracks/02_tp.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_ChristusDerIstMeinLeben/tracks/02_tp.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/05_Entertainer_tpt_tpt/AuSep_1_tpt_05_Entertainer.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/09_Jesus_tpt_vn/AuSep_1_tpt_09_Jesus.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/18_Nocturne_vn_fl_tpt/AuSep_3_tpt_18_Nocturne.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/33_Elise_tpt_tpt_hn_tbn/AuSep_1_tpt_33_Elise.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/34_Fugue_tpt_tpt_hn_tbn/AuSep_1_tpt_34_Fugue.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/43_Chorale_tpt_tpt_hn_tbn_tba/AuSep_2_tpt_43_Chorale.wav"
+    }
+   ]
+  },
+  "flugelhorn": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__02_fh__p05",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__02_fh__p04",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__02_fh__p08",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Jan_DuGrosserSchmerzensmann__02_fh__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Jan_DuGrosserSchmerzensmann__02_fh__p08",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__01_fh__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__02_fh__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Anonymous_AusMeinesHerzensGrunde__02_fh__p05",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Anonymous_AusMeinesHerzensGrunde/tracks/02_fh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Crueger_AufAufMeinHerzMitFreuden/tracks/02_fh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Gesius_DuFriedensfuerstHerrJesuChrist/tracks/01_fh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Jan_DuGrosserSchmerzensmann/tracks/02_fh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Telemann_DerLiebenSonneLichtUndPracht/tracks/02_fh.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_ChristusDerIstMeinLeben/tracks/02_fh.wav"
+    }
+   ]
+  },
+  "trombone": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__04_tb__p06",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__04_tb__p04",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Drese_JesuGehVoran__04_tb__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__04_tb__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__04_tb__p11",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Drese_JesuGehVoran__04_tb__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__04_tb__p02",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "07_GString_tpt_tbn__2_tbn_07_GString__p12",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "07_GString_tpt_tbn__2_tbn_07_GString__p40",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "22_Rejouissance_sax_tbn_tba__2_tbn_22_Rejouissance__p09",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "07_GString_tpt_tbn__2_tbn_07_GString__p10",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "07_GString_tpt_tbn__2_tbn_07_GString__p39",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "21_Rejouissance_cl_tbn_tba__2_tbn_21_Rejouissance__p12",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "21_Rejouissance_cl_tbn_tba__2_tbn_21_Rejouissance__p11",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "22_Rejouissance_sax_tbn_tba__2_tbn_22_Rejouissance__p14",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/04_tb.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Drese_JesuGehVoran/tracks/04_tb.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_ChristusDerIstMeinLeben/tracks/04_tb.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/07_GString_tpt_tbn/AuSep_2_tbn_07_GString.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/21_Rejouissance_cl_tbn_tba/AuSep_2_tbn_21_Rejouissance.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/22_Rejouissance_sax_tbn_tba/AuSep_2_tbn_22_Rejouissance.wav"
+    }
+   ]
+  },
+  "horn": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__03_fho__p06",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__03_fho__p06",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__02_fho__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__03_fho__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__03_fho__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_DuFriedensfuerstHerrJesuChrist__02_fho__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__02_fho__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__02_fho__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "34_Fugue_tpt_tpt_hn_tbn__3_hn_34_Fugue__p13",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "34_Fugue_tpt_tpt_hn_tbn__3_hn_34_Fugue__p25",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "31_Slavonic_tpt_tpt_hn_tbn__3_hn_31_Slavonic__p18",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "34_Fugue_tpt_tpt_hn_tbn__3_hn_34_Fugue__p27",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "34_Fugue_tpt_tpt_hn_tbn__3_hn_34_Fugue__p20",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "31_Slavonic_tpt_tpt_hn_tbn__3_hn_31_Slavonic__p02",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "31_Slavonic_tpt_tpt_hn_tbn__3_hn_31_Slavonic__p17",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "31_Slavonic_tpt_tpt_hn_tbn__3_hn_31_Slavonic__p01",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/03_fho.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Gesius_DuFriedensfuerstHerrJesuChrist/tracks/02_fho.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Gesius_DuFriedensfuerstHerrJesuChrist/tracks/03_fho.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Telemann_DerLiebenSonneLichtUndPracht/tracks/02_fho.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/31_Slavonic_tpt_tpt_hn_tbn/AuSep_3_hn_31_Slavonic.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/34_Fugue_tpt_tpt_hn_tbn/AuSep_3_hn_34_Fugue.wav"
+    }
+   ]
+  },
+  "tuba": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__04_tba__p02",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__04_tba__p04",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__04_tba__p08",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__04_tba__p07",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__04_tba__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__04_tba__p08",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Drese_JesuGehVoran__04_tba__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Drese_JesuGehVoran__04_tba__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p01",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p02",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p06",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p03",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p05",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p08",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "43_Chorale_tpt_tpt_hn_tbn_tba__5_tba_43_Chorale__p07",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/04_tba.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Drese_JesuGehVoran/tracks/04_tba.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Telemann_DerLiebenSonneLichtUndPracht/tracks/04_tba.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/43_Chorale_tpt_tpt_hn_tbn_tba/AuSep_5_tba_43_Chorale.wav"
+    }
+   ]
+  },
+  "sax": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_as__p02",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_as__p04",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__01_as__p05",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Jan_DuGrosserSchmerzensmann__01_as__p07",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__02_as__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Jan_DuGrosserSchmerzensmann__01_as__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__02_as__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Telemann_DerLiebenSonneLichtUndPracht__02_as__p08",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "06_Entertainer_sax_sax__1_sax_06_Entertainer__p14",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "06_Entertainer_sax_sax__1_sax_06_Entertainer__p09",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "39_Jerusalem_vn_vn_va_sax_db__4_sax_39_Jerusalem__p11",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "10_March_tpt_sax__2_sax_10_March__p05",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "39_Jerusalem_vn_vn_va_sax_db__4_sax_39_Jerusalem__p10",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "10_March_tpt_sax__2_sax_10_March__p12",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "41_Miserere_fl_fl_ob_sax_bn__4_sax_41_Miserere__p01",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/01_as.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/02_as.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Jan_DuGrosserSchmerzensmann/tracks/01_as.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Telemann_DerLiebenSonneLichtUndPracht/tracks/02_as.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_ChristusDerIstMeinLeben/tracks/02_as.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/06_Entertainer_sax_sax/AuSep_1_sax_06_Entertainer.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/10_March_tpt_sax/AuSep_2_sax_10_March.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/39_Jerusalem_vn_vn_va_sax_db/AuSep_4_sax_39_Jerusalem.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/41_Miserere_fl_fl_ob_sax_bn/AuSep_4_sax_41_Miserere.wav"
+    }
+   ]
+  },
+  "clarinet": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_cl__p03",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__02_cl__p05",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Anonymous_AusMeinesHerzensGrunde__01_cl__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_DieHelleSonnLeuchtJetztHerfuer__02_cl__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__02_cl__p06",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Anonymous_AusMeinesHerzensGrunde__01_cl__p06",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Bach_IchStehAnDeinerKrippe__02_cl__p06",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__02_cl__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "37_Rondeau_fl_vn_va_cl__4_cl_37_Rondeau__p15",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "37_Rondeau_fl_vn_va_cl__4_cl_37_Rondeau__p07",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "37_Rondeau_fl_vn_va_cl__4_cl_37_Rondeau__p02",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "23_Rejouissance_cl_sax_tba__1_cl_23_Rejouissance__p05",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "21_Rejouissance_cl_tbn_tba__1_cl_21_Rejouissance__p01",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__3_cl_28_Fugue__p01",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__3_cl_28_Fugue__p07",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__3_cl_28_Fugue__p05",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Anonymous_AusMeinesHerzensGrunde/tracks/01_cl.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Bach_IchStehAnDeinerKrippe/tracks/02_cl.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Crueger_AufAufMeinHerzMitFreuden/tracks/02_cl.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_ChristusDerIstMeinLeben/tracks/02_cl.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_DieHelleSonnLeuchtJetztHerfuer/tracks/02_cl.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/21_Rejouissance_cl_tbn_tba/AuSep_1_cl_21_Rejouissance.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/23_Rejouissance_cl_sax_tba/AuSep_1_cl_23_Rejouissance.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/28_Fugue_fl_ob_cl_bn/AuSep_3_cl_28_Fugue.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/37_Rondeau_fl_vn_va_cl/AuSep_4_cl_37_Rondeau.wav"
+    }
+   ]
+  },
+  "oboe": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__01_ob__p05",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__01_ob__p06",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Anonymous_AusMeinesHerzensGrunde__01_ob__p06",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Anonymous_AusMeinesHerzensGrunde__01_ob__p02",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Anonymous_AusMeinesHerzensGrunde__01_ob__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_BefiehlDuDeineWege__01_ob__p07",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__01_ob__p03",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Gesius_BefiehlDuDeineWege__01_ob__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__2_ob_28_Fugue__p06",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__2_ob_28_Fugue__p07",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__2_ob_28_Fugue__p11",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__2_ob_28_Fugue__p10",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__2_ob_28_Fugue__p05",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Anonymous_AusMeinesHerzensGrunde/tracks/01_ob.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Crueger_AufAufMeinHerzMitFreuden/tracks/01_ob.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Gesius_BefiehlDuDeineWege/tracks/01_ob.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/28_Fugue_fl_ob_cl_bn/AuSep_2_ob_28_Fugue.wav"
+    }
+   ]
+  },
+  "flute": {
+   "phrases": [
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__01_fl__p05",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__01_fl__p06",
+     "low": true
+    },
+    {
+     "set": "choralebricks",
+     "id": "Crueger_AufAufMeinHerzMitFreuden__01_fl__p08",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__01_fl__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_DieHelleSonnLeuchtJetztHerfuer__01_fl__p04",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__01_fl__p01",
+     "low": false
+    },
+    {
+     "set": "choralebricks",
+     "id": "Vulpius_ChristusDerIstMeinLeben__01_fl__p03",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "03_Dance_fl_cl__1_fl_03_Dance__p37",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "04_Allegro_fl_fl__2_fl_04_Allegro__p46",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "30_Fugue_fl_fl_ob_sax__1_fl_30_Fugue__p07",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "29_Fugue_fl_fl_ob_cl__1_fl_29_Fugue__p01",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "14_Waltz_fl_fl_cl__1_fl_14_Waltz__p02",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "14_Waltz_fl_fl_cl__1_fl_14_Waltz__p07",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "04_Allegro_fl_fl__2_fl_04_Allegro__p27",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Crueger_AufAufMeinHerzMitFreuden/tracks/01_fl.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_ChristusDerIstMeinLeben/tracks/01_fl.wav"
+    },
+    {
+     "set": "choralebricks",
+     "track": "01_AudioAndAnnotations/Vulpius_DieHelleSonnLeuchtJetztHerfuer/tracks/01_fl.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/03_Dance_fl_cl/AuSep_1_fl_03_Dance.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/04_Allegro_fl_fl/AuSep_2_fl_04_Allegro.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/14_Waltz_fl_fl_cl/AuSep_1_fl_14_Waltz.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/29_Fugue_fl_fl_ob_cl/AuSep_1_fl_29_Fugue.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/30_Fugue_fl_fl_ob_sax/AuSep_1_fl_30_Fugue.wav"
+    }
+   ]
+  },
+  "bassoon": {
+   "phrases": [
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p05",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p09",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p02",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p01",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p13",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p06",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "28_Fugue_fl_ob_cl_bn__4_bn_28_Fugue__p10",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "urmp",
+     "track": "Dataset/28_Fugue_fl_ob_cl_bn/AuSep_4_bn_28_Fugue.wav"
+    }
+   ]
+  },
+  "violin": {
+   "phrases": [
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__2_vn_44_K515__p02",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__2_vn_44_K515__p04",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "09_Jesus_tpt_vn__2_vn_09_Jesus__p07",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "09_Jesus_tpt_vn__2_vn_09_Jesus__p17",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "08_Spring_fl_vn__2_vn_08_Spring__p02",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "19_Pavane_cl_vn_vc__2_vn_19_Pavane__p36",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__1_vn_44_K515__p01",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__1_vn_44_K515__p15",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "urmp",
+     "track": "Dataset/08_Spring_fl_vn/AuSep_2_vn_08_Spring.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/09_Jesus_tpt_vn/AuSep_2_vn_09_Jesus.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/19_Pavane_cl_vn_vc/AuSep_2_vn_19_Pavane.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/20_Pavane_tpt_vn_vc/AuSep_2_vn_20_Pavane.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/44_K515_vn_vn_va_va_vc/AuSep_1_vn_44_K515.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/44_K515_vn_vn_va_va_vc/AuSep_2_vn_44_K515.wav"
+    }
+   ]
+  },
+  "viola": {
+   "phrases": [
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__4_va_44_K515__p23",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__4_va_44_K515__p27",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__3_va_44_K515__p16",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__3_va_44_K515__p38",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__4_va_44_K515__p10",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__3_va_44_K515__p15",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "26_King_vn_vn_va_vc__3_va_26_King__p03",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "26_King_vn_vn_va_vc__3_va_26_King__p04",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "urmp",
+     "track": "Dataset/26_King_vn_vn_va_vc/AuSep_3_va_26_King.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/27_King_vn_vn_va_sax/AuSep_3_va_27_King.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/44_K515_vn_vn_va_va_vc/AuSep_3_va_44_K515.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/44_K515_vn_vn_va_va_vc/AuSep_4_va_44_K515.wav"
+    }
+   ]
+  },
+  "cello": {
+   "phrases": [
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__5_vc_44_K515__p18",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__5_vc_44_K515__p09",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "44_K515_vn_vn_va_va_vc__5_vc_44_K515__p07",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "12_Spring_vn_vn_vc__3_vc_12_Spring__p09",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "12_Spring_vn_vn_vc__3_vc_12_Spring__p03",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "12_Spring_vn_vn_vc__3_vc_12_Spring__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "36_Rondeau_vn_vn_va_vc__4_vc_36_Rondeau__p01",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "urmp",
+     "track": "Dataset/12_Spring_vn_vn_vc/AuSep_3_vc_12_Spring.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/36_Rondeau_vn_vn_va_vc/AuSep_4_vc_36_Rondeau.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/44_K515_vn_vn_va_va_vc/AuSep_5_vc_44_K515.wav"
+    }
+   ]
+  },
+  "bass": {
+   "phrases": [
+    {
+     "set": "urmp",
+     "id": "38_Jerusalem_vn_vn_va_vc_db__5_db_38_Jerusalem__p01",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "38_Jerusalem_vn_vn_va_vc_db__5_db_38_Jerusalem__p04",
+     "low": true
+    },
+    {
+     "set": "urmp",
+     "id": "39_Jerusalem_vn_vn_va_sax_db__5_db_39_Jerusalem__p04",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "39_Jerusalem_vn_vn_va_sax_db__5_db_39_Jerusalem__p08",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "38_Jerusalem_vn_vn_va_vc_db__5_db_38_Jerusalem__p03",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "38_Jerusalem_vn_vn_va_vc_db__5_db_38_Jerusalem__p08",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "39_Jerusalem_vn_vn_va_sax_db__5_db_39_Jerusalem__p01",
+     "low": false
+    },
+    {
+     "set": "urmp",
+     "id": "39_Jerusalem_vn_vn_va_sax_db__5_db_39_Jerusalem__p03",
+     "low": false
+    }
+   ],
+   "tracks": [
+    {
+     "set": "urmp",
+     "track": "Dataset/38_Jerusalem_vn_vn_va_vc_db/AuSep_5_db_38_Jerusalem.wav"
+    },
+    {
+     "set": "urmp",
+     "track": "Dataset/39_Jerusalem_vn_vn_va_sax_db/AuSep_5_db_39_Jerusalem.wav"
+    }
+   ]
+  }
  }
 }

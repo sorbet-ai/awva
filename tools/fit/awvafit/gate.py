@@ -11,9 +11,11 @@ X and Y say how to render a key stream:
                           write the dry output: mono float32, 48 kHz, time 0 = the stream's first row),
                           {octave} and {transpose}; a label may lead it: cmd[label]:<command>
 
-The phrases: the instrument's held-out set (gate_set.json: legato lines from ChoraleBricks and URMP that
-no fit may use), each played through a stream calibrated on that build (awvafit.control: pressure,
-legato, strikes and ramps, per engine), so the comparison is the engine's, not the inference's.
+The phrases: the instrument's held-out set (gate_set.json: a third of its performances in ChoraleBricks
+and URMP, whole, the lowest-pitched among them; no fit may use any phrase of them: held_out_tracks()),
+up to 16 legato lines from them, a quarter low-register, each played through a stream calibrated on that
+build (awvafit.control: pressure, legato, strikes and ramps, per engine), so the comparison is the
+engine's, not the inference's.
 
 The measures, per phrase, against the recording (R), on R's notes and their render counterparts:
   dynamics   level: each note's sustain level re the phrase median, |render - R| (median over notes);
@@ -34,6 +36,10 @@ between the phrase's two halves), so a difference under it is not a difference. 
 its distance from R in floors (the median over the phrases); a group's is its measures' mean; the total
 is the groups' mean.
 
+The range check (awvafit.range_check): every note of the instrument's range, soft and loud, must speak,
+sit on its partial within 15 cents, not flip and start within 150 ms; a candidate with a failing note
+fails, whatever its phrases say.
+
 The verdict:
   identical  candidate and baseline within a floor of each other on every measure: nothing to hear
   pass       the candidate's total is lower, it is better on most groups, and no group is worse by
@@ -49,12 +55,13 @@ import math
 import os
 import subprocess
 import threading
+import types
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from scipy.signal import butter, hilbert, resample_poly, sosfilt, sosfiltfilt
 
-from . import control, env, strike
+from . import control, env, labels, range_check, sources, strike
 
 SR = 48000
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -85,11 +92,54 @@ INSTRUMENTS = {
 
 # --- the held-out set ------------------------------------------------------------------------------
 
-def choose_set(inst, n_cb=3, n_urmp=2, exclude=()):
-    """the held-out phrases of an instrument: legato lines of 6-30 notes, 4-14 s, from distinct tracks,
-    in the order of the SHA-1 of their ids (fixed, not chosen by hand)"""
+def _fingerprint(it, seconds=20.0):
+    """a track's level envelope (50 ms, dB) over its first `seconds` of sound"""
+    from scipy.signal import resample_poly
+
+    from .audio import read
+    x, sr = read(sources.path(it.source, it.ref_path), np.float64)
+    if x.ndim > 1:
+        x = x.mean(1)
+    h = int(0.05 * sr)
+    n = len(x) // h
+    e = 10 * np.log10(np.mean(x[:n * h].reshape(n, h) ** 2, 1) + 1e-12)
+    k = int(np.argmax(e > e.max() - 40))
+    return e[k:k + int(seconds / 0.05)]
+
+
+def performances(items):
+    """{ref_path: performance key}: tracks whose first 20 s of level envelope correlate above 0.98 are one
+    performance (URMP files one recording under several pieces)"""
+    paths = sorted({it.ref_path for it in items})
+    first = {}
+    for it in items:
+        first.setdefault(it.ref_path, it)
+    fp = {p: _fingerprint(first[p]) for p in paths}
+    key = {}
+    for p in paths:
+        for q in sorted(set(key.values())):
+            a, b = fp[p], fp[q]
+            n = min(len(a), len(b))
+            if n > 100 and np.corrcoef(a[:n], b[:n])[0, 1] > 0.98:
+                key[p] = q
+                break
+        else:
+            key[p] = p
+    return key
+
+
+HELD_FRACTION = 1 / 3  # of each set's performances of an instrument, held out for the gate
+
+
+def choose_set(inst, n_cb=8, n_urmp=8, exclude=(), per_track=2):
+    """the held-out phrases of an instrument: a third of each set's performances (URMP's duplicate files
+    grouped by fingerprint) are held out whole, the lowest-pitched among them; from those, legato lines of
+    6-30 notes, 4-14 s, spread over the performances, a quarter of each set's share from its low register
+    (the lines with the lowest median note), the rest in the order of the SHA-1 of their ids (fixed, not
+    chosen by hand). -> (phrases, the held-out tracks: every file of every performance
+    a phrase comes from; no fit may use any phrase of them)"""
     from .phraseset import load
-    out = []
+    out, held = [], set()
     for set_name, name, k in (('choralebricks', INSTRUMENTS[inst][0], n_cb), ('urmp', INSTRUMENTS[inst][1], n_urmp)):
         if not name or not k:
             continue
@@ -104,22 +154,50 @@ def choose_set(inst, n_cb=3, n_urmp=2, exclude=()):
             dur = it.notes[-1]['offset_s'] - it.notes[0]['onset_s'] if it.notes[-1].get('offset_s') else 0
             if 6 <= len(it.notes) <= 30 and 4 <= dur <= 14:
                 cand.append(it)
-        cand.sort(key=lambda i: hashlib.sha1(i.id.encode()).hexdigest())
-        tracks = set()
-        for it in cand:
-            tr = it.id.split('__p')[0]
-            if tr in tracks:
-                continue
-            tracks.add(tr)
-            out.append(dict(set=set_name, id=it.id))
-            if sum(1 for o in out if o['set'] == set_name) >= k:
+        allof = [it for it in items if it.instrument == name]
+        perf = performances(allof) if set_name == 'urmp' else {it.ref_path: it.ref_path for it in allof}
+        low = sorted(cand, key=lambda i: (float(np.median([n['midi'] for n in i.notes])), i.id))
+        sha = sorted(cand, key=lambda i: hashlib.sha1(i.id.encode()).hexdigest())
+        # the held-out performances first: a third of the set's (at least one), the lowest-pitched
+        # performance among them, the rest in SHA-1 order; then the phrases from those only
+        perfs = sorted(set(perf.values()))
+        n_perf = max(1, round(len(perfs) * HELD_FRACTION))
+        with_cand = {perf[it.ref_path] for it in cand}
+        by_low = [perf[it.ref_path] for it in low]
+        chosen = [by_low[0]] if by_low else []
+        for q in sorted(with_cand, key=lambda q: hashlib.sha1(q.encode()).hexdigest()):
+            if len(chosen) >= n_perf:
                 break
-    return out
+            if q not in chosen:
+                chosen.append(q)
+        cap = max(per_track, math.ceil(k / max(len(chosen), 1)))
+        n_low = max(1, round(k / 4))
+        tracks, mine = {}, []
+        for pool, quota in ((low, n_low), (sha, k)):
+            for it in pool:
+                if len(mine) >= quota:
+                    break
+                tr = perf[it.ref_path]
+                if tr not in chosen or tracks.get(tr, 0) >= cap or any(m['id'] == it.id for m in mine):
+                    continue
+                tracks[tr] = tracks.get(tr, 0) + 1
+                mine.append(dict(set=set_name, id=it.id, low=pool is low))
+        out += mine
+        keys_ = set(tracks)
+        held |= {(set_name, p) for p, k in perf.items() if k in keys_}
+    return out, [dict(set=s_, track=p) for s_, p in sorted(held)]
 
 
 def held_out(inst):
     with open(GATE_SET, encoding='utf-8') as f:
-        return json.load(f)['instruments'][inst]
+        return json.load(f)['instruments'][inst]['phrases']
+
+
+def held_out_tracks(inst=None):
+    """the recordings no fit may use (any phrase of them): [(set, track)], of one instrument or all"""
+    with open(GATE_SET, encoding='utf-8') as f:
+        ins = json.load(f)['instruments']
+    return sorted({(t['set'], t['track']) for k, v in ins.items() if inst in (None, k) for t in v['tracks']})
 
 
 def items_for(inst):
@@ -424,7 +502,16 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
         fl = floors(rec, rn)
         C, B = feats[2 * k], feats[2 * k + 1]
         per_item.append(dict(id=it.id, floor=fl, cand=distance(R, C), base=distance(R, B), between=distance(C, B)))
-    return verdict(inst, candidate, baseline, per_item)
+    ranges = None
+    if inst in range_check.RANGES:
+        def rng(bi):
+            _, factory = builds[bi]
+            return range_check.check(lambda o: factory(types.SimpleNamespace(transpose=12.0 * o)), inst,
+                                     os.path.join(workdir, inst, f'b{bi}', 'range'))
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            ranges = list(ex.map(rng, (0, 1)))
+        log(f"  {inst} range: candidate {len(ranges[0]['failures'])} failing notes, baseline {len(ranges[1]['failures'])}")
+    return verdict(inst, candidate, baseline, per_item, ranges)
 
 
 def _med(v):
@@ -432,7 +519,7 @@ def _med(v):
     return float(np.median(v)) if v else None
 
 
-def verdict(inst, candidate, baseline, per_item):
+def verdict(inst, candidate, baseline, per_item, ranges=None):
     measures = [m for g in GROUPS.values() for m in g]
     z = {}
     for m in measures:
@@ -452,7 +539,10 @@ def verdict(inst, candidate, baseline, per_item):
     better = [g for g in ok if groups[g]['cand'] < groups[g]['base']]
     worse = [g for g in ok if groups[g]['cand'] - groups[g]['base'] > 1.0]
     identical = all(v['between'] is None or v['between'] < 1.0 for v in z.values())
-    if identical:
+    range_fail = bool(ranges and ranges[0]['failures'])
+    if range_fail:
+        v = 'fail'  # a note that doesn't speak, sits on the wrong partial or flips fails whatever else
+    elif identical:
         v = 'identical'
     elif tc < tb and len(better) > len(ok) / 2 and not worse:
         v = 'pass'
@@ -460,6 +550,8 @@ def verdict(inst, candidate, baseline, per_item):
         v = 'fail'
     return dict(instrument=inst, candidate=candidate, baseline=baseline, verdict=v, total=dict(cand=tc, base=tb),
                 better_groups=better, worse_groups=worse, groups=groups, measures=z,
+                range=dict(candidate=ranges[0]['failures'], baseline=ranges[1]['failures'],
+                           notes=dict(candidate=ranges[0]['notes'], baseline=ranges[1]['notes'])) if ranges else None,
                 phrases=[p['id'] for p in per_item], per_phrase=per_item)
 
 
@@ -476,6 +568,12 @@ def table(res):
             lines.append(f"| | {m} | {f(v['cand'])} | {f(v['base'])} | {f(v['between'])} | {f(v['floor'])} |")
     lines.append(f"| **total** | | **{f(res['total']['cand'])}** | **{f(res['total']['base'])}** | | |")
     lines += ['', f"better on: {', '.join(res['better_groups']) or 'none'}; worse by more than a floor on: {', '.join(res['worse_groups']) or 'none'}"]
+    if res.get('range'):
+        nm = lambda m: labels.name(m)  # noqa: E731
+        for who in ('candidate', 'baseline'):
+            fl = res['range'][who]
+            lines.append(f"range check, {who}: " + ('every note passes' if not fl else
+                         f"{len(fl)} failing: " + '; '.join(f"{nm(f['midi'])} {f['dyn']}: {', '.join(f['why'])}" for f in fl)))
     return '\n'.join(lines)
 
 

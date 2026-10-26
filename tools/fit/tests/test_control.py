@@ -267,6 +267,40 @@ class GateRuns(unittest.TestCase):
         r(os.path.join(TMP, 'a', 'calibrated.csv'))
         r(os.path.join(TMP, 'b', 'calibrated.csv'))
         self.assertEqual(len(set(seen)), 2)
+class Range(unittest.TestCase):
+    def test_yin_tells_the_partial(self):
+        from awvafit import range_check as RC
+        t = np.arange(SR) / SR
+        for f, want in ((110.0, 0.0), (220.0, 1200.0), (165.0, 702.0)):
+            x = sum(np.sin(2 * np.pi * f * k * t) / k for k in range(1, 8))
+            tr = RC.yin(x, 110 / 3.2, 110 * 3.2)
+            self.assertAlmostEqual(float(np.median(1200 * np.log2(tr[:, 0] / 110))), want, delta=3)
+
+    def test_a_wrong_partial_and_a_flip_fail(self):
+        from awvafit import range_check as RC
+        bad = {45: 2.0, 47: 'flip'}  # 45 sounds an octave up; 47 jumps up an octave in the middle
+
+        def render_for(o):
+            def render(csv):
+                rows = strike.read_csv(csv)[1]
+                x = np.zeros(int((rows[-1][0] + 1.0) * SR))
+                for d in RC._stream(os.path.join(TMP, 'plan.csv'), [(m, lay) for m, lay in RC.plan('trombone')[o]]):
+                    a, b = int(d['t_on'] * SR), int(d['t_off'] * SR)
+                    t = np.arange(b - a) / SR
+                    f = 440 * 2 ** ((d['midi'] - 69) / 12)
+                    k = bad.get(d['midi'])
+                    if k == 'flip':
+                        ff = np.where(t < 0.6, f, 2 * f)
+                        ph = 2 * np.pi * np.cumsum(ff) / SR
+                    else:
+                        ph = 2 * np.pi * f * (k or 1.0) * t
+                    x[a:b] = 0.2 * sum(np.sin(j * ph) / j for j in range(1, 6))
+                return x
+            return render
+
+        res = RC.check(render_for, 'trombone', os.path.join(TMP, 'rng'))
+        failing = {f['midi'] for f in res['failures']}
+        self.assertEqual(failing, {45, 47})
 
 
 class Bursts(unittest.TestCase):
