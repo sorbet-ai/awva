@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "wurli",
   "heroes": ["wurli", "hard", "decay", "drive", "grit", "tone", "wobble", "dyn"],
   "params": {
@@ -28,6 +28,7 @@
     "tone": 6500,
     "bodyhz": 1100,
     "body": 0.7,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }

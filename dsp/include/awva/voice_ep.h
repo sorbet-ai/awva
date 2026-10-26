@@ -34,6 +34,10 @@
  *   tilt (but_y)                pickup alignment: back = sweeter/rounder, forward = barkier
  *   release / pedal             damper; pedal 0..1 is a sustain pedal (fully lifted at 0.8)
  *   repeated strikes            lifting a held key a little and striking again re-strikes
+ *   life (a dial)               micro-randomness, never a vibrato or tremolo: every strike a little
+ *                               different (velocity, hardness, bell / tick, decay, pickup alignment,
+ *                               a start pitch offset of a few cents that settles), a tiny broadband
+ *                               pitch and pickup (brightness) flicker, each voice its own
  *
  * Cost: the per-sample loop is 43 instructions per voice-sample (30 FP, 1 division, all in
  * registers; 49 for the Wurlitzer curve, 67 with 2 divisions while morphing between the two),
@@ -99,8 +103,9 @@ struct Params {
 	real body;   // body EQ gain (-0.9 cut .. 2 boost)
 	// mod
 	real wobble; // tape wow + flutter depth (cents)
+	real life;   // micro-randomness (0 = none)
 };
-static constexpr int NUM_PARAMS = 25;
+static constexpr int NUM_PARAMS = 26;
 static_assert(sizeof(Params) == NUM_PARAMS * sizeof(real), "Params must be plain floats");
 
 // the factory presets: presets/ep/NN-<name>.preset.json, compiled in (the end of this file)
@@ -151,6 +156,11 @@ struct VoiceState {
 	int active;
 	int fresh; // pickup interpolation starts from this block's values
 	int fade;  // blocks left of the fade-out of a stolen voice
+	// life: per strike (start pitch offset, decaying; velocity, hardness, bell / tick, decay
+	// factors; alignment offset) and flicker noises (pitch fast / slow, alignment)
+	real lpo, lva, lhd, lbt, ldc, lal;
+	real lnf, lns, lna;
+	uint32_t lrng;
 };
 
 struct Engine {
@@ -333,6 +343,8 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s.ppk = 0.0f;
 		s.ty = 0.0f;
 		s.ps = 0.0f;
+		s.lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
+		s.lva = s.lhd = s.lbt = s.ldc = 1.0f;
 	}
 	set_preset(e, DEFAULT_PRESET);
 }
@@ -503,7 +515,45 @@ static inline void process_voice(Engine& e, int v) {
 	s.ty += 0.08f * (by - s.ty);
 	s.ps += 0.05f * (pres - s.ps);
 	const real dn = note - 60.0f;
-	const real f0 = 440.0f * exp2_poly((note + e.wob - 69.0f) * (1.0f / 12.0f));
+	// life (micro-randomness): every strike draws its own small offsets (start pitch +-3 cents x
+	// life, settling in ~0.1 s; velocity +-5%, hardness +-10%, bell and tick +-15%, decay +-8%,
+	// alignment +-0.03); one-pole noise flicker of unit spread: pitch (~10 ms and ~300 ms, ~1 cent rms
+	// at life 1), alignment (~80 ms, +-0.01). Off (life 0): the voice as without it.
+	const real life = clampr(P.life, 0.0f, 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_cents = 0.0f, l_al = 0.0f, l_va = 1.0f, l_hd = 1.0f, l_bt = 1.0f, l_dc = 1.0f;
+	if (life_on) {
+		uint32_t r = s.lrng;
+		auto rnd = [&r]() {
+			r = r * 1664525u + 1013904223u;
+			return (real)(int32_t)r * 4.656613e-10f;
+		};
+		if (fire) {
+			s.lpo = 3.0f * rnd();
+			s.lva = 1.0f + 0.05f * rnd();
+			s.lhd = 1.0f + 0.1f * rnd();
+			s.lbt = 1.0f + 0.15f * rnd();
+			s.ldc = 1.0f + 0.08f * rnd();
+			s.lal = 0.03f * rnd();
+		}
+		const real dt = e.block_dt;
+		s.lpo *= 1.0f - dt * 10.0f;
+		const auto flick = [&](real& x, real tc) {
+			const real k = dt / tc < 1.0f ? dt / tc : 1.0f;
+			x = clampr(x + k * (1.732f * __builtin_sqrtf(2.0f / k) * rnd() - x), -3.0f, 3.0f);
+		};
+		flick(s.lnf, 0.01f);
+		flick(s.lns, 0.3f);
+		flick(s.lna, 0.08f);
+		s.lrng = r;
+		l_cents = life * (s.lpo + 0.8f * s.lnf + 0.6f * s.lns);
+		l_al = life * (s.lal + 0.01f * s.lna);
+		l_va = 1.0f + life * (s.lva - 1.0f);
+		l_hd = 1.0f + life * (s.lhd - 1.0f);
+		l_bt = 1.0f + life * (s.lbt - 1.0f);
+		l_dc = 1.0f + life * (s.ldc - 1.0f);
+	}
+	const real f0 = 440.0f * exp2_poly(((life_on ? note + e.wob + 0.01f * l_cents : note + e.wob) - 69.0f) * (1.0f / 12.0f));
 	// tonebar pair: the fundamental and its partner are split around the note, weighted by their
 	// levels, so the perceived pitch (the level-weighted mean) is the note itself
 	const real beat = e.sm_beat, boct = e.sm_boct;
@@ -515,17 +565,17 @@ static inline void process_voice(Engine& e, int v) {
 	// --- strike: velocity impulse into the modes ---------------------------------------------------
 	if (fire) {
 		if (!s.active) reset_voice(s);
-		const real vel = clampr((s.vpk - 0.02f) * P.vsens, VEL_MIN, 1.0f);
+		const real vel = clampr(life_on ? (s.vpk - 0.02f) * P.vsens * l_va : (s.vpk - 0.02f) * P.vsens, VEL_MIN, 1.0f);
 		const real dyn = clampr(P.dyn, 0.0f, 1.0f);
 		const real va = vel * ((1.0f - dyn) + dyn * vel);
-		const real hard = clampr(P.hard, 0.1f, 5.0f);
+		const real hard = clampr(life_on ? P.hard * l_hd : P.hard, 0.1f, 5.0f);
 		const real u1 = HAMMER_C * (1.5f - vel) / hard;                       // f0 * contact time
 		const real regb = clampr(exp2_poly(dn * (1.0f / 24.0f)), 0.5f, 1.8f); // more bell up high
 		real amp[NM];
 		amp[0] = va;
 		amp[1] = va * beat;
-		amp[2] = va * clampr(P.bell, 0.0f, 3.0f) * regb * hammer_rel(ratio[2], u1);
-		amp[3] = va * clampr(P.tick, 0.0f, 3.0f) * hammer_rel(ratio[3], u1);
+		amp[2] = va * clampr(life_on ? P.bell * l_bt : P.bell, 0.0f, 3.0f) * regb * hammer_rel(ratio[2], u1);
+		amp[3] = va * clampr(life_on ? P.tick * l_bt : P.tick, 0.0f, 3.0f) * hammer_rel(ratio[3], u1);
 		// a hammer hitting a ringing tine stops part of its motion first
 		const real keep = 1.0f - 0.55f * vel;
 		for (int k = 0; k < NM; k++) {
@@ -544,7 +594,7 @@ static inline void process_voice(Engine& e, int v) {
 	s.damp += 0.1f * (dtarget - s.damp);
 	if (!(s.damp > 1e-6f)) s.damp = 0.0f;
 	const real kdec = exp2_poly(-dn * (1.0f / 12.0f) * clampr(P.dkey, 0.0f, 2.0f));
-	const real t0 = clampr(P.decay, 0.05f, 60.0f) * kdec;
+	const real t0 = clampr(life_on ? P.decay * l_dc : P.decay, 0.05f, 60.0f) * kdec;
 	const real tb = clampr(P.bdecay, 0.02f, 10.0f) * exp2_poly(-dn * (0.8f / 12.0f));
 	// prompt stage: decays with PROMPT_TAU (shorter for higher notes)
 	const real ptau = PROMPT_TAU * clampr(exp2_poly(-dn * (1.0f / 24.0f)), 0.3f, 3.0f);
@@ -585,7 +635,7 @@ static inline void process_voice(Engine& e, int v) {
 	}
 
 	// --- pickup ---------------------------------------------------------------------------------
-	const real a = clampr(P.align + clampr(P.tilt, 0.0f, 1.0f) * s.ty, 0.3f, 1.6f);
+	const real a = clampr(life_on ? P.align + clampr(P.tilt, 0.0f, 1.0f) * s.ty + l_al : P.align + clampr(P.tilt, 0.0f, 1.0f) * s.ty, 0.3f, 1.6f);
 	const real dg = 1.0f + DIG_MAX * clampr(P.dig, 0.0f, 1.0f) * clampr((s.ps - 0.45f) * (1.0f / 0.55f), 0.0f, 1.0f);
 	const real reg = clampr(exp2_poly(-(note - 64.0f) * (1.0f / 30.0f)), 0.4f, 1.5f);
 	const real rs_reg = rsqrt_fast(rsqrt_fast(reg)); // reg^(1/4)
@@ -718,6 +768,7 @@ static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
     {"bodyhz", "amp", 60.0f, 4000.0f, strisy::ParamKind::continuous},
     {"body", "amp", -0.9f, 2.0f, strisy::ParamKind::continuous},
     {"wobble", "mod", 0.0f, 40.0f, strisy::ParamKind::continuous},
+    {"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous},
 };
 static constexpr real Params::*const param_members[NUM_PARAMS] = {
     &Params::hard,
@@ -745,6 +796,7 @@ static constexpr real Params::*const param_members[NUM_PARAMS] = {
     &Params::bodyhz,
     &Params::body,
     &Params::wobble,
+    &Params::life,
 };
 } // namespace ep
 

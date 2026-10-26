@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "neosoul",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -28,6 +28,7 @@
     "tone": 3500,
     "bodyhz": 140,
     "body": 0.8,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }

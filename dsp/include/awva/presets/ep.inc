@@ -7,7 +7,7 @@
 // presets/ep/00-stage.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "stage",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -35,7 +35,8 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "tone": 7000,
     "bodyhz": 250,
     "body": 0.25,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -43,7 +44,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/ep/01-suitcase.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "suitcase",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -71,7 +72,8 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "tone": 5000,
     "bodyhz": 180,
     "body": 0.6,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -79,7 +81,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/ep/02-mk2.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "mk2",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -107,7 +109,8 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "tone": 9500,
     "bodyhz": 2500,
     "body": 0.25,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -115,7 +118,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
 // presets/ep/03-dyno.preset.json
 inline constexpr char factory_json_3[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "dyno",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -143,7 +146,8 @@ inline constexpr char factory_json_3[] = R"awva-preset({
     "tone": 12000,
     "bodyhz": 3200,
     "body": 0.5,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -151,7 +155,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
 // presets/ep/04-ballad.preset.json
 inline constexpr char factory_json_4[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "ballad",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -179,7 +183,8 @@ inline constexpr char factory_json_4[] = R"awva-preset({
     "tone": 5500,
     "bodyhz": 300,
     "body": 0.2,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -187,7 +192,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
 // presets/ep/05-bark.preset.json
 inline constexpr char factory_json_5[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "bark",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -215,7 +220,8 @@ inline constexpr char factory_json_5[] = R"awva-preset({
     "tone": 6000,
     "bodyhz": 700,
     "body": 0.4,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -223,7 +229,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
 // presets/ep/06-neosoul.preset.json
 inline constexpr char factory_json_6[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "neosoul",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -251,7 +257,8 @@ inline constexpr char factory_json_6[] = R"awva-preset({
     "tone": 3500,
     "bodyhz": 140,
     "body": 0.8,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -259,7 +266,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
 // presets/ep/07-fm80s.preset.json
 inline constexpr char factory_json_7[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "fm80s",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -287,7 +294,8 @@ inline constexpr char factory_json_7[] = R"awva-preset({
     "tone": 14000,
     "bodyhz": 250,
     "body": 0,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -295,7 +303,7 @@ inline constexpr char factory_json_7[] = R"awva-preset({
 // presets/ep/08-lofi.preset.json
 inline constexpr char factory_json_8[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "lofi",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -323,7 +331,8 @@ inline constexpr char factory_json_8[] = R"awva-preset({
     "tone": 3800,
     "bodyhz": 400,
     "body": 0.5,
-    "wobble": 9
+    "wobble": 9,
+    "life": 0
   }
 }
 )awva-preset";
@@ -331,7 +340,7 @@ inline constexpr char factory_json_8[] = R"awva-preset({
 // presets/ep/09-wurli.preset.json
 inline constexpr char factory_json_9[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "wurli",
   "heroes": ["wurli", "hard", "decay", "drive", "grit", "tone", "wobble", "dyn"],
   "params": {
@@ -359,7 +368,8 @@ inline constexpr char factory_json_9[] = R"awva-preset({
     "tone": 6500,
     "bodyhz": 1100,
     "body": 0.7,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -367,7 +377,7 @@ inline constexpr char factory_json_9[] = R"awva-preset({
 // presets/ep/10-wurlibark.preset.json
 inline constexpr char factory_json_10[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "wurlibark",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -395,7 +405,8 @@ inline constexpr char factory_json_10[] = R"awva-preset({
     "tone": 5500,
     "bodyhz": 1000,
     "body": 0.6,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -403,7 +414,7 @@ inline constexpr char factory_json_10[] = R"awva-preset({
 // presets/ep/11-pianet.preset.json
 inline constexpr char factory_json_11[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "pianet",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -431,7 +442,8 @@ inline constexpr char factory_json_11[] = R"awva-preset({
     "tone": 7000,
     "bodyhz": 1500,
     "body": 0.5,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -439,7 +451,7 @@ inline constexpr char factory_json_11[] = R"awva-preset({
 // presets/ep/12-felt.preset.json
 inline constexpr char factory_json_12[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "felt",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -467,7 +479,8 @@ inline constexpr char factory_json_12[] = R"awva-preset({
     "tone": 3200,
     "bodyhz": 220,
     "body": 0.3,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
@@ -475,7 +488,7 @@ inline constexpr char factory_json_12[] = R"awva-preset({
 // presets/ep/13-celesta.preset.json
 inline constexpr char factory_json_13[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "ep", "params_hash": "96fceb08"},
+  "engine": {"id": "ep", "params_hash": "f1b9e58a"},
   "title": "celesta",
   "heroes": ["hard", "decay", "bell", "tick", "drive", "grit", "tone", "wobble"],
   "params": {
@@ -503,7 +516,8 @@ inline constexpr char factory_json_13[] = R"awva-preset({
     "tone": 14000,
     "bodyhz": 2000,
     "body": 0.3,
-    "wobble": 0
+    "wobble": 0,
+    "life": 0
   }
 }
 )awva-preset";
