@@ -69,7 +69,10 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "slur": 0.1,
     "pitch_t": 0.03,
     "vib": 0.5,
-    "vib_hz": 5.2
+    "vib_hz": 5.2,
+    "tongue_nz": 0.516874,
+    "tongue_rt": 0.516874,
+    "tongue_sus": 0.516874
   }
 }
 )awva-preset";
@@ -139,7 +142,10 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "slur": 0.1,
     "pitch_t": 0.03,
     "vib": 0.5,
-    "vib_hz": 5.2
+    "vib_hz": 5.2,
+    "tongue_nz": 1.98266,
+    "tongue_rt": 1.98266,
+    "tongue_sus": 1.98266
   }
 }
 )awva-preset";
@@ -209,7 +215,10 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "slur": 0.1,
     "pitch_t": 0.03,
     "vib": 0.5,
-    "vib_hz": 5.2
+    "vib_hz": 5.2,
+    "tongue_nz": 0.347686,
+    "tongue_rt": 0.347686,
+    "tongue_sus": 0.347686
   }
 }
 )awva-preset";

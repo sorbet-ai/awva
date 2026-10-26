@@ -62,6 +62,9 @@
     "slur": 0.1,
     "pitch_t": 0.03,
     "vib": 0.5,
-    "vib_hz": 5.2
+    "vib_hz": 5.2,
+    "tongue_nz": 0.516874,
+    "tongue_rt": 0.516874,
+    "tongue_sus": 0.516874
   }
 }

@@ -217,6 +217,11 @@ struct Params {
 	real pitch_t;  // the player's ear: pitch correction time constant (s)
 	// modulation
 	real vib, vib_hz; // shake -> breath vibrato
+	// the tongue split (v5): tongue sets the strike that opens the attack's jet and the accent; these
+	// set the same strike's share of the attack's noise ("t"), of the tongue's opening speed, and the
+	// accent and noise a swell within a held note gives (the sustain's texture). At tongue's value
+	// each is v4's tongue
+	real tongue_nz, tongue_rt, tongue_sus;
 };
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
@@ -495,6 +500,9 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
+	const real vpl_nz = rmin(rmax(P.tongue_nz, 0.0f) * vp1 / (0.4f + vp1), 1.0f);   // the attack's noise
+	const real vpl_rt = rmin(rmax(P.tongue_rt, 0.0f) * vp1 / (0.4f + vp1), 1.0f);   // the tongue's speed
+	const real vpl_sus = rmin(rmax(P.tongue_sus, 0.0f) * vp1 / (0.4f + vp1), 1.0f); // a swell's texture
 	real note = clampr(cc.note, 0.0f, 132.0f);
 	// outside the range, past the pipe's and the jet's limits the tone fades into the breath (the
 	// pitch kept); a range wider than the pipe plays an octave up below it, as v2 did
@@ -540,9 +548,14 @@ static inline void process_voice(Engine& e, int vi) {
 		if (!held || s.rise_t > 0.25f || (s.rose && vpres <= 0.05f)) s.rise = 0;
 	}
 	if (vpres > 0.05f) s.rose = 1;
-	const real vstrike = (s.rise || (held && vpres >= RESTRIKE_V && pres >= RESTRIKE_P)) ? vplev : 0.0f;
+	const bool strikes = s.rise || (held && vpres >= RESTRIKE_V && pres >= RESTRIKE_P);
+	const real vstrike = strikes ? vplev : 0.0f;
+	const real vstrike_rt = strikes ? vpl_rt : 0.0f;
+	// the accent and the tongue's noise: during the key's rise the strike's, after it a swell's
+	const real acc_in = s.rise ? vplev : vpl_sus;
+	const real tn_in = s.rise ? vpl_nz : vpl_sus;
 	// a strike opens the tongue: fast for a hard one
-	if (vstrike > 0.05f && (start || vstrike > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vstrike), 0.0005f), 1.0f);
+	if (vstrike > 0.05f && (start || vstrike > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vstrike_rt), 0.0005f), 1.0f);
 	if (start && vplev <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(4.0f * P.tongue_t, 0.0005f), 1.0f);
 	// the attack's jet: a strike (from silence or a re-strike) releases the pressure built behind the
 	// tongue, the jet starts fast and thin and grows more on its way to the edge; a breath attack or
@@ -646,8 +659,8 @@ static inline void process_voice(Engine& e, int vi) {
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
 		const strisy::SvfCoef lc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
-			acc = rmax(acc * fac_acc, vplev);
-			tn = rmax(tn * fac_tn, vplev);
+			acc = rmax(acc * fac_acc, acc_in);
+			tn = rmax(tn * fac_tn, tn_in);
 			real t1, ls;
 			SVF_TICK(rmin(pcl, 2.0f), lv1, lv2, lc, t1, ls);
 			amp = rmax(rmax(ls, 0.0f), amp * fac);
@@ -1016,6 +1029,9 @@ static constexpr ParamEntry param_table[] = {
     {{"pitch_t", "attack", 0.002f, 1.0f, C_}, &Params::pitch_t},
     {{"vib", "mod", 0.0f, 2.0f, C_}, &Params::vib},
     {{"vib_hz", "mod", 2.0f, 9.0f, C_}, &Params::vib_hz},
+    {{"tongue_nz", "attack", 0.0f, 2.0f, C_}, &Params::tongue_nz},   // the strike's attack noise
+    {{"tongue_rt", "attack", 0.0f, 2.0f, C_}, &Params::tongue_rt},   // the strike's tongue speed
+    {{"tongue_sus", "attack", 0.0f, 2.0f, C_}, &Params::tongue_sus}, // a swell's accent and noise
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
