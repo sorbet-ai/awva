@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // The flute engine (voice_flute.h) as a awva::VoiceEngine: awva::engines::flute.
-// Its delay lines (bore and jet, 30 KB): LargeMemory.
+// Its delay lines (bore and jet, 120 KB: long enough at 192 kHz): LargeMemory.
 #ifndef AWVA_ENGINES_FLUTE_H_
 #define AWVA_ENGINES_FLUTE_H_
 

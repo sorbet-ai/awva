@@ -82,7 +82,10 @@
  * (flute) to 36.7k (alto) per block; a stress (10 voices ff, notes jumping every 0.25 s over every
  * register, tilts, shaking) 92k in the worst block. Per voice-sample: two divisions, one square
  * root, four interpolated delay reads, four SVF steps.
- * Memory: per voice two bore half-lines and a jet line of 256 floats (3 KB), 30 KB in LargeMemory.
+ * Sample rates: from 11025 to 192000 Hz the pitch holds 48 kHz's within 0.2 c (the cutoffs at most
+ * 0.4 of the rate, the delay lines long enough at 192 kHz); up to 48828 Hz the samples are v4's.
+ * Memory: per voice two bore half-lines and a jet line of 1024 floats (12 KB, for 192 kHz), 120 KB
+ * in LargeMemory (the wind engine's size).
  */
 #ifndef VOICE_FLUTE_H_
 #define VOICE_FLUTE_H_
@@ -110,12 +113,19 @@ static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
 static_assert(BLOCK % CTRL == 0, "CTRL must divide BLOCK");
-static constexpr int BLEN = 256; // each half of the bore loop (round trip <= ~500 samples: 96 Hz)
+// each half of the bore loop: a round trip of up to ~2040 samples, the alto's lowest bore (an octave
+// below its second register) at 192 kHz; at 48 kHz the loop uses a quarter of it
+static constexpr int BLEN = 1024;
 static constexpr uint32_t BMASK = BLEN - 1;
 static constexpr real DMAX = (real)(BLEN - 3);
-static constexpr int JLEN = 256; // the jet's travel (window flow history)
+static constexpr int JLEN = 1024; // the jet's travel (window flow history), up to ~1020 samples (192 kHz)
 static constexpr uint32_t JMASK = JLEN - 1;
 static constexpr real JMAX = (real)(JLEN - 3);
+// the delays' reach of v1-v4 (256-sample lines: 253 samples), kept up to 48828 Hz, the rates the
+// engine was made and fitted at (it binds on notes far below a range, where the ear trims); above
+// that the same reach in time, the longer lines holding it
+static constexpr real REACH = 253.0f;
+static constexpr real REACH_RATE = 48828.0f;
 static constexpr real RHO = 1.2f;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
@@ -557,7 +567,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real P1 = e.sr / f1;
 	// bore: the open end's reflection (low-pass at the lattice cutoff, the round-trip loss) and the
 	// end corrections' allpass
-	const real fc = clampr(P.cut_hz * exp2s(P.cover_hz * tilt), 200.0f, 12000.0f);
+	const real fc = clampr(P.cut_hz * exp2s(P.cover_hz * tilt), 200.0f, rmin(12000.0f, 0.4f * e.sr)); // (below Nyquist at any rate)
 	const real gc = tanp(e.pi_sr * fc);
 	const real Gc = gc / (1.0f + gc);
 	const real fw = clampr(P.wall * f1, 50.0f, 0.45f * e.sr);
@@ -580,17 +590,18 @@ static inline void process_voice(Engine& e, int vi) {
 		s.trim = 0.0f;
 		s.tlast = -1e4f;
 	}
-	const real Dtot = clampr(P1 * exp2s((s.trim - cover_c) * (1.0f / 1200)) - lp_d - ap_d, 4.0f, 2.0f * DMAX);
+	const real reach = rmin(REACH * rmax(e.sr * (1.0f / REACH_RATE), 1.0f), DMAX); // (REACH up to 48828 Hz)
+	const real Dtot = clampr(P1 * exp2s((s.trim - cover_c) * (1.0f / 1200)) - lp_d - ap_d, 4.0f, 2.0f * reach);
 	s.D = Dtot;
-	const real d1t = clampr(0.5f * Dtot, 1.0f, DMAX);
-	const real d2t = clampr(Dtot - d1t, 1.0f, DMAX);
+	const real d1t = clampr(0.5f * Dtot, 1.0f, reach);
+	const real d2t = clampr(Dtot - d1t, 1.0f, reach);
 	// pipe impedance at the window: Zc S_m (Pa per m/s of window flow)
 	const real rb = clampr(P.bore_mm, 2.0f, 20.0f) * 0.001f;
 	const real zw = RHO * C0 / (PI * rb * rb) * SM;
 	const real kl = 0.5f * RHO / (clampr(P.vortex, 0.1f, 5.0f) * clampr(P.vortex, 0.1f, 5.0f));
 
 	// radiation
-	const strisy::SvfCoef tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 500.0f, 16000.0f), clampr(P.tone_q, 0.5f, 4.0f));
+	const strisy::SvfCoef tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 500.0f, rmin(16000.0f, 0.4f * e.sr)), clampr(P.tone_q, 0.5f, 4.0f));
 	real gain = clampr(P.gain, 0.0f, 100.0f) * 1e-3f;
 	if (note > P.range_hi) gain *= exp2s(clampr(P.out_db, -24.0f, 6.0f) * (1.0f / 6.0206f));
 
@@ -670,7 +681,7 @@ static inline void process_voice(Engine& e, int vi) {
 		if (U > Uth) th = clampr(th * exp2s(-2.0f * clampr(P.ob_amt, 0.0f, 1.0f) * log2s(U / Uth)), 0.02f, 3.0f);
 	}
 	const real tau = th / fs; // seconds
-	const real jd_t = clampr(tau * e.sr, 1.0f, JMAX);
+	const real jd_t = clampr(tau * e.sr, 1.0f, rmin(reach, JMAX));
 	// the deflection at the edge follows the acoustic displacement at the lips (Fletcher), grown
 	// on the way: eta = xi e^{mu W} / 2. The player sets the growth so that the small-signal loop
 	// gain at the note, at the lightest touch, is g_soft: G = (rho delta_d / S_m) b H U sech^2(y0 / b)
@@ -714,7 +725,7 @@ static inline void process_voice(Engine& e, int vi) {
 	// turbulence: deflection noise re b, growing with U (re 25 m/s)
 	const real ur = U * (1.0f / 25.0f);
 	const real tz = rmax(P.turb, 0.0f) * ur * h / bj;
-	const strisy::SvfCoef tzc = strisy::svf_pade(e.pi_sr * clampr(P.turb_hz, 100.0f, 12000.0f), 0.7f);
+	const strisy::SvfCoef tzc = strisy::svf_pade(e.pi_sr * clampr(P.turb_hz, 100.0f, rmin(12000.0f, 0.4f * e.sr)), 0.7f);
 	// edge noise radiated directly: a band at st U / h, level ~ U^3
 	const real fh = clampr(P.hiss_st * U / h, 300.0f, 0.4f * e.sr);
 	const strisy::SvfCoef hzc = strisy::svf_pade(e.pi_sr * fh, 0.8f);
