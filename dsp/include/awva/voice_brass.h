@@ -55,6 +55,12 @@
  *   tilt fwd/back  open presets: brighter / darker (lips and bell; the horn's hand). Mute presets:
  *              wah (harmon: forward = open "wow", back = closed "wu"; plunger: back closes it)
  *   shake      flutter tongue
+ *   life       (a dial) micro-randomness, never a vibrato: every note a little different (a start
+ *              pitch offset of a few cents that settles, brightness, accent and tongue noise), and
+ *              a tiny broadband pitch, level, brightness and breath-noise flicker, each voice its own
+ *   growl      pressing past growl_from (trumpet: 0.7) growls: throat flutter into the horn (an
+ *              irregular level flutter around growl_hz, every cycle and every lip pulse a little
+ *              different, with occasional bursts; alternate lip pulses louder / softer: a subharmonic)
  *
  * Cost (ARM disassembly, per voice-sample): lips 38 instructions (59 with the section's second
  * player), bore + steepening 93 (43 FP), body filters 47 (58 with a mute); no divisions. Control
@@ -169,6 +175,11 @@ struct Params {
 	// modulation
 	real vib, vib_hz;      // automatic (delayed) lip vibrato, semitones
 	real flutter, flut_hz; // shake -> flutter tongue
+	real life;             // micro-randomness (0 = none)
+	// growl
+	real growl;      // growl depth (0 = off)
+	real growl_from; // pressure where the growl sets in (full ~0.3 above)
+	real growl_hz;   // throat flutter rate
 	// section
 	real pair;   // second player (detuned copy of the lips), 0 = solo
 	real detune; // its detune (cents)
@@ -204,6 +215,14 @@ struct VoiceState {
 	real jn, jn2, bn, dr;        // jitter (both players), blat noise, slow pitch wander (block rate)
 	uint32_t rng, nrng;          // block-rate and audio-rate noise generators
 	real vib_ph, vib_env, flut_ph;
+	// life: per note (start pitch offset, decaying; brightness; accent, accent decay, tongue noise
+	// factors) and flicker noises (pitch fast / slow, level, brightness, breath noise)
+	real lpo, lbo, lac, lat, ltn;
+	real lnf, lns, llv, lbr, lnz;
+	uint32_t lrng;
+	real gw, gph, gn, gd;   // growl: smoothed amount, throat phase, rate and depth wander (slow noise)
+	real gcd, gcr, gb, gpz; // this throat cycle's depth and rate, burst envelope, this lip pulse's depth
+	uint32_t grng, gpar;    // growl noise, pulse parity (bit 0: first player, bit 1: second)
 	real note_prev;
 	real vneg;      // release speed latch
 	uint32_t w;     // delay line write index
@@ -322,6 +341,11 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.jn = s.jn2 = s.bn = s.dr = 0.0f;
 	s.vneg = 0.0f;
 	s.vib_env = 0.0f;
+	s.gw = s.gn = s.gd = s.gb = 0.0f;
+	s.gcd = s.gcr = s.gpz = 1.0f;
+	s.gpar = 0;
+	s.lpo = s.lbo = s.lnf = s.lns = s.llv = s.lbr = s.lnz = 0.0f;
+	s.lac = s.lat = s.ltn = 1.0f;
 	s.inc = s.inc2 = 0;
 	s.w = 0;
 	s.ds = (real)SD;
@@ -377,6 +401,10 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s.vib_ph -= (real)(int)s.vib_ph;
 		s.flut_ph = 0.31f * (real)v;
 		s.flut_ph -= (real)(int)s.flut_ph;
+		s.lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
+		s.gph = 0.43f * (real)v;
+		s.gph -= (real)(int)s.gph;
+		s.grng = 0x27D4EB2Fu * (uint32_t)(v + 5) + 777u;
 		s.note_prev = 69.0f;
 		s.active = 0;
 	}
@@ -543,7 +571,7 @@ static inline void process_voice(Engine& e, int v) {
 	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
 	const real vpres = rmin(rmax(cc.pressure_rate, -1.0f), 1.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
-	const real vplev = rmin(P.tongue * vp1 / (0.4f + vp1), 1.0f);
+	real vplev = rmin(P.tongue * vp1 / (0.4f + vp1), 1.0f);
 	const real note = rmin(rmax(cc.pitch, 0.0f), 132.0f);
 	const bool held = pres > 0.0f;
 	bool start = false;
@@ -564,6 +592,38 @@ static inline void process_voice(Engine& e, int v) {
 		s.vneg = 0.0f;
 	}
 	s.note_prev = note;
+	// life (micro-randomness): every note draws its own small offsets; the flicker noises are one-pole
+	// filtered uniform noise of unit spread (~10 ms and ~300 ms pitch, ~120 ms level, ~80 ms
+	// brightness, ~50 ms breath noise). Off (life 0): the voice as without it.
+	const real life = rmin(rmax(P.life, 0.0f), 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_cents = 0.0f, l_oct = 0.0f, l_lv = 1.0f, l_nz = 1.0f;
+	if (life_on) {
+		if (jump) {
+			s.lpo = 3.0f * block_noise(s.lrng); // cents
+			s.lbo = 0.2f * block_noise(s.lrng); // octaves
+			s.lac = 1.0f + 0.2f * block_noise(s.lrng);
+			s.lat = 1.0f + 0.25f * block_noise(s.lrng);
+			s.ltn = 1.0f + 0.4f * block_noise(s.lrng);
+		}
+		s.lpo *= 1.0f - e.block_dt * 10.0f; // settles in ~0.1 s
+		const real dt = e.block_dt;
+		const auto flick = [&](real& x, real tau) {
+			const real a = rmin(dt / tau, 1.0f);
+			x += a * (1.732f * fsqrt(2.0f / a) * block_noise(s.lrng) - x);
+			x = rmin(rmax(x, -3.0f), 3.0f);
+		};
+		flick(s.lnf, 0.01f);
+		flick(s.lns, 0.3f);
+		flick(s.llv, 0.12f);
+		flick(s.lbr, 0.08f);
+		flick(s.lnz, 0.05f);
+		l_cents = life * (s.lpo + 1.6f * s.lnf + 1.2f * s.lns);
+		l_oct = life * (s.lbo + 0.12f * s.lbr);
+		l_lv = 1.0f + 0.05f * life * s.llv;
+		l_nz = rmax(1.0f + 0.35f * life * s.lnz, 0.0f);
+		vplev = rmin(vplev * (1.0f + life * (s.lac - 1.0f)), 1.0f);
+	}
 	const real by = rmin(rmax(cc.timbre, -1.0f), 1.0f);
 	if (start) {
 		s.ty1 = 0.0f;
@@ -590,14 +650,39 @@ static inline void process_voice(Engine& e, int v) {
 	if (s.vib_ph >= 1.0f) s.vib_ph -= (real)(int)s.vib_ph;
 	if (held) s.vib_env = rmin(s.vib_env + e.block_dt * 1.6f, 1.0f);
 	const real vib = rmin(rmax(P.vib, 0.0f), 2.0f) * rmax(s.vib_env - 0.3f, 0.0f) * 1.43f * psin(s.vib_ph);
+	// growl, played by pressure above growl_from (full ~0.3 above it), depth growl: throat flutter
+	// into the horn. An irregular sub-audio flutter (around growl_hz; rate and depth wander over
+	// ~0.1-0.5 s, every cycle draws its own depth and length, now and then a burst) dips the level and
+	// bends the lip pitch a little, and alternate lip pulses get stronger / weaker, each pulse by its
+	// own random amount (period doubling: a rough subharmonic an octave down). Off (growl 0 or below
+	// growl_from): the voice as without it.
+	const real gr_t = held ? rmin(rmax(P.growl, 0.0f), 1.0f) * rmin(rmax((pres - P.growl_from) * 3.3f, 0.0f), 1.0f) : 0.0f;
+	s.gw += 0.04f * (gr_t - s.gw);
+	if (s.gw < 1e-6f) s.gw = 0.0f;
+	const bool growl_on = s.gw > 0.0f;
+	real gpm = 0.0f, ginc = 0.0f;
+	if (growl_on) {
+		// slow wander: one-pole noise, ~250 ms (rate) and ~150 ms (depth); the burst decays in ~150 ms
+		s.gn += 0.0027f * (14.0f * block_noise(s.grng) - s.gn);
+		s.gn = rmin(rmax(s.gn, -1.0f), 1.0f);
+		s.gd += 0.0045f * (11.0f * block_noise(s.grng) - s.gd);
+		s.gd = rmin(rmax(s.gd, -1.0f), 1.0f);
+		s.gb *= 1.0f - e.block_dt * 6.5f;
+		ginc = rmin(rmax(P.growl_hz, 5.0f), 120.0f) * (1.0f + 0.3f * s.gn) / e.sr;
+		real gq = s.gph + 0.25f;
+		if (gq >= 1.0f) gq -= 1.0f;
+		gpm = 0.12f * s.gw * s.gcd * psin(gq);
+	}
 
 	// pitches: the bore follows the note; the lips add scoop, jitter and buzz on top
-	const real nloop = note + vib + 0.005f * P.jitter * s.dr; // slow wander: the bore follows
+	real nloop = note + vib + 0.005f * P.jitter * s.dr; // slow wander: the bore follows
+	if (life_on) nloop += 0.01f * l_cents;
 	const real acc0 = s.acc;
 	const bool pair_on = P.pair > 0.001f;
 	// section: the two players sit symmetrically around the note, each with its own jitter
 	const real half_det = pair_on ? 0.005f * rmin(rmax(P.detune, 0.0f), 50.0f) * rmin(P.pair, 1.0f) : 0.0f;
-	const real nlip = nloop - P.scoop * s.sc + 0.01f * P.jitter * s.jn + P.blat * acc0 * acc0 * s.bn - half_det;
+	real nlip = nloop - P.scoop * s.sc + 0.01f * P.jitter * s.jn + P.blat * acc0 * acc0 * s.bn - half_det;
+	if (growl_on) nlip += gpm;
 	const real fmax = 0.45f * e.sr;
 	const real f0 = rmin(note_freq(nlip), fmax);
 	const uint32_t inc1 = (uint32_t)(f0 * e.ph_scale) | 1u;
@@ -605,7 +690,8 @@ static inline void process_voice(Engine& e, int v) {
 		s.jn2 += 0.15f * (6.0f * block_noise(s.rng) - s.jn2);
 		s.jn2 = rmin(rmax(s.jn2, -4.0f), 4.0f);
 	}
-	const real n2 = nloop - 0.8f * P.scoop * s.sc + 0.01f * P.jitter * s.jn2 + P.blat * acc0 * acc0 * s.bn + half_det;
+	real n2 = nloop - 0.8f * P.scoop * s.sc + 0.01f * P.jitter * s.jn2 + P.blat * acc0 * acc0 * s.bn + half_det;
+	if (growl_on) n2 += gpm;
 	const real f2r = rmin(note_freq(n2), fmax);
 	const uint32_t inc2 = (uint32_t)(f2r * e.ph_scale) | 1u;
 	if (jump || s.inc == 0) {
@@ -618,7 +704,8 @@ static inline void process_voice(Engine& e, int v) {
 	// bore loop: period P0, bell reflection lowpass, round trip loss from the decay time
 	const real fl = rmin(note_freq(nloop), fmax);
 	const real P0 = e.sr / fl;
-	const real tone_y = P.tilt_tone * y;
+	real tone_y = P.tilt_tone * y;
+	if (life_on) tone_y += l_oct;
 	const real fb = rmin(rmax(P.bell_hz * exp2s(0.5f * tone_y), 50.0f), 8000.0f);
 	const real gb = tanp(e.pi_sr * fb);
 	const real Gb = gb / (1.0f + gb);
@@ -678,7 +765,8 @@ static inline void process_voice(Engine& e, int v) {
 	const real ped = rmin(rmax(e.g.sustain, 0.0f), 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);
-	const real fac_acc = 1.0f - e.ctrl_dt / rmax(P.acc_t, 0.005f);
+	const real fac_acc = 1.0f - e.ctrl_dt / rmax(life_on ? P.acc_t * (1.0f + life * (s.lat - 1.0f)) : P.acc_t, 0.005f);
+	const real t_noise = life_on ? P.t_noise * (1.0f + life * (s.ltn - 1.0f)) : P.t_noise;
 	const real fac_sc = 1.0f - e.ctrl_dt / rmax(0.6f * P.acc_t, 0.005f);
 	const real fac_tn = 1.0f - e.ctrl_dt / 0.006f;
 	const real pc = pres * (P.pc_a + P.pc_b * pres);
@@ -726,7 +814,7 @@ static inline void process_voice(Engine& e, int v) {
 			cv[1] = c;
 			cv[2] = inv;
 			cv[3] = mean + pairlv * mean2;
-			cv[4] = P.t_noise * tn * tn;
+			cv[4] = t_noise * tn * tn;
 			cv[5] = inv2 * pairlv;
 			cv[6] = rmin(c + 0.12f, cmax);
 			cv[7] = tcf.a;
@@ -748,10 +836,14 @@ static inline void process_voice(Engine& e, int v) {
 
 	// ---- audio rate: lips ------------------------------------------------------------------------
 	{
-		uint32_t pa = s.ph, pb = s.ph2, ia = s.inc, ib = s.inc2, nr = s.nrng;
+		uint32_t pa = s.ph, pb = s.ph2, ia = s.inc, ib = s.inc2, nr = s.nrng, gpar = s.gpar;
+		real gph = s.gph, gcd = s.gcd, gcr = s.gcr, gb = s.gb, gpz = s.gpz;
+		uint32_t grng = s.grng;
+		const real gdw = rmin(rmax(1.0f + 0.4f * s.gd, 0.3f), 1.4f); // the slow depth wander
+		const real gdip = 0.85f * s.gw, gsub = 1.2f * s.gw;
 		real sg = s.ctrl_prev[0], c = s.ctrl_prev[1], inv = s.ctrl_prev[2], mn = s.ctrl_prev[3], tnl = s.ctrl_prev[4];
 		real inv2 = s.ctrl_prev[5], cb = s.ctrl_prev[6];
-		const real br = P.breath;
+		const real br = life_on ? P.breath * l_nz : P.breath;
 		const real M32 = 2.3283064e-10f; // 2^-32
 		real* __restrict__ src = e.src;
 		for (int k = 0; k < NCTRL; k++) {
@@ -760,7 +852,51 @@ static inline void process_voice(Engine& e, int v) {
 			const real dsg = (cur[0] - sg) * r, dc = (cur[1] - c) * r, dinv = (cur[2] - inv) * r;
 			const real dmn = (cur[3] - mn) * r, dtn = (cur[4] - tnl) * r;
 			const real dinv2 = (cur[5] - inv2) * r, dcb = (cur[6] - cb) * r;
-			if (pair_on) {
+			if (growl_on) {
+				// as below (both players; the second is silent when solo), with the growl
+				for (int j = 0; j < CTRL; j++) {
+					sg += dsg;
+					c += dc;
+					inv += dinv;
+					mn += dmn;
+					tnl += dtn;
+					inv2 += dinv2;
+					cb += dcb;
+					ia += (uint32_t)dA;
+					ib += (uint32_t)dB;
+					const uint32_t pa0 = pa, pb0 = pb;
+					pa += ia;
+					pb += ib;
+					// the parity flips at half a period, where the lips are closed (no step in the pulse)
+					const uint32_t flip = (~pa0 & pa) >> 31;
+					gpar ^= flip;
+					gpar ^= ((~pb0 & pb) >> 31) << 1;
+					if (flip) gpz = 0.75f + 0.25f * block_noise(grng); // this pulse pair's subharmonic depth
+					gph += ginc * gcr;
+					if (gph >= 1.0f) {
+						// a new throat cycle: its own depth (0.5..1) and length (+-30%), now and then a burst
+						gph -= 1.0f;
+						gcd = 0.75f + 0.25f * block_noise(grng);
+						gcr = 1.0f + 0.3f * block_noise(grng);
+						if (block_noise(grng) > 0.88f) gb = 1.0f;
+					}
+					const real gdc = rmin(gdw * gcd * (1.0f + 0.5f * gb), 1.4f);
+					const real gwv = 0.5f + 0.5f * psin(gph);
+					const real gsg = sg * (1.0f - rmin(gdip * gdc, 0.95f) * gwv * gwv);
+					const real gs = rmin(gsub * gdc * gpz, 0.95f);
+					real q = (real)(int32_t)(pa + 0x40000000u) * M32;
+					real ps = 8.0f * q * (1.0f - 2.0f * fabsf(q));
+					const real cs = ps * (0.775f + 0.225f * fabsf(ps));
+					q = (real)(int32_t)(pb + 0x40000000u) * M32;
+					ps = 8.0f * q * (1.0f - 2.0f * fabsf(q));
+					const real cs2 = ps * (0.775f + 0.225f * fabsf(ps));
+					const real h = rmax(cs - c, 0.0f), h2 = rmax(cs2 - cb, 0.0f);
+					const real u = h * h * inv * (1.0f + ((gpar & 1u) ? gs : -gs)) + h2 * h2 * inv2 * (1.0f + ((gpar & 2u) ? gs : -gs));
+					nr = nr * 1664525u + 1013904223u;
+					const real nz = (real)(int32_t)nr * 4.656613e-10f;
+					src[k * CTRL + j] = gsg * (u + br * u * nz - mn) + tnl * nz;
+				}
+			} else if (pair_on) {
 #pragma GCC unroll 2
 				for (int j = 0; j < CTRL; j++) {
 					sg += dsg;
@@ -816,7 +952,7 @@ static inline void process_voice(Engine& e, int v) {
 			inv2 = cur[5];
 			cb = cur[6];
 		}
-		if (!pair_on) {
+		if (!pair_on && !growl_on) {
 			ib = inc2;
 			pb += inc2 * (uint32_t)BLOCK;
 		}
@@ -825,6 +961,13 @@ static inline void process_voice(Engine& e, int v) {
 		s.inc = inc1;
 		s.inc2 = inc2;
 		s.nrng = nr;
+		s.gpar = gpar;
+		s.gph = gph;
+		s.gcd = gcd;
+		s.gcr = gcr;
+		s.gb = gb;
+		s.gpz = gpz;
+		s.grng = grng;
 		s.ctrl_prev[0] = sg;
 		s.ctrl_prev[1] = c;
 		s.ctrl_prev[2] = inv;
@@ -843,7 +986,8 @@ static inline void process_voice(Engine& e, int v) {
 	const real rq = fr / fl;
 	const real rx = 1.0f + rq * rq;
 	const real rx4 = fsqrt(fsqrt(rx));
-	const real gain = rmin(rmax(P.gain, 0.0f), 8.0f) * rmin(rx4 * fsqrt(rx4), 2.5f);
+	real gain = rmin(rmax(P.gain, 0.0f), 8.0f) * rmin(rx4 * fsqrt(rx4), 2.5f);
+	if (life_on) gain *= l_lv;
 	audio_bore(e, s, B1, B2, d1t, d2t, ks, ks2, rl, g, Gb);
 	if (mute_on) audio_body<true>(e, s, Gr, cupc, cupG, mc, mdep, wh, wb, wl, gain);
 	else audio_body<false>(e, s, Gr, cupc, cupG, mc, mdep, wh, wb, wl, gain);
@@ -969,6 +1113,11 @@ static constexpr ParamEntry param_table[] = {
     {{"vib_hz", "mod", 2.0f, 9.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
     {{"flutter", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::flutter}, // shake -> flutter tongue
     {{"flut_hz", "mod", 8.0f, 40.0f, strisy::ParamKind::continuous}, &Params::flut_hz},
+    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life}, // micro-randomness
+    // growl
+    {{"growl", "growl", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::growl},           // depth (0 = off)
+    {{"growl_from", "growl", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::growl_from}, // pressure where it sets in
+    {{"growl_hz", "growl", 10.0f, 80.0f, strisy::ParamKind::continuous}, &Params::growl_hz},   // throat flutter rate
     // section
     {{"pair", "section", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pair},      // second player level
     {{"detune", "section", 0.0f, 30.0f, strisy::ParamKind::continuous}, &Params::detune}, // cents

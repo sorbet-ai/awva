@@ -7,7 +7,7 @@
 // presets/brass/00-trumpet.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "trumpet",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -52,6 +52,10 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -61,7 +65,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/brass/01-flugelhorn.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "flugelhorn",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -106,6 +110,10 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -115,7 +123,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/brass/02-trombone.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "trombone",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -160,6 +168,10 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -169,7 +181,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
 // presets/brass/03-horn.preset.json
 inline constexpr char factory_json_3[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "horn",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -214,6 +226,10 @@ inline constexpr char factory_json_3[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -223,7 +239,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
 // presets/brass/04-euphonium.preset.json
 inline constexpr char factory_json_4[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "euphonium",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -268,6 +284,10 @@ inline constexpr char factory_json_4[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -277,7 +297,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
 // presets/brass/05-tuba.preset.json
 inline constexpr char factory_json_5[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "tuba",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -322,6 +342,10 @@ inline constexpr char factory_json_5[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -331,7 +355,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
 // presets/brass/06-harmon.preset.json
 inline constexpr char factory_json_6[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "harmon",
   "heroes": ["mute", "mute_bp", "mute_hz", "wah", "brassiness", "tone_hz", "vibrato", "release"],
   "params": {
@@ -376,6 +400,10 @@ inline constexpr char factory_json_6[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -385,7 +413,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
 // presets/brass/07-plunger.preset.json
 inline constexpr char factory_json_7[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "plunger",
   "heroes": ["mute", "mute_lp", "mute_hz", "wah", "brassiness", "tone_hz", "vibrato", "release"],
   "params": {
@@ -430,6 +458,10 @@ inline constexpr char factory_json_7[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
@@ -439,7 +471,7 @@ inline constexpr char factory_json_7[] = R"awva-preset({
 // presets/brass/08-section.preset.json
 inline constexpr char factory_json_8[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "section",
   "heroes": ["pair", "detune", "brassiness", "lip_loud", "tone_hz", "breath", "vibrato", "release"],
   "params": {
@@ -484,6 +516,10 @@ inline constexpr char factory_json_8[] = R"awva-preset({
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 1,
     "detune": 9
   }

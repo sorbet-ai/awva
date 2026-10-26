@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "brass", "params_hash": "48dd7f49"},
+  "engine": {"id": "brass", "params_hash": "3a723f64"},
   "title": "flugelhorn",
   "heroes": ["brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"],
   "params": {
@@ -45,6 +45,10 @@
     "vib_hz": 5.5,
     "flutter": 0.6,
     "flut_hz": 24,
+    "life": 0,
+    "growl": 0,
+    "growl_from": 0.7,
+    "growl_hz": 15,
     "pair": 0,
     "detune": 8
   }
