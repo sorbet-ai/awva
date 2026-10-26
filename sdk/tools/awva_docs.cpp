@@ -3,7 +3,8 @@
 //
 // awva_docs: the engines' reference pages from their EngineInfo (docs/engines/<name>.md) and the
 // engine list of the index (docs/README.md). Only the text between the generated markers is
-// written; everything else in a page (its "How it works") is kept as it is.
+// written; everything else in a page (its "How it works") is kept as it is. Only this repository's
+// engines have pages (an engine a host project adds to the SDK is not described here).
 //
 //   awva_docs DOCS_DIR            write the generated parts (a missing page is created)
 //   awva_docs DOCS_DIR --check    exit 1 if any generated part is out of date (the test docs.*)
@@ -122,11 +123,18 @@ std::string engine_section(const sdk::EngineEntry& e) {
 	return o.str();
 }
 
+// an engine of this repository (AWVA_DOCS_ENGINES, from sdk/CMakeLists.txt: the engines/<name>.h
+// in dsp/include/awva), not one a host project added to the SDK
+bool documented(const char* name) {
+	const std::string list = std::string(",") + AWVA_DOCS_ENGINES + ",";
+	return list.find(std::string(",") + name + ",") != std::string::npos;
+}
+
 std::string index_section() {
 	std::ostringstream o;
 	o << BEGIN << "\n\n| engine | what it is | presets | parameters |\n|---|---|---|---|\n";
 	for (const sdk::EngineEntry* e : sdk::engines())
-		o << "| [" << e->info->name << "](engines/" << e->info->name << ".md) | " << e->info->summary << " | " << e->info->num_presets << " | " << e->info->num_params << " |\n";
+		if (documented(e->info->name)) o << "| [" << e->info->name << "](engines/" << e->info->name << ".md) | " << e->info->summary << " | " << e->info->num_presets << " | " << e->info->num_params << " |\n";
 	o << "\n"
 	  << END;
 	return o.str();
@@ -178,6 +186,7 @@ int main(int argc, char** argv) {
 	const bool check = argc > 2 && std::strcmp(argv[2], "--check") == 0;
 	int stale = 0;
 	for (const sdk::EngineEntry* e : sdk::engines()) {
+		if (!documented(e->info->name)) continue;
 		const std::string name = e->info->name;
 		const std::string head = "<!-- SPDX-FileCopyrightText: 2026 Sorbet AI -->\n<!-- SPDX-License-Identifier: Apache-2.0 -->\n# " + name + "\n\n";
 		const std::string tail = "\n\n## How it works\n\n(to be written)\n";

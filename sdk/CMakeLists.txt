@@ -185,6 +185,17 @@ target_link_libraries(awva_render PRIVATE awva_sdk awva_engines awva_performance
 # the test docs.up_to_date fails when they are stale (run awva_docs on docs/ to update them)
 add_executable(awva_docs tools/awva_docs.cpp)
 target_link_libraries(awva_docs PRIVATE awva_sdk awva_engines)
+# the pages are this repository's engines' (dsp/include/awva/engines/<name>.h): a project that adds
+# engines of its own (the Striso firmware's strisy) builds them into the SDK, but docs/ doesn't
+# describe them
+set(_docs_engines "")
+foreach(v IN LISTS AWVA_ENGINES)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dsp/include/awva/engines/${v}.h")
+    list(APPEND _docs_engines ${v})
+  endif()
+endforeach()
+list(JOIN _docs_engines "," _docs_engines)
+target_compile_definitions(awva_docs PRIVATE "AWVA_DOCS_ENGINES=\"${_docs_engines}\"")
 
 # --- render_custom: one engine and one performance with extra compiler flags ---------------------------
 # (tools/harness/render_strisy.sh configures these). The performance is compiled into the engine's
