@@ -28,6 +28,7 @@ HOP = 0.01
 GAP_S = 0.3
 DROP_DB = 25.0
 MIN_DECAYS = 3
+ENDS_GAP_S = 0.22  # an annotated phrase end needs this much breath after it
 PREDELAY = 0.005
 
 
@@ -67,52 +68,109 @@ def decays(x, sr=SR):
     return out, floor
 
 
-def measure(x, sr=SR):
+def measure(x, sr=SR, ends=None):
+    """ends: [(note end s, next sound s)] where the score says the player stops (a phrase's last note
+    into a breath); without, the free decays are found blind"""
     x = np.asarray(x, np.float64)
     if x.ndim > 1:
         x = x.mean(1)
-    ds, floor = decays(x, sr)
+    if ends is None:
+        ds, _ = decays(x, sr)
+        ds = [(t0, t1, 0.06, 0.08) for t0, t1, _ in ds]
+    else:  # an annotated end may be off by tens of ms: the stop is searched 100 ms either side
+        ds = [(t0, t1 - 0.05, 0.1, 0.2) for t0, t1 in ends if t1 - t0 >= ENDS_GAP_S]  # (the next sound may lead its onset)
     rts, drrs, used = [], [], []
     w5 = int(0.005 * sr)
-    for t0, t1, _ in ds:
-        a = max(int((t0 - 0.06) * sr), 0)
+    for t0, t1, back, span in ds:
+        a = max(int((t0 - back) * sr), 0)
         b = int(t1 * sr)
         y = x[a:b] ** 2
+        if len(y) < int((span + GAP_S) * sr):
+            continue
         lvl = 10 * np.log10(np.convolve(y, np.ones(w5) / w5, mode='same') + 1e-20)
-        # the source stops where the level falls fastest (the direct sound leaves at once), in the
-        # 60 ms before the level is 3 dB down
-        d1 = np.diff(lvl[: int(0.08 * sr)])
+        # the source stops where the level falls fastest (the direct sound leaves at once)
+        d1 = np.diff(lvl[: int(span * sr)])
         ws = int(0.002 * sr)
         sm = np.convolve(d1, np.ones(ws) / ws, mode='same')
         s0 = int(np.argmin(sm[w5:])) + w5
         Ls = float(np.median(lvl[max(s0 - int(0.05 * sr), 0):max(s0 - w5, 1)]))
         tail = y[s0 + w5 // 2:]
         lt = lvl[s0 + w5 // 2:]
+        # the background (the gap's last 30 %): its power taken out, and the integration stopped where
+        # the decay meets it (+3 dB), so a noisy room doesn't read as a long one
+        h10 = int(0.01 * sr)
+        nb = len(tail) // h10
+        noise = float(np.min(np.mean(tail[:nb * h10].reshape(nb, h10), 1))) if nb else 0.0  # the gap's quietest 10 ms
+        nf = 10 * math.log10(noise + 1e-20)
+        above = np.where(lt < nf + 3)[0]
+        cut = int(above[0]) if len(above) else len(tail)
+        tail, lt = np.maximum(tail[:cut] - noise, 0.0), lt[:cut]
+        if len(tail) < int(0.03 * sr):
+            continue
         tt = np.arange(len(tail)) / sr
         edc = np.cumsum(tail[::-1])[::-1]
-        edc_db = 10 * np.log10(edc / edc[0] + 1e-30)
-        fl = float(np.median(lt[-int(0.05 * sr):])) + 5
-        lo = max(-25.0, fl - float(lt[:w5].mean()))
-        m = (edc_db <= -5) & (edc_db >= lo)
-        if m.sum() < int(0.03 * sr) or lo > -12:
+        edc_db = 10 * np.log10(edc / (edc[0] + 1e-30) + 1e-30)
+        m = (edc_db <= -5) & (edc_db >= -25)
+        if m.sum() < int(0.03 * sr) or edc_db[m].min() > -12:
             continue
-        slope, _ = np.polyfit(tt[m], edc_db[m], 1)
+        slope, icpt = np.polyfit(tt[m], edc_db[m], 1)
         if slope >= 0:
             continue
+        fit = icpt + slope * tt[m]
+        r2 = 1 - np.sum((edc_db[m] - fit) ** 2) / (np.sum((edc_db[m] - edc_db[m].mean()) ** 2) + 1e-20)
         rt = -60.0 / slope
+        if r2 < 0.9 or not 0.05 <= rt <= 4.0:
+            continue
         # the reverberant level at the stop: the tail's level, its decay line (the EDC's slope) through
         # its first 30 ms after the stop, back to the stop
         k30 = int(0.03 * sr)
+        if len(lt) < k30 + w5:
+            continue
         Lr = float(np.median(lt[w5:k30] - slope * tt[w5:k30]))
         d = Ls - Lr
         if d <= 0.2:
             continue
         rts.append(rt)
         drrs.append(10 * math.log10(10 ** (d / 10) - 1))
-        used.append(dict(at_s=round((a + s0) / sr, 3), rt60_s=round(rt, 3), drop_db=round(d, 1)))
+        used.append(dict(at_s=round((a + s0) / sr, 3), rt60_s=round(rt, 3), drop_db=round(d, 1), drr_db=round(drrs[-1], 1)))
+    return _summary(rts, drrs, used)
+
+
+def _summary(rts, drrs, used):
     if len(rts) < MIN_DECAYS:
         return Room(None, None, used)
     return Room(round(float(np.median(rts)), 3), round(float(np.median(drrs)), 1), used)
+
+
+def measure_many(tracks, sr=SR):
+    """one room from several tracks recorded in it: [(x, ends)] -> Room over all their decays"""
+    rts, drrs, used = [], [], []
+    for x, ends in tracks:
+        m = measure(x, sr, ends)
+        for d in m.decays:
+            rts.append(d['rt60_s'])
+            drrs.append(d['drr_db'])
+            used.append(d)
+    return _summary(rts, drrs, used)
+
+
+def track_ends(items, ref_path):
+    """[(note end, next sound)] on a track's clock from its phrase items (awvafit.phraseset): each
+    phrase's last note into the breath before the next phrase"""
+    spans = []
+    for it in items:
+        if it.ref_path != ref_path or not it.notes:
+            continue
+        on = it.ref_start + it.notes[0]['onset_s']
+        off = it.notes[-1].get('offset_s')
+        if off is not None:
+            spans.append((on, it.ref_start + off))
+    spans.sort()
+    out = []
+    for (a, b), (c, _) in zip(spans, spans[1:]):
+        if c > b:
+            out.append((b, c))
+    return sorted(set(out))
 
 
 def impulse(room, sr=SR, seed=0):
