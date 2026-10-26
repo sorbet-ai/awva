@@ -21,8 +21,9 @@
 #ifndef AWVA_VOICE_ALLOCATOR_H_
 #define AWVA_VOICE_ALLOCATOR_H_
 
-#include <math.h>
 #include <stdint.h>
+
+#include "step_pow.h"
 
 namespace awva::voices {
 
@@ -38,7 +39,7 @@ public:
 
 	// the step tick() is called at, in seconds (2 ms unless the host says another)
 	void set_step(double seconds) {
-		decay_ = pow(LEVEL_DECAY, seconds / LEVEL_SECONDS);
+		decay_ = step_pow::pow_of(LEVEL_DECAY, step_pow::LN_0_998, seconds / LEVEL_SECONDS); // (no libm: step_pow.h)
 		step_ = LEVEL_STEP * (1.0 - decay_) / (1.0 - LEVEL_DECAY);
 	}
 

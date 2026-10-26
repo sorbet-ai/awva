@@ -60,10 +60,10 @@
 #ifndef AWVA_UMP_H_
 #define AWVA_UMP_H_
 
-#include <math.h>
 #include <stdint.h>
 
 #include "controls.h"
+#include "step_pow.h"
 
 namespace awva::ump {
 
@@ -199,7 +199,7 @@ public:
 	// a strike is fading: tick() is due every step
 	[[nodiscard]] bool fading() const { return fading_; }
 	// the step tick() is called at, in seconds (2 ms unless the host says another): the fade a step
-	void set_step(double seconds) { fade_ = (float)pow(STRIKE_FADE, seconds / STRIKE_SECONDS); }
+	void set_step(double seconds) { fade_ = (float)step_pow::pow_of(STRIKE_FADE, step_pow::LN_0_6, seconds / STRIKE_SECONDS); }
 
 	// every note off at once, silently (the panic key)
 	template <class Host> void all_off(Host& h) {

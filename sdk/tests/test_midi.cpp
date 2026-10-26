@@ -222,6 +222,19 @@ TEST_CASE("control rate: at a 2 ms step the level decay and the strike's fade ar
 	}
 }
 
+TEST_CASE("control rate: the step factors are the correctly rounded powers, without libm (step_pow.h)") {
+	namespace sp = awva::step_pow;
+	// at 2 ms the factors themselves; at 48 kHz every block (y = 1/3) what the C library gives
+	CHECK(sp::pow_of(0.998, sp::LN_0_998, 1.0) == 0.998);
+	CHECK(sp::pow_of(0.6, sp::LN_0_6, 1.0) == 0.6);
+	const double y48 = sdk::step_seconds(48000, 0) / 0.002;
+	CHECK(sp::pow_of(0.998, sp::LN_0_998, y48) == std::pow(0.998, y48));
+	CHECK(static_cast<float>(sp::pow_of(0.6, sp::LN_0_6, y48)) == static_cast<float>(std::pow(0.6, y48)));
+	// where a C library's pow() is off by an ulp, the nearest double (computed to 80 digits)
+	CHECK(sp::pow_of(0.998, sp::LN_0_998, 1.8399264029438822) == 0x1.fe1e1459bdd38p-1);
+	CHECK(sp::pow_of(0.998, sp::LN_0_998, 1.389854065323141) == 0x1.fe93ccd981d4fp-1);
+}
+
 TEST_CASE("control rate: the strike fades by its time constant at any step (x0.6 per 2 ms)") {
 	// at every block of 48 kHz (32 frames: a third of 2 ms), three steps fade it as one 2 ms step
 	Mapper m(10);
