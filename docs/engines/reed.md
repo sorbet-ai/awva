@@ -36,17 +36,17 @@ Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of t
 |---|---|---|---|---|---|---|
 | | (none) | | | | | |
 
-## Budget and memory
+## Cost and memory
 
 | | |
 |---|---|
 | voices | up to 10 |
 | channels | 1 (mono) |
-| CPU | 20000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
+| CPU | 62.5 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 1.50781 KB (1544 bytes) (on a 64-bit host) |
-| FastMemory | none |
-| LargeMemory | 160 KB |
+| hot (the engine object) | 1.50781 KB (1544 bytes) (on a 64-bit host) |
+| stream (StreamMemory) | none |
+| bulk (BulkMemory) | 160 KB |
 
 <!-- awva_docs: end -->
 

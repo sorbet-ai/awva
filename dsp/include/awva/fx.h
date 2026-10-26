@@ -5,8 +5,8 @@
  *
  * API, in namespace fx:
  *   typedef float real; BLOCK (= 32)
- *   struct Engine (plain data, lives in DTCM; the big buffers are the host's FastMemory and
- *   LargeMemory, which init() takes over: Engine::fast, Engine::large set before)
+ *   struct Engine (plain data, lives in DTCM; the big buffers are the host's StreamMemory and
+ *   BulkMemory, which init() takes over: Engine::fast, Engine::large set before)
  *   void init(Engine&, int sample_rate);
  *   void process(Engine&, const real* in, real* out_l, real* out_r);   // BLOCK samples each
  *   void set_bypass(Engine&, bool);   // all stages fade out (~20 ms) and stop; parameters are kept
@@ -41,8 +41,8 @@
  * Cost (Cortex-M7, estimated from the -O3 disassembly, ~1.2 cycles per instruction): all stages on
  * ~28k cycles per block (~11% CPU), defaults ~19k (~7%), bypassed ~2k. Tested on the host by the
  * effect contract (sdk/tests/contract_effect.cpp).
- * Memory: Engine 5.6 KB (DTCM, includes the chorus line); FastMemory: delay line 64 KB (int16) +
- * pre-delay 16 KB (e.g. AHB SRAM); LargeMemory: reverb ring 64 KB (e.g. AXI SRAM).
+ * Memory: Engine 5.6 KB (DTCM, includes the chorus line); StreamMemory: delay line 64 KB (int16) +
+ * pre-delay 16 KB (e.g. AHB SRAM); BulkMemory: reverb ring 64 KB (e.g. AXI SRAM).
  * No libm, no per-sample divisions or transcendentals: LFOs are polynomials evaluated per block or
  * per 8 samples and interpolated.
  */
@@ -80,11 +80,11 @@ static constexpr float DL_SCALE = 4096.0f;                 // int16 full scale =
 
 // the host gives the effects their memory (engine contract, engines/fx.h): the delay line and the
 // reverb's pre-delay (80 KB; e.g. AHB SRAM), the reverb ring (64 KB; e.g. AXI SRAM)
-struct FastMemory {
+struct StreamMemory {
 	alignas(32) int16_t dl[DL_LEN];
 	alignas(32) float pd[PD_LEN];
 };
-struct LargeMemory {
+struct BulkMemory {
 	alignas(32) float rv[RV_LEN];
 };
 
@@ -402,8 +402,8 @@ enum {
 // ---------------------------------------------------------------------------------------------
 
 struct Engine {
-	FastMemory* fast;      // the host's (init)
-	LargeMemory* large;    // the host's (init)
+	StreamMemory* stream;  // the host's (init)
+	BulkMemory* bulk;      // the host's (init)
 	float p[NPARAM];       // live parameters (written between blocks)
 	float s[NPARAM];       // smoothed parameters (this block)
 	float sp[NPARAM];      // smoothed parameters of the previous block
@@ -712,7 +712,7 @@ static constexpr float DL_XF_STEP = 1.0f / 48.0f; // crossfade over 48 blocks (3
 
 // echo: input e.h (half rate mono), output added to e.wl / e.wr (already scaled by the mix)
 static FX_NOINLINE void stage_delay(Engine& e) {
-	int16_t* __restrict__ buf = e.fast->dl;
+	int16_t* __restrict__ buf = e.stream->dl;
 	const float* __restrict__ h = e.h;
 	const float r = 1.0f / HB;
 	const float Tmax = 0.5f * DL_LEN - 8.0f;
@@ -869,8 +869,8 @@ static inline void rv_accesses(Engine& e) {
 
 // reverb: input e.h + echo, output added to e.wl / e.wr (scaled by the mix)
 static FX_NOINLINE void stage_reverb(Engine& e) {
-	float* __restrict__ ring = e.large->rv;
-	float* __restrict__ pd = e.fast->pd;
+	float* __restrict__ ring = e.bulk->rv;
+	float* __restrict__ pd = e.stream->pd;
 	const float r = 1.0f / HB;
 	const float sr2 = e.sr2;
 	// pre-delay: glide, slew limited to 0.375 samples per sample
@@ -1137,9 +1137,9 @@ static FX_NOINLINE bool stage_out(Engine& e, real* __restrict__ out_l, real* __r
 // State management
 
 static inline void clear_buffers_now(Engine& e) {
-	for (int i = 0; i < DL_LEN; i++) e.fast->dl[i] = 0;
-	for (int i = 0; i < PD_LEN; i++) e.fast->pd[i] = 0.0f;
-	for (int i = 0; i < RV_LEN; i++) e.large->rv[i] = 0.0f;
+	for (int i = 0; i < DL_LEN; i++) e.stream->dl[i] = 0;
+	for (int i = 0; i < PD_LEN; i++) e.stream->pd[i] = 0.0f;
+	for (int i = 0; i < RV_LEN; i++) e.bulk->rv[i] = 0.0f;
 }
 
 static inline void reset_states(Engine& e) {
@@ -1218,18 +1218,18 @@ static inline void start_half(Engine& e) {
 static inline void clear_step(Engine& e) {
 	const int CHUNK = 1024;
 	if (e.clr_dl >= 0) {
-		uint32_t* b = (uint32_t*)e.fast->dl; // two samples per word
+		uint32_t* b = (uint32_t*)e.stream->dl; // two samples per word
 		const int end = e.clr_dl + CHUNK < DL_LEN / 2 ? e.clr_dl + CHUNK : DL_LEN / 2;
 		for (int i = e.clr_dl; i < end; i++) b[i] = 0;
 		e.clr_dl = end < DL_LEN / 2 ? end : -1;
 	}
 	if (e.clr_rv >= 0) {
 		const int end = e.clr_rv + CHUNK < RV_LEN ? e.clr_rv + CHUNK : RV_LEN;
-		for (int i = e.clr_rv; i < end; i++) e.large->rv[i] = 0.0f;
+		for (int i = e.clr_rv; i < end; i++) e.bulk->rv[i] = 0.0f;
 		e.clr_rv = end < RV_LEN ? end : -1;
 	} else if (e.clr_pd >= 0) {
 		const int end = e.clr_pd + CHUNK < PD_LEN ? e.clr_pd + CHUNK : PD_LEN;
-		for (int i = e.clr_pd; i < end; i++) e.fast->pd[i] = 0.0f;
+		for (int i = e.clr_pd; i < end; i++) e.stream->pd[i] = 0.0f;
 		e.clr_pd = end < PD_LEN ? end : -1;
 	}
 }

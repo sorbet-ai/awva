@@ -8,13 +8,15 @@
 //   struct traits::<name> {
 //       AWVA_ENGINE_FUNCTIONS(<name>)  // Engine, init(e, sr, voices), process(e, out), active_voices(e)
 //       AWVA_ENGINE_PRESETS(<name>)    // (engines with presets) num_presets, preset_name, set_preset
-//       using FastMemory = ...;          // the engine's regions, or NoMemory; Engine has a pointer
-//       using LargeMemory = ...;         //   to each it uses: FastMemory* fast, LargeMemory* large
+//       using StreamMemory = ...;      // the engine's regions (engine.h Region), or NoMemory; Engine has
+//       using BulkMemory = ...;        //   a pointer to each it uses: StreamMemory* stream, BulkMemory* bulk
 //       static constexpr const char* name = "<name>", *summary = "...";
 //       static constexpr const char* short_name = "..."; // 1 to 6 characters (required)
 //       static constexpr uint32_t led = 0xrrggbb;   // its colour (required, not 0)
 //       static constexpr uint32_t inputs = in_pressure | ...;
-//       static constexpr Budget budget = {max_voices, instructions per block, tail seconds};
+//       static constexpr int max_voices = ...;      // the voices it can run
+//       static constexpr float tail_seconds = ...;  // silent and idle this long after the last release
+//       static constexpr Cost cost = {...};         // instructions per voice and frame (COST_REFERENCE)
 //       static constexpr Heroes heroes = {{"cutoff", ...}};                        // optional, up to 8
 //       static constexpr PresetHeroes preset_heroes[] = {{"pad", {{...}}}, ...};  // optional
 //       static constexpr Conformance conformance = {...};          // optional: the checks' tolerances
@@ -67,12 +69,12 @@ template <class T> constexpr int min_rate() {
 	return EngineInfo{}.min_rate;
 }
 
-template <class Native, class FastMemory, class LargeMemory>
-inline void attach(Native& e, FastMemory& f, LargeMemory& l) {
-	if constexpr (std::is_same_v<FastMemory, NoMemory>) (void)f;
-	else e.fast = &f;
-	if constexpr (std::is_same_v<LargeMemory, NoMemory>) (void)l;
-	else e.large = &l;
+template <class Native, class StreamMemory, class BulkMemory>
+inline void attach(Native& e, StreamMemory& f, BulkMemory& l) {
+	if constexpr (std::is_same_v<StreamMemory, NoMemory>) (void)f;
+	else e.stream = &f;
+	if constexpr (std::is_same_v<BulkMemory, NoMemory>) (void)l;
+	else e.bulk = &l;
 }
 
 // the live parameters of a native engine, saved and written back (reset() keeps them)
@@ -124,10 +126,18 @@ template <class T> constexpr int num_presets() {
 	else return 0;
 }
 
-// the size of an adapter: the native engine and the sample rate (EngineInfo::state_bytes)
+// the size of an adapter: the native engine and the sample rate (EngineInfo::regions.hot)
 template <class Native> constexpr size_t state_bytes() {
 	constexpr size_t a = alignof(Native) > alignof(int) ? alignof(Native) : alignof(int);
 	return (sizeof(Native) + sizeof(int) + a - 1) / a * a;
+}
+
+// the regions of an adapter of Native with its traits' memory: sizes and alignment
+template <class Native, class Stream, class Bulk> constexpr Regions regions() {
+	constexpr size_t h = alignof(Native) > alignof(int) ? alignof(Native) : alignof(int);
+	constexpr size_t a = h > alignof(Stream) ? h : alignof(Stream);
+	return {state_bytes<Native>(), std::is_empty_v<Stream> ? 0 : sizeof(Stream), std::is_empty_v<Bulk> ? 0 : sizeof(Bulk),
+	    a > alignof(Bulk) ? a : alignof(Bulk)};
 }
 
 } // namespace detail
@@ -135,8 +145,8 @@ template <class Native> constexpr size_t state_bytes() {
 template <class T> struct Adapter {
 	using Traits = T;
 	using Native = typename T::Engine;
-	using FastMemory = typename T::FastMemory;
-	using LargeMemory = typename T::LargeMemory;
+	using StreamMemory = typename T::StreamMemory;
+	using BulkMemory = typename T::BulkMemory;
 	using Params = strisy::EngineParams<Native>;
 	static constexpr bool has_presets = requires { T::num_presets; };
 	// the traits' init_writes_memory (engine.h), false if they don't say
@@ -147,7 +157,7 @@ template <class T> struct Adapter {
 	Native e;
 	int sample_rate;
 
-	void init(FastMemory& f, LargeMemory& l, int sr, int voices) {
+	void init(StreamMemory& f, BulkMemory& l, int sr, int voices) {
 		detail::attach(e, f, l);
 		T::init(e, sr, voices);
 		sample_rate = sr;
@@ -212,27 +222,40 @@ template <class T> struct Adapter {
 		Params::changed(e, i);
 		return true;
 	}
-	static constexpr EngineInfo info = {T::name, T::summary, 1, T::inputs, T::budget, detail::state_bytes<Native>(),
-	    std::is_empty_v<typename T::FastMemory> ? 0 : sizeof(typename T::FastMemory),
-	    std::is_empty_v<typename T::LargeMemory> ? 0 : sizeof(typename T::LargeMemory), detail::num_presets<T>(),
-	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>(), detail::preset_heroes<T>(), detail::num_preset_heroes<T>(),
-	    detail::title<T>(), detail::conformance<T>(), detail::min_rate<T>(), T::short_name, T::led};
+	static constexpr EngineInfo info = {.name = T::name,
+	    .summary = T::summary,
+	    .channels = 1,
+	    .inputs = T::inputs,
+	    .max_voices = T::max_voices,
+	    .tail_seconds = T::tail_seconds,
+	    .cost = T::cost,
+	    .regions = detail::regions<Native, typename T::StreamMemory, typename T::BulkMemory>(),
+	    .num_presets = detail::num_presets<T>(),
+	    .num_params = strisy::EngineParams<typename T::Engine>::count,
+	    .heroes = detail::heroes<T>(),
+	    .preset_heroes = detail::preset_heroes<T>(),
+	    .num_preset_heroes = detail::num_preset_heroes<T>(),
+	    .title = detail::title<T>(),
+	    .conformance = detail::conformance<T>(),
+	    .min_rate = detail::min_rate<T>(),
+	    .short_name = T::short_name,
+	    .led = T::led};
 	static_assert(detail::length(T::short_name) >= 1 && detail::length(T::short_name) <= 6, "an engine declares a short name of 1 to 6 characters (traits short_name)");
 	static_assert(T::led != 0 && T::led <= 0xffffffu, "an engine declares its colour (traits led, 0xrrggbb, not 0)");
 };
 
 
 // An effect in the fx.h shape: struct traits::<name> {
-//     using Engine; using FastMemory; using LargeMemory;
+//     using Engine; using StreamMemory; using BulkMemory;
 //     static constexpr const char* name, *summary; static constexpr int inputs, outputs;
-//     static constexpr uint32_t instr_per_block;
+//     static constexpr Cost cost;   // instructions per frame (COST_REFERENCE)
 //     static void init(Engine&, int sample_rate); static void process(Engine&, const float* const* in, float* const* out);
 // };
 template <class T> struct EffectAdapter {
 	using Traits = T;
 	using Native = typename T::Engine;
-	using FastMemory = typename T::FastMemory;
-	using LargeMemory = typename T::LargeMemory;
+	using StreamMemory = typename T::StreamMemory;
+	using BulkMemory = typename T::BulkMemory;
 	using Params = strisy::EngineParams<Native>;
 	static_assert(PlainData<Native>, "an effect is plain data");
 
@@ -240,7 +263,7 @@ template <class T> struct EffectAdapter {
 	Native e;
 	int sample_rate;
 
-	void init(FastMemory& f, LargeMemory& l, int sr) {
+	void init(StreamMemory& f, BulkMemory& l, int sr) {
 		detail::attach(e, f, l);
 		T::init(e, sr);
 		sample_rate = sr;
@@ -261,10 +284,9 @@ template <class T> struct EffectAdapter {
 		Params::changed(e, i);
 		return true;
 	}
-	static constexpr EffectInfo info = {T::name, T::summary, T::inputs, T::outputs, T::instr_per_block,
-	    detail::state_bytes<Native>(), std::is_empty_v<typename T::FastMemory> ? 0 : sizeof(typename T::FastMemory),
-	    std::is_empty_v<typename T::LargeMemory> ? 0 : sizeof(typename T::LargeMemory),
-	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>()};
+	static constexpr EffectInfo info = {T::name, T::summary, T::inputs, T::outputs, T::cost,
+	    detail::regions<Native, typename T::StreamMemory, typename T::BulkMemory>(), strisy::EngineParams<typename T::Engine>::count,
+	    detail::heroes<T>()};
 };
 
 

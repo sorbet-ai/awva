@@ -89,17 +89,17 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `c2642da3` | `rev_shake` | expr | 0 | 1 | 1 | toggle |
 | `94e2d6a7` | `rev_ms` | expr | 20 | 300 | 80 | continuous |
 
-## Budget and memory
+## Cost and memory
 
 | | |
 |---|---|
 | voices | up to 10 |
 | channels | 1 (mono) |
-| CPU | 32000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
+| CPU | 100 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 1 s of the last release |
-| engine object | 3.1875 KB (3264 bytes) (on a 64-bit host) |
-| FastMemory | none |
-| LargeMemory | none |
+| hot (the engine object) | 3.1875 KB (3264 bytes) (on a 64-bit host) |
+| stream (StreamMemory) | none |
+| bulk (BulkMemory) | none |
 
 <!-- awva_docs: end -->
 

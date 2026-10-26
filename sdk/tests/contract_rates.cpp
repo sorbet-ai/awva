@@ -36,7 +36,7 @@ RateRun run_at(int rate, int preset) {
 	std::vector<NoteControls> vc(static_cast<size_t>(e.voices()), dsp::note_at_rest);
 	InstrumentControls g = dsp::instrument_at_rest;
 	const float dt = static_cast<float>(dsp::BLOCK) / static_cast<float>(rate); // a block, s
-	const int held_blocks = static_cast<int>(1.0f / dt), total = static_cast<int>((1.0f + info().budget.tail_seconds + 0.5f) / dt);
+	const int held_blocks = static_cast<int>(1.0f / dt), total = static_cast<int>((1.0f + info().tail_seconds + 0.5f) / dt);
 	RateRun r;
 	vc[0].pitch = 69.0f;
 	for (int b = 0; b < total; b++) {
@@ -93,7 +93,7 @@ float pitch_hz(const std::vector<float>& x, int rate) {
 } // namespace
 
 TEST_CASE("rates: at every rate from min_rate to max_rate, finite, bounded, within the declared cents of 48 kHz, silent within the tail") {
-	const float tail = info().budget.tail_seconds;
+	const float tail = info().tail_seconds;
 	float worst[std::size(kRates)] = {}; // cents from 48 kHz, every preset's worst (the log's table)
 	bool unpitched[std::size(kRates)] = {};
 	for (int p : presets()) {

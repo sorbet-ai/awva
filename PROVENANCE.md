@@ -8,7 +8,7 @@ This records where each file of this repository comes from. The repository was s
 
 | files | what |
 |---|---|
-| `dsp/include/awva/engine.h`, `adapter.h`, `engine_set.h`, `params.h`, `placement.h` | the engine contract and its helpers |
+| `dsp/include/awva/engine.h`, `adapter.h`, `engine_set.h`, `params.h` | the engine contract and its helpers |
 | `dsp/include/awva/ump.h`, `midi_in.h`, `voice_allocator.h`, `legato.h` | the UMP profile and decoder, the MIDI 1.0/MPE up-converter, the voice allocator, mono legato |
 | `dsp/include/awva/voice_{va,modal,bowed,reed,sine,wind,ep,brass,trumpet,accordion}.h`, `voice_wind_tune.h`, `trumpet_{bore,cal,seed}.h` | the engines |
 | `dsp/include/awva/engines/*.h`, `effects/fx.h` | the engines' and the effects' contract traits |

@@ -12,8 +12,8 @@ namespace traits {
 struct accordion {
 	AWVA_ENGINE_FUNCTIONS(accordion)
 	AWVA_ENGINE_PRESETS(accordion)
-	using FastMemory = NoMemory;
-	using LargeMemory = NoMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = NoMemory;
 	static constexpr const char* name = "accordion";
 	static constexpr const char* title = "Accordion";
 	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
@@ -23,7 +23,9 @@ struct accordion {
 	    "free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets)";
 	// pressure drives the bellows, timbre the tilt expression; motion.accel_g the bellows shake, sustain its reversal
 	static constexpr uint32_t inputs = in_pressure | in_timbre | in_accel | in_sustain;
-	static constexpr Budget budget = {::accordion::MAX_VOICES, 32000, 1.0f}; // master (preset 6) 31556; silent 0.67 s after the release
+	static constexpr int max_voices = ::accordion::MAX_VOICES;
+	static constexpr float tail_seconds = 1.0f;
+	static constexpr Cost cost = {100.0f}; // measured 98.6 (master, preset 6: 31556 a block); silent 0.67 s after the release
 	// the hero parameters: how it plays (the musette's beating, the bellows, the pressure response, the
 	// reeds' speech, the cassotto, the chamber's brightness, the pallet bend, the tilt expression)
 	static constexpr Heroes heroes = {{"beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"}};

@@ -8,7 +8,7 @@ Three ways to host them:
 
 - **On the PC, the SDK** (`sdk/`): one library per engine, MIDI in, the renderer, the shell, MIDI files.
 - **The component** (`component/`): a C ABI that loads each engine from its own library. The CLAP, VST3 and AU plugins are built on it: [github.com/sorbet-ai/awva-plugins](https://github.com/sorbet-ai/awva-plugins).
-- **Your own firmware:** take this repository as a git submodule, pinned by commit, and compile the engines from `dsp/include` into your audio thread. Each engine declares its memory regions, so you place them in your RAMs (`engine.h`, `engine_set.h`), and its budget in instructions per 32-sample block.
+- **Your own firmware:** take this repository as a git submodule, pinned by commit, and compile the engines from `dsp/include` into your audio thread. Each engine declares its three memory regions by how they are used (hot, stream, bulk), so you place them in your RAMs (`engine.h`, `engine_set.h`), and its cost in instructions a voice and frame on a reference core; you check it against your own limits with a host profile (`awva_sdk/host_profile.h`).
 
 | | |
 |---|---|

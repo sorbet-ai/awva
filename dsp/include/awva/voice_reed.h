@@ -248,7 +248,7 @@ struct VoiceState {
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
 // engines/reed.h; e.g. AXI SRAM, outside the DTCM Engine)
-struct LargeMemory {
+struct BulkMemory {
 	float main[MAX_VOICES][MAIN_LEN];
 	float tube[MAX_VOICES][SHORT_LEN]; // the short tube
 };
@@ -257,7 +257,7 @@ struct Engine {
 	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
-	LargeMemory* large; // the host's (init)
+	BulkMemory* bulk; // the host's (init)
 	real sr;
 	real shake; // smoothed shake amount from acc_abs
 	real dc1;   // master DC blocker state
@@ -275,8 +275,8 @@ static inline void reset_voice(Engine& e, int v) {
 	s.note_prev = note;
 	s.d1 = 100.0f;
 	s.d2 = 100.0f;
-	for (int i = 0; i < MAIN_LEN; i++) e.large->main[v][i] = 0.0f;
-	for (int i = 0; i < SHORT_LEN; i++) e.large->tube[v][i] = 0.0f;
+	for (int i = 0; i < MAIN_LEN; i++) e.bulk->main[v][i] = 0.0f;
+	for (int i = 0; i < SHORT_LEN; i++) e.bulk->tube[v][i] = 0.0f;
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {
@@ -421,8 +421,8 @@ static inline void process_voice(Engine& e, int v) {
 	const real doutg = (outg_t - outg0) * (1.0f / BLOCK);
 
 	// ---- per-sample loop
-	float* __restrict__ mb = e.large->main[v];
-	float* __restrict__ sb = e.large->tube[v];
+	float* __restrict__ mb = e.bulk->main[v];
+	float* __restrict__ sb = e.bulk->tube[v];
 	real* __restrict__ mix = e.mix;
 	uint32_t widx = s.widx, rng = s.rng, gph = s.gph;
 	real pr1 = s.pr1, pr2 = s.pr2;

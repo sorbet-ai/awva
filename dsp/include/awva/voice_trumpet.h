@@ -59,7 +59,7 @@
  * about 114k instructions per block on average; engine + master effects (every stage on) 140k in the
  * worst block (all ten notes starting in the same block). The brass engine: 92k on the same test.
  * Per voice-sample: three divisions, one square root, ~110 FP operations; per block a few complex
- * impedance evaluations for the loop delay and threshold. Memory: bore delay lines 80 KB (64 KB FastMemory, 16 KB LargeMemory),
+ * impedance evaluations for the loop delay and threshold. Memory: bore delay lines 80 KB (64 KB StreamMemory, 16 KB BulkMemory),
  * Engine ~7 KB.
  */
 #ifndef VOICE_TRUMPET_H_
@@ -107,13 +107,13 @@ static constexpr real DC_HZ = 2.0f;
 #endif
 
 // the bore delay lines, 8 KB per voice, placed by the host (engine SDK): the first NFAST voices' in
-// FastMemory (e.g. AHB SRAM), the others' in LargeMemory (e.g. AXI SRAM); in an EngineSet
+// StreamMemory (e.g. AHB SRAM), the others' in BulkMemory (e.g. AXI SRAM); in an EngineSet
 // neither region has room for all 80 KB
 static constexpr int NFAST = 8;
-struct FastMemory {
+struct StreamMemory {
 	alignas(32) float bore[NFAST][2][BLEN];
 };
-struct LargeMemory {
+struct BulkMemory {
 	alignas(32) float bore[MAX_VOICES - NFAST][2][BLEN];
 };
 
@@ -232,10 +232,10 @@ struct Engine {
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	Params p;           // as set (preset, live edits)
-	Params ps;          // smoothed copy used by the DSP
-	FastMemory* fast;   // the host's (init): bore delay lines of voices 0 .. NFAST - 1
-	LargeMemory* large; // the host's (init): the others'
+	Params p;             // as set (preset, live edits)
+	Params ps;            // smoothed copy used by the DSP
+	StreamMemory* stream; // the host's (init): bore delay lines of voices 0 .. NFAST - 1
+	BulkMemory* bulk;     // the host's (init): the others'
 	real sr, inv_sr, pi_sr, dt, ctrl_dt, block_dt;
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
@@ -342,7 +342,7 @@ struct Cx {
 
 // a voice's bore delay line h (0: towards the bell, 1: back)
 [[nodiscard]] static inline float* bore_line(Engine& e, int v, int h) {
-	return v < NFAST ? e.fast->bore[v][h] : e.large->bore[v - NFAST][h];
+	return v < NFAST ? e.stream->bore[v][h] : e.bulk->bore[v - NFAST][h];
 }
 
 // ---------------------------------------------------------------------------------------------

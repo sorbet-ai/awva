@@ -3,13 +3,13 @@
 // EngineSet<E...>: a fixed set of VoiceEngines chosen at compile time (a host that runs one of
 // them at a time), as three plain-data objects the host places itself:
 //
-//   EngineSet<...>::State    the engine object they share       (Placement::tcm:   e.g. DTCM)
-//   EngineSet<...>::Fast     one FastMemory region they share  (Placement::fast:  e.g. AHB SRAM)
-//   EngineSet<...>::Large    one LargeMemory region they share (Placement::large: e.g. AXI SRAM)
+//   EngineSet<...>::Hot      the engine object they share       (Region::hot)
+//   EngineSet<...>::Stream   one StreamMemory region they share (Region::stream)
+//   EngineSet<...>::Bulk     one BulkMemory region they share   (Region::bulk)
 //
 // Only one engine runs at a time, so the engine object and its memory regions are one arena per
-// class, as large as the largest engine's: while an engine runs, its object is the start of the
-// State arena and its FastMemory and LargeMemory the start of the others. start(k, ...) hands the
+// class, as bulk as the largest engine's: while an engine runs, its object is the start of the
+// Hot arena and its StreamMemory and BulkMemory the start of the others. start(k, ...) hands the
 // arenas to engine k: its object's share is zeroed, and its regions' share unless its init() writes
 // all of them itself (init_writes_memory, engine.h: the same state, without writing the bytes
 // twice in the switch block); then its init() runs. So an engine always starts from its state at
@@ -63,7 +63,7 @@ template <size_t Bytes, size_t Align> struct Arena {
 	template <class M> void clear() { std::memset(bytes, 0, sizeof(M)); }
 };
 
-// the arena for every region type M...: as large and as aligned as the largest
+// the arena for every region type M...: as bulk and as aligned as the largest
 template <class... M> using SharedArena = Arena<std::max({sizeof(M)...}), std::max({alignof(M)...})>;
 
 // Fits<Arena, Engine, Region>::value: a check that names the engine (and the region) in the
@@ -77,27 +77,27 @@ template <VoiceEngine... E> struct EngineSet {
 	static constexpr int count = sizeof...(E);
 	template <size_t I> using engine = typename detail::Nth<I, E...>::type;
 
-	using State = SharedArena<E...>;
-	using Fast = SharedArena<typename E::FastMemory...>;
-	using Large = SharedArena<typename E::LargeMemory...>;
-	static_assert((Fits<Fast, E, typename E::FastMemory>::value && ...));
-	static_assert((Fits<Large, E, typename E::LargeMemory>::value && ...));
+	using Hot = SharedArena<E...>;
+	using Stream = SharedArena<typename E::StreamMemory...>;
+	using Bulk = SharedArena<typename E::BulkMemory...>;
+	static_assert((Fits<Stream, E, typename E::StreamMemory>::value && ...));
+	static_assert((Fits<Bulk, E, typename E::BulkMemory>::value && ...));
 
 	// f(engine k) for 0 <= k < count (nothing otherwise); f gets the engine and its index as a
 	// std::integral_constant
-	template <class F> static void visit(int k, State& s, F&& f) {
+	template <class F> static void visit(int k, Hot& s, F&& f) {
 		visit_(k, s, f, std::index_sequence_for<E...>());
 	}
-	// the same with the engine's memory regions in the arenas: f(engine, fast, large, index).
+	// the same with the engine's memory regions in the arenas: f(engine, stream, bulk, index).
 	// Only for the engine the arenas were started for (start below).
-	template <class F> static void visit(int k, State& s, Fast& fast, Large& large, F&& f) {
-		visit_mem_(k, s, fast, large, f, std::index_sequence_for<E...>());
+	template <class F> static void visit(int k, Hot& s, Stream& stream, Bulk& bulk, F&& f) {
+		visit_mem_(k, s, stream, bulk, f, std::index_sequence_for<E...>());
 	}
-	// engine k takes over the arenas: its object and regions zeroed, then init(engine, fast, large,
+	// engine k takes over the arenas: its object and regions zeroed, then init(engine, stream, bulk,
 	// index) (the engine's init with them). Call it where the engines run (the synth thread): the
 	// engine that ran before must not touch the arenas again.
-	template <class F> static void start(int k, State& s, Fast& fast, Large& large, F&& init) {
-		visit_mem_(k, s, fast, large, init, std::index_sequence_for<E...>(), true);
+	template <class F> static void start(int k, Hot& s, Stream& stream, Bulk& bulk, F&& init) {
+		visit_mem_(k, s, stream, bulk, init, std::index_sequence_for<E...>(), true);
 	}
 
 	// EngineInfo of engine k (nullptr outside)
@@ -107,24 +107,24 @@ template <VoiceEngine... E> struct EngineSet {
 	}
 
 private:
-	template <class F, size_t... I> static void visit_(int k, State& s, F& f, std::index_sequence<I...>) {
+	template <class F, size_t... I> static void visit_(int k, Hot& s, F& f, std::index_sequence<I...>) {
 		(void)((k == static_cast<int>(I) && (f(s.template as<engine<I>>(), std::integral_constant<size_t, I>()), true)) || ...);
 	}
-	template <size_t I, class F> static void with_mem_(State& s, Fast& fast, Large& large, F& f, bool clear) {
-		using FastM = typename engine<I>::FastMemory;
-		using LargeM = typename engine<I>::LargeMemory;
+	template <size_t I, class F> static void with_mem_(Hot& s, Stream& stream, Bulk& bulk, F& f, bool clear) {
+		using StreamM = typename engine<I>::StreamMemory;
+		using BulkM = typename engine<I>::BulkMemory;
 		if (clear) {
 			s.template clear<engine<I>>();
 			if (!init_writes_memory<engine<I>>) {
-				fast.template clear<FastM>();
-				large.template clear<LargeM>();
+				stream.template clear<StreamM>();
+				bulk.template clear<BulkM>();
 			}
 		}
-		f(s.template as<engine<I>>(), fast.template as<FastM>(), large.template as<LargeM>(), std::integral_constant<size_t, I>());
+		f(s.template as<engine<I>>(), stream.template as<StreamM>(), bulk.template as<BulkM>(), std::integral_constant<size_t, I>());
 	}
 	template <class F, size_t... I>
-	static void visit_mem_(int k, State& s, Fast& fast, Large& large, F& f, std::index_sequence<I...>, bool clear = false) {
-		(void)((k == static_cast<int>(I) && (with_mem_<I>(s, fast, large, f, clear), true)) || ...);
+	static void visit_mem_(int k, Hot& s, Stream& stream, Bulk& bulk, F& f, std::index_sequence<I...>, bool clear = false) {
+		(void)((k == static_cast<int>(I) && (with_mem_<I>(s, stream, bulk, f, clear), true)) || ...);
 	}
 };
 

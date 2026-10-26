@@ -60,21 +60,27 @@ enum Input : uint32_t {
 	in_spin = 1u << 7,          // InstrumentControls::motion.spin
 };
 
-// Where a host puts an engine's memory. The engine object itself is always Placement::tcm.
-enum class Placement : uint8_t {
-	tcm,   // tightly coupled, zero wait states: the hot state (e.g. a Cortex-M7's DTCM, 128 KB)
-	fast,  // FastMemory: large, touched every sample (e.g. AHB SRAM, 256 KB)
-	large, // LargeMemory: large, any RAM (e.g. AXI SRAM, 512 KB)
+// An engine's memory, in three regions by how it is used: the host puts each in the RAM that
+// suits it (one heap on a PC; on a microcontroller, the fastest RAM for hot, fast RAM for stream,
+// any RAM, external included, for bulk).
+enum class Region : uint8_t {
+	hot,    // the engine object: small, touched every sample (tightly coupled RAM, L1-resident)
+	stream, // StreamMemory: large, touched every sample (delay lines, bores); cacheable is fine
+	bulk,   // BulkMemory: large, touched per block or rarely (tables, a reverb ring); any RAM
+};
+// the regions' sizes in bytes (0: none) and the alignment they need
+struct Regions {
+	size_t hot, stream, bulk;
+	size_t align;
 };
 
-// What running the engine costs (hints for hosts; budgets.max_voices is a hard limit)
-struct Budget {
-	int max_voices;           // voices it can run
-	uint32_t instr_per_block; // worst preset, Cortex-M7 instructions per block counted under QEMU
-	                          // (10 voices, the default performance); a 480 MHz M7 at 48828 Hz has
-	                          // 480 MHz / 48828 Hz * 32 = 314k cycles per block
-	float tail_seconds;       // after the last release it is silent and idle within this time
+// What running the engine costs, on a reference machine a host scales from to its own (its clock,
+// its compiler): instructions per voice and frame, the worst preset with every voice playing
+struct Cost {
+	float instr_per_voice_frame;
 };
+inline constexpr const char* COST_REFERENCE =
+    "Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset";
 
 // a region an engine doesn't need
 struct NoMemory {};
@@ -150,14 +156,14 @@ struct Conformance {
 }
 
 struct EngineInfo {
-	const char* name;    // the engine's short name, e.g. "va"
-	const char* summary; // one line for people
-	int channels;        // 1: mono, 2: stereo out
-	uint32_t inputs;     // Input bits
-	Budget budget;
-	size_t state_bytes;                // the engine object (Placement::tcm)
-	size_t fast_bytes;                 // its FastMemory (0: none)
-	size_t large_bytes;                // its LargeMemory (0: none)
+	const char* name;                  // the engine's short name, e.g. "va"
+	const char* summary;               // one line for people
+	int channels;                      // 1: mono, 2: stereo out
+	uint32_t inputs;                   // Input bits
+	int max_voices;                    // voices it can run (a hard limit)
+	float tail_seconds;                // after the last release it is silent and idle within this time
+	Cost cost;                         // (COST_REFERENCE)
+	Regions regions;                   // the engine object (hot), its StreamMemory and BulkMemory
 	int num_presets;                   // 0: no presets
 	int num_params;                    // live parameters
 	Heroes heroes;                     // the engine's hero parameters
@@ -190,17 +196,17 @@ struct EffectInfo {
 	const char* name;
 	const char* summary;
 	int inputs, outputs; // channels
-	uint32_t instr_per_block;
-	size_t state_bytes, fast_bytes, large_bytes;
+	Cost cost;           // per frame (all its channels)
+	Regions regions;
 	int num_params;
 	Heroes heroes;
 };
 
 // The memory of an engine as one object, for hosts that don't place the regions separately (the
-// PC); an embedded host may put FastMemory and LargeMemory in different RAMs (engine_set.h).
+// PC); an embedded host may put StreamMemory and BulkMemory in different RAMs (engine_set.h).
 template <class E> struct Memory {
-	AWVA_NO_UNIQUE_ADDRESS typename E::FastMemory fast;
-	AWVA_NO_UNIQUE_ADDRESS typename E::LargeMemory large;
+	AWVA_NO_UNIQUE_ADDRESS typename E::StreamMemory stream;
+	AWVA_NO_UNIQUE_ADDRESS typename E::BulkMemory bulk;
 };
 
 // plain data: zero-filled storage is a valid engine before init(); nothing runs at startup
@@ -211,8 +217,8 @@ concept PlainData = std::is_trivially_default_constructible_v<T> && std::is_triv
 // The contracts
 
 // A polyphonic sound engine.
-//   init(fast, large, sample_rate, voices)   start from silence; the regions stay the engine's
-//                                             until the next init (voices <= budget.max_voices)
+//   init(stream, bulk, sample_rate, voices)  start from silence; the regions stay the engine's
+//                                             until the next init (voices <= info.max_voices)
 //   reset()             back to silence, keeping the preset and the live parameter values
 //   process(vc, g, out) one block: vc[voices()] controls, g the globals, out[0..channels) BLOCK
 //                       samples each (full scale about +-4: hosts typically play it x0.25)
@@ -222,8 +228,8 @@ concept PlainData = std::is_trivially_default_constructible_v<T> && std::is_triv
 //   live parameters: param_desc(i) (nullptr past the last), param(i) the live value,
 //            set_param(i, v) a write by write_param()'s rule (false: not written)
 template <class E>
-concept VoiceEngine = PlainData<E> && PlainData<typename E::FastMemory> && PlainData<typename E::LargeMemory> &&
-    requires(E& e, const E& ce, typename E::FastMemory& f, typename E::LargeMemory& l,
+concept VoiceEngine = PlainData<E> && PlainData<typename E::StreamMemory> && PlainData<typename E::BulkMemory> &&
+    requires(E& e, const E& ce, typename E::StreamMemory& f, typename E::BulkMemory& l,
         const NoteControls* vc, const InstrumentControls& g, float* const* out, int i, float v) {
 	    { E::info } -> std::convertible_to<const EngineInfo&>;
 	    { e.init(f, l, i, i) } -> std::same_as<void>;
@@ -239,7 +245,7 @@ concept VoiceEngine = PlainData<E> && PlainData<typename E::FastMemory> && Plain
 	    { e.set_param(i, v) } -> std::same_as<bool>;
     };
 
-// An engine whose init() writes every byte of its FastMemory and LargeMemory declares
+// An engine whose init() writes every byte of its StreamMemory and BulkMemory declares
 //   static constexpr bool init_writes_memory = true;
 // Then a host that hands it memory another engine used (EngineSet's shared arenas) needn't zero it
 // first: the engine starts from the same state either way. sdk/tests (engine_set) proves it for
@@ -247,11 +253,11 @@ concept VoiceEngine = PlainData<E> && PlainData<typename E::FastMemory> && Plain
 // over zeros.
 template <class E> inline constexpr bool init_writes_memory = requires { requires E::init_writes_memory; };
 
-// An audio effect: init(fast, large, sample_rate), reset(), process(in, out) with
+// An audio effect: init(stream, bulk, sample_rate), reset(), process(in, out) with
 // in[0..inputs) and out[0..outputs) BLOCK samples each, live parameters as a VoiceEngine.
 template <class F>
-concept Effect = PlainData<F> && PlainData<typename F::FastMemory> && PlainData<typename F::LargeMemory> &&
-    requires(F& f, typename F::FastMemory& fm, typename F::LargeMemory& lm, const float* const* in,
+concept Effect = PlainData<F> && PlainData<typename F::StreamMemory> && PlainData<typename F::BulkMemory> &&
+    requires(F& f, typename F::StreamMemory& fm, typename F::BulkMemory& lm, const float* const* in,
         float* const* out, int i, float v) {
 	    { F::info } -> std::convertible_to<const EffectInfo&>;
 	    { f.init(fm, lm, i) } -> std::same_as<void>;

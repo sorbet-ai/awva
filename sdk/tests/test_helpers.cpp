@@ -84,9 +84,9 @@ TEST_CASE("params: write_param clamps, rounds unless continuous, ignores NaN") {
 TEST_CASE("engine_set: visit reaches each engine with its own type and memory") {
 	using Set = dsp::EngineSet<dsp::engines::va, dsp::engines::sine>;
 	static_assert(Set::count == 2);
-	static Set::State s; // (the engine last initialised: sine)
-	static Set::Fast f;
-	static Set::Large l;
+	static Set::Hot s; // (the engine last initialised: sine)
+	static Set::Stream f;
+	static Set::Bulk l;
 	for (int k = 0; k < Set::count; k++)
 		Set::visit(k, s, f, l, [](auto& e, auto& fast, auto& large, auto) { e.init(fast, large, 48000, 6); });
 	CHECK(std::strcmp(Set::info(0)->name, "va") == 0);
@@ -114,18 +114,18 @@ TEST_CASE("engine_set: one arena per class (the objects, each region), the large
 	using B = bowed_zeroed;
 	using T = dsp::engines::trumpet;
 	using Set = dsp::EngineSet<B, T, dsp::engines::sine>;
-	static_assert(Set::Fast::size == std::max(sizeof(B::FastMemory), sizeof(T::FastMemory)));
-	static_assert(Set::Large::size == std::max(sizeof(B::LargeMemory), sizeof(T::LargeMemory)));
-	static_assert(Set::Fast::size < sizeof(B::FastMemory) + sizeof(T::FastMemory), "shared, not added up");
-	static_assert(Set::State::size == std::max({sizeof(B), sizeof(T), sizeof(dsp::engines::sine)}), "one engine object, the largest");
+	static_assert(Set::Stream::size == std::max(sizeof(B::StreamMemory), sizeof(T::StreamMemory)));
+	static_assert(Set::Bulk::size == std::max(sizeof(B::BulkMemory), sizeof(T::BulkMemory)));
+	static_assert(Set::Stream::size < sizeof(B::StreamMemory) + sizeof(T::StreamMemory), "shared, not added up");
+	static_assert(Set::Hot::size == std::max({sizeof(B), sizeof(T), sizeof(dsp::engines::sine)}), "one engine object, the largest");
 	static_assert(!dsp::init_writes_memory<B> && dsp::init_writes_memory<T>);
 	// the fit check: an arena smaller than a region doesn't hold it
-	static_assert(!dsp::Arena<8, 4>::holds<B::FastMemory>());
-	static_assert(dsp::Arena<sizeof(B::FastMemory), alignof(B::FastMemory)>::holds<B::FastMemory>());
+	static_assert(!dsp::Arena<8, 4>::holds<B::StreamMemory>());
+	static_assert(dsp::Arena<sizeof(B::StreamMemory), alignof(B::StreamMemory)>::holds<B::StreamMemory>());
 
-	static Set::State s, s0;
-	static Set::Fast fast, fast0;
-	static Set::Large large, large0;
+	static Set::Hot s, s0;
+	static Set::Stream fast, fast0;
+	static Set::Bulk large, large0;
 	// what ran before left its data in the arenas
 	std::memset(s.bytes, 0x5a, sizeof s.bytes);
 	std::memset(fast.bytes, 0x5a, sizeof fast.bytes);

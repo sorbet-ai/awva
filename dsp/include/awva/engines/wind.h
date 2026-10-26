@@ -12,8 +12,8 @@ namespace traits {
 struct wind {
 	AWVA_ENGINE_FUNCTIONS(wind)
 	AWVA_ENGINE_PRESETS(wind)
-	using FastMemory = NoMemory;
-	using LargeMemory = ::wind::LargeMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = ::wind::BulkMemory;
 	// init() writes every byte of both regions (reset of every voice): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "wind";
@@ -24,7 +24,9 @@ struct wind {
 	static constexpr const char* summary = "woodwinds: reed and jet driven bores, cylindrical and conical (9 presets)";
 	// pressure, pressure_rate, timbre (the embouchure), motion.accel_g (the saxes' growl); sustain is not read
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel;
-	static constexpr Budget budget = {::wind::MAX_VOICES, 20000, 2.0f};
+	static constexpr int max_voices = ::wind::MAX_VOICES;
+	static constexpr float tail_seconds = 2.0f;
+	static constexpr Cost cost = {62.5f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"}};
 	static constexpr PresetHeroes preset_heroes[] = {

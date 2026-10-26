@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // The trumpet engine (voice_trumpet.h) as a awva::VoiceEngine: awva::engines::trumpet.
-// Its bore delay lines (80 KB): 64 KB FastMemory, 16 KB LargeMemory.
+// Its bore delay lines (80 KB): 64 KB StreamMemory, 16 KB BulkMemory.
 #ifndef AWVA_ENGINES_TRUMPET_H_
 #define AWVA_ENGINES_TRUMPET_H_
 
@@ -13,8 +13,8 @@ namespace traits {
 struct trumpet {
 	AWVA_ENGINE_FUNCTIONS(trumpet)
 	AWVA_ENGINE_PRESETS(trumpet)
-	using FastMemory = ::trumpet::FastMemory;
-	using LargeMemory = ::trumpet::LargeMemory;
+	using StreamMemory = ::trumpet::StreamMemory;
+	using BulkMemory = ::trumpet::BulkMemory;
 	// init() writes every byte of both regions (reset of every voice): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "trumpet";
@@ -25,7 +25,9 @@ struct trumpet {
 	static constexpr const char* summary = "physical trumpet: lips, mouthpiece and bore, played like the brass trumpet (1 preset)";
 	// pressure the breath, pressure_rate the attack, timbre the lips (lip_tilt); motion.accel_g and sustain
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
-	static constexpr Budget budget = {::trumpet::MAX_VOICES, 44000, 2.0f}; // profile.sh 42288; silent 0.25 s after the release
+	static constexpr int max_voices = ::trumpet::MAX_VOICES;
+	static constexpr float tail_seconds = 2.0f;
+	static constexpr Cost cost = {137.5f}; // measured 132.15 (42288 a block); silent 0.25 s after the release
 	// the hero parameters (the contract suite checks the names)
 	// the new model's: brassiness, the bell and the radiation's brightness, the tongue, the loudest
 	// breath, the breath noise, the lips under tilt, the release (no presets to override them)

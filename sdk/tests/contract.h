@@ -37,7 +37,7 @@ constexpr float PEAK_PLAYING = 32.0f; // every voice at full pressure (a host at
 [[nodiscard]] inline std::string name() { return info().name; }
 // extreme but legal parameters may be loud: only blow-ups fail (64, or the engine's declared bound)
 [[nodiscard]] inline float peak_fuzz() { return info().conformance.fuzz_peak; }
-[[nodiscard]] inline int nvoices() { return std::min(10, info().budget.max_voices); }
+[[nodiscard]] inline int nvoices() { return std::min(10, info().max_voices); }
 [[nodiscard]] inline int blocks(double s, int rate = SR) { return static_cast<int>(s * rate / dsp::BLOCK); }
 
 // every preset, or -1 for an engine without presets

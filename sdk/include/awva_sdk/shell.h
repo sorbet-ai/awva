@@ -26,7 +26,7 @@ namespace awva::sdk {
 
 class Shell {
 public:
-	// voices: the engine's voices (at most its budget's max_voices); fx: the master effects on
+	// voices: the engine's voices (at most its max_voices); fx: the master effects on
 	Shell(const EngineEntry& engine, int sample_rate, int voices = 10, bool fx = true);
 
 	void set_engine(const EngineEntry& engine); // a new engine, from silence (MIDI state kept)

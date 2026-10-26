@@ -122,9 +122,9 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 		CHECK(d.min_rate >= 11025);
 		CHECK(d.max_rate == 192000);
 		CHECK(d.num_presets == e->info->num_presets);
-		CHECK(d.fast_bytes == e->info->fast_bytes);
-		CHECK(d.large_bytes == e->info->large_bytes);
-		CHECK(d.state_bytes >= e->info->state_bytes);
+		CHECK(d.fast_bytes == e->info->regions.stream);
+		CHECK(d.large_bytes == e->info->regions.bulk);
+		CHECK(d.state_bytes >= e->info->regions.hot);
 		for (int i = 0; i < e->info->num_params; i++) {
 			CHECK(std::strcmp(d.params[i].name, e->param_desc(i)->name) == 0);
 			CHECK(dll.c().param_index(d.params[i].id) == i);

@@ -4,6 +4,7 @@
 // engine and linked to that engine's library, awva_engine_<name> (AWVA_ENGINE_ENTRY names its
 // entry), so every engine gets every check without a line of its own (sdk/CMakeLists.txt).
 //   info              the declaration is complete and consistent
+//   profile           it fits the host profile (AWVA_HOST_PROFILE: awva_sdk/host_profile.h)
 //   init              silent and idle with no input; the first note sounds
 //   release           silent (< 1e-4) and idle within its declared tail after the last release
 //   reset             back to silence, the preset and the live parameter values kept; afterwards
@@ -38,8 +39,14 @@
 #include <string>
 #include <vector>
 
+#include "awva_sdk/host_profile.h"
 #include "awva_sdk/presets.h"
 #include "contract.h"
+
+// the host whose limits the suite checks (awva_sdk/host_profile.h): a host project defines its own
+#ifndef AWVA_HOST_PROFILE
+#define AWVA_HOST_PROFILE awva::sdk::example_profile
+#endif
 #include "nsc/no_denormals.h"
 
 using namespace contract; // NOLINT(google-build-using-namespace): the suite's own helpers
@@ -62,22 +69,33 @@ TEST_CASE("info: the declaration is complete") {
 	CHECK(std::strlen(in.short_name) <= 6);
 	CHECK(in.led != 0); // every engine has a colour
 	CHECK(in.led <= 0xffffffu);
-	CHECK(in.budget.max_voices >= 1);
-	CHECK(in.budget.instr_per_block > 0);
-	CHECK(in.budget.instr_per_block < 314000); // a block's cycles on a 480 MHz Cortex-M7 at 48828 Hz
-	CHECK(in.budget.tail_seconds > 0.0f);
-	CHECK(in.budget.tail_seconds <= 30.0f);
+	CHECK(in.max_voices >= 1);
+	CHECK(in.cost.instr_per_voice_frame > 0.0f);
+	CHECK(in.tail_seconds > 0.0f);
+	CHECK(in.tail_seconds <= 30.0f);
 	CHECK((in.inputs & dsp::in_pressure) != 0);
-	CHECK(in.state_bytes > 0);
-	CHECK(in.state_bytes < 128 * 1024); // a Cortex-M7's 128 KB DTCM, for everything
+	CHECK(in.regions.hot > 0);
+	CHECK(in.regions.align >= alignof(int));
+	CHECK((in.regions.align & (in.regions.align - 1)) == 0); // (a power of two)
 	CHECK(in.num_presets >= 0);
 	CHECK(in.num_params >= 0);
 	sdk::Engine e(entry());
 	e.init(SR, nvoices());
 	CHECK(e.voices() == nvoices());
 	CHECK((in.num_presets > 0 ? e.preset() >= 0 && e.preset() < in.num_presets : e.preset() == -1));
-	MESSAGE(std::string(in.name) << ": " << in.num_presets << " presets, " << in.num_params << " parameters, state " << in.state_bytes
-	                             << " B, fast " << in.fast_bytes << " B, large " << in.large_bytes << " B");
+	MESSAGE(std::string(in.name) << ": " << in.num_presets << " presets, " << in.num_params << " parameters, hot " << in.regions.hot
+	                             << " B, stream " << in.regions.stream << " B, bulk " << in.regions.bulk << " B");
+}
+
+TEST_CASE("profile: the engine fits the host profile (its regions, its share of the processor)") {
+	const awva::sdk::HostProfile& h = AWVA_HOST_PROFILE;
+	const awva::sdk::Fit f = awva::sdk::fit(info(), h);
+	MESSAGE(std::string(info().name) << " on " << h.name << ": " << 100.0 * f.cpu << " % of the processor, hot " << info().regions.hot << " of " << h.hot_max
+	                                 << " B, stream " << info().regions.stream << " of " << h.stream_max << " B, bulk " << info().regions.bulk << " of " << h.bulk_max << " B");
+	CHECK(f.hot);
+	CHECK(f.stream);
+	CHECK(f.bulk);
+	CHECK(f.cpu < 1.0);
 }
 
 TEST_CASE("init: silent and idle with no input, a note sounds") {
@@ -99,7 +117,7 @@ TEST_CASE("init: silent and idle with no input, a note sounds") {
 }
 
 TEST_CASE("release: silent and idle within the declared tail") {
-	const float tail = info().budget.tail_seconds;
+	const float tail = info().tail_seconds;
 	float worst = 0.0f;
 	for (int p : presets()) {
 		CAPTURE(std::string(info().name));
@@ -496,7 +514,7 @@ TEST_CASE("presets: names and numbering, switching while notes sound") {
 }
 
 TEST_CASE("voice stealing: note jumps, instant re-strikes, every voice at once") {
-	const float tail = info().budget.tail_seconds;
+	const float tail = info().tail_seconds;
 	for (int p : presets()) {
 		CAPTURE(std::string(info().name));
 		CAPTURE(p);
@@ -627,8 +645,8 @@ TEST_CASE("cpu: the worst case runs much faster than real time on the PC") {
 	const Stats s = play(e, k, blocks(2.0), nullptr, [&](int b) { phrase(k, b % blocks(1.4)); });
 	const double host = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
 	const double rt = host / 2.0;
-	MESSAGE(std::string(info().name) << ": " << e.voices() << " voices at full pressure: " << 100.0 * rt << " % of real time on this PC (a 480 MHz Cortex-M7: "
-	                                 << 100.0 * info().budget.instr_per_block / 314000 << " % declared)");
+	MESSAGE(std::string(info().name) << ": " << e.voices() << " voices at full pressure: " << 100.0 * rt << " % of real time on this PC (declared: "
+	                                 << info().cost.instr_per_voice_frame << " instructions a voice and frame on the reference)");
 	CHECK(s.nonfinite == 0);
 #ifndef __SANITIZE_ADDRESS__
 	CHECK(rt < 0.5); // (no timing under the sanitizers)
@@ -657,7 +675,7 @@ GuardRender guard_render(int preset, bool guarded) {
 		return static_cast<float>(rng >> 8) * (1.0f / 16777216.0f);
 	};
 	GuardRender r;
-	const int playing = blocks(4.0), total = playing + blocks(std::max(8.0, info().budget.tail_seconds + 1.0));
+	const int playing = blocks(4.0), total = playing + blocks(std::max(8.0, info().tail_seconds + 1.0));
 	r.playing_samples = playing * dsp::BLOCK;
 	r.out.reserve(static_cast<size_t>(total) * dsp::BLOCK);
 	for (int b = 0; b < total; b++) {
@@ -722,7 +740,7 @@ TEST_CASE("the host's FTZ guard: finite, silent after the release, the same in 2
 		CAPTURE(p);
 		const GuardRender ieee = guard_render(p, false), ftz = guard_render(p, true);
 		REQUIRE(ieee.out.size() == ftz.out.size());
-		const size_t quiet = static_cast<size_t>(ieee.playing_samples) + static_cast<size_t>(blocks(info().budget.tail_seconds + 0.2)) * dsp::BLOCK; // (the release takes up to 0.1 s)
+		const size_t quiet = static_cast<size_t>(ieee.playing_samples) + static_cast<size_t>(blocks(info().tail_seconds + 0.2)) * dsp::BLOCK; // (the release takes up to 0.1 s)
 		long nonfinite = 0, loud_after = 0, pcm = 0, changed = 0;
 		double max_diff = 0.0;
 		for (size_t i = 0; i < ftz.out.size(); i++) {

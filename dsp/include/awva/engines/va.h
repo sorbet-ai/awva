@@ -12,8 +12,8 @@ namespace traits {
 struct va {
 	AWVA_ENGINE_FUNCTIONS(va)
 	AWVA_ENGINE_PRESETS(va)
-	using FastMemory = NoMemory;
-	using LargeMemory = NoMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = NoMemory;
 	static constexpr const char* name = "va";
 	static constexpr const char* title = "Virtual Analog";
 	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
@@ -21,7 +21,9 @@ struct va {
 	static constexpr uint32_t led = 0x401400;
 	static constexpr const char* summary = "virtual analog: saw/pulse/sub oscillators, sync, ladder-style filter, envelopes (8 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_spin | in_sustain;
-	static constexpr Budget budget = {::va::MAX_VOICES, 24000, 10.0f};
+	static constexpr int max_voices = ::va::MAX_VOICES;
+	static constexpr float tail_seconds = 10.0f;
+	static constexpr Cost cost = {75.0f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"}};
 	static constexpr PresetHeroes preset_heroes[] = {

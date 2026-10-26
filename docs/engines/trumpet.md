@@ -85,17 +85,17 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `175c54d9` | `flutter` | mod | 0 | 1 | 0.6 | continuous |
 | `e6f3c1b1` | `flut_hz` | mod | 8 | 40 | 24 | continuous |
 
-## Budget and memory
+## Cost and memory
 
 | | |
 |---|---|
 | voices | up to 10 |
 | channels | 1 (mono) |
-| CPU | 44000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
+| CPU | 137.5 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 8.19531 KB (8392 bytes) (on a 64-bit host) |
-| FastMemory | 64 KB |
-| LargeMemory | 16 KB |
+| hot (the engine object) | 8.19531 KB (8392 bytes) (on a 64-bit host) |
+| stream (StreamMemory) | 64 KB |
+| bulk (BulkMemory) | 16 KB |
 
 <!-- awva_docs: end -->
 

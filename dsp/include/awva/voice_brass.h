@@ -123,7 +123,7 @@ using strisy::rmin;
 
 // the bore delay lines, 8 KB per voice: the host gives them to the engine (engine contract,
 // engines/brass.h; e.g. AXI SRAM)
-struct LargeMemory {
+struct BulkMemory {
 	float bore[MAX_VOICES][2][BLEN];
 };
 
@@ -219,9 +219,9 @@ struct Engine {
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	LargeMemory* large; // the host's (init)
-	Params p;           // parameters as set (presets, live edits)
-	Params ps;          // smoothed copy used by the DSP (de-zippers live edits)
+	BulkMemory* bulk; // the host's (init)
+	Params p;         // parameters as set (presets, live edits)
+	Params ps;        // smoothed copy used by the DSP (de-zippers live edits)
 	real sr, pi_sr, ph_scale, ctrl_dt, block_dt;
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake; // global shake envelope
@@ -330,7 +330,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	for (int i = 0; i < SLEN; i++) s.sb[i] = 0.0f;
 	if (v >= 0 && v < MAX_VOICES)
 		for (int h = 0; h < 2; h++)
-			for (int i = 0; i < BLEN; i++) e.large->bore[v][h][i] = 0.0f;
+			for (int i = 0; i < BLEN; i++) e.bulk->bore[v][h][i] = 0.0f;
 }
 
 static inline void update_derived(Engine& e) {
@@ -837,8 +837,8 @@ static inline void process_voice(Engine& e, int v) {
 	}
 
 	// ---- audio rate: bore, bell, body, mute ----------------------------------------------------
-	float* B1 = e.large->bore[v][0];
-	float* B2 = e.large->bore[v][1];
+	float* B1 = e.bulk->bore[v][0];
+	float* B2 = e.bulk->bore[v][1];
 	// level keytracking: the radiation high-pass takes the fundamental of notes below rad_hz; give
 	// part of it back ((1 + (rad_hz/f0)^2)^0.375) so low notes keep their weight
 	const real rq = fr / fl;

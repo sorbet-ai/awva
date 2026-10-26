@@ -50,7 +50,7 @@ TEST_CASE("soak: chaos, every voice held, the decay: finite, bounded, then silen
 		Keys k(e.voices());
 		Rng r{0x50a1u + static_cast<uint32_t>(p + 1)};
 		Phase ph[3] = {{"chaos"}, {"held"}, {"decay"}};
-		const int n[3] = {blocks(chaos), blocks(10.0), blocks(info().budget.tail_seconds + 2.0)};
+		const int n[3] = {blocks(chaos), blocks(10.0), blocks(info().tail_seconds + 2.0)};
 		int last_loud = -1;
 		for (int f = 0; f < 3; f++) {
 			if (f == 1) { // (the preset's values back: the tail is declared for them)
@@ -95,7 +95,7 @@ TEST_CASE("soak: chaos, every voice held, the decay: finite, bounded, then silen
 		}
 		const double silent_after = static_cast<double>(last_loud + 1) * dsp::BLOCK / SR;
 		CAPTURE(silent_after);
-		CHECK(silent_after <= info().budget.tail_seconds);
+		CHECK(silent_after <= info().tail_seconds);
 		CHECK(e.active_voices() == 0);
 	}
 }

@@ -86,8 +86,8 @@ TEST_CASE("effect: info and parameters") {
 	CHECK(std::strlen(in.summary) > 10);
 	CHECK(in.inputs == 1);
 	CHECK(in.outputs == 2);
-	CHECK(in.instr_per_block > 0);
-	CHECK(in.state_bytes > 0);
+	CHECK(in.cost.instr_per_voice_frame > 0.0f);
+	CHECK(in.regions.hot > 0);
 	CHECK(f.param_desc(f.num_params()) == nullptr);
 	std::set<std::string> names;
 	for (int i = 0; i < f.num_params(); i++) {

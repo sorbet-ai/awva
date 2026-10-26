@@ -14,7 +14,7 @@ awva's engines are per-note sound engines: each note gets a pitch and its own co
 
 ## The engines
 
-Each page has a reference part generated from the engine's `EngineInfo` (inputs, presets, parameters, hero parameters, budget and memory) by `awva_docs` (`sdk/tools/awva_docs.cpp`), followed by a hand-written account of how it works and how it plays. The test `docs.up_to_date` fails when the generated parts are stale; to update them, build the SDK and run `awva_docs docs`.
+Each page has a reference part generated from the engine's `EngineInfo` (inputs, presets, parameters, hero parameters, cost and memory) by `awva_docs` (`sdk/tools/awva_docs.cpp`), followed by a hand-written account of how it works and how it plays. The test `docs.up_to_date` fails when the generated parts are stale; to update them, build the SDK and run `awva_docs docs`.
 
 <!-- awva_docs: generated from the engine's EngineInfo (sdk/tools/awva_docs.cpp); run it to update, don't edit -->
 

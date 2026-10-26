@@ -85,7 +85,7 @@
  * Sample rates: from 11025 to 192000 Hz the pitch holds 48 kHz's within 0.2 c (the cutoffs at most
  * 0.4 of the rate, the delay lines long enough at 192 kHz); up to 48828 Hz the samples are v4's.
  * Memory: per voice two bore half-lines and a jet line of 1024 floats (12 KB, for 192 kHz), 120 KB
- * in LargeMemory (the wind engine's size).
+ * in BulkMemory (the wind engine's size).
  */
 #ifndef VOICE_FLUTE_H_
 #define VOICE_FLUTE_H_
@@ -137,7 +137,7 @@ static constexpr real LIMIT_ST = 3.0f;   // beyond either, the tone fades into t
 static constexpr real RESTRIKE_V = 0.3f; // a re-strike within a held note: vpres at least this (v5)
 static constexpr real RESTRIKE_P = 0.1f; // and a pressure of at least this
 
-struct LargeMemory {
+struct BulkMemory {
 	alignas(32) float bore[MAX_VOICES][2][BLEN];
 	alignas(32) float jet[MAX_VOICES][JLEN];
 };
@@ -289,9 +289,9 @@ struct Engine {
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	Params p;           // as set (preset, live edits)
-	Params ps;          // smoothed copy used by the DSP
-	LargeMemory* large; // the host's (init): delay lines
+	Params p;         // as set (preset, live edits)
+	Params ps;        // smoothed copy used by the DSP
+	BulkMemory* bulk; // the host's (init): delay lines
 	real sr, inv_sr, pi_sr, dt, ctrl_dt, block_dt;
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
@@ -378,8 +378,8 @@ struct Engine {
 }
 
 // a voice's delay lines
-[[nodiscard]] static inline float* bore_line(Engine& e, int v, int h) { return e.large->bore[v][h]; }
-[[nodiscard]] static inline float* jet_line(Engine& e, int v) { return e.large->jet[v]; }
+[[nodiscard]] static inline float* bore_line(Engine& e, int v, int h) { return e.bulk->bore[v][h]; }
+[[nodiscard]] static inline float* jet_line(Engine& e, int v) { return e.bulk->jet[v]; }
 
 // the fingering: the register (mode) a note is played on, and the bore's fundamental
 static inline void fingering(real note, real low, bool overblow, int& mode, real& bore_note) {

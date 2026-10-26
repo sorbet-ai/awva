@@ -11,8 +11,8 @@ namespace awva {
 namespace traits {
 struct reed {
 	AWVA_ENGINE_FUNCTIONS(reed)
-	using FastMemory = NoMemory;
-	using LargeMemory = ::reed::LargeMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = ::reed::BulkMemory;
 	// init() writes every byte of both regions (reset of every voice): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "reed";
@@ -22,7 +22,9 @@ struct reed {
 	static constexpr uint32_t led = 0x203000;
 	static constexpr const char* summary = "single reed: clarinet to saxophone, one model, tilt morphs the bore";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel;
-	static constexpr Budget budget = {::reed::MAX_VOICES, 20000, 2.0f};
+	static constexpr int max_voices = ::reed::MAX_VOICES;
+	static constexpr float tail_seconds = 2.0f;
+	static constexpr Cost cost = {62.5f};
 	// the rates whose pitch is further from 48 kHz than the default 3 cents, each a known fault with its
 	// bound (a cent or two above every preset's worst, measured 2026-10-25; contract_rates.cpp)
 	static constexpr const char* rate_fault = "not diagnosed yet";

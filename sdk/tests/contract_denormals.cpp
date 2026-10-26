@@ -32,7 +32,7 @@ struct Tail {
 
 // the phrase (released at 1.5 s), then the tail and 1 s more: the last second
 Tail after_tail(int p) {
-	const float tail = info().budget.tail_seconds;
+	const float tail = info().tail_seconds;
 	sdk::Engine e = fresh(p);
 	Keys k(e.voices());
 	const int from = blocks(1.5 + tail), n = blocks(1.5 + tail + 1.0);

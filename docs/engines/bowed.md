@@ -87,17 +87,17 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `d88458fb` | `pizz_decay` | pizz | 0.1 | 5 | 1 | continuous |
 | `2a09f08f` | `pizz_bright` | pizz | 0.2 | 5 | 1 | continuous |
 
-## Budget and memory
+## Cost and memory
 
 | | |
 |---|---|
 | voices | up to 10 |
 | channels | 1 (mono) |
-| CPU | 32000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
+| CPU | 100 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 2.74219 KB (2808 bytes) (on a 64-bit host) |
-| FastMemory | 100 KB |
-| LargeMemory | 8 KB |
+| hot (the engine object) | 2.74219 KB (2808 bytes) (on a 64-bit host) |
+| stream (StreamMemory) | 100 KB |
+| bulk (BulkMemory) | 8 KB |
 
 <!-- awva_docs: end -->
 

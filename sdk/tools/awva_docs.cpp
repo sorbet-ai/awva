@@ -109,14 +109,14 @@ std::string engine_section(const sdk::EngineEntry& e) {
 		o << "| `" << id << "` | `" << d->name << "` | " << d->group << " | " << num(d->min) << " | " << num(d->max) << " | " << num(*eng.param(i)) << " | " << kind_name(d->kind) << " |\n";
 	}
 	if (eng.num_params() == 0) o << "| | (none) | | | | | |\n";
-	o << "\n## Budget and memory\n\n| | |\n|---|---|\n";
-	o << "| voices | up to " << in.budget.max_voices << " |\n";
+	o << "\n## Cost and memory\n\n| | |\n|---|---|\n";
+	o << "| voices | up to " << in.max_voices << " |\n";
 	o << "| channels | " << in.channels << (in.channels == 1 ? " (mono)" : " (stereo)") << " |\n";
-	o << "| CPU | " << in.budget.instr_per_block << " QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |\n";
-	o << "| tail | silent and idle within " << num(in.budget.tail_seconds) << " s of the last release |\n";
-	o << "| engine object | " << bytes(in.state_bytes) << " (on a 64-bit host) |\n";
-	o << "| FastMemory | " << bytes(in.fast_bytes) << " |\n";
-	o << "| LargeMemory | " << bytes(in.large_bytes) << " |\n\n";
+	o << "| CPU | " << num(in.cost.instr_per_voice_frame) << " instructions a voice and frame (" << dsp::COST_REFERENCE << ") |\n";
+	o << "| tail | silent and idle within " << num(in.tail_seconds) << " s of the last release |\n";
+	o << "| hot (the engine object) | " << bytes(in.regions.hot) << " (on a 64-bit host) |\n";
+	o << "| stream (StreamMemory) | " << bytes(in.regions.stream) << " |\n";
+	o << "| bulk (BulkMemory) | " << bytes(in.regions.bulk) << " |\n\n";
 	o << END;
 	return o.str();
 }

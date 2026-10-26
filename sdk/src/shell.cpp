@@ -8,8 +8,8 @@
 namespace awva::sdk {
 
 Shell::Shell(const EngineEntry& engine, int sample_rate, int voices, bool fx) :
-    engine_(engine), fx_(fx_effect()), midi_(std::make_unique<TimedMidi>(std::min(voices, engine.info->budget.max_voices), sample_rate)), sr_(sample_rate),
-    nv_(std::min(voices, engine.info->budget.max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), note_at_rest),
+    engine_(engine), fx_(fx_effect()), midi_(std::make_unique<TimedMidi>(std::min(voices, engine.info->max_voices), sample_rate)), sr_(sample_rate),
+    nv_(std::min(voices, engine.info->max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), note_at_rest),
     g_(dsp::instrument_at_rest) {
 	engine_.init(sr_, nv_);
 	fx_.init(sr_);
@@ -19,7 +19,7 @@ Shell::Shell(const EngineEntry& engine, int sample_rate, int voices, bool fx) :
 
 void Shell::set_engine(const EngineEntry& engine) {
 	engine_ = Engine(engine);
-	nv_ = std::min(nv_, engine.info->budget.max_voices);
+	nv_ = std::min(nv_, engine.info->max_voices);
 	engine_.init(sr_, nv_);
 }
 
@@ -38,7 +38,7 @@ bool Shell::ump(const uint32_t* words, int offset, int32_t note_id) {
 }
 
 int Shell::ended_notes(int32_t* ids, int max) {
-	const auto tail = static_cast<uint64_t>(static_cast<double>(engine_.info().budget.tail_seconds) * sr_);
+	const auto tail = static_cast<uint64_t>(static_cast<double>(engine_.info().tail_seconds) * sr_);
 	return midi_->ended(ids, max, tail, engine_.active_voices() == 0);
 }
 

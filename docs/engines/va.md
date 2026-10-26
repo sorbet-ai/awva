@@ -103,17 +103,17 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `e4d88d72` | `vibrato` | mod | 0 | 1.5 | 0.35 | continuous |
 | `9e2c50e9` | `vib_hz` | mod | 1 | 9 | 5.3 | continuous |
 
-## Budget and memory
+## Cost and memory
 
 | | |
 |---|---|
 | voices | up to 16 |
 | channels | 1 (mono) |
-| CPU | 24000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
+| CPU | 75 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 10 s of the last release |
-| engine object | 3.53906 KB (3624 bytes) (on a 64-bit host) |
-| FastMemory | none |
-| LargeMemory | none |
+| hot (the engine object) | 3.53906 KB (3624 bytes) (on a 64-bit host) |
+| stream (StreamMemory) | none |
+| bulk (BulkMemory) | none |
 
 <!-- awva_docs: end -->
 

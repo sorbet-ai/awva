@@ -11,8 +11,8 @@ namespace awva {
 namespace traits {
 struct sine {
 	AWVA_ENGINE_FUNCTIONS(sine)
-	using FastMemory = NoMemory;
-	using LargeMemory = NoMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = NoMemory;
 	static constexpr const char* name = "sine";
 	static constexpr const char* title = "Sine";
 	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
@@ -20,7 +20,9 @@ struct sine {
 	static constexpr uint32_t led = 0x202030;
 	static constexpr const char* summary = "the minimal example engine: one sine per voice, level from pressure";
 	static constexpr uint32_t inputs = in_pressure;
-	static constexpr Budget budget = {::sine::MAX_VOICES, 1600, 1.0f};
+	static constexpr int max_voices = ::sine::MAX_VOICES;
+	static constexpr float tail_seconds = 1.0f;
+	static constexpr Cost cost = {5.0f};
 };
 } // namespace traits
 

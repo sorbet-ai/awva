@@ -263,7 +263,7 @@ struct VoiceState {
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
 // engines/wind.h; e.g. AXI SRAM)
-struct LargeMemory {
+struct BulkMemory {
 	float main[MAX_VOICES][MAIN_LEN];
 	float tube[MAX_VOICES][SHORT_LEN]; // the short tube
 };
@@ -273,8 +273,8 @@ struct Engine {
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset, kind;
-	int instrument;     // e.p.instrument as an index: instruments[], CORR[]
-	LargeMemory* large; // the host's (init)
+	int instrument;   // e.p.instrument as an index: instruments[], CORR[]
+	BulkMemory* bulk; // the host's (init)
 	real sr;
 	Params p;  // as set (presets, live edits)
 	Params ps; // smoothed copy used by the DSP
@@ -306,8 +306,8 @@ static inline void reset_voice(Engine& e, int v, bool clear) {
 	s.d1 = 100.0f;
 	s.d2 = 10.0f;
 	if (clear) {
-		for (int i = 0; i < MAIN_LEN; i++) e.large->main[v][i] = 0.0f;
-		for (int i = 0; i < SHORT_LEN; i++) e.large->tube[v][i] = 0.0f;
+		for (int i = 0; i < MAIN_LEN; i++) e.bulk->main[v][i] = 0.0f;
+		for (int i = 0; i < SHORT_LEN; i++) e.bulk->tube[v][i] = 0.0f;
 	}
 }
 
@@ -403,8 +403,8 @@ struct BlockCoef {
 template <int KIND>
 [[nodiscard]] static inline real run_voice(Engine& e, int v, const BlockCoef& c) {
 	VoiceState& s = e.vs[v];
-	float* __restrict__ mb = e.large->main[v];
-	float* __restrict__ sb = e.large->tube[v];
+	float* __restrict__ mb = e.bulk->main[v];
+	float* __restrict__ sb = e.bulk->tube[v];
 	real* __restrict__ mix = e.mix;
 	real* __restrict__ nmix = e.nmix;
 	uint32_t widx = s.widx, rng = s.rng;

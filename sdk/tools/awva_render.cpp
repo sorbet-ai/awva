@@ -424,7 +424,7 @@ int main(int argc, char** argv) {
 		preset = sdk::find_preset(*entry, preset_arg);
 		if (preset < 0) fail(std::string("the engine ") + engine_name + " has no preset \"" + preset_arg + "\" (--list shows them)");
 	}
-	if (nv < 1 || nv > entry->info->budget.max_voices) fail("--nv " + std::to_string(nv) + ": the engine runs 1 to " + std::to_string(entry->info->budget.max_voices) + " voices");
+	if (nv < 1 || nv > entry->info->max_voices) fail("--nv " + std::to_string(nv) + ": the engine runs 1 to " + std::to_string(entry->info->max_voices) + " voices");
 	if (tail < 0 || settle < 0) fail("--tail and --settle are seconds, 0 or more");
 
 	// the input: exactly one

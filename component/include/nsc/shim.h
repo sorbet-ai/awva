@@ -69,7 +69,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		    engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
-	static_assert(E::info.budget.max_voices <= 16, "16 voices at most");
+	static_assert(E::info.max_voices <= 16, "16 voices at most");
 	static_assert(E::info.min_rate >= MIN_RATE && E::info.min_rate < MAX_RATE, "min_rate: 11025 Hz or more, under MAX_RATE");
 
 	static State& st(void* p) { return *static_cast<State*>(p); }
@@ -156,14 +156,14 @@ template <dsp::VoiceEngine E> struct Shim {
 		d.channels = in.channels;
 		d.short_name = in.short_name;
 		d.led = in.led;
-		d.max_voices = in.budget.max_voices;
-		d.instr_per_block = in.budget.instr_per_block;
-		d.tail_seconds = in.budget.tail_seconds;
+		d.max_voices = in.max_voices;
+		d.instr_per_block = static_cast<uint32_t>(in.cost.instr_per_voice_frame * 320.0f); // (10 voices, 32 frames)
+		d.tail_seconds = in.tail_seconds;
 		d.min_rate = in.min_rate;
 		d.max_rate = MAX_RATE;
 		d.state_bytes = static_cast<uint32_t>(sizeof(State));
-		d.fast_bytes = static_cast<uint32_t>(in.fast_bytes); // (0: none; an empty region is still passed)
-		d.large_bytes = static_cast<uint32_t>(in.large_bytes);
+		d.fast_bytes = static_cast<uint32_t>(in.regions.stream); // (0: none; an empty region is still passed)
+		d.large_bytes = static_cast<uint32_t>(in.regions.bulk);
 		d.stack_bytes = 0;
 		d.num_params = NP + 1;
 		d.num_presets = in.num_presets;
@@ -179,7 +179,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		if (sr < E::info.min_rate || sr > MAX_RATE) return -1;
 		State* s = new (state) State(nv, sr);
 		s->g = dsp::instrument_at_rest;
-		s->engine.init(*static_cast<typename E::FastMemory*>(fast), *static_cast<typename E::LargeMemory*>(large), sr, nv);
+		s->engine.init(*static_cast<typename E::StreamMemory*>(fast), *static_cast<typename E::BulkMemory*>(large), sr, nv);
 		for (int i = 0; i < E::info.num_params; i++) s->defaults[i] = *s->engine.param(i);
 		return 0;
 	}
@@ -220,7 +220,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	// went idle, or another note took their key)
 	static int32_t ended(void* state, int32_t* ids, int32_t max) {
 		State& s = st(state);
-		const auto tail = static_cast<uint64_t>(static_cast<double>(E::info.budget.tail_seconds) * s.sample_rate);
+		const auto tail = static_cast<uint64_t>(static_cast<double>(E::info.tail_seconds) * s.sample_rate);
 		return s.midi.ended(ids, max, tail, s.engine.active_voices() == 0);
 	}
 	static int32_t voices(const void* state) { return st(state).engine.voices(); }

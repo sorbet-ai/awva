@@ -12,8 +12,8 @@ namespace traits {
 struct modal {
 	AWVA_ENGINE_FUNCTIONS(modal)
 	AWVA_ENGINE_PRESETS(modal)
-	using FastMemory = NoMemory;
-	using LargeMemory = NoMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = NoMemory;
 	static constexpr const char* name = "modal";
 	static constexpr const char* title = "Modal";
 	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
@@ -21,7 +21,9 @@ struct modal {
 	static constexpr uint32_t led = 0x001840;
 	static constexpr const char* summary = "tuned percussion: banks of damped resonators, struck or rubbed (6 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_spin | in_sustain;
-	static constexpr Budget budget = {::modal::MAX_VOICES, 18000, 5.0f};
+	static constexpr int max_voices = ::modal::MAX_VOICES;
+	static constexpr float tail_seconds = 5.0f;
+	static constexpr Cost cost = {56.25f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"hard", "decay", "upper", "keytrack", "hfdamp", "damper", "tremdepth", "rub"}};
 	// the presets inharmonic by design (voice_modal.h models): no period to compare with the note,

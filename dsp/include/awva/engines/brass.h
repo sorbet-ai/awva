@@ -12,8 +12,8 @@ namespace traits {
 struct brass {
 	AWVA_ENGINE_FUNCTIONS(brass)
 	AWVA_ENGINE_PRESETS(brass)
-	using FastMemory = NoMemory;
-	using LargeMemory = ::brass::LargeMemory;
+	using StreamMemory = NoMemory;
+	using BulkMemory = ::brass::BulkMemory;
 	// init() writes every byte of both regions (reset of every voice): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "brass";
@@ -23,7 +23,9 @@ struct brass {
 	static constexpr uint32_t led = 0x402800;
 	static constexpr const char* summary = "brass: a lip source and a physical bore, bell, mutes (9 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
-	static constexpr Budget budget = {::brass::MAX_VOICES, 30000, 2.0f};
+	static constexpr int max_voices = ::brass::MAX_VOICES;
+	static constexpr float tail_seconds = 2.0f;
+	static constexpr Cost cost = {93.75f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"}};
 	static constexpr PresetHeroes preset_heroes[] = {

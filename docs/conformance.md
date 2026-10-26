@@ -19,7 +19,7 @@ ctest --test-dir build/sdk -L soak                     # the long soak (AWVA_SOA
 
 Add its traits header, `dsp/include/awva/engines/<name>.h`, and configure again. The build makes the engine's library, its contract program (`awva_engine_<name>_contract`) and its component library, and registers every check of both levels for it. The checks read what they need from the engine's `EngineInfo`:
 
-- **its budget:** `tail_seconds` (how soon it is silent and idle after the last release) and `max_voices`;
+- **its limits:** `tail_seconds` (how soon it is silent and idle after the last release) and `max_voices`;
 - **its inputs:** an input it declares must change its sound in some preset, and an input it doesn't declare must make no difference;
 - **its lowest rate:** `min_rate`, 11025 unless its traits declare a higher one (`static constexpr int min_rate = 22050;` for an engine unstable or out of tune below it); its component refuses lower rates and the checks don't play below it;
 - **its conformance settings** (`EngineInfo::conformance`, `engine.h`), each with a default.
@@ -61,7 +61,8 @@ A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`
 
 | check | what it guarantees |
 |---|---|
-| info | the declaration is complete: name, summary, channels, budget, inputs, sizes |
+| info | the declaration is complete: name, summary, channels, voices, tail, cost, inputs, regions |
+| profile | it fits the host profile (`AWVA_HOST_PROFILE`, `awva_sdk/host_profile.h`): its regions, its share of the processor |
 | init | silent and idle with no input; a note sounds |
 | release | silent (< 1e-4) and idle within `tail_seconds` after the last release, every preset |
 | reset | back to silence with the preset and the parameter values kept; afterwards it plays exactly as a fresh engine with them |
