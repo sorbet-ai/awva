@@ -67,6 +67,9 @@
  *   pedal  press: bellows reversal.
  *   acc_abs  the instrument's motion (a global input): shaking it gives the bellows shake.
  *   vpres  unused (the attack follows the pressure rise itself).
+ *   life   (a dial) micro-randomness, never a vibrato: every note a little different (start pitch
+ *          offset that settles, speaking time, voicing brightness), a tiny broadband pitch,
+ *          pressure (level) and brightness flicker, each voice its own.
  * No libm; no divisions or square roots in the sample loops.
  */
 #ifndef VOICE_ACCORDION_H_
@@ -209,6 +212,8 @@ struct Params {
 	real rev_pedal; // bellows reversal on pedal press (on/off)
 	real rev_shake; // bellows reversal on shaking (on/off)
 	real rev_ms;    // reversal gap, ms
+	// life
+	real life; // micro-randomness (0 = none)
 };
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 
@@ -240,6 +245,10 @@ struct VoiceState {
 	real fg;       // fade gain at the end of the last block
 	uint32_t seed; // note-on counter for the reed tuning errors and phases
 	Reed r[NRANK];
+	// life: per note (start pitch offset, decaying; speaking time, brightness factors) and the
+	// flicker noises (pitch fast / slow, pressure, brightness); lseed: the note they belong to
+	real lpo, lsp, lbo, lnf, lns, lpr, lbr;
+	uint32_t lrng, lseed;
 };
 
 struct Engine {
@@ -270,10 +279,13 @@ struct Engine {
 };
 
 static inline void reset_voice(VoiceState& s) {
-	const uint32_t seed = s.seed;
+	const uint32_t seed = s.seed, lrng = s.lrng;
 	const real note = s.note;
 	s = VoiceState();
 	s.seed = seed;
+	s.lrng = lrng;
+	s.lseed = seed;
+	s.lsp = 1.0f;
 	s.note = note;
 	s.fg = 1.0f;
 }
@@ -328,6 +340,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	for (int v = 0; v < MAX_VOICES; v++) {
 		e.vc[v] = awva::note_at_rest;
 		e.vs[v].seed = 0;
+		e.vs[v].lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
 		e.vs[v].note = 69.0f;
 		reset_voice(e.vs[v]);
 	}
@@ -452,6 +465,42 @@ static inline void process_voice(Engine& e, int v) {
 	}
 	const real fg = s.fade > 0 ? (real)(s.fade - 1) * (1.0f / FADE_BLOCKS) : 1.0f;
 
+	// life (micro-randomness, never a vibrato): every note draws a start pitch offset (+-2 cents x
+	// life, settling in ~0.1 s), its speaking time (+-15%) and voicing brightness (+-10%); one-pole
+	// noise flicker of unit spread: pitch (~10 ms and ~300 ms, ~1.5 cents rms at life 1), pressure
+	// at the reeds (~100 ms, ~3%: level and brightness together), brightness (~80 ms). Off (life
+	// 0): the voice as without it.
+	const real life = clampr(q.life, 0.0f, 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_cents = 0.0f, l_pr = 1.0f, l_br = 1.0f, l_sp = 1.0f;
+	if (life_on) {
+		uint32_t r = s.lrng;
+		auto rnd = [&r]() {
+			r = r * 1664525u + 1013904223u;
+			return (real)(int32_t)r * 4.656613e-10f;
+		};
+		if (s.seed != s.lseed) { // a new note's reeds
+			s.lseed = s.seed;
+			s.lpo = 2.0f * rnd();
+			s.lsp = 1.0f + 0.15f * rnd();
+			s.lbo = 0.1f * rnd();
+		}
+		s.lpo *= 1.0f - dt * 10.0f;
+		const auto flick = [&](real& x, real tc) {
+			const real a = rmin(dt / tc, 1.0f);
+			x = clampr(x + a * (1.732f * fsqrt(2.0f / a) * rnd() - x), -3.0f, 3.0f);
+		};
+		flick(s.lnf, 0.01f);
+		flick(s.lns, 0.3f);
+		flick(s.lpr, 0.1f);
+		flick(s.lbr, 0.08f);
+		s.lrng = r;
+		l_cents = life * (s.lpo + 1.2f * s.lnf + 0.9f * s.lns);
+		l_pr = 1.0f + 0.03f * life * s.lpr;
+		l_br = 1.0f + life * (s.lbo + 0.04f * s.lbr);
+		l_sp = 1.0f + life * (s.lsp - 1.0f);
+	}
+
 	// pallet and pressure behind it
 	const real kopen = 1.0f - exp_neg(dt * (1000.0f / 2.0f));
 	const real kclose = 1.0f - exp_neg(dt * 1000.0f / clampr(q.release_ms, 2.0f, 500.0f));
@@ -468,8 +517,8 @@ static inline void process_voice(Engine& e, int v) {
 	if (!(s.dp == s.dp)) s.dp = 0.0f;
 	// bellows reversal: the pressure at the reeds goes through zero (exactly 0 at the turn)
 	const real rg = e.rev_g;
-	const real dp = rmax(s.dp, 0.0f) * rg * rg;
-	const real vj = fsqrt(rmax(s.dp, 0.0f)) * rg * fg;
+	const real dp = life_on ? rmax(s.dp, 0.0f) * rg * rg * l_pr : rmax(s.dp, 0.0f) * rg * rg;
+	const real vj = life_on ? fsqrt(rmax(s.dp, 0.0f) * l_pr) * rg * fg : fsqrt(rmax(s.dp, 0.0f)) * rg * fg;
 	const real rise = rmax(dp - s.dp_blk, 0.0f);
 	s.dp_blk = dp;
 
@@ -477,7 +526,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real hp = rmax(dp - 0.4f, 0.0f);
 	const real flat_c = -q.flat * hp * hp * (1.0f / 0.36f);
 	const real bend_c = -q.bend * bl * e.bel * rg * rg * (1.0f - tau) * (s.o > 0.01f ? 1.0f : 0.0f);
-	const real f8 = 440.0f * pow2((s.note - 69.0f) * (1.0f / 12.0f) + (bend_c) * (1.0f / 1200.0f));
+	const real f8 = 440.0f * pow2((s.note - 69.0f) * (1.0f / 12.0f) + (life_on ? bend_c + l_cents : bend_c) * (1.0f / 1200.0f));
 	const real beat_a4 = clampr(q.beat, 0.0f, 20.0f);
 	const real btr = clampr(q.beat_track, 0.0f, 1.0f);
 	const real L8 = (s.note - 69.0f) * (1.0f / 12.0f); // log2(f8 / 440) (bends of a few cents aside)
@@ -489,12 +538,12 @@ static inline void process_voice(Engine& e, int v) {
 
 	// tilt: voicing
 	const real ty = clampr(c.timbre, -1.0f, 1.0f) * q.tilt;
-	const real isc0 = pow2(0.8f * ty) / clampr(q.constrict, 0.2f, 6.0f);
+	const real isc0 = life_on ? pow2(0.8f * ty) / clampr(q.constrict, 0.2f, 6.0f) * l_br : pow2(0.8f * ty) / clampr(q.constrict, 0.2f, 6.0f);
 
 	const real* lv = rank_level(q);
 	const real thr = clampr(q.thresh, 0.002f, 0.5f);
 	const real speak = clampr(q.speak_ms, 3.0f, 500.0f) * 0.001f;
-	const real sig0 = 6.8f / speak; // logistic 1% -> 90% in speak at A4
+	const real sig0 = life_on ? 6.8f / (speak * l_sp) : 6.8f / speak; // logistic 1% -> 90% in speak at A4
 	real peak = 0.0f;
 	int sounding = 0;
 	for (int r = 0; r < NRANK; r++) {
@@ -777,6 +826,7 @@ static constexpr ParamEntry param_table[] = {
     {{"rev_pedal", "expr", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::rev_pedal},
     {{"rev_shake", "expr", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::rev_shake},
     {{"rev_ms", "expr", 20.0f, 300.0f, strisy::ParamKind::continuous}, &Params::rev_ms},
+    {{"life", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life}, // micro-randomness
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "musette",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -45,6 +45,7 @@
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }

@@ -7,7 +7,7 @@
 // presets/accordion/00-clarinet.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "clarinet",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -52,7 +52,8 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -60,7 +61,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/accordion/01-bassoon.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "bassoon",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -105,7 +106,8 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -113,7 +115,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/accordion/02-piccolo.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "piccolo",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -158,7 +160,8 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -166,7 +169,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
 // presets/accordion/03-violin.preset.json
 inline constexpr char factory_json_3[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "violin",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -211,7 +214,8 @@ inline constexpr char factory_json_3[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -219,7 +223,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
 // presets/accordion/04-musette.preset.json
 inline constexpr char factory_json_4[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "musette",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -264,7 +268,8 @@ inline constexpr char factory_json_4[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -272,7 +277,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
 // presets/accordion/05-organ.preset.json
 inline constexpr char factory_json_5[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "organ",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -317,7 +322,8 @@ inline constexpr char factory_json_5[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -325,7 +331,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
 // presets/accordion/06-master.preset.json
 inline constexpr char factory_json_6[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "master",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -370,7 +376,8 @@ inline constexpr char factory_json_6[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -378,7 +385,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
 // presets/accordion/07-bandoneon.preset.json
 inline constexpr char factory_json_7[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "bandoneon",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -423,7 +430,8 @@ inline constexpr char factory_json_7[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 1,
     "rev_shake": 1,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
@@ -431,7 +439,7 @@ inline constexpr char factory_json_7[] = R"awva-preset({
 // presets/accordion/08-harmonium.preset.json
 inline constexpr char factory_json_8[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "accordion", "params_hash": "e1b5b87b"},
+  "engine": {"id": "accordion", "params_hash": "7d7b5f2d"},
   "title": "harmonium",
   "heroes": ["beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"],
   "params": {
@@ -476,7 +484,8 @@ inline constexpr char factory_json_8[] = R"awva-preset({
     "tilt": 0.3,
     "rev_pedal": 0,
     "rev_shake": 0,
-    "rev_ms": 80
+    "rev_ms": 80,
+    "life": 0
   }
 }
 )awva-preset";
