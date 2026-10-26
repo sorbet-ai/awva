@@ -403,7 +403,7 @@ TEST_CASE("descriptor: complete and consistent") {
 	             << d.max_rate << ", tail " << d.tail_seconds << " s, regions " << d.state_bytes << " + " << d.fast_bytes << " + " << d.large_bytes << " B");
 }
 
-TEST_CASE("rates: init() takes min_rate .. max_rate and refuses the others; at each a note sounds and ends within the tail") {
+TEST_CASE("rates: init() takes min_rate .. max_rate and refuses the others, and at each a note sounds and ends within the tail") {
 	const nsc_desc& d = desc();
 	{
 		Instance in;

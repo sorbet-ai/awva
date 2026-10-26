@@ -96,6 +96,9 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
     awva_conformance_tests("conformance.${v}." "${AWVA_COMPONENT_DIR}/${v}${CMAKE_SHARED_LIBRARY_SUFFIX}" KNOWN ${AWVA_KNOWN_${v}} ${AWVA_KNOWN_COMPONENT} LABELS "conformance;unit")
   endforeach()
   add_dependencies(awva_conformance nsc_components)
+  # a ';' in a check's name splits it in ctest, which then runs no check and passes
+  add_test(NAME conformance.names_without_semicolons COMMAND awva_conformance --list-test-cases)
+  set_tests_properties(conformance.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
   # awva_add_component from a project outside awva: everything in its own build directory. It builds
   # with this build's toolchain (not the environment's default compiler)
   add_test(NAME component.add_component_from_outside COMMAND "${CMAKE_COMMAND}" "-DAWVA=${CMAKE_CURRENT_SOURCE_DIR}/.."

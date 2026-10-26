@@ -282,6 +282,11 @@ foreach(v IN LISTS AWVA_ENGINES)
   add_test(NAME contract.${v}.soak COMMAND awva_engine_${v}_contract --no-skip "--test-case=soak*")
   set_tests_properties(contract.${v}.soak PROPERTIES LABELS soak)
 endforeach()
+# a ';' in a check's name splits it in ctest, which then runs no check and passes (one engine's
+# program lists the suite's names)
+list(GET AWVA_ENGINES 0 _first)
+add_test(NAME contract.names_without_semicolons COMMAND awva_engine_${_first}_contract --list-test-cases)
+set_tests_properties(contract.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
 
 add_executable(awva_effect_fx_contract tests/main.cpp tests/contract_effect.cpp)
 target_include_directories(awva_effect_fx_contract PRIVATE "${AWVA_DOCTEST_DIR}")
