@@ -31,6 +31,11 @@ jobs:
         run: ctest --test-dir build/sdk --output-on-failure -j 4 -LE example
       - name: examples
         run: ctest --test-dir build/sdk --output-on-failure -L example -V # (-V: the hashes in the log, to compare across OSes)
+      - name: generated files as committed
+        shell: bash
+        run: | # the factory presets' .inc files written again on this OS: the same bytes as in the repository
+          cmake -P tools/presets_inc.cmake
+          git diff --exit-code -- dsp/include/awva/presets
   format:
     runs-on: ubuntu-22.04
     steps:
