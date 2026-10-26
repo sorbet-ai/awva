@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The range check: every note of an instrument's range, at a soft and a loud dynamic, on one build.
 
-Each note is an isolated press (strike 0.25, ramp 40 ms, held 1.2 s) through the key path, the keys an
-octave press away where the layout needs it. A note passes when:
+Each note is an isolated press through the key path, held 1.2 s soft, mid and loud (strike / pressure
+0.2 / 0.12, 0.45 / 0.4, 0.75 / 0.85) and short (0.3 s, mid), the keys an octave press away where the
+layout needs it. A note passes when:
   speaks     its sustain is periodic (YIN aperiodicity <= 0.3 in most frames) and within 25 dB of the
              instrument's median note at that dynamic
   partial    its median pitch (YIN, searched from a twelfth under to a twelfth over the note, so a
@@ -30,7 +31,8 @@ RANGES = {
     'sax': (49, 80), 'clarinet': (50, 89), 'oboe': (58, 89), 'flute': (60, 96), 'bassoon': (34, 75),
     'violin': (55, 100), 'viola': (48, 88), 'cello': (36, 76), 'bass': (28, 67),
 }
-DYNAMICS = (('soft', 0.25), ('loud', 0.6))
+DYNAMICS = (('soft', 0.2, 0.12), ('mid', 0.45, 0.4), ('loud', 0.75, 0.85))  # (name, strike, pressure)
+SHORT = 0.3  # s: a short press at the mid dynamic too (it must speak and start in time)
 HOLD = 1.2
 GAP = 0.6
 PARTIAL_C = 15.0
@@ -95,8 +97,8 @@ def _stream(path, notes):
     t = 0.3
     sched = []
     for m, lay in notes:
-        for dyn, P in DYNAMICS:
-            end = s.press(t, 0.25, P, HOLD, note=lay, ramp=0.04)
+        for dyn, v, P, hold in [(d, v, P, HOLD) for d, v, P in DYNAMICS] + [('short', DYNAMICS[1][1], DYNAMICS[1][2], SHORT)]:
+            end = s.press(t, v, P, hold, note=lay)
             sched.append(dict(midi=m, dyn=dyn, t_on=t, t_off=end - 0.02))
             t = end + GAP
     s.write(path, notes=False)
@@ -115,10 +117,11 @@ def _note(x, d):
     if not len(tr):
         return dict(d, level=-200.0, ok_frames=0.0)
     t = np.arange(len(tr)) * 0.01
-    sus = (t >= 0.3) & (t <= (b - a) / SR - 0.1)
+    sus = (t >= min(0.3, 0.4 * (b - a) / SR)) & (t <= (b - a) / SR - 0.1)
     cents = 1200 * np.log2(tr[:, 0] / f)
     good = sus & (tr[:, 1] <= 0.3) & np.isfinite(cents)
-    lvl = 10 * math.log10(np.mean(x[int((d['t_on'] + 0.3) * SR):int((d['t_off'] - 0.1) * SR)] ** 2) + 1e-20)
+    s0 = d['t_on'] + min(0.3, 0.4 * (d['t_off'] - d['t_on']))
+    lvl = 10 * math.log10(np.mean(x[int(s0 * SR):int((d['t_off'] - 0.1) * SR)] ** 2) + 1e-20)
     out = dict(d, level=lvl, ok_frames=float(good.sum() / max(sus.sum(), 1)))
     if good.sum() >= 5:
         med = float(np.median(cents[good]))
@@ -143,7 +146,7 @@ def check(render_for, inst, workdir):
         x = render_for(o)(p)
         rows += [_note(x, d) for d in sched]
     fails = []
-    for dyn, _ in DYNAMICS:
+    for dyn in [d for d, _, _ in DYNAMICS] + ['short']:
         lv = [r['level'] for r in rows if r['dyn'] == dyn]
         med = float(np.median(lv))
         for r in rows:
@@ -157,7 +160,7 @@ def check(render_for, inst, workdir):
             else:
                 if abs(r['cents']) > PARTIAL_C:
                     why.append(f"off by {r['cents']:+.0f} c" + (' (wrong partial)' if abs(r['cents']) > 300 else ''))
-                if r['flip_frac'] > 0.05 or r['flip_run_ms'] >= 30:
+                if dyn != 'short' and (r['flip_frac'] > 0.05 or r['flip_run_ms'] >= 30):
                     why.append(f"flips ({r['flip_frac'] * 100:.0f} % of the sustain, {r['flip_run_ms']} ms run)")
                 if r['start_ms'] is None or r['start_ms'] > 150:
                     why.append(f"starts late ({r['start_ms']} ms)")
