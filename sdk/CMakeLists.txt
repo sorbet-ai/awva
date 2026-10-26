@@ -360,6 +360,31 @@ set_tests_properties(awva_render.compare_other PROPERTIES LABELS unit FIXTURES_R
 
 # (the docs are this repository's engines: a project that includes the SDK may
 # add engines of its own, so only a build of the SDK itself checks them)
+# the musical test performances (tools/fit/performances: MIDI 2.0, derived from recordings): each one's
+# dry render against its golden hash, and listening renders that must meet their loudness and refuse
+# a level that would clip. (The scripted performances above are stress scripts, not for listening.)
+set(_perf_dir "${CMAKE_CURRENT_SOURCE_DIR}/../tools/fit/performances")
+if(EXISTS "${_perf_dir}/goldens.txt")
+  file(STRINGS "${_perf_dir}/goldens.txt" _goldens REGEX "^[^#]")
+  foreach(_g IN LISTS _goldens)
+    string(REPLACE " " ";" _g "${_g}")
+    list(GET _g 0 _file)
+    list(GET _g 1 _eng)
+    list(GET _g 2 _pre)
+    list(GET _g 3 _hash)
+    get_filename_component(_name "${_file}" NAME_WE)
+    add_test(NAME awva_render.musical.${_name} COMMAND awva_render --engine ${_eng} --preset ${_pre} --ump "${_perf_dir}/${_file}" --expect ${_hash})
+    set_tests_properties(awva_render.musical.${_name} PROPERTIES LABELS unit)
+  endforeach()
+  add_test(NAME awva_render.listen_meets_its_loudness COMMAND awva_render --engine wind --preset 3 --ump "${_perf_dir}/sax/sax_legato.ump"
+    --listen --lufs -23 --wav "${CMAKE_CURRENT_BINARY_DIR}/listen_sax.wav")
+  set_tests_properties(awva_render.listen_meets_its_loudness PROPERTIES LABELS unit
+    PASS_REGULAR_EXPRESSION "listening render -2[23]\.[0-9]+ LUFS" FAIL_REGULAR_EXPRESSION "refused")
+  add_test(NAME awva_render.listen_refuses_a_clipping_level COMMAND awva_render --engine wind --preset 3 --ump "${_perf_dir}/sax/sax_legato.ump"
+    --listen --lufs 0 --wav "${CMAKE_CURRENT_BINARY_DIR}/listen_loud.wav")
+  set_tests_properties(awva_render.listen_refuses_a_clipping_level PROPERTIES LABELS unit WILL_FAIL TRUE)
+endif()
+
 # the fitting tools' options: the live parameters, and the controls round trip (tools/fit)
 add_test(NAME awva_render.params COMMAND awva_render --engine va --preset 0 --set cut_base=40.5 --params)
 set_tests_properties(awva_render.params PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "cut_base filter -20 80 40.5")

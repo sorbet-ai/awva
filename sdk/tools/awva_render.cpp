@@ -37,6 +37,13 @@
 //   --ctl-out FILE    the controls the engine got, float32 per block (the --ctl layout)
 //   --manifest FILE   a JSON record of the render: engine, preset, parameters, input, settings,
 //                     outputs, peak and hash
+//   --listen          a render for ears: stereo through the master effects, normalised to --lufs
+//                     (integrated loudness, ITU-R BS.1770-4; default -23, EBU R128) with its true peak (4x
+//                     oversampled) at or under --true-peak (dBTP, default -1); --wav is then 24 bit,
+//                     not scaled or clipped. Refused (exit 1, nothing written) if it is silent,
+//                     non-finite, or would pass the ceiling at that loudness. The scripted
+//                     performances (--perf) are stress scripts for regression, not for listening.
+//   --lufs L, --true-peak C   the listening render's loudness and ceiling
 //   --check           fail (exit 1) on non-finite output, a peak over --max-peak (default 8), or
 //                     with --silent-after T any sample above 1e-4 after T s or voices still active
 //   --expect HASH     fail unless the render's hash (FNV-1a 64 of the float bits) is HASH
@@ -44,8 +51,8 @@
 //   --compare FILE.f32  how far the render is from another (an --out of an earlier build): the
 //                     samples that differ and the largest difference, absolute and in dB re 1.0
 //   --list            the engines, their presets and the performances, and exit
-// stdout: "hash <hex>". Exit 2: bad arguments or an input that can't be read; exit 1: --check or
-// --expect failed.
+// stdout: "hash <hex>". Exit 2: bad arguments or an input that can't be read; exit 1: --check,
+// --expect or --listen failed.
 // Renders are deterministic: the engines seed their noise in init(), the same input and settings
 // give the same hash on every run.
 #include <chrono>
@@ -141,6 +148,110 @@ void list() {
 	}
 	std::fwrite(s.data(), 2, n, f);
 	return std::fclose(f) == 0;
+}
+
+// 24 bit WAV of float samples already at their level (the listening render): no scaling, no clipping
+[[nodiscard]] bool write_wav24(const char* path, const std::vector<float>& x, int channels, int sample_rate) {
+	FILE* f = std::fopen(path, "wb");
+	if (!f) return false;
+	const auto u32 = [f](uint32_t v) { std::fwrite(&v, 4, 1, f); };
+	const auto u16 = [f](uint16_t v) { std::fwrite(&v, 2, 1, f); };
+	const uint32_t n = static_cast<uint32_t>(x.size()), data = n * 3;
+	std::fwrite("RIFF", 1, 4, f);
+	u32(4 + 8 + 16 + 8 + data);
+	std::fwrite("WAVEfmt ", 1, 8, f);
+	u32(16);
+	u16(1);
+	u16(static_cast<uint16_t>(channels));
+	u32(static_cast<uint32_t>(sample_rate));
+	u32(static_cast<uint32_t>(sample_rate * 3 * channels));
+	u16(static_cast<uint16_t>(3 * channels));
+	u16(24);
+	std::fwrite("data", 1, 4, f);
+	u32(data);
+	std::vector<uint8_t> b(static_cast<size_t>(n) * 3);
+	for (uint32_t k = 0; k < n; k++) {
+		const double v = std::fmax(-1.0, std::fmin(1.0, static_cast<double>(x[k])));
+		const int32_t q = static_cast<int32_t>(std::lrint(v * 8388607.0));
+		b[3 * k] = static_cast<uint8_t>(q & 0xff);
+		b[3 * k + 1] = static_cast<uint8_t>((q >> 8) & 0xff);
+		b[3 * k + 2] = static_cast<uint8_t>((q >> 16) & 0xff);
+	}
+	std::fwrite(b.data(), 1, b.size(), f);
+	return std::fclose(f) == 0;
+}
+
+// ITU-R BS.1770-4 integrated loudness (LUFS) of interleaved channels (weights 1): K-weighting, 400 ms
+// blocks every 100 ms, gated at -70 LUFS and 10 LU under the ungated mean. -inf for silence.
+[[nodiscard]] double loudness(const std::vector<float>& x, int channels, int sr) {
+	const double pi = 3.14159265358979323846;
+	double K = std::tan(pi * 1681.974450955533 / sr);
+	const double Vh = std::pow(10.0, 3.999843853973347 / 20), Vb = std::pow(Vh, 0.4996667741545416), Q1 = 0.7071752369554196;
+	const double a0 = 1 + K / Q1 + K * K;
+	const double b1[3] = {(Vh + Vb * K / Q1 + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q1 + K * K) / a0};
+	const double a1[3] = {1.0, 2 * (K * K - 1) / a0, (1 - K / Q1 + K * K) / a0};
+	K = std::tan(pi * 38.13547087602444 / sr);
+	const double Q2 = 0.5003270373238773, d = 1 + K / Q2 + K * K;
+	const double b2[3] = {1.0, -2.0, 1.0}, a2[3] = {1.0, 2 * (K * K - 1) / d, (1 - K / Q2 + K * K) / d};
+	const size_t n = x.size() / static_cast<size_t>(channels);
+	std::vector<double> e(n, 0.0);       // the K-weighted energy per frame, summed over the channels
+	for (int c = 0; c < channels; c++) { // the two stages, cascaded
+		double sx1 = 0, sx2 = 0, sy1 = 0, sy2 = 0, hx1 = 0, hx2 = 0, hy1 = 0, hy2 = 0;
+		for (size_t i = 0; i < n; i++) {
+			const double v = x[i * channels + c];
+			const double y = b1[0] * v + b1[1] * sx1 + b1[2] * sx2 - a1[1] * sy1 - a1[2] * sy2;
+			sx2 = sx1, sx1 = v, sy2 = sy1, sy1 = y;
+			const double z = b2[0] * y + b2[1] * hx1 + b2[2] * hx2 - a2[1] * hy1 - a2[2] * hy2;
+			hx2 = hx1, hx1 = y, hy2 = hy1, hy1 = z;
+			e[i] += z * z;
+		}
+	}
+	const size_t blk = static_cast<size_t>(std::lround(0.4 * sr)), step = static_cast<size_t>(std::lround(0.1 * sr));
+	if (n < blk) return -INFINITY;
+	std::vector<double> c(n + 1, 0.0);
+	for (size_t i = 0; i < n; i++) c[i + 1] = c[i] + e[i];
+	std::vector<double> z;
+	for (size_t a = 0; a + blk <= n; a += step) z.push_back((c[a + blk] - c[a]) / static_cast<double>(blk));
+	const auto lk = [](double v) { return v > 0 ? -0.691 + 10 * std::log10(v) : -INFINITY; };
+	double s1 = 0;
+	size_t n1 = 0;
+	for (double v : z)
+		if (lk(v) > -70) s1 += v, n1++;
+	if (!n1) return -INFINITY;
+	const double rel = lk(s1 / static_cast<double>(n1)) - 10;
+	double s2 = 0;
+	size_t n2 = 0;
+	for (double v : z)
+		if (lk(v) > -70 && lk(v) > rel) s2 += v, n2++;
+	return n2 ? lk(s2 / static_cast<double>(n2)) : -INFINITY;
+}
+
+// the true peak (dBTP) of interleaved channels: 4x oversampled by a windowed-sinc polyphase filter
+// (12 taps a phase), as ITU-R BS.1770-4 annex 2 describes
+[[nodiscard]] double true_peak_db(const std::vector<float>& x, int channels) {
+	const double pi = 3.14159265358979323846;
+	constexpr int P = 4, T = 12, N = P * T;
+	double h[N];
+	for (int i = 0; i < N; i++) {
+		const double t = (i - (N - 1) / 2.0) / P;
+		const double sinc = t == 0 ? 1.0 : std::sin(pi * t) / (pi * t);
+		h[i] = sinc * (0.5 - 0.5 * std::cos(2 * pi * (i + 0.5) / N));
+	}
+	const size_t n = x.size() / static_cast<size_t>(channels);
+	double peak = 0;
+	for (int c = 0; c < channels; c++)
+		for (size_t i = 0; i < n; i++) {
+			peak = std::fmax(peak, std::fabs(x[i * channels + c]));
+			for (int p = 0; p < P; p++) {
+				double y = 0;
+				for (int k = 0; k < T; k++) {
+					const size_t j = i + T / 2 - k;
+					if (j < n) y += h[p + P * k] * x[j * channels + c];
+				}
+				peak = std::fmax(peak, std::fabs(y));
+			}
+		}
+	return peak > 0 ? 20 * std::log10(peak) : -INFINITY;
 }
 
 // captured engine controls (the --ctl layout): the key signals and the globals of every block
@@ -243,10 +354,10 @@ struct Set {
 int main(int argc, char** argv) {
 	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr, *ump = nullptr, *compare = nullptr;
 	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr, *ctl_out = nullptr, *manifest = nullptr;
-	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0;
+	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0, target_lufs = -23.0, tp_ceiling = -1.0;
 	int nv = 10, rate = 0;
 	float transpose = 0.0f;
-	bool use_fx = false, check = false, list_params = false, ftz = false, legato = false;
+	bool use_fx = false, check = false, list_params = false, ftz = false, legato = false, listen = false;
 	std::vector<Set> sets;
 	std::vector<float> notes;
 	for (int a = 1; a < argc; a++) {
@@ -264,6 +375,9 @@ int main(int argc, char** argv) {
 		else if (s == "--ump") ump = next();
 		else if (s == "--legato") legato = true;
 		else if (s == "--compare") compare = next();
+		else if (s == "--listen") listen = true;
+		else if (s == "--lufs") target_lufs = std::atof(next());
+		else if (s == "--true-peak") tp_ceiling = std::atof(next());
 		else if (s == "--seconds") seconds = std::atof(next());
 		else if (s == "--tail") tail = std::atof(next());
 		else if (s == "--settle") settle = std::atof(next());
@@ -316,6 +430,7 @@ int main(int argc, char** argv) {
 	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --rec, --midi, --ctl or --ump");
 	if (legato && !midi && !ump) fail("--legato: the MIDI mapping's mode (--midi or --ump)");
 	const bool default_input = !perf && !rec && !midi && !ctl && !ump;
+	if (listen) use_fx = true; // a render for ears goes through the effects
 	if (default_input) perf = "default";
 	int sr = rate;
 	if (!sr) {
@@ -442,6 +557,31 @@ int main(int argc, char** argv) {
 		compute_s += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
 	}
 
+	// the listening render: normalised to its loudness, its true peak checked, refused if it would clip
+	double lufs_raw = NAN, lufs_out = NAN, tp_out = NAN, gain_db = 0;
+	if (listen) {
+		for (float v : out)
+			if (!std::isfinite(v)) {
+				std::fprintf(stderr, "!! --listen: the render has non-finite samples: refused\n");
+				return 1;
+			}
+		lufs_raw = loudness(out, channels, sr);
+		if (!std::isfinite(lufs_raw)) {
+			std::fprintf(stderr, "!! --listen: the render is silent: refused\n");
+			return 1;
+		}
+		gain_db = target_lufs - lufs_raw;
+		const float g = static_cast<float>(std::pow(10.0, gain_db / 20));
+		for (float& v : out) v *= g;
+		lufs_out = loudness(out, channels, sr);
+		tp_out = true_peak_db(out, channels);
+		std::fprintf(stderr, "awva_render: listening render %.2f LUFS (gain %+.2f dB), true peak %.2f dBTP (ceiling %.1f)\n", lufs_out, gain_db, tp_out, tp_ceiling);
+		if (tp_out > tp_ceiling) {
+			std::fprintf(stderr, "!! --listen: at %.1f LUFS the true peak would be %.2f dBTP, over the ceiling %.1f: refused (ask for less loudness)\n", target_lufs, tp_out, tp_ceiling);
+			return 1;
+		}
+	}
+
 	size_t bad = 0, loud_tail = 0;
 	float peak = 0;
 	const size_t tail_from = silent_after < 0 ? out.size() : static_cast<size_t>(silent_after * sr) * channels;
@@ -459,7 +599,8 @@ int main(int argc, char** argv) {
 		std::fprintf(stderr, "awva_render: wrote %s\n", sdk::file_identity(out_path).c_str());
 	}
 	if (wav) {
-		if (!write_wav(wav, out, channels, sr, std::string(head) + shaping + "; input " + input)) fail(std::string("cannot write ") + wav);
+		if (!(listen ? write_wav24(wav, out, channels, sr) : write_wav(wav, out, channels, sr, std::string(head) + shaping + "; input " + input)))
+			fail(std::string("cannot write ") + wav);
 		std::fprintf(stderr, "awva_render: wrote %s\n", sdk::file_identity(wav).c_str());
 	}
 	if (ctl_out) {
@@ -511,6 +652,15 @@ int main(int argc, char** argv) {
 		}
 		field("set", ps + "}");
 		field("input", json_string(input));
+		if (listen) {
+			field("listen", "true");
+			field("lufs", json_number(lufs_out));
+			field("lufs_target", json_number(target_lufs));
+			field("lufs_before", json_number(lufs_raw));
+			field("gain_db", json_number(gain_db));
+			field("true_peak_dbtp", json_number(tp_out));
+			field("true_peak_ceiling", json_number(tp_ceiling));
+		}
 		field("input_kind", json_string(ctl ? "ctl" : rec ? "rec" :
 		                            midi                  ? "midi" :
 		                            ump                   ? "ump" :
