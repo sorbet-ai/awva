@@ -35,6 +35,16 @@
   {"inst": "trumpet", "better": "iter1", "worse": "stage2-1", "set": "soft", "ref": "rec", "ref_dyn": "mf", "dyns": ["s0.07", "s0.12", "s0.2"]},
   {"inst": "trumpet", "better": "iter1", "worse": "stage2-2", "set": "soft", "ref": "rec", "ref_dyn": "mf", "dyns": ["s0.07", "s0.12", "s0.2"]}
 ],
+"phrases_about": "Listener verdicts on whole phrases (ChoraleBricks legato lines, the phrase manifest's key stream through a build's audition virtual board): build, entry, phrase id, the tap heard (usb: after the master effects; engine: dry), how it was heard (alone, or beside the recording), the verdict and its reason tags (poor-overall, weak-overall, glitch-artifacts-hf: high, glitchy artifacts; no-breath-p: no breath at p; harsh-attack; more-fake; plosive-attack: hard, plosive attacks; test-tube: like blowing into a test tube). \"preferred\": the better of a pair heard together, not approved. Re-rendered with the phrase-set tools, not stored here.",
+"phrases": [
+  {"inst": "sax", "build": "sax v2 (16ff291)", "entry": "sax:alto sax", "phrase": "Bach_IchStehAnDeinerKrippe__02_as__p06", "tap": "usb", "heard": "alone", "verdict": "rejected", "reasons": ["poor-overall"]},
+  {"inst": "horn", "build": "brass family v3 (0da2935)", "entry": "trumpet:horn", "phrase": "Bach_IchStehAnDeinerKrippe__02_fho__p01", "tap": "usb", "heard": "alone", "verdict": "rejected", "reasons": ["weak-overall"]},
+  {"inst": "flute", "build": "flute v4 (449da36)", "entry": "flute:flute", "phrase": "Bach_IchStehAnDeinerKrippe__01_fl__p07", "tap": "engine", "heard": "blind A/B with the recording (the recording picked at once)", "verdict": "rejected", "reasons": ["glitch-artifacts-hf", "no-breath-p"]},
+  {"inst": "trumpet", "build": "brass family v3 (0da2935)", "entry": "trumpet:trumpet", "phrase": "Bach_IchStehAnDeinerKrippe__01_tp__p01", "tap": "engine", "heard": "beside the recording and trumpet v2 (the dataset strikes, uncalibrated)", "verdict": "not judged", "reasons": ["harsh-attack"]},
+  {"inst": "trumpet", "build": "trumpet v2 (f118c3a)", "entry": "trumpet:trumpet", "phrase": "Bach_IchStehAnDeinerKrippe__01_tp__p01", "tap": "engine", "heard": "beside the recording and brass family v3 (the dataset strikes, uncalibrated)", "verdict": "not judged", "reasons": ["harsh-attack", "more-fake"]},
+  {"inst": "clarinet", "build": "clarinet v2 (44f5922)", "entry": "clarinet:clarinet", "phrase": "Gesius_BefiehlDuDeineWege__02_cl__p01", "tap": "engine", "heard": "beside the recording and clarinet v1 (the dataset strikes, uncalibrated)", "verdict": "rejected", "reasons": ["plosive-attack", "test-tube"]},
+  {"inst": "clarinet", "build": "clarinet v1 (7cd0c3a)", "entry": "clarinet:clarinet", "phrase": "Gesius_BefiehlDuDeineWege__02_cl__p01", "tap": "engine", "heard": "beside the recording and clarinet v2 (the dataset strikes, uncalibrated)", "verdict": "preferred", "reasons": ["plosive-attack"]}
+],
 "metrics": {
   "attack": {"role": "ranker", "use": ["soft/hybrid", "soft/rec"], "why": "decisive at soft strikes; at medium and hard strikes against recordings it prefers the rejected old trumpet"},
   "jtfs": {"role": "ranker", "use": ["main/rec", "main/hybrid"], "why": "the best timbre ranker against real recordings; small margins on stage 2"},
