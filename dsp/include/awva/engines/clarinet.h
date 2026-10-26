@@ -27,9 +27,7 @@ struct clarinet {
 	static constexpr int max_voices = ::clarinet::MAX_VOICES;
 	static constexpr float tail_seconds = 2.0f; // silent ~0.25 s after the release
 	static constexpr Cost cost = {131.25f};     // measured 127.2 (40688 a block: the B-flat; the bass clarinet 34728)
-	// below about 40 kHz the bass clarinet's reed (3.9 kHz) squeals: its coupling to the flow, one
-	// sample late, lags too far at the reed's frequency (22050 Hz: the notes go up 15-45 semitones)
-	static constexpr int min_rate = 44100;
+	// (below 44.1 kHz the model runs at 2 to 4 times the rate, decimated: voice_clarinet.h OS_RATE)
 	// the hero parameters: the reed's opening and resonance, the breath at ff and at the lightest touch, the lattice
 	// cutoff, the tongue, the embouchure under tilt, the release
 	static constexpr Heroes heroes = {{"zeta", "reed_hz", "g_loud", "p_soft", "lat_hz", "tongue", "emb", "release"}};

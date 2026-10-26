@@ -54,7 +54,9 @@
  * Cost: about 41k QEMU instructions per block (10 voices, the default performance); per voice-sample
  * one square root and ~100 FP operations, per block the bore's impedance at the note (a few complex
  * evaluations). Memory: the bore delay lines, 10 KB per voice, as long as 192 kHz needs (BulkMemory,
- * 102.4 KB). Below 44.1 kHz the bass clarinet's reed squeals (engines/clarinet.h min_rate).
+ * 102.4 KB). Below 44.1 kHz the model runs at 2 to 4 times the rate, decimated (OS_RATE): one
+ * sample late, the reed's coupling to the flow would lag too far at the bass clarinet's reed
+ * frequency (3.9 kHz; at 22050 Hz the notes went up 15-45 semitones).
  */
 #ifndef VOICE_CLARINET_H_
 #define VOICE_CLARINET_H_
@@ -218,6 +220,20 @@ struct VoiceState {
 	int active;
 };
 
+// Below OS_RATE the model runs at os = ceil(OS_RATE / rate) times the rate (2 at 22050 Hz, 4 at
+// 11025), its output decimated by a windowed-sinc low-pass (Blackman, 32 os + 1 taps, -6 dB at
+// 0.45 of the output's Nyquist frequency, flat to 0.8 of it; whatever would fold below 0.8 of it
+// is 79 dB down). At OS_RATE and above, os is 1 and process() is the model's block as it is.
+static constexpr int OS_RATE = 44100;
+static constexpr int OS_MAX = 4; // (11025 Hz: the lowest rate a component takes)
+// os 2: 65 taps, -6 dB at 0.225 of the output rate x2; stop band (above the output Nyquist) -28 dB, pass band to 0.35 x Nyquist within -0.00 dB
+static constexpr float DEC2[65] = {-1.31287939e-19f, -1.39819375e-06f, -3.73240318e-05f, -1.38177819e-05f, 0.000158162869f, 0.000125696029f, -0.000345467643f, -0.00044207139f, 0.00051799851f, 0.00107522291f, -0.000498968274f, -0.00209377503f, 3.01874611e-18f, 0.00344736621f, 0.00135819528f, -0.0048803228f, -0.00397581219f, 0.00586021971f, 0.00816024983f, -0.00554275271f, -0.0139955114f, 0.00276699786f, 0.0212366025f, 0.00399234743f, -0.029272167f, -0.0169718112f, 0.037183285f, 0.0407574241f, -0.0438980327f, -0.0912283175f, 0.0484093688f, 0.31314939f, 0.449998046f, 0.31314939f, 0.0484093688f, -0.0912283175f, -0.0438980327f, 0.0407574241f, 0.037183285f, -0.0169718112f, -0.029272167f, 0.00399234743f, 0.0212366025f, 0.00276699786f, -0.0139955114f, -0.00554275271f, 0.00816024983f, 0.00586021971f, -0.00397581219f, -0.0048803228f, 0.00135819528f, 0.00344736621f, 3.01874611e-18f, -0.00209377503f, -0.000498968274f, 0.00107522291f, 0.00051799851f, -0.00044207139f, -0.000345467643f, 0.000125696029f, 0.000158162869f, -1.38177819e-05f, -3.73240318e-05f, -1.39819375e-06f, -1.31287939e-19f};
+// os 3: 97 taps, -6 dB at 0.225 of the output rate x2; stop band (above the output Nyquist) -29 dB, pass band to 0.35 x Nyquist within -0.00 dB
+static constexpr float DEC3[97] = {-8.75252881e-20f, 8.08096493e-07f, -6.31100836e-06f, -2.48826865e-05f, -2.68701921e-05f, 2.28823796e-05f, 0.000105441907f, 0.000127279609f, -3.15601988e-19f, -0.000230311749f, -0.000350758596f, -0.000144944641f, 0.000345332321f, 0.000726516358f, 0.000522296569f, -0.000332645498f, -0.00122983803f, -0.00124733531f, 2.0124973e-18f, 0.00173879014f, 0.00239273443f, 0.00090546347f, -0.00199663362f, -0.00392134215f, -0.00265054132f, 0.00159683759f, 0.00561410264f, 0.00544016626f, -5.61483369e-18f, -0.00701058067f, -0.00933034045f, -0.0034279032f, 0.00736694572f, 0.0141577343f, 0.00940396723f, -0.0055932894f, -0.0195147769f, -0.0188774457f, 9.79273599e-18f, 0.0247888553f, 0.0337926455f, 0.012887447f, -0.0292653535f, -0.0609200002f, -0.0454760365f, 0.0322729108f, 0.150304597f, 0.257065046f, 0.299998681f, 0.257065046f, 0.150304597f, 0.0322729108f, -0.0454760365f, -0.0609200002f, -0.0292653535f, 0.012887447f, 0.0337926455f, 0.0247888553f, 9.79273599e-18f, -0.0188774457f, -0.0195147769f, -0.0055932894f, 0.00940396723f, 0.0141577343f, 0.00736694572f, -0.0034279032f, -0.00933034045f, -0.00701058067f, -5.61483369e-18f, 0.00544016626f, 0.00561410264f, 0.00159683759f, -0.00265054132f, -0.00392134215f, -0.00199663362f, 0.00090546347f, 0.00239273443f, 0.00173879014f, 2.0124973e-18f, -0.00124733531f, -0.00122983803f, -0.000332645498f, 0.000522296569f, 0.000726516358f, 0.000345332321f, -0.000144944641f, -0.000350758596f, -0.000230311749f, -3.15601988e-19f, 0.000127279609f, 0.000105441907f, 2.28823796e-05f, -2.68701921e-05f, -2.48826865e-05f, -6.31100836e-06f, 8.08096493e-07f, -8.75252881e-20f};
+// os 4: 129 taps, -6 dB at 0.225 of the output rate x2; stop band (above the output Nyquist) -28 dB, pass band to 0.35 x Nyquist within -0.00 dB
+static constexpr float DEC4[129] = {-6.56439655e-20f, 5.72997358e-07f, -6.99096832e-07f, -7.80480479e-06f, -1.86620147e-05f, -2.27195914e-05f, -6.90889052e-06f, 3.2296774e-05f, 7.90814293e-05f, 0.000100290545f, 6.28480104e-05f, -4.0444995e-05f, -0.00017273381f, -0.000258957751f, -0.000221035681f, -2.92380599e-05f, 0.000258999238f, 0.000502986931f, 0.000537611423f, 0.000267788991f, -0.000249484121f, -0.00079045621f, -0.00104688745f, -0.000783895442f, 1.50937296e-18f, 0.00100560621f, 0.001723683f, 0.0016721056f, 0.000679097597f, -0.000939964624f, -0.00244016124f, -0.00296243326f, -0.00198790597f, 0.000293985808f, 0.00293010967f, 0.00456086801f, 0.00408012466f, 0.00129608043f, -0.00277137618f, -0.00619452172f, -0.00699775528f, -0.00421593072f, 0.00138349884f, 0.00736895768f, 0.0106183006f, 0.00884894942f, 0.00199617359f, -0.00731728642f, -0.0146360826f, -0.0156512001f, -0.00848590509f, 0.0048290051f, 0.0185916413f, 0.0255758849f, 0.0203787107f, 0.002560538f, -0.021949015f, -0.0421209477f, -0.0456141559f, -0.0237670899f, 0.0242046829f, 0.0896663054f, 0.156574685f, 0.206520684f, 0.224999009f, 0.206520684f, 0.156574685f, 0.0896663054f, 0.0242046829f, -0.0237670899f, -0.0456141559f, -0.0421209477f, -0.021949015f, 0.002560538f, 0.0203787107f, 0.0255758849f, 0.0185916413f, 0.0048290051f, -0.00848590509f, -0.0156512001f, -0.0146360826f, -0.00731728642f, 0.00199617359f, 0.00884894942f, 0.0106183006f, 0.00736895768f, 0.00138349884f, -0.00421593072f, -0.00699775528f, -0.00619452172f, -0.00277137618f, 0.00129608043f, 0.00408012466f, 0.00456086801f, 0.00293010967f, 0.000293985808f, -0.00198790597f, -0.00296243326f, -0.00244016124f, -0.000939964624f, 0.000679097597f, 0.0016721056f, 0.001723683f, 0.00100560621f, 1.50937296e-18f, -0.000783895442f, -0.00104688745f, -0.00079045621f, -0.000249484121f, 0.000267788991f, 0.000537611423f, 0.000502986931f, 0.000258999238f, -2.92380599e-05f, -0.000221035681f, -0.000258957751f, -0.00017273381f, -4.0444995e-05f, 6.28480104e-05f, 0.000100290545f, 7.90814293e-05f, 3.2296774e-05f, -6.90889052e-06f, -2.27195914e-05f, -1.86620147e-05f, -7.80480479e-06f, -6.99096832e-07f, 5.72997358e-07f, -6.56439655e-20f};
+static constexpr int DEC_TAPS_MAX = (int)(sizeof DEC4 / sizeof DEC4[0]);
+
 struct Engine {
 	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
@@ -237,6 +253,12 @@ struct Engine {
 	VoiceState vs[MAX_VOICES];
 	real vout[BLOCK];
 	real mix[BLOCK];
+	// below OS_RATE the model runs at os x the host's rate, the output decimated (dec, ntap taps;
+	// hist: the last ntap - 1 samples of the model's output, then a block of os x BLOCK)
+	int os;
+	const float* dec;
+	int ntap;
+	real hist[DEC_TAPS_MAX - 1 + OS_MAX * BLOCK];
 	real gmc[NCTRL]; // mouth pressure at the control points
 	real gtc[NCTRL]; // tongue gate at the control points
 	real tnc[NCTRL]; // tongue noise at the control points
@@ -417,7 +439,13 @@ static inline void set_preset(Engine& e, int i) {
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {
-	const real sr = (real)sample_rate;
+	// below OS_RATE: the model at os x the rate (OS_RATE or more), decimated to it in process()
+	e.os = sample_rate >= OS_RATE ? 1 : (OS_RATE + sample_rate - 1) / sample_rate;
+	if (e.os > OS_MAX) e.os = OS_MAX;
+	e.dec = e.os == 2 ? DEC2 : (e.os == 3 ? DEC3 : DEC4);
+	e.ntap = e.os == 2 ? (int)(sizeof DEC2 / sizeof DEC2[0]) : (e.os == 3 ? (int)(sizeof DEC3 / sizeof DEC3[0]) : (int)(sizeof DEC4 / sizeof DEC4[0]));
+	for (real& h : e.hist) h = 0.0f;
+	const real sr = (real)sample_rate * (real)e.os;
 	e.sr = sr;
 	e.dt = 1.0f / sr;
 	e.pi_sr = PI / sr;
@@ -919,7 +947,7 @@ static inline void process_voice(Engine& e, int vi) {
 	if (!held && vplev <= 0.0f && s.bgate < 1e-4f && s.amp < 1e-5f && s.acc < 1e-4f && peak < 1e-5f) s.active = 0;
 }
 
-static inline void process(Engine& e, real* __restrict__ output) {
+static inline void process_block(Engine& e, real* __restrict__ output) {
 	// smooth the parameters towards the set values (live edits glide in ~13 ms instead of stepping)
 	{
 		const real* __restrict__ pt = reinterpret_cast<const real*>(&e.p);
@@ -947,6 +975,23 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	e.dc = ok ? dc : 0.0f;
 	e.t1 = ok ? t1 : 0.0f;
 	e.t2 = ok ? t2 : 0.0f;
+}
+
+static inline void process(Engine& e, real* __restrict__ output) {
+	if (e.os <= 1) {
+		process_block(e, output);
+		return;
+	}
+	// os blocks of the model after the last ntap - 1 samples, then every os-th one low-passed
+	const int keep = e.ntap - 1, n = e.os * BLOCK;
+	for (int i = 0; i < e.os; i++) process_block(e, e.hist + keep + i * BLOCK);
+	for (int m = 0; m < BLOCK; m++) {
+		const real* x = e.hist + (m + 1) * e.os - 1; // (the newest sample this output takes: x[keep])
+		real y = 0.0f;
+		for (int k = 0; k < e.ntap; k++) y += e.dec[k] * x[keep - k];
+		output[m] = y;
+	}
+	for (int i = 0; i < keep; i++) e.hist[i] = e.hist[n + i];
 }
 
 // ---------------------------------------------------------------------------------------------
