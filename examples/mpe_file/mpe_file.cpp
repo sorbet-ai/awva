@@ -117,7 +117,6 @@ int main(int argc, char** argv) {
 	// MIDI in, in integer frames (awva_sdk/timed_midi.h): each message
 	// queued at its frame, and every 2 ms (96 frames at 48 kHz) a step runs the ones due
 	auto midi = std::make_unique<sdk::TimedMidi>(NV, SR); // (some kilobytes: on the heap)
-	std::vector<awva::VoiceControls> vc(NV, awva::voice_at_rest);
 	awva::GlobalControls g = awva::globals_at_rest;
 	const auto frame_of = [](double t) { return t <= 0 ? uint64_t{0} : static_cast<uint64_t>(std::llround(t * SR)); };
 	size_t next = 0;
@@ -131,19 +130,10 @@ int main(int argc, char** argv) {
 		for (; next < file.events.size() && frame_of(file.events[next].t) <= start; next++)
 			(void)midi->midi1(frame_of(file.events[next].t), file.events[next].bytes, file.events[next].len);
 		midi->advance(start);
-		// the voices' key signals to the engine (gate, strike and release follow from them)
-		for (int v = 0; v < NV; v++) {
-			const awva::VoiceControls& m = midi->midi().voices()[v];
-			vc[v].note = m.note;
-			vc[v].pres = m.pres;
-			vc[v].vpres = m.vpres;
-			vc[v].but_x = m.but_x;
-			vc[v].but_y = m.but_y;
-			awva::track_key(vc[v]);
-		}
+		// the voices' controls to the engine
 		g = midi->midi().globals();
 		float* o[1] = {&out[static_cast<size_t>(b) * awva::BLOCK]};
-		engine.process(vc.data(), g, o);
+		engine.process(midi->midi().voices(), g, o);
 	}
 
 	uint64_t h = 1469598103934665603ull; // FNV-1a 64 over the float bits, as awva_render prints it

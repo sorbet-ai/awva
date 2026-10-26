@@ -75,14 +75,13 @@ extern "C" {
 
 /* one voice's controls for process_voices(), as the host's voice logic gives them */
 typedef struct nsc_voice {
-	float note;    /* pitch in semitones (69 = A4), fractional */
-	float pres;    /* pressure: 0 released, 1 the full press */
-	float vpres;   /* pressure velocity: > 0 striking, < 0 releasing */
-	float but_x;   /* tilt sideways, -1 .. 1 */
-	float but_y;   /* tilt forward/back, -1 .. 1 */
-	float gate;    /* 1 while held */
-	float strike;  /* the strike that opened the gate, 0 .. 1 */
-	float release; /* the release that closed it, 0 .. 1 */
+	float pitch;         /* semitones (69 = A4), fractional */
+	float pressure;      /* 0 released, 1 MIDI 2.0's full scale (engines take up to 1.5) */
+	float pressure_rate; /* how fast the pressure moves: > 0 pressing, < 0 lifting */
+	float timbre;        /* -1 .. 1 (MIDI 2.0's Registered Per-Note Controller 74) */
+	float velocity;      /* the Note On's velocity, 0 .. 1 */
+	float release;       /* the Note Off's velocity, 0 .. 1 */
+	uint8_t gate;        /* 1 from the Note On to the Note Off */
 } nsc_voice;
 
 /* the instrument's controls: accelerometer (g), gyroscope, pedal */
@@ -124,7 +123,7 @@ typedef struct nsc_desc {
 	const char* summary;  /* one line */
 	const char* version;  /* the engines repository commit it was built from */
 	uint32_t schema_hash; /* FNV-1a over the parameters' ids, ranges and kinds: a change breaks stored values */
-	uint32_t inputs;      /* the Input bits of engine.h (pressure, velocity, x, y, pedal, motion) */
+	uint32_t inputs;      /* the Input bits of engine.h (pressure, its rate, timbre, velocities, pedal, motion) */
 	int32_t channels;     /* 1 or 2 */
 	uint32_t led;         /* its colour, 0xrrggbb (e.g. for a host's LED or UI); 0: none, the host's default */
 	int32_t max_voices;

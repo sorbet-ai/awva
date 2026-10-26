@@ -506,15 +506,15 @@ TEST_CASE("voice stealing: note jumps, instant re-strikes, every voice at once")
 				k.release(0);
 				const int phase = b % blocks(0.03);
 				for (int v = 0; v < nv; v++) {
-					VoiceControls& c = k.vc[static_cast<size_t>(v)];
+					NoteControls& c = k.vc[static_cast<size_t>(v)];
 					if (phase == 0) {
-						c.pres = 0.0f; // released at once
-						c.vpres = -0.8f;
+						c.pressure = 0.0f; // released at once
+						c.pressure_rate = -0.8f;
 						k.target[static_cast<size_t>(v)] = 0.0f;
 					} else if (phase == 1) {
-						c.note = static_cast<float>(30 + (v * 7 + b) % 70);
-						c.pres = 0.9f; // struck at once
-						c.vpres = 1.0f;
+						c.pitch = static_cast<float>(30 + (v * 7 + b) % 70);
+						c.pressure = 0.9f; // struck at once
+						c.pressure_rate = 1.0f;
 						k.target[static_cast<size_t>(v)] = 0.9f;
 					}
 				}
@@ -541,10 +541,10 @@ struct Probe {
 const std::vector<Probe>& input_probes() {
 	static const auto t_of = [](int b) { return static_cast<double>(b) * dsp::BLOCK / SR; };
 	static const std::vector<Probe> probes = {
-	    {dsp::in_velocity, "velocity", [](Keys& k, int) { for (VoiceControls& c : k.vc) c.vpres = 0.0f; }},
-	    {dsp::in_tilt_x, "tilt x", [](Keys& k, int b) { for (VoiceControls& c : k.vc) c.but_x = static_cast<float>(0.9 * std::sin(2 * M_PI * 3 * t_of(b))); }},
-	    {dsp::in_tilt_y, "tilt y", [](Keys& k, int b) { for (VoiceControls& c : k.vc) c.but_y = static_cast<float>(0.9 * std::sin(2 * M_PI * 2 * t_of(b))); }},
-	    {dsp::in_note_events, "gate, strike, release", [](Keys& k, int) { for (VoiceControls& c : k.vc) c.gate = c.strike = c.release = 0.0f; }},
+	    {dsp::in_pressure_rate, "pressure rate", [](Keys& k, int) { for (NoteControls& c : k.vc) c.pressure_rate = 0.0f; }},
+	    {dsp::in_timbre, "timbre", [](Keys& k, int b) { for (NoteControls& c : k.vc) c.timbre = static_cast<float>(0.9 * std::sin(2 * M_PI * 2 * t_of(b))); }},
+	    {dsp::in_velocity, "velocity", [](Keys& k, int b) { for (NoteControls& c : k.vc) c.velocity = static_cast<float>(0.5 + 0.5 * std::sin(2 * M_PI * 3 * t_of(b))); }},
+	    {dsp::in_release, "release", [](Keys& k, int b) { for (NoteControls& c : k.vc) c.release = static_cast<float>(0.5 + 0.5 * std::sin(2 * M_PI * 4 * t_of(b))); }},
 	    {dsp::in_shake, "shake", [](Keys& k, int b) { const double s = std::sin(2 * M_PI * 3 * t_of(b)); k.g.acc_abs = static_cast<float>(1 + 2.5 * s * s); }},
 	    {dsp::in_accel, "acceleration", [](Keys& k, int b) {
 		     k.g.acc_x = static_cast<float>(std::sin(2 * M_PI * 0.5 * t_of(b)));
@@ -648,7 +648,7 @@ struct GuardRender {
 GuardRender guard_render(int preset, bool guarded) {
 	sdk::Engine e = fresh(preset);
 	const int nv = e.voices();
-	std::vector<VoiceControls> vc(static_cast<size_t>(nv), dsp::voice_at_rest);
+	std::vector<NoteControls> vc(static_cast<size_t>(nv), dsp::note_at_rest);
 	GlobalControls g = dsp::globals_at_rest;
 	std::vector<float> target(static_cast<size_t>(nv), 0.0f), rate(static_cast<size_t>(nv), 0.0f);
 	uint32_t rng = 0x9e3779b9u + static_cast<uint32_t>(preset + 1);
@@ -663,7 +663,7 @@ GuardRender guard_render(int preset, bool guarded) {
 	for (int b = 0; b < total; b++) {
 		const double t = static_cast<double>(b) * dsp::BLOCK / SR;
 		for (int i = 0; i < nv; i++) {
-			VoiceControls& c = vc[static_cast<size_t>(i)];
+			NoteControls& c = vc[static_cast<size_t>(i)];
 			float& tg = target[static_cast<size_t>(i)];
 			float& rt = rate[static_cast<size_t>(i)];
 			if (b < playing) {
@@ -671,22 +671,22 @@ GuardRender guard_render(int preset, bool guarded) {
 					const float x = u();
 					if (x < 0.15f) tg = 0.0f;
 					else {
-						if (c.pres == 0.0f || x < 0.5f) c.note = 24.0f + 84.0f * u();
+						if (c.pressure == 0.0f || x < 0.5f) c.pitch = 24.0f + 84.0f * u();
 						tg = 1.5f * u();
 					}
 					rt = u() < 0.4f ? 10.0f : 0.002f + 0.2f * u(); // a strike in one block, or a slope
 				}
 				if (b > playing - blocks(0.6) && b % 8 == 0) tg = tg > 0.0f ? 0.0f : 1.0f; // staccato
-				c.but_x = std::clamp(c.but_x + 0.2f * (u() - 0.5f), -1.0f, 1.0f);
-				c.but_y = std::clamp(c.but_y + 0.2f * (u() - 0.5f), -1.0f, 1.0f);
+				(void)u();                                                                 // (the draw a second tilt took: the same phrase as before)
+				c.timbre = std::clamp(c.timbre + 0.2f * (u() - 0.5f), -1.0f, 1.0f);
 			} else {
 				tg = 0.0f;
 				rt = 0.01f;
 			}
-			const float before = c.pres, d = tg - c.pres;
-			c.pres = std::max(0.0f, std::fabs(d) <= rt ? tg : c.pres + (d > 0 ? rt : -rt));
-			c.vpres = std::clamp((c.pres - before) * (static_cast<float>(SR) / dsp::BLOCK) * 0.0125f, -1.0f, 1.0f);
-			dsp::track_key(c);
+			const float before = c.pressure, d = tg - c.pressure;
+			c.pressure = std::max(0.0f, std::fabs(d) <= rt ? tg : c.pressure + (d > 0 ? rt : -rt));
+			c.pressure_rate = std::clamp((c.pressure - before) * (static_cast<float>(SR) / dsp::BLOCK) * 0.0125f, -1.0f, 1.0f);
+			gate_of(c);
 		}
 		if (b < playing) {
 			const double s = std::sin(2.0 * 3.14159265358979 * 6.0 * t);

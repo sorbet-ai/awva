@@ -14,7 +14,7 @@
 //     --midi FILE.mid   a Standard MIDI File, MIDI 1.0 or MPE, through the MIDI/MPE mapping
 //                       (awva/midi_in.h: up-converted to MIDI 2.0)
 //     --ump FILE.ump    timed UMP packets, a text file (awva_sdk/performance.h: ump_player), the same way
-//     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (note, pres, vpres, x, y),
+//     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (pitch, pressure, pressure_rate, timbre),
 //                       then the 8 globals (what --ctl-out writes, or an embedded host's capture)
 //   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s, a MIDI
 //                     file's length + 2 s, a controls file's blocks), plus --tail
@@ -68,7 +68,7 @@ namespace dsp = awva;
 
 namespace {
 
-constexpr int CTL_VOICES = 10, CTL_WIDTH = CTL_VOICES * 5 + 8;
+constexpr int CTL_VOICES = 10, CTL_WIDTH = CTL_VOICES * 4 + 8;
 
 [[noreturn]] void fail(const std::string& msg) {
 	std::fprintf(stderr, "awva_render: %s\n", msg.c_str());
@@ -148,17 +148,17 @@ class ControlsPlayer final : public sdk::Player {
 public:
 	ControlsPlayer(std::string path, std::vector<float> c, int voices, int sample_rate) :
 	    path_(std::move(path)), c_(std::move(c)), nv_(voices), sr_(sample_rate) {}
-	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, dsp::NoteControls* vc, dsp::GlobalControls& g) override {
 		if (static_cast<size_t>(b) >= blocks()) return; // past the end: everything stays
 		const float* c = &c_[static_cast<size_t>(b) * CTL_WIDTH];
 		for (int v = 0; v < nv_ && v < CTL_VOICES; v++) {
-			vc[v].note = c[5 * v];
-			vc[v].pres = c[5 * v + 1];
-			vc[v].vpres = c[5 * v + 2];
-			vc[v].but_x = c[5 * v + 3];
-			vc[v].but_y = c[5 * v + 4];
+			vc[v].pitch = c[4 * v];
+			vc[v].pressure = c[4 * v + 1];
+			vc[v].pressure_rate = c[4 * v + 2];
+			vc[v].timbre = c[4 * v + 3];
+			vc[v].gate = vc[v].pressure > 0.0f;
 		}
-		const float* gg = c + CTL_VOICES * 5;
+		const float* gg = c + CTL_VOICES * 4;
 		g = {gg[0], gg[1], gg[2], gg[3], gg[4], gg[5], gg[6], gg[7]};
 	}
 	[[nodiscard]] double seconds() const override { return static_cast<double>(blocks()) * dsp::BLOCK / sr_; }
@@ -382,11 +382,11 @@ int main(int argc, char** argv) {
 	const int nblocks = ctl && own_length && tail == 0 ? static_cast<int>(ctl_blocks) : static_cast<int>(seconds * sr / dsp::BLOCK);
 	const int channels = use_fx ? 2 : 1;
 	std::vector<float> out(static_cast<size_t>(nblocks) * dsp::BLOCK * channels);
-	std::vector<dsp::VoiceControls> vc(static_cast<size_t>(nv), dsp::voice_at_rest);
+	std::vector<dsp::NoteControls> vc(static_cast<size_t>(nv), dsp::note_at_rest);
 	dsp::GlobalControls g = dsp::globals_at_rest;
 	// the engine gets a moved copy (the player writes only what changes): transposed, the list's notes
 	const bool moved = transpose != 0.0f || !notes.empty();
-	std::vector<dsp::VoiceControls> ev(static_cast<size_t>(nv));
+	std::vector<dsp::NoteControls> ev(static_cast<size_t>(nv));
 	std::vector<float> held(static_cast<size_t>(nv), 0.0f), list_note(static_cast<size_t>(nv), 69.0f), ctl_rec;
 	size_t next_note = 0;
 	if (ctl_out) ctl_rec.reserve(static_cast<size_t>(nblocks) * CTL_WIDTH);
@@ -406,21 +406,20 @@ int main(int argc, char** argv) {
 		std::optional<nsc::ScopedNoDenormals> no_denormals; // (--ftz: this block, as a component's process())
 		if (ftz) no_denormals.emplace();
 		player->block(b, vc.data(), g);
-		for (dsp::VoiceControls& c : vc) dsp::track_key(c);
-		const dsp::VoiceControls* to = vc.data();
+		const dsp::NoteControls* to = vc.data();
 		if (moved) {
 			for (size_t v = 0; v < vc.size(); v++) {
-				if (!notes.empty() && vc[v].pres > 0.0f && held[v] <= 0.0f) list_note[v] = notes[next_note++ % notes.size()];
-				held[v] = vc[v].pres;
+				if (!notes.empty() && vc[v].pressure > 0.0f && held[v] <= 0.0f) list_note[v] = notes[next_note++ % notes.size()];
+				held[v] = vc[v].pressure;
 				ev[v] = vc[v];
-				ev[v].note = (notes.empty() ? vc[v].note : list_note[v]) + transpose;
+				ev[v].pitch = (notes.empty() ? vc[v].pitch : list_note[v]) + transpose;
 			}
 			to = ev.data();
 		}
 		if (ctl_out) {
 			for (int v = 0; v < CTL_VOICES; v++) {
-				const dsp::VoiceControls c = v < nv ? to[v] : dsp::voice_at_rest;
-				ctl_rec.insert(ctl_rec.end(), {c.note, c.pres, c.vpres, c.but_x, c.but_y});
+				const dsp::NoteControls c = v < nv ? to[v] : dsp::note_at_rest;
+				ctl_rec.insert(ctl_rec.end(), {c.pitch, c.pressure, c.pressure_rate, c.timbre});
 			}
 			ctl_rec.insert(ctl_rec.end(), {g.acc_abs, g.acc_x, g.acc_y, g.acc_z, g.rot_x, g.rot_y, g.rot_z, g.pedal});
 		}

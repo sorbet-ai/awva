@@ -255,7 +255,7 @@ struct LargeMemory {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	LargeMemory* large; // the host's (init)
 	real sr;
@@ -288,7 +288,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dcx = 0.0f;
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;
 	for (int v = 0; v < MAX_VOICES; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		e.vs[v].note_prev = 69.0f;
 		reset_voice(e, v);
 	}
@@ -301,10 +301,10 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 
 static inline void process_voice(Engine& e, int v) {
 	VoiceState& s = e.vs[v];
-	const strisy::VoiceControls c = e.vc[v];
-	real pres = clampr(c.pres, 0.0f, 1.5f);
+	const awva::NoteControls c = e.vc[v];
+	real pres = clampr(c.pressure, 0.0f, 1.5f);
 	if (!(pres == pres)) pres = 0.0f;
-	real vp = clampr(c.vpres - 0.02f, 0.0f, 1.0f);
+	real vp = clampr(c.pressure_rate - 0.02f, 0.0f, 1.0f);
 	if (!(vp == vp)) vp = 0.0f;
 	// velocity only counts while the note is held: a host may leave the last vpres on a
 	// released voice, which must neither wake it nor keep it (and its tongue noise) alive
@@ -313,14 +313,14 @@ static inline void process_voice(Engine& e, int v) {
 	bool wake = false;
 	if (!s.active) {
 		if (pres <= 0.0f) {
-			s.note_prev = c.note;
+			s.note_prev = c.pitch;
 			return;
 		}
 		s.active = 1;
 		s.quiet = 0;
 		wake = true;
 	}
-	real note = c.note;
+	real note = c.pitch;
 	if (!(note == note)) note = 60.0f;
 	note = clampr(note, NOTE_MIN, NOTE_MAX);
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f;
@@ -331,8 +331,8 @@ static inline void process_voice(Engine& e, int v) {
 	s.pres_s += 0.25f * (pres - s.pres_s); // ~2.5 ms
 	if (s.pres_s < 1e-6f) s.pres_s = 0.0f; // no denormals in the decays
 	const real ps = s.pres_s;
-	s.by_s += 0.03f * (clampr(c.but_y, -1.0f, 1.0f) - s.by_s); // ~20 ms
-	s.tongue = strisy::rmax(s.tongue * 0.96f, vplev);          // ~25 ms decay
+	s.by_s += 0.03f * (clampr(c.timbre, -1.0f, 1.0f) - s.by_s); // ~20 ms
+	s.tongue = strisy::rmax(s.tongue * 0.96f, vplev);           // ~25 ms decay
 	if (s.tongue < 1e-6f) s.tongue = 0.0f;
 	const real tg = s.tongue;
 

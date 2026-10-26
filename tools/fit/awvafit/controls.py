@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
 """Engine-level controls (.ctl, what awva_render --ctl plays and --ctl-out writes): float32 per
-32-sample block, 10 voices x (note, pres, vpres, x, y), then the 8 globals.
+32-sample block, 10 voices x (pitch, pressure, pressure_rate, timbre), then the 8 globals.
 
   c = Ctl(seconds); c.note(voice, t0, note, P, v, hold); c.write('x.ctl')   synthesise scripted notes
   read(path) -> (voices [blocks, 10, 5], globals [blocks, 8])
@@ -28,7 +28,7 @@ class Ctl:
         self.nb = int(seconds * sr / BLOCK)
         self.c = np.zeros((self.nb, CTL_WIDTH), np.float32)
         for v in range(CTL_VOICES):
-            self.c[:, 5 * v] = 69
+            self.c[:, 4 * v] = 69
         self.c[:, 50:58] = GLOB
         self.t = np.arange(self.nb) * BLOCK / sr
         self.notes = []
@@ -55,13 +55,13 @@ class Ctl:
         dp = np.gradient(p, self.t)
         vp = np.clip(K * dp, -1, 1)
         c = self.c
-        c[live, 5 * voice] = note
-        c[live, 5 * voice + 1] = np.maximum(p[live], 0)
-        c[live, 5 * voice + 2] = vp[live]
-        c[live, 5 * voice + 4] = tilt
+        c[live, 4 * voice] = note
+        c[live, 4 * voice + 1] = np.maximum(p[live], 0)
+        c[live, 4 * voice + 2] = vp[live]
+        c[live, 4 * voice + 3] = tilt
         # the key path keeps the last note and vpres after the release
         after = t >= t_end + rel
-        c[after, 5 * voice] = note
+        c[after, 4 * voice] = note
         self.notes.append(dict(voice=voice, t_on=float(t0), t_off=float(t0 + t_end), note=float(note), P=float(P), v=float(v)))
         return t0 + t_end + rel
 

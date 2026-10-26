@@ -18,7 +18,7 @@ using dsp::EffectInfo;
 using dsp::EngineInfo;
 using dsp::GlobalControls;
 using dsp::ParamDesc;
-using dsp::VoiceControls;
+using dsp::NoteControls;
 
 // one engine (sdk/src/engine_entry.h makes it from the engine's type)
 struct EngineEntry {
@@ -28,7 +28,7 @@ struct EngineEntry {
 	void (*destroy)(void*);
 	void (*init)(void*, int sample_rate, int voices);
 	void (*reset)(void*);
-	void (*process)(void*, const VoiceControls*, const GlobalControls&, float* const* out);
+	void (*process)(void*, const NoteControls*, const GlobalControls&, float* const* out);
 	int (*active_voices)(const void*);
 	int (*voices)(const void*);
 	const char* (*preset_name)(int);
@@ -87,7 +87,7 @@ public:
 	[[nodiscard]] const EngineInfo& info() const { return *e_->info; }
 	void init(int sample_rate, int voices) { e_->init(p_, sample_rate, voices); }
 	void reset() { e_->reset(p_); }
-	void process(const VoiceControls* vc, const GlobalControls& g, float* const* out) { e_->process(p_, vc, g, out); }
+	void process(const NoteControls* vc, const GlobalControls& g, float* const* out) { e_->process(p_, vc, g, out); }
 	[[nodiscard]] int active_voices() const { return e_->active_voices(p_); }
 	[[nodiscard]] int voices() const { return e_->voices(p_); }
 	[[nodiscard]] int num_presets() const { return e_->info->num_presets; }

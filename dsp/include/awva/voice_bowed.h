@@ -209,7 +209,7 @@ struct BodyCoef {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
 	FastMemory* fast;   // the host's (init)
@@ -347,7 +347,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.e_lvl = e.p.ens;
 	for (int i = 0; i < ENS_LEN; i++) e.large->ens[i] = 0.0f;
 	for (int v = 0; v < MAX_VOICES; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		e.vs[v] = VoiceState();
 		e.vs[v].seed = 0x9e3779b9u * (uint32_t)(v + 1);
 		e.vs[v].note_prev = e.vs[v].note_body = 69.0f;
@@ -362,19 +362,19 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 // one voice over a block, added into out
 static inline void process_voice(Engine& e, int v, real trem, real body_shift, real* __restrict__ out) {
 	VoiceState& s = e.vs[v];
-	const strisy::VoiceControls c = e.vc[v];
+	const awva::NoteControls c = e.vc[v];
 	const Params& p = e.ps;
 	const bool pizz = p.pizz >= 0.5f;
-	const real pres = clampf(c.pres, 0.0f, 2.0f); // (also maps NaN to 0)
+	const real pres = clampf(c.pressure, 0.0f, 2.0f); // (also maps NaN to 0)
 	// pressure velocity only counts while the note is held: after a release a host may leave the
 	// last value in place (a stale positive value must not keep accents, noise or plucks alive)
-	const real vp = pres > 0.0f ? clampf(c.vpres, -1.5f, 1.5f) : rmin(clampf(c.vpres, -1.5f, 1.5f), 0.0f);
+	const real vp = pres > 0.0f ? clampf(c.pressure_rate, -1.5f, 1.5f) : rmin(clampf(c.pressure_rate, -1.5f, 1.5f), 0.0f);
 	if (!s.active) {
 		// (a silent voice starting a bowed note needs a seed; the seeds share a per-block budget,
 		// so a big low chord spreads its seeds over a few blocks instead of one long block)
 		const bool need_seed = pres > 0.0f && p.pizz < 0.5f;
 		if (pres <= 0.0f || (need_seed && e.seed_budget <= 0)) {
-			s.note_prev = c.note;
+			s.note_prev = c.pitch;
 			s.pres_prev = 0.0f;
 			s.vp_prev = vp;
 			return;
@@ -382,9 +382,9 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 		s.active = 1;
 		s.quiet = 0;
 	}
-	const real note0 = clampf(c.note, 18.0f, 116.0f);
+	const real note0 = clampf(c.pitch, 18.0f, 116.0f);
 	const bool jump = fabsf(note0 - s.note_prev) >= 1.0f;
-	s.note_prev = c.note;
+	s.note_prev = c.pitch;
 	const bool onset = pres > 0.0f && s.pres_prev <= 0.0f;
 	if (onset || jump) {
 		s.age = 0.0f;
@@ -418,7 +418,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	// (a dead zone: pressing fast tilts the key forward by itself, up to ~0.5 in recordings of
 	// staccato playing; without it fast passages drift towards the bridge: brighter, scratchier)
 	{
-		const real yin = clampf(c.but_y, -1.0f, 1.0f), dz = clampf(p.tilt_dead, 0.0f, 0.8f);
+		const real yin = clampf(c.timbre, -1.0f, 1.0f), dz = clampf(p.tilt_dead, 0.0f, 0.8f);
 		const real ya = rmax(fabsf(yin) - dz, 0.0f) / (1.0f - dz);
 		s.by += 0.15f * ((yin < 0.0f ? -ya : ya) - s.by);
 	}

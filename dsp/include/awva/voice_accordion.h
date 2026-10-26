@@ -244,7 +244,7 @@ struct VoiceState {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
 	real sr, inv_sr;
@@ -326,7 +326,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	}
 	e.gr1 = e.gr2 = strisy::SvfState();
 	for (int v = 0; v < MAX_VOICES; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		e.vs[v].seed = 0;
 		e.vs[v].note = 69.0f;
 		reset_voice(e.vs[v]);
@@ -416,11 +416,11 @@ static inline void run_reed(Reed& d, real* __restrict__ bus, real cw, real sw, r
 }
 
 static inline void process_voice(Engine& e, int v) {
-	const strisy::VoiceControls c = e.vc[v];
+	const awva::NoteControls c = e.vc[v];
 	VoiceState& s = e.vs[v];
 	const Params& q = e.ps;
-	const real pres = (c.pres == c.pres) ? clampr(c.pres, 0.0f, 1.5f) : 0.0f;
-	const real note_in = (c.note == c.note) ? clampr(c.note, 0.0f, 140.0f) : 69.0f;
+	const real pres = (c.pressure == c.pressure) ? clampr(c.pressure, 0.0f, 1.5f) : 0.0f;
+	const real note_in = (c.pitch == c.pitch) ? clampr(c.pitch, 0.0f, 140.0f) : 69.0f;
 	const real dt = (real)BLOCK * e.inv_sr;
 
 	if (!s.active) {
@@ -488,7 +488,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real slow8 = pow2(ls * L8), ls_oct = pow2(ls);
 
 	// tilt: voicing
-	const real ty = clampr(c.but_y, -1.0f, 1.0f) * q.tilt;
+	const real ty = clampr(c.timbre, -1.0f, 1.0f) * q.tilt;
 	const real isc0 = pow2(0.8f * ty) / clampr(q.constrict, 0.2f, 6.0f);
 
 	const real* lv = rank_level(q);
@@ -589,7 +589,7 @@ static inline void bellows(Engine& e, real dt) {
 	const Params& q = e.ps;
 	real mx = 0.0f;
 	for (int v = 0; v < e.nvoices; v++) {
-		const real p = e.vc[v].pres;
+		const real p = e.vc[v].pressure;
 		if (p == p && p > mx) mx = p;
 	}
 	mx = pres_curve(rmin(mx, 1.5f), q.curve);

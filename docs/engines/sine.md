@@ -13,7 +13,7 @@ Header `dsp/include/awva/voice_sine.h`, traits `dsp/include/awva/engines/sine.h`
 | input | control | from MIDI |
 |---|---|---|
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
-| pressure | `pres`, 0 released .. 1 a firm press (up to ~1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
+| pressure | `pressure`, 0 released .. 1 MIDI 2.0's full scale (engines take up to 1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
 
 An input not listed makes no difference to the sound; each listed one changes it in at least one preset (the contract suite checks both). What each does in this engine: "Playing" below. MIDI in detail: [Playing with MIDI 2.0 and MPE](../midi.md).
 
@@ -41,7 +41,7 @@ Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of t
 | channels | 1 (mono) |
 | CPU | 1600 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 1 s of the last release |
-| engine object | 560 bytes (on a 64-bit host) |
+| engine object | 688 bytes (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | none |
 

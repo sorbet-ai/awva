@@ -155,7 +155,7 @@ struct VoiceState {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
 	Params p;
@@ -321,7 +321,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		e.mix[n] = 0.0f;
 	}
 	for (int v = 0; v < MAX_VOICES; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		VoiceState& s = e.vs[v];
 		s = VoiceState();
 		reset_voice(s);
@@ -430,15 +430,15 @@ static inline real render_any(VoiceState& s, const Pick& p0, const Pick& p1, rea
 static inline void process_voice(Engine& e, int v) {
 	VoiceState& s = e.vs[v];
 	const Params& P = e.p;
-	const strisy::VoiceControls c = e.vc[v];
+	const awva::NoteControls c = e.vc[v];
 	real* __restrict__ out = e.out;
 	real* __restrict__ mix = e.mix;
 
-	const real pres = clampr(c.pres, 0.0f, 1.5f);
+	const real pres = clampr(c.pressure, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
 	// after a release a host may leave the last vpres in place: ignore positive values then
-	const real vp = clampr(c.vpres, -1.0f, held ? 1.5f : 0.0f);
-	const real note = clampr(c.note, 0.0f, 135.0f);
+	const real vp = clampr(c.pressure_rate, -1.0f, held ? 1.5f : 0.0f);
+	const real note = clampr(c.pitch, 0.0f, 135.0f);
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f; // reassigned to a new key
 	s.note_prev = note;
 
@@ -496,7 +496,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (jump) reset_voice(s);
 
 	// --- block-rate control values ---------------------------------------------------------------
-	const real by = clampr(c.but_y, -1.0f, 1.0f);
+	const real by = clampr(c.timbre, -1.0f, 1.0f);
 	if (fire && !s.active) {
 		s.ty = by;
 		s.ps = pres;

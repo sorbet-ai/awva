@@ -70,8 +70,7 @@ TEST_CASE("soak: chaos, every voice held, the decay: finite, bounded, then silen
 				} else if (f == 1) {
 					const double t = static_cast<double>(b) * dsp::BLOCK / SR;
 					for (size_t v = 0; v < k.vc.size(); v++) {
-						k.vc[v].but_x = static_cast<float>(0.5 * std::sin(0.2 * t + 2.0 * static_cast<double>(v)));
-						k.vc[v].but_y = static_cast<float>(0.8 * std::sin(0.3 * t + static_cast<double>(v)));
+						k.vc[v].timbre = static_cast<float>(0.8 * std::sin(0.3 * t + static_cast<double>(v)));
 					}
 				}
 				float out[dsp::BLOCK];

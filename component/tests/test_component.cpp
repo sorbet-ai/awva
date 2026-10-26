@@ -75,13 +75,12 @@ void render_both(const char* id, int preset, sdk::Player& player, double seconds
 		linked.set_preset(preset);
 		dll.c().set_preset(dll.in.state, preset);
 	}
-	std::vector<dsp::VoiceControls> va(NV, dsp::voice_at_rest), vb(NV, dsp::voice_at_rest);
+	std::vector<dsp::NoteControls> va(NV, dsp::note_at_rest), vb(NV, dsp::note_at_rest);
 	dsp::GlobalControls ga = dsp::globals_at_rest, gb = dsp::globals_at_rest;
 	const int blocks = static_cast<int>(seconds * SR / NSC_BLOCK);
 	std::vector<float> a(static_cast<size_t>(blocks) * NSC_BLOCK), b(a.size());
 	for (int k = 0; k < blocks; k++) {
 		player.block(k, va.data(), ga);
-		for (auto& c : va) dsp::track_key(c);
 		vb = va;
 		gb = ga;
 		float* oa[1] = {&a[static_cast<size_t>(k) * NSC_BLOCK]};
@@ -208,7 +207,6 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 	e.init(SR, NV);
 	auto mv = std::make_unique<sdk::MidiVoices>(NV);
 	mv->set_legato(legato);
-	std::vector<dsp::VoiceControls> vc(NV, dsp::voice_at_rest);
 	size_t k = 0;
 	uint64_t steps = 0;
 	for (int b = 0; b < blocks; b++) {
@@ -218,19 +216,10 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 			for (; k < perf.size() && perf[k].frame <= fs; k++) (void)mv->ump2(perf[k].w0, perf[k].w1);
 			mv->step();
 		}
-		for (int v = 0; v < NV; v++) {
-			const dsp::VoiceControls& m = mv->voices()[v];
-			vc[v].note = m.note;
-			vc[v].pres = m.pres;
-			vc[v].vpres = m.vpres;
-			vc[v].but_x = m.but_x;
-			vc[v].but_y = m.but_y;
-			dsp::track_key(vc[v]);
-		}
 		float* o[1] = {&out[start]};
 		{
 			const nsc::ScopedNoDenormals nd; // (as the library runs it)
-			e.process(vc.data(), mv->globals(), o);
+			e.process(mv->voices(), mv->globals(), o);
 		}
 	}
 	return out;
@@ -282,7 +271,7 @@ class Moving final : public sdk::Player {
 public:
 	explicit Moving(std::unique_ptr<sdk::Player> p) :
 	    p_(std::move(p)) {}
-	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, dsp::NoteControls* vc, dsp::GlobalControls& g) override {
 		p_->block(b, vc, g);
 		const double t = static_cast<double>(b) * NSC_BLOCK / SR;
 		const double s = std::sin(2.0 * 3.14159265358979 * 6.0 * t);
@@ -308,13 +297,12 @@ std::vector<float> render_linked(const char* id, int preset, sdk::Player& player
 	sdk::Engine linked(*sdk::find_engine(id));
 	linked.init(SR, NV);
 	if (preset >= 0) linked.set_preset(preset);
-	std::vector<dsp::VoiceControls> v(NV, dsp::voice_at_rest);
+	std::vector<dsp::NoteControls> v(NV, dsp::note_at_rest);
 	dsp::GlobalControls g = dsp::globals_at_rest;
 	const int blocks = static_cast<int>(seconds * SR / NSC_BLOCK);
 	std::vector<float> a(static_cast<size_t>(blocks) * NSC_BLOCK);
 	for (int k = 0; k < blocks; k++) {
 		player.block(k, v.data(), g);
-		for (auto& c : v) dsp::track_key(c);
 		float* o[1] = {&a[static_cast<size_t>(k) * NSC_BLOCK]};
 		linked.process(v.data(), g, o);
 	}
@@ -714,12 +702,11 @@ std::vector<float> render_midi_file(const char* id, const std::string& path, int
 	REQUIRE(player != nullptr);
 	sdk::Engine e(*sdk::find_engine(id));
 	e.init(sr, NV);
-	std::vector<dsp::VoiceControls> vc(NV, dsp::voice_at_rest);
+	std::vector<dsp::NoteControls> vc(NV, dsp::note_at_rest);
 	dsp::GlobalControls g = dsp::globals_at_rest;
 	std::vector<float> out(static_cast<size_t>(frames));
 	for (int b = 0; b * NSC_BLOCK < frames; b++) {
 		player->block(b, vc.data(), g);
-		for (dsp::VoiceControls& c : vc) dsp::track_key(c);
 		float buf[NSC_BLOCK];
 		float* o[1] = {buf};
 		{

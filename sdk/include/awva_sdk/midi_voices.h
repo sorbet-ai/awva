@@ -8,8 +8,7 @@
 //
 // Time: MIDI is taken in fixed steps of awva::midi::TICK_SECONDS (2 ms): message() queues,
 // step() runs one step (the voices' level decay, the strike fade if one is fading, then the
-// messages queued since the last step). The signals of a voice are in voices(); gate, strike and
-// release follow from them (dsp::track_key, once per block).
+// messages queued since the last step). The controls of each voice are in voices().
 #ifndef AWVA_SDK_MIDI_VOICES_H_
 #define AWVA_SDK_MIDI_VOICES_H_
 
@@ -41,7 +40,7 @@ public:
 	// one 2 ms step: the voices' level decay, the strike fade, then the queued messages
 	void step();
 
-	[[nodiscard]] const dsp::VoiceControls* voices() const { return vc_.data(); }
+	[[nodiscard]] const NoteControls* voices() const { return vc_.data(); }
 	[[nodiscard]] int num_voices() const { return nv_; }
 	// mono legato (legato.h): one voice, a note pressed while another is held slurs to it; the
 	// held notes are forgotten on a switch, and the voices beyond the first go quiet
@@ -76,13 +75,14 @@ public:
 private:
 	void apply(uint8_t status, uint8_t d1, uint8_t d2);
 	void write_legato(int s, const midi::NoteSignals& n);
+	void write(NoteControls& c, int s, const midi::NoteSignals& n) const;
 
 	midi::NoteInput in_;
 	awva::ump::Decoder<midi::NOTES> dec_;
 	midi::InstrumentInput instrument_;
 	voices::VoiceAllocator<midi::NOTES, 16> alloc_;
 	static constexpr int MAX_VOICES = 16;
-	std::array<dsp::VoiceControls, MAX_VOICES> vc_;
+	std::array<NoteControls, MAX_VOICES> vc_;
 	dsp::GlobalControls g_;
 	int nv_ = 0;
 	voices::Legato<midi::NOTES> legato_;
@@ -90,7 +90,8 @@ private:
 	float bend_range_ = 48.0f;
 	bool held_[midi::NOTES] = {};
 	float floor_[midi::NOTES] = {};
-	uint32_t queue_[QUEUE][2]; // (MIDI 1.0: the bytes in w0, w1 = 0xffffffff)
+	float velocity_[midi::NOTES] = {}, release_[midi::NOTES] = {}; // a note slot's Note On and Note Off velocity
+	uint32_t queue_[QUEUE][2];                                     // (MIDI 1.0: the bytes in w0, w1 = 0xffffffff)
 	int queued_ = 0;
 };
 

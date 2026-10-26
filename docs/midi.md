@@ -8,11 +8,14 @@ Every way of playing an engine ends in one place: a decoder of MIDI 2.0 Universa
 
 | control | meaning |
 |---|---|
-| `note` | the pitch in semitones, fractional (69 = A4), with bends and tunings included |
-| `pres` | pressure: 0 released, 1 a firm press, up to about 1.5 |
-| `vpres` | the pressure's velocity: above 0 while the note is struck, below 0 while it is released |
-| `but_x`, `but_y` | two per-note controllers, the tilts: sideways and forward/back, -1 .. 1 |
-| `gate`, `strike`, `release` | derived once per block: held or not, and the velocities of the strike that opened the note and of the release that ended it |
+| `pitch` | semitones, fractional (69 = A4), with bends and tunings included |
+| `pressure` | 0 released, 1 MIDI 2.0's full-scale pressure (engines take up to 1.5) |
+| `pressure_rate` | how fast the pressure moves: above 0 while the note is struck, below 0 while it is released |
+| `timbre` | a per-note controller, -1 .. 1 (MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74) |
+| `velocity`, `release` | the Note On's and the Note Off's velocities, 0 .. 1 |
+| `gate` | 1 from the Note On to the Note Off (the pressure stays above 0 while it is 1) |
+
+These are `awva::NoteControls` (`dsp/include/awva/controls.h`).
 
 The globals are `acc_abs`, `acc_x/y/z` (the accelerometer, in g), `rot_x/y/z` (the gyroscope) and `pedal` (0 .. 1). Each engine page lists which of them the engine reads.
 
@@ -22,11 +25,11 @@ The lower zone: member channels 2 .. 1 + members. An MCM (RPN 6 on channel 1) se
 
 | MPE | control |
 |---|---|
-| note on, its key | the note; its velocity becomes a strike (`vpres`), which the decoder fades (x0.6 every 2 ms while above 0.01). Until pressure arrives, `pres` is the velocity, so a keyboard without aftertouch still sounds |
-| the member channel's pitch bend × the bend range (RPN 0) | added to `note` |
-| channel pressure (or poly pressure) | `pres` (a held note's pressure never drops to 0) |
-| CC74 | `but_y` |
-| note off and its velocity | the release (`vpres` < 0) |
+| note on, its key | the note; its velocity becomes a strike (`pressure_rate`), which the decoder fades (x0.6 every 2 ms while above 0.01). Until pressure arrives, `pressure` is the velocity, so a keyboard without aftertouch still sounds |
+| the member channel's pitch bend × the bend range (RPN 0) | added to `pitch` |
+| channel pressure (or poly pressure) | `pressure` (a held note's pressure never drops to 0) |
+| CC74 | `timbre` |
+| note off and its velocity | `release`, and `pressure_rate` < 0 |
 
 ## From plain MIDI 1.0
 
@@ -35,9 +38,9 @@ On every channel outside an MPE zone (the master channel, or all of them without
 | MIDI 1.0 | control |
 |---|---|
 | note on / off | as in MPE |
-| poly pressure (that note), channel pressure (all its notes) | `pres` |
-| CC1 (the mod wheel) | `but_y`, 0 .. 1 |
-| CC74 | `but_y`, 64 = 0 |
+| poly pressure (that note), channel pressure (all its notes) | `pressure` |
+| CC1 (the mod wheel) | `timbre`, 0 .. 1 |
+| CC74 | `timbre`, 64 = 0 |
 | pitch bend | the instrument's bend (±2 semitones), which every note follows |
 | CC64 | `pedal` |
 
@@ -48,18 +51,17 @@ With every note slot held (16), a new note takes the oldest.
 The same mapping, at MIDI 2.0's resolution:
 
 - **Velocities** are 16 bits (v / 65535).
-- **Pressures and controllers** are 32 bits; full scale is the engine scale's full pressure, `pres` = 1.0.
+- **Pressures and controllers** are 32 bits; full scale is `pressure` = 1.0.
 - **Pitch bend and CC74** are bipolar by the specification: the centre 0x80000000 is exactly 0, and each side is scaled to its own end.
 - **Registered Per-Note Controller 3** (Pitch 7.25) sets a note's own absolute pitch.
+- **Registered Per-Note Controller 74** sets a note's own `timbre`; the channel's CC74 then leaves that note alone.
 - **Registered Controllers** 0 and 6 are the bend range and the MCM; CC64 is the pedal.
 
 Where MPE can carry a value, the engines get the same float from MPE and from MIDI 2.0. Where it can't (finer velocities, pressures and bends, a note's own pitch), they follow the finer value.
 
 ## Not from MIDI
 
-- **`but_x`, the sideways tilt:** MIDI 1.0 and MPE don't carry it (a sideways pitch bend is already in `note`); MIDI 2.0 can send it as Assignable Per-Note Controller 3. An engine that reads `but_x` itself declares it.
 - **The motion sensor and the gyroscope:** global inputs that a host with such sensors writes. The profile has numbers reserved for them (Assignable Controllers 0x10 .. 0x16), but MIDI in doesn't take them yet.
-- **Per-note `but_y`:** in MPE it is per channel, so per note. A plain MIDI 2.0 host currently sets it per channel (CC74); a per-note controller for it is planned (see the component README).
 
 ## awva's UMP profile
 

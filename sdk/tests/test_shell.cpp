@@ -114,7 +114,7 @@ TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 	CHECK(p->seconds() == doctest::Approx(2.6));
 	sdk::Engine e(*sdk::find_engine("ep"));
 	e.init(48000, 10);
-	std::vector<awva::VoiceControls> vc(10, awva::voice_at_rest);
+	std::vector<awva::NoteControls> vc(10, awva::note_at_rest);
 	awva::GlobalControls g = awva::globals_at_rest;
 	float peak = 0;
 	for (int b = 0; b < static_cast<int>(p->seconds() * 48000 / 32); b++) {

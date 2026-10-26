@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// The small shared units of dsp/: dspmath.h, svf.h, params.h, engine.h's track_key, engine_set.h.
+// The small shared units of dsp/: dspmath.h, svf.h, params.h, engine_set.h.
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -79,38 +79,6 @@ TEST_CASE("params: write_param clamps, rounds unless continuous, ignores NaN") {
 	CHECK(v == 3.0f);
 	CHECK(strisy::write_param(&steps, &v, 100.0f));
 	CHECK(v == 8.0f);
-}
-
-TEST_CASE("track_key: gate, strike and release from the key signals") {
-	dsp::VoiceControls c = dsp::voice_at_rest;
-	dsp::track_key(c);
-	CHECK(c.gate == 0.0f);
-	c.pres = 0.1f; // the key goes down
-	c.vpres = 0.4f;
-	dsp::track_key(c);
-	CHECK(c.gate == 1.0f);
-	CHECK(c.strike == 0.4f);
-	c.pres = 0.5f; // faster
-	c.vpres = 0.7f;
-	dsp::track_key(c);
-	CHECK(c.strike == 0.7f);
-	c.vpres = 0.0f; // held
-	dsp::track_key(c);
-	CHECK(c.strike == 0.7f);
-	c.pres = 0.0f; // released
-	c.vpres = -0.3f;
-	dsp::track_key(c);
-	CHECK(c.gate == 0.0f);
-	CHECK(c.release == 0.3f);
-	CHECK(c.strike == 0.7f);
-	c.vpres = -0.5f;
-	dsp::track_key(c);
-	CHECK(c.release == 0.5f);
-	c.pres = 0.2f; // struck again
-	c.vpres = 2.0f;
-	dsp::track_key(c);
-	CHECK(c.gate == 1.0f);
-	CHECK(c.strike == 1.0f); // (clipped)
 }
 
 TEST_CASE("engine_set: visit reaches each engine with its own type and memory") {

@@ -275,12 +275,12 @@ static void va_test_hook(Engine& e) {
 		const double u = t - n * per;
 		static const int nn[9] = {45, 52, 57, 60, 64, 67, 72, 76, 84};
 		const float pres = (float)(u < per - 0.08 ? (u < 0.01 ? u / 0.01 : 1.0) * (0.5 + 0.4 * sin(2 * M_PI * 1.3 * t + k)) : 0.0);
-		strisy::VoiceControls& c = e.vc[v];
-		c.note = (float)nn[(n * 5 + k * 2) % 9] + 0.2f * (float)sin(2 * M_PI * 5 * t);
-		c.vpres = pmax(-1.0f, pmin(1.0f, (pres - pold[k]) * (SAMPLERATE / BLOCK) * 0.0125f));
-		c.pres = pres;
-		c.but_x = 0;
-		c.but_y = (float)sin(2 * M_PI * 0.4 * t + k);
+		awva::NoteControls& c = e.vc[v];
+		c.pitch = (float)nn[(n * 5 + k * 2) % 9] + 0.2f * (float)sin(2 * M_PI * 5 * t);
+		c.pressure_rate = pmax(-1.0f, pmin(1.0f, (pres - pold[k]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		c.pressure = pres;
+		c.timbre = (float)sin(2 * M_PI * 0.4 * t + k);
+		c.gate = pres > 0.0f;
 		pold[k] = pres;
 	}
 	// live writes

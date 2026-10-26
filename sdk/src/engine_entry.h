@@ -26,7 +26,7 @@ template <dsp::VoiceEngine E> [[nodiscard]] const EngineEntry& entry_of(const ch
 		    b->e.init(b->m.fast, b->m.large, sr, nv);
 	    },
 	    [](void* p) { static_cast<Box*>(p)->e.reset(); },
-	    [](void* p, const VoiceControls* vc, const GlobalControls& g, float* const* out) { static_cast<Box*>(p)->e.process(vc, g, out); },
+	    [](void* p, const NoteControls* vc, const GlobalControls& g, float* const* out) { static_cast<Box*>(p)->e.process(vc, g, out); },
 	    [](const void* p) { return static_cast<const Box*>(p)->e.active_voices(); },
 	    [](const void* p) { return static_cast<const Box*>(p)->e.voices(); },
 	    [](int i) { return E::preset_name(i); },

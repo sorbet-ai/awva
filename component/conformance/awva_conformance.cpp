@@ -788,7 +788,7 @@ TEST_CASE("voices: process_voices() is silent at rest, a pressed voice sounds, t
 	const auto run = [&](bool press) {
 		Instance in;
 		REQUIRE(in.init(rate) == 0);
-		std::vector<nsc_voice> v(static_cast<size_t>(nvoices()), nsc_voice{69.0f, 0, 0, 0, 0, 0, 0, 0});
+		std::vector<nsc_voice> v(static_cast<size_t>(nvoices()), nsc_voice{69.0f, 0, 0, 0, 0, 0, 0});
 		const nsc_globals g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
 		const int nc = channels();
 		std::vector<float> buf(static_cast<size_t>(nc) * NSC_BLOCK), all;
@@ -797,12 +797,12 @@ TEST_CASE("voices: process_voices() is silent at rest, a pressed voice sounds, t
 		for (int b = 0; b < static_cast<int>(frames_of(1.0, rate) / NSC_BLOCK); b++) {
 			if (press) { // a key pressed over 20 ms, held
 				nsc_voice& c = v[0];
-				const float np = std::min(0.7f, c.pres + 0.05f);
-				c.vpres = np - c.pres;
-				c.pres = np;
-				c.note = 60.0f;
-				c.gate = 1.0f;
-				c.strike = std::max(c.strike, 0.5f);
+				const float np = std::min(0.7f, c.pressure + 0.05f);
+				c.pressure_rate = np - c.pressure;
+				c.pressure = np;
+				c.pitch = 60.0f;
+				c.gate = 1;
+				c.velocity = 0.5f;
 			}
 			comp().process_voices(in.state(), v.data(), &g, o.data());
 			all.insert(all.end(), buf.begin(), buf.end());

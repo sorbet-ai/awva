@@ -216,7 +216,7 @@ struct VoiceState {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
 	LargeMemory* large; // the host's (init)
@@ -380,7 +380,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s.note_prev = 69.0f;
 		s.active = 0;
 	}
-	for (int v = 0; v < e.nvoices; v++) e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+	for (int v = 0; v < e.nvoices; v++) e.vc[v] = awva::note_at_rest;
 	set_preset(e, DEFAULT_PRESET);
 }
 
@@ -538,14 +538,14 @@ static inline void audio_body(Engine& e, VoiceState& s, real Gr, const strisy::S
 static inline void process_voice(Engine& e, int v) {
 	VoiceState& s = e.vs[v];
 	const Params& P = e.ps;
-	const strisy::VoiceControls cc = e.vc[v];
-	const real pres = rmin(rmax(cc.pres, 0.0f), 1.5f);
+	const awva::NoteControls cc = e.vc[v];
+	const real pres = rmin(rmax(cc.pressure, 0.0f), 1.5f);
 	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
-	const real vpres = rmin(rmax(cc.vpres, -1.0f), pres > 0.0f ? 1.0f : 0.0f);
+	const real vpres = rmin(rmax(cc.pressure_rate, -1.0f), pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(P.tongue * vp1 / (0.4f + vp1), 1.0f);
-	const real note = rmin(rmax(cc.note, 0.0f), 132.0f);
+	const real note = rmin(rmax(cc.pitch, 0.0f), 132.0f);
 	const bool held = pres > 0.0f;
 	bool start = false;
 	if (!s.active) {
@@ -565,7 +565,7 @@ static inline void process_voice(Engine& e, int v) {
 		s.vneg = 0.0f;
 	}
 	s.note_prev = note;
-	const real by = rmin(rmax(cc.but_y, -1.0f), 1.0f);
+	const real by = rmin(rmax(cc.timbre, -1.0f), 1.0f);
 	if (start) {
 		s.ty1 = 0.0f;
 		s.ty2 = by;

@@ -44,7 +44,7 @@ class Scripted final : public Player {
 public:
 	Scripted(const ScriptedPerformance& p, int voices) :
 	    p_(p), nv_(voices) {}
-	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override { p_.block(b, nv_, vc, g); }
+	void block(int b, NoteControls* vc, dsp::GlobalControls& g) override { p_.block(b, nv_, vc, g); }
 	[[nodiscard]] double seconds() const override { return 17.5; }
 	[[nodiscard]] std::string describe() const override {
 		return std::string("scripted performance \"") + p_.name + "\" (" + file_identity(p_.header) + ")";
@@ -59,17 +59,17 @@ class Keys final : public Player {
 public:
 	Keys(std::string path, std::vector<harness::RecEvent> ev, int sample_rate) :
 	    path_(std::move(path)), ev_(std::move(ev)), sr_(sample_rate) {}
-	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls&) override {
+	void block(int b, NoteControls* vc, dsp::GlobalControls&) override {
 		// the last event of each voice up to this block (the controls hold between messages)
 		const double t = static_cast<double>(b) * dsp::BLOCK / sr_;
 		for (; k_ < ev_.size() && ev_[k_].t <= t; k_++) {
 			const harness::RecEvent& x = ev_[k_];
-			dsp::VoiceControls& c = vc[x.voice];
-			c.note = x.note;
-			c.pres = x.pres;
-			c.vpres = x.vpres;
-			c.but_x = x.but_x;
-			c.but_y = x.but_y;
+			NoteControls& c = vc[x.voice];
+			c.pitch = x.note;
+			c.pressure = x.pres;
+			c.pressure_rate = x.vpres;
+			c.timbre = x.but_y;
+			c.gate = x.pres > 0.0f;
 		}
 	}
 	[[nodiscard]] double seconds() const override { return ev_.back().t + 2.0; }
@@ -92,7 +92,7 @@ public:
 	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
 		in_->midi().set_legato(legato);
 	}
-	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, NoteControls* vc, dsp::GlobalControls& g) override {
 		// in integer frames (timed_midi.h, the component's rule): an event at its frame (its time,
 		// rounded to the nearest frame), taken at the first 2 ms step at or after it; the steps due
 		// by this block's start run first
@@ -100,14 +100,7 @@ public:
 		for (; k_ < f_.events.size() && frame_of(f_.events[k_].t) <= start; k_++)
 			(void)in_->midi1(frame_of(f_.events[k_].t), f_.events[k_].bytes, f_.events[k_].len);
 		in_->advance(start);
-		for (int v = 0; v < in_->midi().num_voices(); v++) {
-			const dsp::VoiceControls& m = in_->midi().voices()[v];
-			vc[v].note = m.note;
-			vc[v].pres = m.pres;
-			vc[v].vpres = m.vpres;
-			vc[v].but_x = m.but_x;
-			vc[v].but_y = m.but_y;
-		}
+		for (int v = 0; v < in_->midi().num_voices(); v++) vc[v] = in_->midi().voices()[v];
 		g = in_->midi().globals();
 	}
 	[[nodiscard]] double seconds() const override { return f_.seconds + 2.0; }
@@ -139,18 +132,11 @@ public:
 	    path_(std::move(path)), p_(std::move(p)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
 		in_->midi().set_legato(legato);
 	}
-	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, NoteControls* vc, dsp::GlobalControls& g) override {
 		const uint64_t start = static_cast<uint64_t>(b) * dsp::BLOCK;
 		for (; k_ < p_.size() && p_[k_].frame <= start; k_++) (void)in_->ump(p_[k_].frame, p_[k_].w);
 		in_->advance(start);
-		for (int v = 0; v < in_->midi().num_voices(); v++) {
-			const dsp::VoiceControls& m = in_->midi().voices()[v];
-			vc[v].note = m.note;
-			vc[v].pres = m.pres;
-			vc[v].vpres = m.vpres;
-			vc[v].but_x = m.but_x;
-			vc[v].but_y = m.but_y;
-		}
+		for (int v = 0; v < in_->midi().num_voices(); v++) vc[v] = in_->midi().voices()[v];
 		g = in_->midi().globals();
 	}
 	[[nodiscard]] double seconds() const override { return static_cast<double>(p_.back().frame) / sr_ + 2.0; }

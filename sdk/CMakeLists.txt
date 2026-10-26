@@ -124,16 +124,16 @@ namespace perf_${id} {
 #include \"${header}\"
 }
 
-static void perf_block(int b, int nv, awva::dsp::VoiceControls* vc, awva::dsp::GlobalControls& g) {
+static void perf_block(int b, int nv, awva::NoteControls* vc, awva::dsp::GlobalControls& g) {
 	perf_${id}::Ctl v[NVOICES_MAX];
 	float gl[8];
 	perf_${id}::block_controls(b, v, nv, gl);
 	for (int i = 0; i < nv; i++) {
-		vc[i].note = v[i].note;
-		vc[i].pres = v[i].pres;
-		vc[i].vpres = v[i].vpres;
-		vc[i].but_x = v[i].but_x;
-		vc[i].but_y = v[i].but_y;
+		vc[i].pitch = v[i].note;
+		vc[i].pressure = v[i].pres;
+		vc[i].pressure_rate = v[i].vpres;
+		vc[i].timbre = v[i].but_y;
+		vc[i].gate = v[i].pres > 0.0f;
 	}
 	g = {gl[0], gl[1], gl[2], gl[3], gl[4], gl[5], gl[6], gl[7]};
 }
@@ -236,16 +236,16 @@ if(AWVA_RENDER_VOICE IN_LIST AWVA_ENGINES)
 #include <string.h>
 #include \"${_perf}\"
 
-static void perf_block(int b, int nv, awva::dsp::VoiceControls* vc, awva::dsp::GlobalControls& g) {
+static void perf_block(int b, int nv, awva::NoteControls* vc, awva::dsp::GlobalControls& g) {
 	Ctl v[NVOICES_MAX];
 	float gl[8];
 	block_controls(b, v, nv, gl);
 	for (int i = 0; i < nv; i++) {
-		vc[i].note = v[i].note;
-		vc[i].pres = v[i].pres;
-		vc[i].vpres = v[i].vpres;
-		vc[i].but_x = v[i].but_x;
-		vc[i].but_y = v[i].but_y;
+		vc[i].pitch = v[i].note;
+		vc[i].pressure = v[i].pres;
+		vc[i].pressure_rate = v[i].vpres;
+		vc[i].timbre = v[i].but_y;
+		vc[i].gate = v[i].pres > 0.0f;
 	}
 	g = {gl[0], gl[1], gl[2], gl[3], gl[4], gl[5], gl[6], gl[7]};
 }

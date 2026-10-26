@@ -270,7 +270,7 @@ struct LargeMemory {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset, kind;
 	int instrument;     // e.p.instrument as an index: instruments[], CORR[]
@@ -356,7 +356,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dc1 = e.dcx = 0.0f;
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = e.nmix[n] = 0.0f;
 	for (int v = 0; v < MAX_VOICES; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		e.vs[v].note_prev = 69.0f;
 		reset_voice(e, v, true);
 	}
@@ -547,25 +547,25 @@ template <int KIND>
 
 static inline void process_voice(Engine& e, int v) {
 	VoiceState& s = e.vs[v];
-	const strisy::VoiceControls c = e.vc[v];
+	const awva::NoteControls c = e.vc[v];
 	const Params& q = e.ps;
-	real pres = clampr(c.pres, 0.0f, 1.5f);
+	real pres = clampr(c.pressure, 0.0f, 1.5f);
 	if (!(pres == pres)) pres = 0.0f;
-	real vp = clampr(c.vpres - 0.02f, 0.0f, 1.0f);
+	real vp = clampr(c.pressure_rate - 0.02f, 0.0f, 1.0f);
 	if (!(vp == vp)) vp = 0.0f;
 	// velocity only while held (a host may leave a stale vpres on released voices)
 	const real vplev = pres > 0.0f ? vp / (0.3f + vp) : 0.0f;
 	bool wake = false;
 	if (!s.active) {
 		if (pres <= 0.0f) {
-			s.note_prev = c.note;
+			s.note_prev = c.pitch;
 			return;
 		}
 		s.active = 1;
 		s.quiet = 0;
 		wake = true;
 	}
-	real note = c.note;
+	real note = c.pitch;
 	if (!(note == note)) note = 60.0f;
 	note = clampr(note, NOTE_MIN, NOTE_MAX);
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f;
@@ -577,7 +577,7 @@ static inline void process_voice(Engine& e, int v) {
 	s.ps += e.kp * (pres - s.ps);
 	if (s.ps < 1e-6f) s.ps = 0.0f;
 	const real ps = s.ps;
-	s.ty += 0.03f * (clampr(c.but_y, -1.0f, 1.0f) - s.ty);
+	s.ty += 0.03f * (clampr(c.timbre, -1.0f, 1.0f) - s.ty);
 	const real ty = s.ty;
 	s.tongue = rmax(s.tongue * 0.94f, vplev); // ~16 ms
 	if (s.tongue < 1e-6f) s.tongue = 0.0f;

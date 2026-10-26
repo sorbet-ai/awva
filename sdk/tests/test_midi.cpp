@@ -16,7 +16,7 @@ namespace {
 // the voice playing a note (pres > 0 at the note's pitch), -1 if none
 int voice_of(const sdk::MidiVoices& m, float note) {
 	for (int v = 0; v < m.num_voices(); v++)
-		if (m.voices()[v].pres > 0.0f && std::fabs(m.voices()[v].note - note) < 1e-3f) return v;
+		if (m.voices()[v].pressure > 0.0f && std::fabs(m.voices()[v].pitch - note) < 1e-3f) return v;
 	return -1;
 }
 
@@ -33,19 +33,19 @@ TEST_CASE("midi in: a note on and off, as midi_in.h maps them") {
 	send(m, {{0x90, 60, 100}}); // master channel: not an MPE member
 	const int v = voice_of(m, 60.0f);
 	REQUIRE(v == 0);
-	const awva::VoiceControls& c = m.voices()[v];
-	CHECK(c.vpres == doctest::Approx(100.0f / 127));
-	CHECK(c.pres == doctest::Approx(100.0f / 127)); // until pressure comes, the velocity
-	send(m, {});                                    // the strike fades
-	CHECK(c.vpres == doctest::Approx(0.6f * 100.0f / 127));
-	CHECK(c.pres == doctest::Approx(100.0f / 127));
+	const awva::NoteControls& c = m.voices()[v];
+	CHECK(c.pressure_rate == doctest::Approx(100.0f / 127));
+	CHECK(c.pressure == doctest::Approx(100.0f / 127)); // until pressure comes, the velocity
+	send(m, {});                                        // the strike fades
+	CHECK(c.pressure_rate == doctest::Approx(0.6f * 100.0f / 127));
+	CHECK(c.pressure == doctest::Approx(100.0f / 127));
 	send(m, {{0xd0, 0, 0}}); // channel pressure 0: held notes stay above 0
-	CHECK(c.pres == doctest::Approx(1.0f / 127));
+	CHECK(c.pressure == doctest::Approx(1.0f / 127));
 	send(m, {{0xd0, 64, 0}});
-	CHECK(c.pres == doctest::Approx(64.0f / 127));
+	CHECK(c.pressure == doctest::Approx(64.0f / 127));
 	send(m, {{0x80, 60, 40}});
-	CHECK(c.pres == 0.0f);
-	CHECK(c.vpres == doctest::Approx(-40.0f / 127));
+	CHECK(c.pressure == 0.0f);
+	CHECK(c.pressure_rate == doctest::Approx(-40.0f / 127));
 	CHECK(m.notes_held() == 0);
 }
 
@@ -56,19 +56,19 @@ TEST_CASE("midi in: MPE members bend, press and tilt their own notes") {
 	REQUIRE(a == 0);
 	REQUIRE(b == 1);
 	send(m, {{0xe1, 0x00, 0x48}}); // channel 2 bend: (0x2400 - 0x2000) / 8192 * 48 = +6 semitones
-	CHECK(m.voices()[a].note == doctest::Approx(66.0f));
-	CHECK(m.voices()[b].note == doctest::Approx(64.0f));
+	CHECK(m.voices()[a].pitch == doctest::Approx(66.0f));
+	CHECK(m.voices()[b].pitch == doctest::Approx(64.0f));
 	send(m, {{0xb2, 74, 127}}); // channel 3 timbre -> y
-	CHECK(m.voices()[b].but_y == doctest::Approx(63.0f / 64));
-	CHECK(m.voices()[a].but_y == 0.0f);
+	CHECK(m.voices()[b].timbre == doctest::Approx(63.0f / 64));
+	CHECK(m.voices()[a].timbre == 0.0f);
 	send(m, {{0xd2, 32, 0}}); // channel 3 pressure
-	CHECK(m.voices()[b].pres == doctest::Approx(32.0f / 127));
-	CHECK(m.voices()[a].pres == doctest::Approx(90.0f / 127));
+	CHECK(m.voices()[b].pressure == doctest::Approx(32.0f / 127));
+	CHECK(m.voices()[a].pressure == doctest::Approx(90.0f / 127));
 	// the bend range (RPN 0 on a member channel), then the master channel's bend: the instrument's
 	send(m, {{0xb1, 101, 0}, {0xb1, 100, 0}, {0xb1, 6, 24}});
 	CHECK(m.bend_range() == 24.0f);
 	send(m, {{0xe0, 0x00, 0x60}}); // master: (0x3000 - 0x2000) / 8192 * 2 = +1
-	CHECK(m.voices()[b].note == doctest::Approx(65.0f));
+	CHECK(m.voices()[b].pitch == doctest::Approx(65.0f));
 	// the MCM: no zone, every channel is like the master
 	send(m, {{0xb0, 101, 0}, {0xb0, 100, 6}, {0xb0, 6, 0}});
 	CHECK(m.members() == 0);
@@ -131,15 +131,15 @@ TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Re
 	m.step();
 	float y60 = 9, y64 = 9;
 	for (int v = 0; v < m.num_voices(); v++) {
-		if (m.voices()[v].note == 60.0f) y60 = m.voices()[v].but_y;
-		if (m.voices()[v].note == 64.0f) y64 = m.voices()[v].but_y;
+		if (m.voices()[v].pitch == 60.0f) y60 = m.voices()[v].timbre;
+		if (m.voices()[v].pitch == 64.0f) y64 = m.voices()[v].timbre;
 	}
 	CHECK(y60 == doctest::Approx(0.5).epsilon(1e-6));
 	CHECK(y64 == doctest::Approx(-0.5).epsilon(1e-6));
 	ump(0x40b04a00u, 0xffffffffu); // CC74 of the channel: the notes keep their own
 	m.step();
 	for (int v = 0; v < m.num_voices(); v++) {
-		if (m.voices()[v].note == 60.0f) CHECK(m.voices()[v].but_y == y60);
-		if (m.voices()[v].note == 64.0f) CHECK(m.voices()[v].but_y == y64);
+		if (m.voices()[v].pitch == 60.0f) CHECK(m.voices()[v].timbre == y60);
+		if (m.voices()[v].pitch == 64.0f) CHECK(m.voices()[v].timbre == y64);
 	}
 }

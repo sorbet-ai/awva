@@ -9,7 +9,7 @@ namespace awva::sdk {
 
 Shell::Shell(const EngineEntry& engine, int sample_rate, int voices, bool fx) :
     engine_(engine), fx_(fx_effect()), midi_(std::make_unique<TimedMidi>(std::min(voices, engine.info->budget.max_voices), sample_rate)), sr_(sample_rate),
-    nv_(std::min(voices, engine.info->budget.max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), dsp::voice_at_rest),
+    nv_(std::min(voices, engine.info->budget.max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), note_at_rest),
     g_(dsp::globals_at_rest) {
 	engine_.init(sr_, nv_);
 	fx_.init(sr_);
@@ -23,7 +23,7 @@ void Shell::set_engine(const EngineEntry& engine) {
 	engine_.init(sr_, nv_);
 }
 
-void Shell::set_controls(const VoiceControls* vc, const GlobalControls& g) {
+void Shell::set_controls(const NoteControls* vc, const GlobalControls& g) {
 	direct_ = true;
 	for (int v = 0; v < nv_; v++) vc_[static_cast<size_t>(v)] = vc[v];
 	g_ = g;
@@ -45,18 +45,9 @@ int Shell::ended_notes(int32_t* ids, int max) {
 void Shell::render_block() {
 	if (!direct_) {
 		midi_->advance(frames_); // the 2 ms steps due by this block's start (timed_midi.h)
-		for (int v = 0; v < nv_; v++) {
-			VoiceControls& c = vc_[static_cast<size_t>(v)];
-			const VoiceControls& m = midi_->midi().voices()[v];
-			c.note = m.note;
-			c.pres = m.pres;
-			c.vpres = m.vpres;
-			c.but_x = m.but_x;
-			c.but_y = m.but_y;
-		}
+		for (int v = 0; v < nv_; v++) vc_[static_cast<size_t>(v)] = midi_->midi().voices()[v];
 		g_ = midi_->midi().globals();
 	}
-	for (VoiceControls& c : vc_) dsp::track_key(c);
 	frames_ += dsp::BLOCK;
 	float* const eo[1] = {mono_};
 	engine_.process(vc_.data(), g_, eo);

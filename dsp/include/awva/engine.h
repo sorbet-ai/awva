@@ -45,66 +45,24 @@ using strisy::GlobalControls;
 using strisy::ParamDesc;
 using strisy::ParamKind;
 
-// The controls of one voice, as a note gives them. The first five are its continuous signals
-// (strisy::VoiceControls: controls.h has their ranges); gate, strike and release are the same
-// note's events (track_key() derives them from the signals).
-struct VoiceControls {
-	float note;    // pitch in semitones, MIDI numbering (69 = A4), fractional
-	float pres;    // pressure, 0 (released) .. 1 (firm), up to ~1.5
-	float vpres;   // pressure velocity, about -1 .. 1: > 0 striking, < 0 releasing
-	float but_x;   // tilt sideways, -1 .. 1
-	float but_y;   // tilt forward/back, -1 .. 1
-	float gate;    // 1 while the note is held (pres > 0), else 0
-	float strike;  // velocity of the strike that opened the gate, 0 .. 1 (kept until the next)
-	float release; // velocity of the release that closed it, 0 .. 1 (kept until the next)
-};
-
-// the continuous signals of a voice (what the engines' process() reads)
-[[nodiscard]] constexpr strisy::VoiceControls key_controls(const VoiceControls& c) {
-	return {c.note, c.pres, c.vpres, c.but_x, c.but_y};
-}
-
-// a voice at rest: note 69, no pressure, no tilt
-inline constexpr VoiceControls voice_at_rest = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 // the instrument at rest: accelerometer 1 g down, no rotation, pedal 3/16
 inline constexpr GlobalControls globals_at_rest = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
-
-// Gate, strike and release from the signals, once per block after they were written: the gate
-// opens when pres rises above 0 and closes when it returns to 0; strike is the highest vpres seen
-// while the gate is open (how fast the pressure rose), release the highest -vpres since it closed.
-// A pressure sensor gives only pres and vpres; a host that has the note events may set all three.
-constexpr void track_key(VoiceControls& c) {
-	const auto clip = [](float x) { return x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x); };
-	if (c.pres > 0.0f) {
-		if (c.gate == 0.0f) {
-			c.gate = 1.0f;
-			c.strike = clip(c.vpres);
-		} else if (c.vpres > c.strike) {
-			c.strike = clip(c.vpres);
-		}
-	} else if (c.gate != 0.0f) {
-		c.gate = 0.0f;
-		c.release = clip(-c.vpres);
-	} else if (-c.vpres > c.release) {
-		c.release = clip(-c.vpres);
-	}
-}
 
 // ---------------------------------------------------------------------------------------------
 // What an engine declares about itself
 
 // The inputs an engine reads (EngineInfo::inputs). An input it doesn't declare makes no
-// difference to its output (the contract tests check this). The pitch is always read.
+// difference to its output (the contract tests check this). The pitch and the gate are always read.
 enum Input : uint32_t {
-	in_pressure = 1u << 0,    // pres
-	in_velocity = 1u << 1,    // vpres
-	in_tilt_x = 1u << 2,      // but_x (the pitch bend is already in note)
-	in_tilt_y = 1u << 3,      // but_y
-	in_note_events = 1u << 4, // gate, strike, release
-	in_shake = 1u << 5,       // acc_abs
-	in_accel = 1u << 6,       // acc_x, acc_y, acc_z
-	in_rotation = 1u << 7,    // rot_x, rot_y, rot_z
-	in_pedal = 1u << 8,       // pedal
+	in_pressure = 1u << 0,      // NoteControls::pressure
+	in_pressure_rate = 1u << 1, // NoteControls::pressure_rate
+	in_timbre = 1u << 2,        // NoteControls::timbre
+	in_velocity = 1u << 3,      // NoteControls::velocity
+	in_release = 1u << 4,       // NoteControls::release
+	in_shake = 1u << 5,         // acc_abs
+	in_accel = 1u << 6,         // acc_x, acc_y, acc_z
+	in_rotation = 1u << 7,      // rot_x, rot_y, rot_z
+	in_pedal = 1u << 8,         // pedal
 };
 
 // Where a host puts an engine's memory. The engine object itself is always Placement::tcm.
@@ -263,7 +221,7 @@ concept PlainData = std::is_trivially_default_constructible_v<T> && std::is_triv
 template <class E>
 concept VoiceEngine = PlainData<E> && PlainData<typename E::FastMemory> && PlainData<typename E::LargeMemory> &&
     requires(E& e, const E& ce, typename E::FastMemory& f, typename E::LargeMemory& l,
-        const VoiceControls* vc, const GlobalControls& g, float* const* out, int i, float v) {
+        const NoteControls* vc, const GlobalControls& g, float* const* out, int i, float v) {
 	    { E::info } -> std::convertible_to<const EngineInfo&>;
 	    { e.init(f, l, i, i) } -> std::same_as<void>;
 	    { e.reset() } -> std::same_as<void>;

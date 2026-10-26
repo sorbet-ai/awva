@@ -26,7 +26,7 @@ namespace contract {
 namespace dsp = awva;
 namespace sdk = awva::sdk;
 using dsp::GlobalControls;
-using dsp::VoiceControls;
+using dsp::NoteControls;
 
 constexpr int SR = 48000;
 constexpr float SILENT = 1e-4f;       // the render checks' silence
@@ -90,18 +90,20 @@ constexpr float PEAK_PLAYING = 32.0f; // every voice at full pressure (a host at
 
 // --- the keys and the phrases ---------------------------------------------------------------------
 
-// The keys: pressure glides to its target at 1 per 20 ms, vpres is its speed as the harness
-// performances compute it, gate/strike/release follow (track_key): every engine sees a real
-// strike and release.
+// a voice's gate from its pressure (the scripted players' rule: held while pressed)
+inline void gate_of(NoteControls& c) { c.gate = c.pressure > 0.0f; }
+
+// The keys: pressure glides to its target at 1 per 20 ms, pressure_rate is its speed as the
+// harness performances compute it, the gate follows: every engine sees a real strike and release.
 struct Keys {
-	std::vector<VoiceControls> vc;
+	std::vector<NoteControls> vc;
 	std::vector<float> target;
 	GlobalControls g = dsp::globals_at_rest;
 	int rate = SR;
 	explicit Keys(int nv, int sample_rate = SR) :
-	    vc(static_cast<size_t>(nv), dsp::voice_at_rest), target(static_cast<size_t>(nv), 0.0f), rate(sample_rate) {}
+	    vc(static_cast<size_t>(nv), dsp::note_at_rest), target(static_cast<size_t>(nv), 0.0f), rate(sample_rate) {}
 	void press(int v, float note, float pres) {
-		vc[static_cast<size_t>(v)].note = note;
+		vc[static_cast<size_t>(v)].pitch = note;
 		target[static_cast<size_t>(v)] = pres;
 	}
 	void release(int v) { target[static_cast<size_t>(v)] = 0.0f; }
@@ -111,11 +113,11 @@ struct Keys {
 		const auto speed = static_cast<float>(dsp::BLOCK / (0.02 * rate));
 		const float blocks_per_s = static_cast<float>(rate) / dsp::BLOCK;
 		for (size_t v = 0; v < vc.size(); v++) {
-			const float p = vc[v].pres, t = target[v];
+			const float p = vc[v].pressure, t = target[v];
 			const float np = p < t ? std::min(t, p + speed) : std::max(t, p - speed);
-			vc[v].vpres = std::clamp((np - p) * blocks_per_s * 0.0125f, -1.0f, 1.0f);
-			vc[v].pres = np;
-			dsp::track_key(vc[v]);
+			vc[v].pressure_rate = std::clamp((np - p) * blocks_per_s * 0.0125f, -1.0f, 1.0f);
+			vc[v].pressure = np;
+			gate_of(vc[v]);
 		}
 	}
 };
@@ -164,9 +166,8 @@ inline void phrase(Keys& k, int b, float transpose = 0.0f) {
 		if (t < 1.5 && b == blocks(step * 0.25 + 0.18, k.rate)) k.release(3);
 	}
 	for (int v = 0; v < std::min(nv, 3); v++) {
-		VoiceControls& c = k.vc[static_cast<size_t>(v)];
-		c.but_x = static_cast<float>(0.3 * std::sin(2 * M_PI * 5 * t + v));
-		c.but_y = static_cast<float>(0.6 * std::sin(2 * M_PI * 0.7 * t + v));
+		NoteControls& c = k.vc[static_cast<size_t>(v)];
+		c.timbre = static_cast<float>(0.6 * std::sin(2 * M_PI * 0.7 * t + v));
 	}
 	if (b == blocks(1.5, k.rate)) k.release_all();
 }
@@ -183,23 +184,23 @@ struct Rng {
 // random playing: presses and releases, glides, tilt, strikes, pedal and motion, extremes included
 inline void fuzz_controls(Rng& r, Keys& k) {
 	for (size_t v = 0; v < k.vc.size(); v++) {
-		VoiceControls& c = k.vc[v];
+		NoteControls& c = k.vc[v];
 		const float u = r.next();
 		if (u < 0.03f) { // press / release (instantly: the pressure jumps)
-			const bool on = c.pres <= 0.0f;
-			c.pres = k.target[v] = on ? r.range(0.05f, 1.3f) : 0.0f;
-			c.vpres = on ? r.range(0.0f, 1.0f) : -r.range(0.0f, 1.0f);
-			if (on) c.note = r.range(10.0f, 120.0f);
-		} else if (c.pres > 0.0f) {
-			c.pres = k.target[v] = std::clamp(c.pres + r.range(-0.05f, 0.05f), 0.01f, 1.5f);
-			c.vpres = r.range(-0.2f, 0.2f);
-			c.note += r.range(-0.1f, 0.1f);
-			c.but_x = r.range(-1.0f, 1.0f);
-			c.but_y = r.range(-1.0f, 1.0f);
+			const bool on = c.pressure <= 0.0f;
+			c.pressure = k.target[v] = on ? r.range(0.05f, 1.3f) : 0.0f;
+			c.pressure_rate = on ? r.range(0.0f, 1.0f) : -r.range(0.0f, 1.0f);
+			if (on) c.pitch = r.range(10.0f, 120.0f);
+		} else if (c.pressure > 0.0f) {
+			c.pressure = k.target[v] = std::clamp(c.pressure + r.range(-0.05f, 0.05f), 0.01f, 1.5f);
+			c.pressure_rate = r.range(-0.2f, 0.2f);
+			c.pitch += r.range(-0.1f, 0.1f);
+			(void)r.range(-1.0f, 1.0f); // (the draw a second tilt took: the same phrases as before)
+			c.timbre = r.range(-1.0f, 1.0f);
 		} else {
-			c.vpres = 0.0f;
+			c.pressure_rate = 0.0f;
 		}
-		dsp::track_key(c);
+		gate_of(c);
 	}
 	if (r.next() < 0.02f) {
 		k.g.acc_abs = r.range(0.0f, 3.5f);

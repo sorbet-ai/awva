@@ -26,8 +26,8 @@ struct ScriptedPerformance {
 	const char* header; // the file it was compiled from
 	int sample_rate;    // the rate it is written for (its SAMPLERATE)
 	int max_voices;     // its NVOICES_MAX
-	// the key signals (note, pres, vpres, but_x, but_y) of block b for nv voices, and the globals
-	void (*block)(int b, int nv, dsp::VoiceControls* vc, dsp::GlobalControls& g);
+	// the controls (pitch, pressure, pressure_rate, timbre, gate) of block b for nv voices, and the globals
+	void (*block)(int b, int nv, NoteControls* vc, dsp::GlobalControls& g);
 };
 
 // the scripted performances linked in (awva_performances), by name
@@ -37,9 +37,8 @@ struct ScriptedPerformance {
 class Player {
 public:
 	virtual ~Player() = default;
-	// the voice signals of block b (blocks in order from 0): writes what changes, the rest stays;
-	// gate, strike and release follow from them (dsp::track_key)
-	virtual void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) = 0;
+	// the controls of block b (blocks in order from 0): writes what changes, the rest stays
+	virtual void block(int b, NoteControls* vc, dsp::GlobalControls& g) = 0;
 	// its natural length in seconds (a render's default)
 	[[nodiscard]] virtual double seconds() const = 0;
 	// what it is, for a log: kind, name, file (absolute), its size and checksum, its length

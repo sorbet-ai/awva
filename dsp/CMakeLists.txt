@@ -5,7 +5,7 @@
 # (docs/README.md). Header only on purpose: the engines are static inline and compile into the one
 # translation unit that runs them (an embedded host's synth thread, or sdk/ on the PC), so the
 # compiler sees the whole DSP at once.
-#   awva/engine.h           the contract: VoiceEngine, Effect, VoiceControls, EngineInfo
+#   awva/engine.h           the contract: VoiceEngine, Effect, NoteControls, EngineInfo
 #   awva/adapter.h          an engine header in the voice_<name>.h shape as a VoiceEngine
 #   awva/engine_set.h       a compile-time set of engines (a host that switches between them)
 #   awva/engines/<name>.h   each engine as a VoiceEngine: awva::dsp::engines::<name>

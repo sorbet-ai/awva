@@ -34,7 +34,7 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - Give a Note On the host's note id (`nsc_event.note_id`, else -1). After each `process()`, drain `ended()` (call it again while it returns `max`) and send each id's note-end (CLAP_EVENT_NOTE_END).
 - Mono legato: `mode(state, NSC_MODE_LEGATO, 1)`.
 
-**An instrument: `process_voices(state, voices, globals, out)`.** The host allocates voices itself and gives each its controls (`nsc_voice`: note, pressure, velocity, x, y, and the gate, strike and release that `track_key()` derives). The component only renders, bit for bit as the same engine compiled in.
+**An instrument: `process_voices(state, voices, globals, out)`.** The host allocates voices itself and gives each its controls (`nsc_voice`: pitch, pressure, pressure rate, timbre, the velocities and the gate, as `awva::NoteControls`). The component only renders, bit for bit as the same engine compiled in.
 
 ## 4. Parameters and presets
 

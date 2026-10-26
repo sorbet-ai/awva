@@ -33,20 +33,20 @@ RateRun run_at(int rate, int preset) {
 	sdk::Engine e(entry());
 	e.init(rate, nvoices());
 	if (preset >= 0) e.set_preset(preset);
-	std::vector<VoiceControls> vc(static_cast<size_t>(e.voices()), dsp::voice_at_rest);
+	std::vector<NoteControls> vc(static_cast<size_t>(e.voices()), dsp::note_at_rest);
 	GlobalControls g = dsp::globals_at_rest;
 	const float dt = static_cast<float>(dsp::BLOCK) / static_cast<float>(rate); // a block, s
 	const int held_blocks = static_cast<int>(1.0f / dt), total = static_cast<int>((1.0f + info().budget.tail_seconds + 0.5f) / dt);
 	RateRun r;
-	vc[0].note = 69.0f;
+	vc[0].pitch = 69.0f;
 	for (int b = 0; b < total; b++) {
-		VoiceControls& c = vc[0];
+		NoteControls& c = vc[0];
 		const float target = b < held_blocks ? 0.6f : 0.0f;
 		const float step = dt / 0.02f; // 1 per 20 ms
-		const float np = c.pres < target ? std::min(target, c.pres + step) : std::max(target, c.pres - step);
-		c.vpres = std::clamp((np - c.pres) / dt * 0.0125f, -1.0f, 1.0f);
-		c.pres = np;
-		for (VoiceControls& v : vc) dsp::track_key(v);
+		const float np = c.pressure < target ? std::min(target, c.pressure + step) : std::max(target, c.pressure - step);
+		c.pressure_rate = std::clamp((np - c.pressure) / dt * 0.0125f, -1.0f, 1.0f);
+		c.pressure = np;
+		for (NoteControls& v : vc) gate_of(v);
 		float out[dsp::BLOCK];
 		float* const o[1] = {out};
 		e.process(vc.data(), g, o);

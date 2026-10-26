@@ -199,7 +199,7 @@ struct VoiceState {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
 	const Model* pr;
@@ -325,7 +325,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		e.out[n] = 0.0f;
 	}
 	for (int v = 0; v < MAX_VOICES; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		VoiceState& s = e.vs[v];
 		reset_voice(s);
 		s.note_prev = 69.0f;
@@ -390,25 +390,25 @@ static inline void run_modes(VoiceState& s, const real* __restrict__ x, real* __
 
 static inline void process_voice(Engine& e, int v, real trem_lfo) {
 	VoiceState& s = e.vs[v];
-	const strisy::VoiceControls c = e.vc[v];
+	const awva::NoteControls c = e.vc[v];
 	const Model& P = *e.pr;
 	real* __restrict__ out = e.out;
-	const real pres = clampr(c.pres, 0.0f, 1.5f);
+	const real pres = clampr(c.pressure, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
 	// strikes only while a note is held: after release a host may leave the last vpres in place
 	const Params& Q = e.prm;
-	const real starget = held ? clampr((c.vpres - Q.thresh) * e.inv_span, 0.0f, 1.0f) : 0.0f;
+	const real starget = held ? clampr((c.pressure_rate - Q.thresh) * e.inv_span, 0.0f, 1.0f) : 0.0f;
 
 	if (!s.active) {
 		if (!held && starget <= STRIKE_REARM) {
-			s.note_prev = c.note;
+			s.note_prev = c.pitch;
 			s.sdone = 0.0f;
 			s.pbase = pres;
 			return;
 		}
 		reset_voice(s);
 		s.active = 1;
-	} else if (s.fade || fabsf(c.note - s.note_prev) >= 1.0f) {
+	} else if (s.fade || fabsf(c.pitch - s.note_prev) >= 1.0f) {
 		// new note (or preset) on a sounding voice: fade the old one out over this block with its
 		// old partials (about -45 dB), then start fresh next block (a pending strike comes then)
 		for (int m = 0; m < s.nact; m++) {
@@ -418,15 +418,15 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 		run_modes<false>(s, e.x, out);
 		for (int n = 0; n < BLOCK; n++) e.mix[n] += out[n];
 		reset_voice(s);
-		s.note_prev = c.note;
+		s.note_prev = c.pitch;
 		s.pbase = 0.0f; // a new note may strike even when the voice was taken from a held key
 		return;
 	}
-	s.note_prev = c.note;
+	s.note_prev = c.pitch;
 
-	const real f0 = 440.0f * exp2_poly((c.note - 69.0f) * (1.0f / 12.0f));
+	const real f0 = 440.0f * exp2_poly((c.pitch - 69.0f) * (1.0f / 12.0f));
 	// decay over the keyboard: T60 ~ (f0 / f_C4)^-alpha
-	const real pitch_decay = exp2_poly(Q.keytrack * (c.note - 60.0f) * (1.0f / 12.0f));
+	const real pitch_decay = exp2_poly(Q.keytrack * (c.pitch - 60.0f) * (1.0f / 12.0f));
 	// damper: engages as the key is lifted (fully at release), lifted by the sustain pedal
 	const real ped = 1.0f - clampr(e.g.pedal, 0.0f, 1.0f) * Q.pedal;
 	const real damp = DAMP_SIGMA * Q.damper * ped * ped * clampr(1.0f - pres * e.inv_lift, 0.0f, 1.0f);
@@ -446,7 +446,7 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 	}
 	const real keep = 1.0f - Q.mute * clampr(dlev * (1.0f / STRIKE_LEVEL), 0.0f, 1.0f);
 	// mallet hardness: strike strength, a little tilt (at the moment of the strike only)
-	const real hard = (Q.hard + Q.hardvel * starget) * (1.0f + Q.tilt * clampr(c.but_y, -1.0f, 1.0f));
+	const real hard = (Q.hard + Q.hardvel * starget) * (1.0f + Q.tilt * clampr(c.timbre, -1.0f, 1.0f));
 	const real lhard = hard > 1e-3f ? hard : 1e-3f;
 
 	// --- rub (wine glass) -------------------------------------------------------------------------

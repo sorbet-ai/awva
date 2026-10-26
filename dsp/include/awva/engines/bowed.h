@@ -19,7 +19,7 @@ struct bowed {
 	static constexpr const char* name = "bowed";
 	static constexpr const char* title = "Bowed Strings";
 	static constexpr const char* summary = "bowed strings: friction-driven waveguide strings, modal body, section (9 presets)";
-	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_rotation | in_pedal;
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_shake | in_rotation | in_pedal;
 	static constexpr Budget budget = {::bowed::MAX_VOICES, 32000, 2.0f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"}};

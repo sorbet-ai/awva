@@ -30,7 +30,7 @@ struct VoiceState {
 
 struct Engine {
 	strisy::GlobalControls g;
-	strisy::VoiceControls vc[MAX_VOICES];
+	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	real sr;
 	real amp_coef; // one-pole smoothing per sample
@@ -53,7 +53,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
 	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
 	for (int v = 0; v < e.nvoices; v++) {
-		e.vc[v] = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+		e.vc[v] = awva::note_at_rest;
 		e.vs[v] = {1.0f, 0.0f, 0.0f};
 	}
 }
@@ -61,12 +61,12 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 static inline void process(Engine& e, real* output) {
 	for (int n = 0; n < BLOCK; n++) output[n] = 0.0f;
 	for (int v = 0; v < e.nvoices; v++) {
-		const strisy::VoiceControls c = e.vc[v];
+		const awva::NoteControls c = e.vc[v];
 		VoiceState& st = e.vs[v];
-		real target = c.pres > 0.0f ? c.pres : 0.0f;
+		real target = c.pressure > 0.0f ? c.pressure : 0.0f;
 		if (target == 0.0f && st.amp < 1e-6f) continue; // silent voice: skip
 		// block-rate rotation coefficients for the note's frequency
-		real w = 2.0f * 3.14159265f * 8.1757989f * strisy::fastpow2(c.note * (1.0f / 12.0f)) / e.sr;
+		real w = 2.0f * 3.14159265f * 8.1757989f * strisy::fastpow2(c.pitch * (1.0f / 12.0f)) / e.sr;
 		w = w < 1.5707963f ? w : 1.5707963f; // up to SR/4
 		real cw = cos_poly(w), sw = sin_poly(w);
 		real cc = st.c, ss = st.s, amp = st.amp;
@@ -88,7 +88,7 @@ static inline void process(Engine& e, real* output) {
 
 [[nodiscard]] static inline int active_voices(const Engine& e) {
 	int n = 0;
-	for (int v = 0; v < e.nvoices; v++) n += e.vs[v].amp > 1e-6f || e.vc[v].pres > 0.0f;
+	for (int v = 0; v < e.nvoices; v++) n += e.vs[v].amp > 1e-6f || e.vc[v].pressure > 0.0f;
 	return n;
 }
 
