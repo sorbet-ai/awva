@@ -16,6 +16,9 @@ struct va {
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "va";
 	static constexpr const char* title = "Virtual Analog";
+	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
+	static constexpr const char* short_name = "va";
+	static constexpr uint32_t led = 0x401400;
 	static constexpr const char* summary = "virtual analog: saw/pulse/sub oscillators, sync, ladder-style filter, envelopes (8 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_rotation | in_pedal;
 	static constexpr Budget budget = {::va::MAX_VOICES, 24000, 10.0f};

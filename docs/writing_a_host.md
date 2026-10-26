@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Writing a host
 
-A host loads an engine component (`component/include/nsc/nsc.h`, ABI 2), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
+A host loads an engine component (`component/include/nsc/nsc.h`, ABI 3), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
 - **a plugin**, which plays from a DAW's notes;
 - **an embedded instrument**, which reads its own sensors and allocates voices itself.
 
@@ -13,8 +13,8 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - Build the component, or take its library: `<id>.dll` / `.dylib` / `.so`, with `<id>.json` (its manifest) beside it. A project of your own can build one with `awva_add_component(<target> <engine> STATIC|SHARED|MODULE)`; the sources are generated in your build directory.
 - Load it, and call `nsc_entry()`. `component/include/nsc/load.h` does this, and checks that `desc->magic` is `NSC_MAGIC` and `desc->abi` is `NSC_ABI`. Refuse a component of another ABI.
 - Read the descriptor. It is static and readable before any instance exists:
-  - `id` (the short name), `uid` (`com.sorbet-ai.awva.<id>`, the plugin or package id), `name` (a title for people), `summary`, `version`;
-  - `led`: its colour, 0xrrggbb (0: none, use your own);
+  - `id` (the short name), `uid` (`com.sorbet-ai.awva.<id>`, the plugin or package id), `name` (a title for people), `short_name` (1 to 6 characters, for narrow displays), `summary`, `version`;
+  - `led`: its colour, 0xrrggbb (never 0);
   - `min_rate` .. `max_rate`: the sample rates it supports;
   - `max_voices`, `channels`, `tail_seconds`, `instr_per_block` (the budget);
   - the three region sizes;

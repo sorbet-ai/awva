@@ -21,7 +21,7 @@ Three ways to host them:
 | `tools/fit/` | rendering engines and measuring them against recordings: the fits' shared toolkit ([docs/fitting.md](docs/fitting.md)) |
 | `third_party/doctest` | the test framework |
 
-**The component (ABI 2).** `component/include/nsc/nsc.h` is a C ABI that loads one engine from its own shared library. It takes UMP in, at integer frames, with late events exact. Parameters have stable ids and declared defaults, and an `output` level follows the engine's own. Notes carry host ids, handed back by `ended()`. The descriptor gives a title, a colour, the heroes, the presets and the sample rates (11025 .. 192000). `awva_add_component()` builds an engine as a component library inside another project. See `component/README.md`, and `docs/writing_a_host.md` for a host: a plugin or an embedded instrument.
+**The component (ABI 3).** `component/include/nsc/nsc.h` is a C ABI that loads one engine from its own shared library. It takes UMP in, at integer frames, with late events exact. Parameters have stable ids and declared defaults, and an `output` level follows the engine's own. Notes carry host ids, handed back by `ended()`. The descriptor gives a title, a short name, a colour, the heroes, the presets and the sample rates (11025 .. 192000). `awva_add_component()` builds an engine as a component library inside another project. See `component/README.md`, and `docs/writing_a_host.md` for a host: a plugin or an embedded instrument.
 
 Build and test on their own:
 
