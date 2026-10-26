@@ -20,12 +20,16 @@
 #include "awva/ump.h"
 #include "awva/voice_allocator.h"
 
+#ifndef AWVA_MIDI_STEP_QUEUE
+#define AWVA_MIDI_STEP_QUEUE 512 // MIDI messages a control step takes
+#endif
+
 namespace awva::sdk {
 
 class MidiVoices {
 public:
-	static constexpr int QUEUE = 512; // messages per step
-	static constexpr int NOTES = 16;  // notes held at once (a 17th takes the oldest)
+	static constexpr int QUEUE = AWVA_MIDI_STEP_QUEUE; // messages per step (a build's)
+	static constexpr int NOTES = 16;                   // notes held at once (a 17th takes the oldest)
 
 	explicit MidiVoices(int voices);
 

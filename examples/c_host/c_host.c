@@ -18,8 +18,8 @@
 
 #include "nsc/nsc.h"
 
-/* written for ABI 3: nsc_event.note_id and ended() (2), short_name (3) */
-_Static_assert(NSC_ABI == 3, "c_host follows ABI 3");
+/* written for ABI 4: nsc_event.note_id and ended() (2), short_name (3), max_events (4) */
+_Static_assert(NSC_ABI == 4, "c_host follows ABI 4");
 
 #if defined(_WIN32)
 #include <windows.h>

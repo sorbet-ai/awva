@@ -78,6 +78,19 @@ foreach(v IN LISTS AWVA_ENGINES)
     COMMAND nsc_manifest "$<TARGET_FILE:nsc_${v}>" "${AWVA_COMPONENT_DIR}/${v}.json" VERBATIM)
   list(APPEND AWVA_COMPONENTS nsc_${v})
 endforeach()
+# one component built with small MIDI tables, as a host with little RAM builds them (AWVA_MIDI_QUEUE,
+# AWVA_NOTE_IDS, AWVA_MIDI_STEP_QUEUE: timed_midi.h, midi_voices.h): its descriptor says so and the
+# conformance checks hold on it (conformance.sine_small.*)
+awva_add_component(nsc_sine_small sine SHARED)
+target_compile_definitions(nsc_sine_small PRIVATE AWVA_MIDI_QUEUE=256 AWVA_NOTE_IDS=16 AWVA_MIDI_STEP_QUEUE=256)
+set_target_properties(nsc_sine_small PROPERTIES OUTPUT_NAME sine_small PREFIX "" CXX_VISIBILITY_PRESET hidden
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/small" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/small")
+if(APPLE)
+  target_link_options(nsc_sine_small PRIVATE -Wl,-exported_symbol,_nsc_entry)
+endif()
+add_custom_command(TARGET nsc_sine_small POST_BUILD
+  COMMAND nsc_manifest "$<TARGET_FILE:nsc_sine_small>" "${CMAKE_CURRENT_BINARY_DIR}/small/sine_small.json" VERBATIM)
+list(APPEND AWVA_COMPONENTS nsc_sine_small)
 add_custom_target(nsc_components DEPENDS ${AWVA_COMPONENTS})
 set(AWVA_COMPONENTS "${AWVA_COMPONENTS}" PARENT_SCOPE)
 
@@ -98,6 +111,10 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
   foreach(v IN LISTS AWVA_ENGINES)
     awva_conformance_tests("conformance.${v}." "${AWVA_COMPONENT_DIR}/${v}${CMAKE_SHARED_LIBRARY_SUFFIX}" KNOWN ${AWVA_KNOWN_${v}} ${AWVA_KNOWN_COMPONENT} LABELS "conformance;unit")
   endforeach()
+  awva_conformance_tests("conformance.sine_small." "${CMAKE_CURRENT_BINARY_DIR}/small/sine_small${CMAKE_SHARED_LIBRARY_SUFFIX}" KNOWN ${AWVA_KNOWN_sine} ${AWVA_KNOWN_COMPONENT} LABELS "conformance;unit")
+  add_test(NAME component.small_tables_in_the_descriptor COMMAND nsc_manifest "${CMAKE_CURRENT_BINARY_DIR}/small/sine_small${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  set_tests_properties(component.small_tables_in_the_descriptor PROPERTIES LABELS unit
+    PASS_REGULAR_EXPRESSION "\"max_events\": 256,\n  \"max_note_ids\": 16,")
   add_dependencies(awva_conformance nsc_components)
   # a ';' in a check's name splits it in ctest, which then runs no check and passes
   add_test(NAME conformance.names_without_semicolons COMMAND awva_conformance --list-test-cases)

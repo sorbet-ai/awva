@@ -27,6 +27,7 @@
 #include "awva_sdk/performance.h"
 #include "awva_sdk/smf.h"
 #include "awva_sdk/presets.h"
+#include "awva_sdk/timed_midi.h"
 
 namespace {
 
@@ -438,7 +439,7 @@ TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked 
 	const nsc_component& c = dll.c();
 	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
 	constexpr int N = 200, EVERY = 6, HOLD = 600; // a note every 6 blocks, held 600: 100 at once
-	static_assert(N > NSC_MAX_NOTE_IDS && HOLD / EVERY > NSC_MAX_NOTE_IDS);
+	static_assert(N > sdk::TimedMidi::NOTES && HOLD / EVERY > sdk::TimedMidi::NOTES);
 	Ids back(N);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
@@ -800,7 +801,7 @@ TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked 
 	const nsc_component& c = dll.c();
 	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
 	constexpr int N = 200, EVERY = 6, HOLD = 600; // a note every 6 blocks, held 600: 100 at once
-	static_assert(N > NSC_MAX_NOTE_IDS && HOLD / EVERY > NSC_MAX_NOTE_IDS);
+	static_assert(N > sdk::TimedMidi::NOTES && HOLD / EVERY > sdk::TimedMidi::NOTES);
 	Ids back(N);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};

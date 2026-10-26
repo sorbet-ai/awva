@@ -35,4 +35,4 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 
 <!-- awva_docs: end -->
 
-- [Writing a host](writing_a_host.md): a plugin or an embedded instrument, on the engine component (ABI 3).
+- [Writing a host](writing_a_host.md): a plugin or an embedded instrument, on the engine component (ABI 4).

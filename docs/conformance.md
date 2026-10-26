@@ -111,7 +111,7 @@ build/conformance/awva_conformance path/to/engine.so -r=junit > conformance.xml
 | presets | each preset is set and reads back; switching every 0.1 s while notes sound stays finite and bounded |
 | determinism | the same events give the same samples; two instances interleaved share nothing |
 | blocks | a host with blocks of 1, 7, 33, 256 frames and random sizes gives each event when it sees it, late ones at their negative frames. The result is bit for bit the render with every event on time, at 44.1 and 48 kHz |
-| note_ids | every Note On's id comes back from `ended()` exactly once (no id lost, none twice, none unknown) through voice stealing, re-struck keys, MIDI 1.0 Note On with velocity 0, and more notes than `NSC_MAX_NOTE_IDS`. `note_ids.presets`: while the presets change under the notes. `note_ids.reset`: when `reset()` comes while notes sound |
+| note_ids | every Note On's id comes back from `ended()` exactly once (no id lost, none twice, none unknown) through voice stealing, re-struck keys, MIDI 1.0 Note On with velocity 0, and more notes than the descriptor's `max_note_ids`. `note_ids.presets`: while the presets change under the notes. `note_ids.reset`: when `reset()` comes while notes sound |
 | output | (with a parameter `output`) at 1 the samples are untouched, at 0.5 and 2 exactly half and double |
 | silence | after the tail, no subnormal sample (a subnormal tail costs a host time for nothing heard) and nothing above -120 dBFS; whether it is exactly 0 is reported |
 | memory | random events, parameter writes (extremes, NaN) and preset changes at `min_rate`, 48 kHz and `max_rate`. In host blocks of random sizes the output is finite and bounded, and nothing is written outside the three regions (guards before and after each) |

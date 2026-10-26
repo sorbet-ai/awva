@@ -45,7 +45,6 @@ static_assert(sizeof(nsc_voice) == sizeof(dsp::NoteControls) && offsetof(nsc_voi
 static_assert(sizeof(nsc_globals) == sizeof(dsp::InstrumentControls), "nsc_globals is dsp::InstrumentControls");
 using awva::preset::fnv1a; // (the parameters' ids, the schema hash: preset.h's)
 using awva::preset::fnv1a_word;
-static_assert(NSC_MAX_EVENTS == awva::sdk::TimedMidi::MAX_EVENTS && NSC_MAX_NOTE_IDS == awva::sdk::TimedMidi::NOTES, "ended()'s guarantee is TimedMidi's");
 
 
 template <dsp::VoiceEngine E> struct Shim {
@@ -170,6 +169,8 @@ template <dsp::VoiceEngine E> struct Shim {
 		d.params = params_.p;
 		d.presets = presets_.p;
 		for (int k = 0; k < NSC_MAX_HEROES; k++) d.heroes[k] = in.heroes.name[k];
+		d.max_events = awva::sdk::TimedMidi::MAX_EVENTS; // (ended()'s guarantee is TimedMidi's)
+		d.max_note_ids = awva::sdk::TimedMidi::NOTES;
 		return d;
 	}
 	static constexpr nsc_desc desc_ = make_desc();
