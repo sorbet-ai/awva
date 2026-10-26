@@ -3,7 +3,8 @@
 #
 # awva CI: build the SDK and the components, run their tests (Linux, macOS universal, Windows),
 # run the examples (examples/: from plain C and through the SDK; non-silent, deterministic, and the
-# MPE render the same as awva_render's), the fitting toolkit's tests (tools/fit), and check the format
+# MPE render the same as awva_render's), the fitting toolkit's tests (tools/fit), every test again
+# under AddressSanitizer and UndefinedBehaviorSanitizer (Linux, the soak too), and check the format
 # (clang-format 15).
 name: ci
 on: [push, pull_request]
@@ -48,6 +49,19 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then py=.venv-fit/Scripts/python.exe; exe=$(cygpath -w "$PWD/build/sdk/awva_render.exe"); else exe=$PWD/$exe; fi
           $py -m pip install -q -r tools/fit/requirements.txt
           AWVA_RENDER="$exe" $py -m unittest discover -s tools/fit/tests -v
+  sanitizers:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: configure
+        run: cmake -S sdk -B build/san -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DAWVA_SANITIZE=ON
+      - name: build
+        run: cmake --build build/san
+      - name: test # every test, the soak and the examples too; the first sanitizer error fails its test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: ctest --test-dir build/san --output-on-failure -j 4
   format:
     runs-on: ubuntu-22.04
     steps:

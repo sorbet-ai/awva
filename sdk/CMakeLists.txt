@@ -25,6 +25,15 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CMAKE_CXX_STANDARD 20)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   set(CMAKE_CXX_EXTENSIONS OFF)
+  # AWVA_SANITIZE: every target of this build (the components too) under AddressSanitizer and
+  # UndefinedBehaviorSanitizer, the first error fatal (CI's sanitizers job). float-divide-by-zero is
+  # not in 'undefined': an engine's x / 0 is an inf or a NaN in its output, found here.
+  option(AWVA_SANITIZE "build every target with -fsanitize=address,undefined,float-divide-by-zero" OFF)
+  if(AWVA_SANITIZE)
+    set(san -fsanitize=address,undefined,float-divide-by-zero -fno-sanitize-recover=all -fno-omit-frame-pointer)
+    add_compile_options(${san} -g)
+    add_link_options(${san})
+  endif()
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../dsp" "${CMAKE_BINARY_DIR}/dsp")
   add_library(awva_host_options INTERFACE)
   target_compile_options(awva_host_options INTERFACE -Wall -Wextra)
