@@ -237,7 +237,7 @@ static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only f
 //                 the takes' rise from the key); its top notes, to C8, outside its range (they speak
 //                 at the lightest touch so), its output level so that its fitted top meets them
 static constexpr int NUM_PRESETS = 3;
-[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static constexpr const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef FLUTE_PRESET
@@ -1062,11 +1062,11 @@ namespace flute {
 #include "presets/flute.inc"
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/flute/: a file per preset");
 
-[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+[[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
 	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
-[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+[[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
 
 [[nodiscard]] static inline Params preset_params(int i) {
 	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
