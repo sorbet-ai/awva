@@ -30,7 +30,7 @@ using dsp::NoteControls;
 
 constexpr int SR = 48000;
 constexpr float SILENT = 2.5e-5f;    // the render checks' silence (output scale: engine.h OUTPUT_SCALE)
-constexpr float PEAK_PLAYING = 8.0f; // every voice at full pressure
+constexpr float PEAK_PLAYING = 8.0f; // every voice at full pressure, 10 voices (peak_playing())
 
 [[nodiscard]] inline const sdk::EngineEntry& entry() { return AWVA_ENGINE_ENTRY(); }
 [[nodiscard]] inline const dsp::EngineInfo& info() { return *entry().info; }
@@ -42,6 +42,9 @@ constexpr float PEAK_PLAYING = 8.0f; // every voice at full pressure
 #define AWVA_CONTRACT_VOICES 10
 #endif
 [[nodiscard]] inline int nvoices() { return std::min(AWVA_CONTRACT_VOICES, info().max_voices); }
+// the bound on every voice at full pressure: PEAK_PLAYING for 10 voices, more voices in proportion
+// (the voices sum: 16 voices at once may reach 16/10 of 10's)
+[[nodiscard]] inline float peak_playing() { return PEAK_PLAYING * std::max(1.0f, static_cast<float>(nvoices()) / 10.0f); }
 [[nodiscard]] inline int blocks(double s, int rate = SR) { return static_cast<int>(s * rate / dsp::BLOCK); }
 
 // every preset, or -1 for an engine without presets

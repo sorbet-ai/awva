@@ -112,7 +112,7 @@ TEST_CASE("init: silent and idle with no input, a note sounds") {
 		const Stats note = play(e, k, blocks(1.0));
 		CHECK(note.nonfinite == 0);
 		CHECK(note.peak > 2.5e-4f);
-		CHECK(note.peak < PEAK_PLAYING);
+		CHECK(note.peak < peak_playing());
 	}
 }
 
@@ -548,7 +548,7 @@ TEST_CASE("voice stealing: note jumps, instant re-strikes, every voice at once")
 			}
 		});
 		CHECK(s.nonfinite == 0);
-		CHECK(s.peak <= PEAK_PLAYING);
+		CHECK(s.peak <= peak_playing());
 		const float silent_after = static_cast<float>(s.last_loud + 1) * dsp::BLOCK / SR - 3.5f;
 		CHECK(silent_after <= tail + 0.1f);
 		CHECK(e.active_voices() == 0);

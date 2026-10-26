@@ -109,7 +109,7 @@ TEST_CASE("rates: at every rate from min_rate to max_rate, finite, bounded, with
 			const RateRun r = run_at(rate, p);
 			CHECK(r.s.nonfinite == 0);
 			if (!(x && x->may_not_sound)) CHECK(r.s.peak > 2.5e-4f); // it sounds
-			CHECK(r.s.peak < PEAK_PLAYING);
+			CHECK(r.s.peak < peak_playing());
 			CHECK(r.silent_after <= tail);
 			if (f48 > 0.0f) { // a periodic note at 48 kHz: the same pitch within rate_cents (or the rate's tolerance)
 				const float f = pitch_hz(r.held, rate);
