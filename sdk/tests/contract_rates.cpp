@@ -74,13 +74,14 @@ float pitch_hz(const std::vector<float>& x, int rate) {
 	double best = 0.0;
 	for (int lag = lo; lag <= hi + 1; lag++) {
 		double s = 0.0;
-		for (int i = 0; i < n; i++) s += static_cast<double>(x[static_cast<size_t>(i)]) * x[static_cast<size_t>(i + lag)];
+		for (int i = 0; i < n; i++) s += static_cast<double>(x[static_cast<size_t>(i)]) * x[static_cast<size_t>(i) + static_cast<size_t>(lag)];
 		r[static_cast<size_t>(lag)] = s / e0;
 		if (lag <= hi) best = std::max(best, r[static_cast<size_t>(lag)]);
 	}
 	if (best < 0.5) return 0.0f;
 	for (int lag = lo + 1; lag <= hi; lag++) {
-		const double a = r[static_cast<size_t>(lag - 1)], b = r[static_cast<size_t>(lag)], c = r[static_cast<size_t>(lag + 1)];
+		const size_t k = static_cast<size_t>(lag); // (lag > lo >= 0)
+		const double a = r[k - 1], b = r[k], c = r[k + 1];
 		if (b >= 0.9 * best && b >= a && b >= c) {
 			const double d = a - 2 * b + c, off = d != 0.0 ? 0.5 * (a - c) / d : 0.0;
 			return static_cast<float>(rate / (lag + off));

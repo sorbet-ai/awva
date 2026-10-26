@@ -262,7 +262,7 @@ constexpr float INAUDIBLE = 1e-6f; // -120 dBFS (full scale 1)
 	const auto ac = [&](int lag) {
 		double s = 0.0, ea = 0.0, eb = 0.0;
 		for (int i = 0; i + lag < n0; i++) {
-			const double a = x[static_cast<size_t>(i)], b = x[static_cast<size_t>(i + lag)];
+			const double a = x[static_cast<size_t>(i)], b = x[static_cast<size_t>(i) + static_cast<size_t>(lag)];
 			s += a * b;
 			ea += a * a;
 			eb += b * b;
@@ -321,7 +321,8 @@ constexpr float INAUDIBLE = 1e-6f; // -120 dBFS (full scale 1)
 	const double low = *std::min_element(m.begin(), m.end());
 	*found = at > 0 && at < STEPS && m[static_cast<size_t>(at)] - low > std::log(10.0);
 	if (!*found) return 0.0;
-	const double a = m[static_cast<size_t>(at - 1)], b = m[static_cast<size_t>(at)], c = m[static_cast<size_t>(at + 1)], d = a - 2 * b + c;
+	const size_t k = static_cast<size_t>(at); // (0 < at < STEPS)
+	const double a = m[k - 1], b = m[k], c = m[k + 1], d = a - 2 * b + c;
 	return ((at - STEPS / 2) + (d != 0.0 ? 0.5 * (a - c) / d : 0.0)) * 0.5;
 }
 

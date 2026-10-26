@@ -18,7 +18,7 @@ using namespace contract; // NOLINT(google-build-using-namespace): the suite's o
 namespace {
 [[nodiscard]] std::vector<float> tuning_notes(const dsp::Tuning& t) {
 	std::vector<float> n;
-	for (float x = t.low; x < t.high; x += 6.0f) n.push_back(x);
+	for (int k = 0; t.low + 6.0f * static_cast<float>(k) < t.high; k++) n.push_back(t.low + 6.0f * static_cast<float>(k));
 	n.push_back(t.high);
 	return n;
 }
