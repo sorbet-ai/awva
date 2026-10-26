@@ -56,6 +56,7 @@
 // --expect or --listen failed.
 // Renders are deterministic: the engines seed their noise in init(), the same input and settings
 // give the same hash on every run.
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -620,7 +621,7 @@ int main(int argc, char** argv) {
 		double maxd = 0, refpeak = 0;
 		for (size_t i = 0; i < out.size() && i < ref.size(); i++) {
 			refpeak = std::fmax(refpeak, std::fabs(static_cast<double>(ref[i])));
-			if (std::memcmp(&out[i], &ref[i], sizeof(float)) == 0) continue;
+			if (std::bit_cast<uint32_t>(out[i]) == std::bit_cast<uint32_t>(ref[i])) continue; // (bit for bit)
 			if (!differ++) first = i;
 			maxd = std::fmax(maxd, std::fabs(static_cast<double>(out[i]) - ref[i]));
 		}
