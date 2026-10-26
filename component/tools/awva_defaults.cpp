@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // awva_defaults <engine> <out.h>: an engine's parameter defaults (their values after init()) as
-// the constant array nsc::defaults_v<E> its component compiles in (component/CMakeLists.txt).
+// the constant array nsc::defaults_v<E> (and its length, nsc::defaults_count_v<E>) its component
+// compiles in (component/CMakeLists.txt).
 // The values are written as hex floats: bit for bit what the engine holds.
 #include <cstdio>
 #include <string>
@@ -32,7 +33,8 @@ int main(int argc, char** argv) {
 		s += b;
 	}
 	if (n == 0) s += "0.0f";
-	s += "};\n} // namespace declared_defaults\ntemplate <> inline constexpr const float* defaults_v<awva::engines::" + id + "> = declared_defaults::" + id + ";\n} // namespace nsc\n";
+	s += "};\n} // namespace declared_defaults\ntemplate <> inline constexpr const float* defaults_v<awva::engines::" + id + "> = declared_defaults::" + id + ";\n";
+	s += "template <> inline constexpr int defaults_count_v<awva::engines::" + id + "> = " + std::to_string(n) + ";\n} // namespace nsc\n";
 	FILE* f = std::fopen(argv[2], "wb");
 	if (!f) return 1;
 	std::fputs(s.c_str(), f);

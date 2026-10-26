@@ -168,14 +168,20 @@ struct EngineInfo {
 	int min_rate = 11025;         // the lowest sample rate it is made for (a component refuses lower ones)
 };
 
-// the hero parameters of a preset, by its name (the engine's own if it has none, or for nullptr)
-[[nodiscard]] constexpr const Heroes& heroes_of(const EngineInfo& in, const char* preset) {
-	for (int i = 0; preset && i < in.num_preset_heroes; i++) {
+// the hero parameters of a preset, by its name (not nullptr; the engine's own if it has none).
+// (No pointer is compared in it: usable in a constant expression under every compiler's
+// sanitizers, which don't fold an object's address compared with nullptr.)
+[[nodiscard]] constexpr const Heroes& heroes_of_named(const EngineInfo& in, const char* preset) {
+	for (int i = 0; i < in.num_preset_heroes; i++) {
 		const char *a = in.preset_heroes[i].preset, *b = preset;
 		while (*a && *a == *b) a++, b++;
 		if (*a == *b) return in.preset_heroes[i].heroes;
 	}
 	return in.heroes;
+}
+// the same, the engine's own for nullptr
+[[nodiscard]] constexpr const Heroes& heroes_of(const EngineInfo& in, const char* preset) {
+	return preset ? heroes_of_named(in, preset) : in.heroes;
 }
 
 struct EffectInfo {
