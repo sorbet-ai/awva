@@ -516,7 +516,7 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, v
             with open(lp, encoding='utf-8') as f:
                 cached = f.read() == label
         if not cached:
-            path, _ = control.calibrated(item, render, d, log=lambda m: None)
+            path, _ = control.calibrated(item, render, d, log=lambda m: None, cache=caches[bi])
             with open(lp, 'w', encoding='utf-8') as f:
                 f.write(label)
         x = render(path)
@@ -525,6 +525,7 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, v
         xn = _render_notes(item, path)
         return features(x, xn), xn
 
+    caches = [control.SweepCache(control.sweep_notes_for(items)) for _ in (0, 1)]  # a build's sweeps, once
     jobs = [(bi, it) for it in items for bi in (0, 1)]
     with ThreadPoolExecutor(max_workers=workers) as ex:
         feats = list(ex.map(lambda j: one(*j), jobs))
