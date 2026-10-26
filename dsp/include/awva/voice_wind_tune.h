@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // Tuning correction tables for voice_wind.h (samples of extra loop delay per instrument, at notes
-// 20 + 7k, k = 0..13), measured on the host with tools/harness/out/wind_tune.h.
+// 20 + 7k, k = 0..13), measured on the host at 48 kHz with tools/harness/out/wind_tune.h.
 static constexpr real CORR[NUM_INSTRUMENTS][14] = {
     {0.90f, 0.92f, 0.91f, 0.90f, 0.88f, 0.82f, 0.70f, 0.48f, 0.38f, 0.26f, 0.17f, 0.16f, 0.20f, 0.18f},          // clarinet
     {1.62f, 1.61f, 1.58f, 1.53f, 1.41f, 1.16f, 0.75f, 0.67f, 0.45f, 0.30f, 0.20f, 0.18f, 0.23f, 0.21f},          // bass clarinet

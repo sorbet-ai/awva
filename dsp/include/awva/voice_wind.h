@@ -225,7 +225,8 @@ static constexpr int NUM_PRESETS = 9;
 [[nodiscard]] static inline const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
-// measured tuning correction per instrument: samples of extra loop delay at notes 20 + 7k
+// measured tuning correction per instrument: samples of extra loop delay at notes 20 + 7k, at
+// 48 kHz (a time: Engine::corr_sr scales it to the rate)
 #include "voice_wind_tune.h"
 
 [[nodiscard]] static inline real tuning_corr(int instrument, real note) {
@@ -279,6 +280,7 @@ struct Engine {
 	Params ps; // smoothed copy used by the DSP
 	real low_note;
 	real inv_sr;   // 1 / sample rate
+	real corr_sr;  // sample rate / 48000: CORR is in samples at 48 kHz, of a delay that is a time
 	real kp;       // breath smoothing coefficient (per block)
 	real inv_1mp0; // 1 / (1 - speak)
 	real inv_p0;   // 1 / speak
@@ -344,6 +346,7 @@ static constexpr int DEFAULT_PRESET = 0;
 static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.sr = (real)sample_rate;
 	e.inv_sr = 1.0f / e.sr;
+	e.corr_sr = e.sr / 48000.0f; // (exactly 1 at 48 kHz)
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
 	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
 	e.shake = 0.0f;
@@ -641,7 +644,7 @@ static inline void process_voice(Engine& e, int v) {
 	}
 
 	// delay lengths: loop delay + filter phase delays + correction = period
-	const real corr = tuning_corr(e.instrument, nt);
+	const real corr = tuning_corr(e.instrument, nt) * e.corr_sr;
 	real D1, D2 = 1.0f;
 	if (kind == KIND_CYL) {
 		D1 = clampr(0.5f * P - tau - corr, 2.0f, (real)(MAIN_LEN - 5));
