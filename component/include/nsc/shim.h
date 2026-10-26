@@ -54,9 +54,14 @@ template <dsp::VoiceEngine E> struct Shim {
 		uint64_t frame; // frames rendered by process()
 		int32_t sample_rate, voices;
 		float defaults[E::info.num_params > 0 ? E::info.num_params : 1]; // the parameters after init(): what a preset that lacks one gives it
+		// the heroes of the preset file load_preset() read last (its own list, so save_preset() writes
+		// them back); a factory preset (set_preset) has its heroes from the descriptor instead
+		char heroes[NSC_MAX_HEROES][awva::preset::NAME];
+		int32_t num_heroes; // -1: none from a file
 		E engine;
 		State(int nv, int sr) :
-		    midi(nv, sr), vc(), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), engine() {}
+		    midi(nv, sr), vc(), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), heroes(), num_heroes(-1),
+		    engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
 	static_assert(E::info.budget.max_voices <= 16, "16 voices at most");
@@ -220,7 +225,10 @@ template <dsp::VoiceEngine E> struct Shim {
 	}
 	static int32_t voices(const void* state) { return st(state).engine.voices(); }
 	static int32_t preset(const void* state) { return st(state).engine.preset(); }
-	static void set_preset(void* state, int32_t i) { st(state).engine.set_preset(i); }
+	static void set_preset(void* state, int32_t i) {
+		st(state).num_heroes = -1; // (a factory preset's heroes are its own)
+		st(state).engine.set_preset(i);
+	}
 	// the output level: at 1 nothing is touched (the engine's samples, bit for bit)
 	static void level(const State& s, float* const* out) {
 		if (s.output == 1.0f) return;
@@ -262,6 +270,17 @@ template <dsp::VoiceEngine E> struct Shim {
 				r.error = "another engine's preset";
 			} else {
 				s.engine.load_params(values, -1);
+				// its heroes, the ones that are this engine's parameters (none written: the engine's)
+				s.num_heroes = p.num_heroes > 0 ? 0 : -1;
+				for (int k = 0; k < p.num_heroes && s.num_heroes < NSC_MAX_HEROES; k++) {
+					bool known = false;
+					for (int i = 0; i < E::info.num_params && !known; i++) known = std::strcmp(E::param_desc(i)->name, p.heroes[k].c_str()) == 0;
+					if (!known) continue;
+					char* dst = s.heroes[s.num_heroes++];
+					int n = 0;
+					for (const char* c = p.heroes[k].c_str(); *c && n + 1 < awva::preset::NAME; c++) dst[n++] = *c;
+					dst[n] = 0;
+				}
 				r.loaded = 1;
 				r.exact = res.exact ? 1 : 0;
 				r.clamped = res.num_clamped;
@@ -273,9 +292,10 @@ template <dsp::VoiceEngine E> struct Shim {
 		return r.loaded;
 	}
 	// the current values as a preset: the engine's id and schema, the build's version, every
-	// parameter by name, the current preset's heroes
+	// parameter by name, the heroes: the last preset file's, else the current factory preset's
 	static uint32_t save_preset(const void* state, const char* title, char* out, uint32_t capacity) {
-		E& e = const_cast<E&>(st(state).engine);
+		const State& s = st(state);
+		E& e = const_cast<E&>(s.engine);
 		awva::preset::Preset p;
 		p.engine.set(E::info.name);
 		p.version.set(NSC_VERSION);
@@ -283,9 +303,13 @@ template <dsp::VoiceEngine E> struct Shim {
 		p.has_hash = true;
 		p.title.set(title);
 		const int pr = e.preset();
-		const dsp::Heroes& h = dsp::heroes_of(E::info, pr >= 0 ? E::preset_name(pr) : nullptr);
-		for (const char* n : h.name)
-			if (n && p.num_heroes < awva::preset::MAX_HEROES) p.heroes[p.num_heroes++].set(n);
+		if (pr < 0 && s.num_heroes >= 0) {
+			for (int k = 0; k < s.num_heroes && p.num_heroes < awva::preset::MAX_HEROES; k++) p.heroes[p.num_heroes++].set(s.heroes[k]);
+		} else {
+			const dsp::Heroes& h = dsp::heroes_of(E::info, pr >= 0 ? E::preset_name(pr) : nullptr);
+			for (const char* n : h.name)
+				if (n && p.num_heroes < awva::preset::MAX_HEROES) p.heroes[p.num_heroes++].set(n);
+		}
 		for (int i = 0; i < E::info.num_params; i++) p.add_param(E::param_desc(i)->name, *e.param(i));
 		return out ? static_cast<uint32_t>(awva::preset::write(p, out, capacity)) : 0;
 	}

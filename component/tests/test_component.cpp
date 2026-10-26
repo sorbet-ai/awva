@@ -866,3 +866,69 @@ TEST_CASE("late events: a plugin host at any block size takes every event at awv
 		std::filesystem::remove(path);
 	}
 }
+
+namespace {
+
+// a component instance's two seconds of the UMP performance (ump_performance), after `setup`
+std::vector<float> preset_render(Loaded& dll) {
+	const std::vector<Ev> perf = ump_performance();
+	const int blocks = 2 * SR / NSC_BLOCK;
+	std::vector<float> out(static_cast<size_t>(blocks) * NSC_BLOCK);
+	size_t k = 0;
+	for (int b = 0; b < blocks; b++) {
+		std::vector<nsc_event> ev;
+		const uint64_t start = static_cast<uint64_t>(b) * NSC_BLOCK;
+		for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
+			ev.push_back({static_cast<int32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
+		float* o[1] = {&out[start]};
+		dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+	}
+	return out;
+}
+std::string saved(const Loaded& dll, const char* title) {
+	std::string t(8192, '\0');
+	t.resize(dll.c().save_preset(dll.in.state, title, t.data(), static_cast<uint32_t>(t.size())));
+	return t;
+}
+
+} // namespace
+
+TEST_CASE("presets as files: save, then load, gives the same file again (its heroes) and the same sound, on every engine") {
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		const char* id = e->info->name;
+		const int presets = e->info->num_presets;
+		for (int i = -1; i < presets; i++) { // (-1: the defaults after init())
+			INFO(id << " preset " << i);
+			Loaded a(id), b(id);
+			REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
+			REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+			if (i >= 0) a.c().set_preset(a.in.state, i);
+			const std::string file = saved(a, "t");
+			REQUIRE(!file.empty());
+			nsc_preset_report r{};
+			REQUIRE(b.c().load_preset(b.in.state, file.data(), static_cast<uint32_t>(file.size()), &r) == 1);
+			CHECK(r.exact == 1);
+			CHECK(saved(b, "t") == file); // (the heroes, every value, the title)
+			CHECK(same(preset_render(a), preset_render(b)));
+			// and loaded again from what was loaded: the file's own heroes stay
+			Loaded c(id);
+			REQUIRE(c.c().init(c.in.state, c.in.fast, c.in.large, SR, NV) == 0);
+			const std::string again = saved(b, "t");
+			REQUIRE(c.c().load_preset(c.in.state, again.data(), static_cast<uint32_t>(again.size()), nullptr) == 1);
+			CHECK(saved(c, "t") == file);
+		}
+	}
+}
+
+TEST_CASE("presets as files: a file's heroes that aren't the engine's parameters are dropped; a factory preset has its own again") {
+	Loaded dll("ep");
+	const nsc_component& c = dll.c();
+	REQUIRE(c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV) == 0);
+	const std::string text = R"({"format": "awva-preset/1", "engine": {"id": "ep"}, "heroes": ["decay", "nosuch", "tone"], "params": {"decay": 3}})";
+	REQUIRE(c.load_preset(dll.in.state, text.data(), static_cast<uint32_t>(text.size()), nullptr) == 1);
+	const std::string out = saved(dll, "x");
+	CHECK(out.find("\"heroes\": [\"decay\", \"tone\"]") != std::string::npos);
+	c.set_preset(dll.in.state, 0);
+	const std::string factory = saved(dll, "x");
+	CHECK(factory.find("\"heroes\": [\"decay\", \"tone\"]") == std::string::npos);
+}
