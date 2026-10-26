@@ -28,7 +28,7 @@ SR = 48000
 # a practical range (MIDI, sounding) per instrument
 RANGES = {
     'trumpet': (54, 82), 'flugelhorn': (52, 77), 'trombone': (40, 72), 'horn': (41, 77), 'tuba': (29, 65),
-    'sax': (49, 80), 'clarinet': (50, 89), 'oboe': (58, 89), 'flute': (60, 96), 'bassoon': (34, 75),
+    'sax': (49, 80), 'clarinet': (50, 89), 'oboe': (58, 89), 'english_horn': (52, 81), 'flute': (60, 96), 'bassoon': (34, 75),
     'violin': (55, 100), 'viola': (48, 88), 'cello': (36, 76), 'bass': (28, 67),
 }
 DYNAMICS = (('soft', 0.2, 0.12), ('mid', 0.45, 0.4), ('loud', 0.75, 0.85))  # (name, strike, pressure)
