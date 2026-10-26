@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "bass",
   "heroes": ["cut_base", "res", "cut_env", "drive", "sub", "acc_level", "acc_cutoff", "release"],
   "params": {
@@ -58,6 +58,7 @@
     "cut_drift": 0.2,
     "gyro_chorus": 0.22,
     "vibrato": 0.2,
-    "vib_hz": 5.3
+    "vib_hz": 5.3,
+    "life": 0
   }
 }

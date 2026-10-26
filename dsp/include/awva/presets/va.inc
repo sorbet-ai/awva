@@ -7,7 +7,7 @@
 // presets/va/00-classic.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "classic",
   "heroes": ["cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"],
   "params": {
@@ -65,7 +65,8 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.22,
     "vibrato": 0.35,
-    "vib_hz": 5.3
+    "vib_hz": 5.3,
+    "life": 0
   }
 }
 )awva-preset";
@@ -73,7 +74,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/va/01-pad.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "pad",
   "heroes": ["cut_base", "cut_env", "release", "saw2_detune", "drift", "res", "sub", "vibrato"],
   "params": {
@@ -131,7 +132,8 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.35,
     "vibrato": 0.25,
-    "vib_hz": 4.6
+    "vib_hz": 4.6,
+    "life": 0
   }
 }
 )awva-preset";
@@ -139,7 +141,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/va/02-lead.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "lead",
   "heroes": ["cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"],
   "params": {
@@ -197,7 +199,8 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.22,
     "vibrato": 0.6,
-    "vib_hz": 5.6
+    "vib_hz": 5.6,
+    "life": 0
   }
 }
 )awva-preset";
@@ -205,7 +208,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
 // presets/va/03-bass.preset.json
 inline constexpr char factory_json_3[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "bass",
   "heroes": ["cut_base", "res", "cut_env", "drive", "sub", "acc_level", "acc_cutoff", "release"],
   "params": {
@@ -263,7 +266,8 @@ inline constexpr char factory_json_3[] = R"awva-preset({
     "cut_drift": 0.2,
     "gyro_chorus": 0.22,
     "vibrato": 0.2,
-    "vib_hz": 5.3
+    "vib_hz": 5.3,
+    "life": 0
   }
 }
 )awva-preset";
@@ -271,7 +275,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
 // presets/va/04-brass.preset.json
 inline constexpr char factory_json_4[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "brass",
   "heroes": ["cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"],
   "params": {
@@ -329,7 +333,8 @@ inline constexpr char factory_json_4[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.22,
     "vibrato": 0.4,
-    "vib_hz": 5
+    "vib_hz": 5,
+    "life": 0
   }
 }
 )awva-preset";
@@ -337,7 +342,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
 // presets/va/05-keys.preset.json
 inline constexpr char factory_json_5[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "keys",
   "heroes": ["cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"],
   "params": {
@@ -395,7 +400,8 @@ inline constexpr char factory_json_5[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.22,
     "vibrato": 0.3,
-    "vib_hz": 5.3
+    "vib_hz": 5.3,
+    "life": 0
   }
 }
 )awva-preset";
@@ -403,7 +409,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
 // presets/va/06-acid.preset.json
 inline constexpr char factory_json_6[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "acid",
   "heroes": ["cut_base", "res", "cut_env", "drive", "acc_cutoff", "acc_level", "acc_decay", "release"],
   "params": {
@@ -461,7 +467,8 @@ inline constexpr char factory_json_6[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.22,
     "vibrato": 0.35,
-    "vib_hz": 5.3
+    "vib_hz": 5.3,
+    "life": 0
   }
 }
 )awva-preset";
@@ -469,7 +476,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
 // presets/va/07-strings.preset.json
 inline constexpr char factory_json_7[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "strings",
   "heroes": ["cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"],
   "params": {
@@ -527,7 +534,8 @@ inline constexpr char factory_json_7[] = R"awva-preset({
     "cut_drift": 0.3,
     "gyro_chorus": 0.3,
     "vibrato": 0.3,
-    "vib_hz": 5.2
+    "vib_hz": 5.2,
+    "life": 0
   }
 }
 )awva-preset";

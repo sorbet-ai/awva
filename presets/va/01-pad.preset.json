@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "va", "params_hash": "aa32f5a1"},
+  "engine": {"id": "va", "params_hash": "e01363cf"},
   "title": "pad",
   "heroes": ["cut_base", "cut_env", "release", "saw2_detune", "drift", "res", "sub", "vibrato"],
   "params": {
@@ -58,6 +58,7 @@
     "cut_drift": 0.3,
     "gyro_chorus": 0.35,
     "vibrato": 0.25,
-    "vib_hz": 4.6
+    "vib_hz": 4.6,
+    "life": 0
   }
 }

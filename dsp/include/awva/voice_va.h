@@ -16,6 +16,9 @@
  *   output:      post-filter soft saturation (driven harder with pressure and strikes, little
  *                aliasing because it acts on the low-passed signal), then the VCA level
  *   modulation:  slow random pitch and cutoff drift per voice, vibrato from shaking
+ *   life:        (a dial) micro-randomness, never a vibrato: every note a little different (start
+ *                pitch offset that settles, cutoff, accent), a tiny broadband pitch, level and
+ *                cutoff flicker, each voice its own
  *   envelope:    level follows pressure (smoothed, no stepping); a strike adds an accent transient
  *                (louder, brighter, more sync sweep) that decays in ~0.16 s; after release the level
  *                and the cutoff decay together (pedal sets the tail length, a fast release shortens it)
@@ -94,6 +97,7 @@ struct Params {
 	// modulation
 	real drift_a;           // pitch drift of A (semitones per unit drift)
 	real vib_depth, vib_hz; // vibrato from shaking (semitones at full shake)
+	real life;              // micro-randomness (0 = none)
 };
 
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
@@ -127,6 +131,11 @@ struct VoiceState {
 	real vib_ph, pwm_ph; // LFO phases [0, 1)
 	real note_prev;
 	real vneg; // release speed latch (largest negative vpres while releasing)
+	// life: per note (start pitch offset, decaying; cutoff offset; accent, accent decay factors)
+	// and flicker noises (pitch fast / slow, level, cutoff)
+	real lpo, lco, lac, lat;
+	real lnf, lns, llv, lcf;
+	uint32_t lrng;
 	int active;
 };
 
@@ -216,6 +225,8 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s = VoiceState();
 		reset_voice(s);
 		s.rng = 0x9E3779B9u * (uint32_t)(v + 1) + 12345u;
+		s.lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
+		s.lac = s.lat = 1.0f;
 		// free running analog oscillators: different start phases per voice
 		s.phA = s.rng * 2654435761u;
 		s.phB = s.phA;
@@ -254,15 +265,17 @@ static inline void process_voice(Engine& e, int v) {
 	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
 	const real vpres = rmin(rmax(c.pressure_rate, -1.0f), 1.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
-	const real vplev = vp1 / (0.4f + vp1);
+	real vplev = vp1 / (0.4f + vp1);
 	const real note = rmin(rmax(c.pitch, 0.0f), 132.0f);
 	const bool held = pres > 0.0f;
+	bool start = false;
 	if (!s.active) {
 		if (!held && vplev <= 0.0f) {
 			s.note_prev = note;
 			return;
 		}
 		s.active = 1;
+		start = true;
 	}
 
 	// ---- block rate -------------------------------------------------------------------------
@@ -282,6 +295,43 @@ static inline void process_voice(Engine& e, int v) {
 		s.ty2 = ty2;
 	}
 	y = rmin(rmax(y + P.y_off, -1.0f), 1.0f);
+
+	// life (micro-randomness, never a vibrato): every note draws its own small offsets (start pitch
+	// +-3 cents x life, settling in ~0.1 s; cutoff +-1 semitone; accent +-20%, its decay +-20%);
+	// one-pole noise flicker of unit spread: pitch (~10 ms and ~300 ms, ~2 cents rms at life 1),
+	// level (~120 ms, ~0.4 dB), cutoff (~80 ms, ~0.3 semitone). Off (life 0): as without it.
+	const real life = rmin(rmax(P.life, 0.0f), 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_cents = 0.0f, l_cut = 0.0f, l_lv = 1.0f, l_at = 1.0f;
+	if (life_on) {
+		uint32_t r = s.lrng;
+		auto rnd = [&r]() {
+			r = r * 1664525u + 1013904223u;
+			return (real)(int32_t)r * 4.656613e-10f;
+		};
+		if (jump || start) {
+			s.lpo = 3.0f * rnd();
+			s.lco = 1.0f * rnd();
+			s.lac = 1.0f + 0.2f * rnd();
+			s.lat = 1.0f + 0.2f * rnd();
+		}
+		const real dt = e.block_dt;
+		s.lpo *= 1.0f - dt * 10.0f;
+		const auto flick = [&](real& x, real tau) {
+			const real a = rmin(dt / tau, 1.0f);
+			x = rmin(rmax(x + a * (1.732f * __builtin_sqrtf(2.0f / a) * rnd() - x), -3.0f), 3.0f);
+		};
+		flick(s.lnf, 0.01f);
+		flick(s.lns, 0.3f);
+		flick(s.llv, 0.12f);
+		flick(s.lcf, 0.08f);
+		s.lrng = r;
+		l_cents = life * (s.lpo + 1.6f * s.lnf + 1.2f * s.lns);
+		l_cut = life * (s.lco + 0.3f * s.lcf);
+		l_lv = 1.0f + 0.05f * life * s.llv;
+		l_at = 1.0f + life * (s.lat - 1.0f);
+		vplev *= 1.0f + life * (s.lac - 1.0f);
+	}
 	const real yn = rmax(-y, 0.0f), yp = rmax(y, 0.0f);
 
 	// analog drift: 2x one-pole lowpassed noise (~0.5 Hz), about unit standard deviation
@@ -309,7 +359,8 @@ static inline void process_voice(Engine& e, int v) {
 	const real b0 = bl0 * (1.5f - 0.5f * bl0);
 
 	// pitches
-	const real nA = note + P.drift_a * drift[0] + vib + P.acc_pitch * s.acc;
+	real nA = note + P.drift_a * drift[0] + vib + P.acc_pitch * s.acc;
+	if (life_on) nA += 0.01f * l_cents;
 #ifdef VA_TEST_CLEAN
 	const real nC = nA;
 #else
@@ -369,9 +420,10 @@ static inline void process_voice(Engine& e, int v) {
 	const real rel_tc = (P.rel_min + P.rel_ped * ped * ped) / (1.0f + P.rel_vneg * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? P.held_tc : rel_tc);
 	const real acc_tc = P.acc_t0 * strisy::fastpow2((132.0f - note) * P.acc_key); // 0.16 s at note 60 (classic)
-	const real fac_acc = 1.0f - e.ctrl_dt / acc_tc;
+	const real fac_acc = 1.0f - e.ctrl_dt / (life_on ? acc_tc * l_at : acc_tc);
 	const real pc = pres * (P.pc_a + P.pc_b * pres);
-	const real cut0 = P.cut_key * note + P.cut_base + P.cut_drift * drift[2] - P.cut_yn * yn + P.cut_yp * yp;
+	real cut0 = P.cut_key * note + P.cut_base + P.cut_drift * drift[2] - P.cut_yn * yn + P.cut_yp * yp;
+	if (life_on) cut0 += l_cut;
 
 	// ---- control rate: level, accent, cutoff -> ladder coefficients ---------------------------
 	{
@@ -379,7 +431,7 @@ static inline void process_voice(Engine& e, int v) {
 		const strisy::SvfCoef lc = e.lv_c;
 		const real pi_sr = e.pi_sr;
 		const real acc_amp = P.acc_amp, cut_env = P.cut_env, acc_cut = P.acc_cut;
-		const real dr_base = P.dr_base, dr_env = P.dr_env, acc_drive = P.acc_drive, gain = P.gain;
+		const real dr_base = P.dr_base, dr_env = P.dr_env, acc_drive = P.acc_drive, gain = life_on ? P.gain * l_lv : P.gain;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vplev);
 			real t1, ls;
@@ -668,6 +720,7 @@ static constexpr ParamEntry param_table[] = {
     {{"gyro_chorus", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::gyro_det}, // detune from rotation
     {{"vibrato", "mod", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::vib_depth},    // shake vibrato, semitones
     {{"vib_hz", "mod", 1.0f, 9.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
+    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life}, // micro-randomness
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
