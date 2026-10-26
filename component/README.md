@@ -23,6 +23,16 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
   - mono legato (`mode(NSC_MODE_LEGATO, 1)`).
 - **`process_voices(controls)`** is for a host that allocates voices itself. The board does today, and the virtual board's loaded engines use it: the engine's own `process()` on the host's controls.
 
+## The plugin lane's findings (ABI 2)
+
+- **Late events:** `nsc_event.frame` is signed. An event that came after its block was rendered is given at its frame before the block, down to -32, and is taken at its own step: exact at every rate, no added latency.
+- **The version:** `AWVA_VERSION`, set at configure time (`-DAWVA_VERSION=...`). Otherwise it is `git describe` of awva's own checkout (a submodule's too), never an enclosing repository's; an export without `.git` gives "unknown".
+- **A title:** `nsc_desc.name` is a title for people ("Electric Piano", "Virtual Analog"), from the engine's traits (`title`). `id` stays the short name.
+- **A static component:** `awva_add_component(<target> <engine> STATIC|SHARED|MODULE)` builds an engine as a component library: the entry, the shim, the MIDI side, the defaults. A plugin project links it and copies no glue; the libraries here are built with it too.
+- **An output level:** every component has the parameter `output` after the engine's own (0..2, default 1). At 1 the samples are the engine's, bit for bit. reed and sine thus have a parameter too.
+- **Sample rates:** `min_rate` .. `max_rate`, 11025 .. 192000, in the descriptor. `init()` returns -1 for a rate outside them and does nothing; hosts refuse such rates. The engines are made for this range: outside it some go silent or loud.
+- **A colour:** `nsc_desc.led` (0xrrggbb, 0 for none) is the engine's colour, from its traits' `led`; none have one yet.
+
 ## Answers to the CLAP prototype's questions
 
 | # | question | answer |

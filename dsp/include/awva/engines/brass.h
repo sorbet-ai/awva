@@ -17,6 +17,7 @@ struct brass {
 	// init() writes every byte of both regions (reset of every voice): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "brass";
+	static constexpr const char* title = "Brass";
 	static constexpr const char* summary = "brass: a lip source and a physical bore, bell, mutes (9 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_pedal;
 	static constexpr Budget budget = {::brass::MAX_VOICES, 30000, 2.0f};

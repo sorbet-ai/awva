@@ -75,7 +75,8 @@ typedef struct nsc_globals {
 
 /* a UMP packet (1 to 4 words, by its message type) at a frame of the block */
 typedef struct nsc_event {
-	uint32_t frame;  /* 0 .. NSC_BLOCK - 1 */
+	int32_t frame;   /* its frame, from the block's start: 0 .. NSC_BLOCK - 1, or up to -NSC_BLOCK for an
+	                    event that came after its block was rendered (taken at its own step: exact) */
 	int32_t note_id; /* the host's id of the note a Note On starts (CLAP's note_id); -1: none */
 	uint32_t words[4];
 } nsc_event;
@@ -102,7 +103,7 @@ typedef struct nsc_desc {
 	uint32_t magic, abi;  /* NSC_MAGIC, NSC_ABI */
 	const char* id;       /* "accordion": the engine's short name (the board's voice list) */
 	const char* uid;      /* "com.sorbet-ai.awva.accordion": the plugin / package id */
-	const char* name;     /* a title */
+	const char* name;     /* a title for people ("Electric Piano"; the id when the engine has none) */
 	const char* summary;  /* one line */
 	const char* version;  /* the engines repository commit it was built from */
 	uint32_t schema_hash; /* FNV-1a over the parameters' ids, ranges and kinds: a change breaks stored values */
@@ -112,6 +113,7 @@ typedef struct nsc_desc {
 	int32_t max_voices;
 	uint32_t instr_per_block; /* the budget: QEMU instructions per block, worst preset, 10 voices */
 	float tail_seconds;
+	int32_t min_rate, max_rate;                    /* the sample rates it supports (init() refuses others) */
 	uint32_t state_bytes, fast_bytes, large_bytes; /* the regions init() takes */
 	uint32_t stack_bytes;                          /* the deepest process() stack measured on the board (0: not measured) */
 	int32_t num_params, num_presets;
@@ -126,7 +128,8 @@ enum nsc_mode {
 
 typedef struct nsc_component {
 	const nsc_desc* desc;
-	void (*init)(void* state, void* fast, void* large, int32_t sample_rate, int32_t voices);
+	/* 0; -1: a sample rate outside min_rate .. max_rate (nothing done) */
+	int32_t (*init)(void* state, void* fast, void* large, int32_t sample_rate, int32_t voices);
 	void (*reset)(void* state);                                 /* silence, the parameters and the preset kept */
 	int32_t (*mode)(void* state, int32_t which, int32_t value); /* 1 done, 0 not supported */
 	void (*process)(void* state, const nsc_event* events, int32_t num_events, float* const* out);

@@ -179,9 +179,15 @@ int main(int argc, char** argv) {
 	int stale = 0;
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		const std::string name = e->info->name;
-		const std::string head = "<!-- SPDX-FileCopyrightText: 2026 Sorbet AI -->\n<!-- SPDX-License-Identifier: Apache-2.0 -->\n# " + name + "\n\n";
+		std::string head = "<!-- SPDX-FileCopyrightText: 2026 Sorbet AI -->\n<!-- SPDX-License-Identifier: Apache-2.0 -->\n# ";
+		head += name;
+		head += "\n\n";
 		const std::string tail = "\n\n## How it works\n\n(to be written)\n";
-		if (process(dir + "/engines/" + name + ".md", engine_section(*e), head, tail, check, stale)) return 2;
+		std::string path = dir;
+		path += "/engines/";
+		path += name;
+		path += ".md";
+		if (process(path, engine_section(*e), head, tail, check, stale)) return 2;
 	}
 	if (process(dir + "/README.md", index_section(), "# awva documentation\n\n", "\n", check, stale)) return 2;
 	return stale ? 1 : 0;

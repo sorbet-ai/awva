@@ -43,6 +43,11 @@
 namespace awva {
 
 namespace detail {
+// the traits' title, if they have one
+template <class T> constexpr const char* title() {
+	if constexpr (requires { T::title; }) return T::title;
+	return nullptr;
+}
 
 template <class Native, class FastMemory, class LargeMemory>
 inline void attach(Native& e, FastMemory& f, LargeMemory& l) {
@@ -161,7 +166,8 @@ template <class T> struct Adapter {
 	static constexpr EngineInfo info = {T::name, T::summary, 1, T::inputs, T::budget, detail::state_bytes<Native>(),
 	    std::is_empty_v<typename T::FastMemory> ? 0 : sizeof(typename T::FastMemory),
 	    std::is_empty_v<typename T::LargeMemory> ? 0 : sizeof(typename T::LargeMemory), detail::num_presets<T>(),
-	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>(), detail::preset_heroes<T>(), detail::num_preset_heroes<T>()};
+	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>(), detail::preset_heroes<T>(), detail::num_preset_heroes<T>(),
+	    detail::title<T>()};
 };
 
 

@@ -15,6 +15,7 @@ struct va {
 	using FastMemory = NoMemory;
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "va";
+	static constexpr const char* title = "Virtual Analog";
 	static constexpr const char* summary = "virtual analog: saw/pulse/sub oscillators, sync, ladder-style filter, envelopes (8 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_rotation | in_pedal;
 	static constexpr Budget budget = {::va::MAX_VOICES, 24000, 10.0f};

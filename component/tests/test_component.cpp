@@ -107,12 +107,15 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 		CHECK(d.abi == NSC_ABI);
 		CHECK(std::strcmp(d.id, e->info->name) == 0);
 		CHECK(std::string(d.uid) == std::string("com.sorbet-ai.awva.") + e->info->name);
-		CHECK(d.num_params == e->info->num_params);
+		CHECK(d.num_params == e->info->num_params + 1); // (the engine's, then the output level)
+		CHECK(std::strcmp(d.params[d.num_params - 1].name, "output") == 0);
+		CHECK(d.min_rate == 11025);
+		CHECK(d.max_rate == 192000);
 		CHECK(d.num_presets == e->info->num_presets);
 		CHECK(d.fast_bytes == e->info->fast_bytes);
 		CHECK(d.large_bytes == e->info->large_bytes);
 		CHECK(d.state_bytes >= e->info->state_bytes);
-		for (int i = 0; i < d.num_params; i++) {
+		for (int i = 0; i < e->info->num_params; i++) {
 			CHECK(std::strcmp(d.params[i].name, e->param_desc(i)->name) == 0);
 			CHECK(dll.c().param_index(d.params[i].id) == i);
 		}
@@ -183,7 +186,7 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 			std::vector<nsc_event> ev;
 			const uint64_t start = static_cast<uint64_t>(b) * NSC_BLOCK;
 			for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
-				ev.push_back({static_cast<uint32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
+				ev.push_back({static_cast<int32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
 			float* o[1] = {&out[start]};
 			dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
 		}
@@ -237,7 +240,8 @@ TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (
 TEST_CASE("parameters by index and id, the board's write rule, reset and sample rates") {
 	Loaded dll("accordion");
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, 44100, NV);
+	CHECK(c.init(dll.in.state, dll.in.fast, dll.in.large, 8000, NV) == -1); // (outside min_rate .. max_rate)
+	REQUIRE(c.init(dll.in.state, dll.in.fast, dll.in.large, 44100, NV) == 0);
 	const nsc_desc& d = *c.desc;
 	REQUIRE(d.num_params > 0);
 	const float before = c.param(dll.in.state, 0);
@@ -397,7 +401,7 @@ struct Ids {
 
 nsc_event ump_note(uint32_t frame, bool on, int i, int32_t id) {
 	const uint32_t ch = static_cast<uint32_t>(i % 16), key = static_cast<uint32_t>(i / 16);
-	return {frame, id, {(on ? 0x40900000u : 0x40800000u) | ch << 16 | key << 8, on ? 0xc0000000u : 0x40000000u, 0, 0}};
+	return {static_cast<int32_t>(frame), id, {(on ? 0x40900000u : 0x40800000u) | ch << 16 | key << 8, on ? 0xc0000000u : 0x40000000u, 0, 0}};
 }
 
 } // namespace
@@ -436,6 +440,7 @@ TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest 
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
 	std::vector<nsc_event> ev;
+	ev.reserve(Q);
 	for (int i = 0; i < Q; i++) ev.push_back(ump_note(31, true, i, i)); // block 0, frame 31: waits for the step at 96
 	c.process(dll.in.state, ev.data(), Q, o);
 	CHECK(back.drain(c, dll.in.state) == 0);
@@ -456,4 +461,112 @@ TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest 
 	}
 	back.drain(c, dll.in.state);
 	CHECK(back.each_once());
+}
+
+TEST_CASE("the output level: at its default the samples are the engine's, at 0.5 half of them") {
+	Loaded a("ep"), b("ep");
+	REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
+	REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+	const int out = a.c().param_index(a.c().desc->params[a.c().desc->num_params - 1].id); // ("output")
+	REQUIRE(out == a.c().desc->num_params - 1);
+	CHECK(b.c().set_param(b.in.state, out, 0.5f) == 1);
+	const nsc_event on = {0, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
+	float x[NSC_BLOCK], y[NSC_BLOCK];
+	float* ox[1] = {x};
+	float* oy[1] = {y};
+	bool sounded = false;
+	for (int k = 0; k < 400; k++) {
+		a.c().process(a.in.state, k == 0 ? &on : nullptr, k == 0 ? 1 : 0, ox);
+		b.c().process(b.in.state, k == 0 ? &on : nullptr, k == 0 ? 1 : 0, oy);
+		for (int n = 0; n < NSC_BLOCK; n++) {
+			REQUIRE(y[n] == x[n] * 0.5f);
+			sounded |= x[n] != 0.0f;
+		}
+	}
+	CHECK(sounded);
+}
+
+TEST_CASE("a late event (a negative frame, before its block) lands where it would have on time") {
+	Loaded a("va"), b("va");
+	REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, 44100, NV) == 0);
+	REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, 44100, NV) == 0);
+	// a note at frame 40 at 44.1 kHz (step 1 is at frame 89): in time, at frame 8 of block 1, or
+	// late, at frame -24 of block 2
+	const nsc_event in_time = {8, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
+	const nsc_event late = {-24, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
+	std::vector<float> x(NSC_BLOCK * 300), y(x.size());
+	for (int k = 0; k < 300; k++) {
+		float* ox[1] = {&x[static_cast<size_t>(k) * NSC_BLOCK]};
+		float* oy[1] = {&y[static_cast<size_t>(k) * NSC_BLOCK]};
+		a.c().process(a.in.state, k == 1 ? &in_time : nullptr, k == 1 ? 1 : 0, ox);
+		b.c().process(b.in.state, k == 2 ? &late : nullptr, k == 2 ? 1 : 0, oy);
+	}
+	CHECK(x == y);
+}
+
+TEST_CASE("a late frame in the very first block is frame 0 (nothing before the start)") {
+	Loaded a("va"), b("va");
+	REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
+	REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+	const nsc_event at0 = {0, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
+	const nsc_event early = {-32, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
+	std::vector<float> x(NSC_BLOCK * 200), y(x.size());
+	for (int k = 0; k < 200; k++) {
+		float* ox[1] = {&x[static_cast<size_t>(k) * NSC_BLOCK]};
+		float* oy[1] = {&y[static_cast<size_t>(k) * NSC_BLOCK]};
+		a.c().process(a.in.state, k == 0 ? &at0 : nullptr, k == 0 ? 1 : 0, ox);
+		b.c().process(b.in.state, k == 0 ? &early : nullptr, k == 0 ? 1 : 0, oy);
+	}
+	CHECK(x == y);
+}
+
+TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory regions; the peak, recorded") {
+	constexpr int RATE = 11025, GUARD = 4096;
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		nsc_library lib{};
+		REQUIRE(nsc_load(lib_path(e->info->name).c_str(), &lib) == 0);
+		const nsc_desc& d = *lib.c->desc;
+		// the regions with a guard after each: a write past one shows there
+		std::vector<std::vector<uint8_t>> mem;
+		void* region[3];
+		const uint32_t sizes[3] = {d.state_bytes, d.fast_bytes, d.large_bytes};
+		for (int r = 0; r < 3; r++) {
+			mem.emplace_back(sizes[r] + GUARD + 64, uint8_t{0});
+			uint8_t* base = mem.back().data();
+			region[r] = base + (64 - reinterpret_cast<uintptr_t>(base) % 64) % 64; // (64-byte aligned)
+			std::memset(static_cast<uint8_t*>(region[r]) + sizes[r], 0xa5, GUARD);
+		}
+		REQUIRE(lib.c->init(region[0], region[1], region[2], RATE, NV) == 0);
+		// notes across the range, struck, pressed, bent, released (8 s)
+		float peak = 0.0f;
+		bool finite = true;
+		float buf[NSC_BLOCK];
+		float* o[1] = {buf};
+		const int blocks = 8 * RATE / NSC_BLOCK;
+		for (int b = 0; b < blocks; b++) {
+			std::vector<nsc_event> ev;
+			if (b % 40 == 0 && b < blocks - 400) {
+				const uint32_t key = 36u + static_cast<uint32_t>((b / 40) * 5 % 60), ch = static_cast<uint32_t>(1 + (b / 40) % 8);
+				ev.push_back({0, -1, {0x40900000u | ch << 16 | key << 8, 0xf0000000u, 0, 0}});
+				ev.push_back({4, -1, {0x40d00000u | ch << 16, 0xffffffffu, 0, 0}});
+				ev.push_back({8, -1, {0x40e00000u | ch << 16, 0x90000000u, 0, 0}});
+			}
+			if (b % 40 == 30 && b < blocks - 400) {
+				const uint32_t key = 36u + static_cast<uint32_t>((b / 40) * 5 % 60), ch = static_cast<uint32_t>(1 + (b / 40) % 8);
+				ev.push_back({0, -1, {0x40800000u | ch << 16 | key << 8, 0x80000000u, 0, 0}});
+			}
+			lib.c->process(region[0], ev.data(), static_cast<int32_t>(ev.size()), o);
+			for (float s : buf) {
+				finite = finite && std::isfinite(s);
+				peak = std::fmax(peak, std::fabs(s));
+			}
+		}
+		bool guards = true;
+		for (int r = 0; r < 3; r++)
+			for (int i = 0; i < GUARD; i++) guards = guards && static_cast<uint8_t*>(region[r])[sizes[r] + i] == 0xa5;
+		MESSAGE("11025 Hz: " << std::string(e->info->name) << " peak " << peak << (finite ? "" : " NON-FINITE") << (guards ? "" : " OUT OF ITS REGIONS"));
+		CHECK(finite);
+		CHECK(guards);
+		nsc_unload(&lib);
+	}
 }

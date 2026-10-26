@@ -15,6 +15,7 @@ struct accordion {
 	using FastMemory = NoMemory;
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "accordion";
+	static constexpr const char* title = "Accordion";
 	static constexpr const char* summary =
 	    "free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets)";
 	// pres drives the bellows, but_y the tilt expression; acc_abs the bellows shake, the pedal its reversal

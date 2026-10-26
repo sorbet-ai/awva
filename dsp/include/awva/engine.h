@@ -152,6 +152,7 @@ struct EngineInfo {
 	Heroes heroes;                     // the engine's hero parameters
 	const PresetHeroes* preset_heroes; // presets with their own (num_preset_heroes of them)
 	int num_preset_heroes;
+	const char* title = nullptr; // a title for people ("Electric Piano"); nullptr: name
 };
 
 // the hero parameters of a preset, by its name (the engine's own if it has none, or for nullptr)
