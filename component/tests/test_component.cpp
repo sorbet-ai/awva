@@ -119,7 +119,8 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 		CHECK(std::string(d.uid) == std::string("com.sorbet-ai.awva.") + e->info->name);
 		CHECK(d.num_params == e->info->num_params + 1); // (the engine's, then the output level)
 		CHECK(std::strcmp(d.params[d.num_params - 1].name, "output") == 0);
-		CHECK(d.min_rate == 11025);
+		CHECK(d.min_rate == e->info->min_rate); // (11025 Hz, or the engine's own: EngineInfo::min_rate)
+		CHECK(d.min_rate >= 11025);
 		CHECK(d.max_rate == 192000);
 		CHECK(d.num_presets == e->info->num_presets);
 		CHECK(d.fast_bytes == e->info->fast_bytes);
@@ -617,8 +618,8 @@ TEST_CASE("a late frame in the very first block is frame 0 (nothing before the s
 	CHECK(x == y);
 }
 
-TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory regions, the peak recorded") {
-	constexpr int RATE = 11025, GUARD = 4096;
+TEST_CASE("every engine at its min_rate: lower rates refused, finite, within its memory regions, the peak recorded") {
+	constexpr int GUARD = 4096;
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		nsc_library lib{};
 		REQUIRE(nsc_load(lib_path(e->info->name).c_str(), &lib) == 0);
@@ -633,13 +634,15 @@ TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory region
 			region[r] = base + (64 - reinterpret_cast<uintptr_t>(base) % 64) % 64; // (64-byte aligned)
 			std::memset(static_cast<uint8_t*>(region[r]) + sizes[r], 0xa5, GUARD);
 		}
-		REQUIRE(lib.c->init(region[0], region[1], region[2], RATE, NV) == 0);
+		const int rate = d.min_rate;
+		CHECK(lib.c->init(region[0], region[1], region[2], rate - 1, NV) == -1);
+		REQUIRE(lib.c->init(region[0], region[1], region[2], rate, NV) == 0);
 		// notes across the range, struck, pressed, bent, released (8 s)
 		float peak = 0.0f;
 		bool finite = true;
 		float buf[NSC_BLOCK];
 		float* o[1] = {buf};
-		const int blocks = 8 * RATE / NSC_BLOCK;
+		const int blocks = 8 * rate / NSC_BLOCK;
 		for (int b = 0; b < blocks; b++) {
 			std::vector<nsc_event> ev;
 			if (b % 40 == 0 && b < blocks - 400) {
@@ -661,7 +664,7 @@ TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory region
 		bool guards = true;
 		for (int r = 0; r < 3; r++)
 			for (int i = 0; i < GUARD; i++) guards = guards && static_cast<uint8_t*>(region[r])[sizes[r] + i] == 0xa5;
-		MESSAGE("11025 Hz: " << std::string(e->info->name) << " peak " << peak << (finite ? "" : " NON-FINITE") << (guards ? "" : " OUT OF ITS REGIONS"));
+		MESSAGE(rate << " Hz: " << std::string(e->info->name) << " peak " << peak << (finite ? "" : " NON-FINITE") << (guards ? "" : " OUT OF ITS REGIONS"));
 		CHECK(finite);
 		CHECK(guards);
 		nsc_unload(&lib);

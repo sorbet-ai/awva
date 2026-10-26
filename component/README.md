@@ -31,7 +31,7 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 - **A title:** `nsc_desc.name` is a title for people ("Electric Piano", "Virtual Analog"), from the engine's traits (`title`). `id` stays the short name.
 - **A static component:** `awva_add_component(<target> <engine> STATIC|SHARED|MODULE)` builds an engine as a component library: the entry, the shim, the MIDI side, the defaults. A plugin project links it and copies no glue; the libraries here are built with it too.
 - **An output level:** every component has the parameter `output` after the engine's own (0..2, default 1). At 1 the samples are the engine's, bit for bit. reed and sine thus have a parameter too.
-- **Sample rates:** `min_rate` .. `max_rate`, 11025 .. 192000, in the descriptor. `init()` returns -1 for a rate outside them and does nothing; hosts refuse such rates. The engines are made for this range: outside it some go silent or loud.
+- **Sample rates:** `min_rate` .. `max_rate` in the descriptor: 11025 .. 192000, or from a higher `min_rate` where the engine's traits declare one (an engine unstable or out of tune below some rate). `init()` returns -1 for a rate outside them and does nothing; hosts refuse such rates. Outside its range an engine may go silent or loud.
 - **A colour:** `nsc_desc.led` (0xrrggbb, 0 for none) is the engine's colour, from its traits' `led`; none have one yet.
 
 ## Answers to the CLAP prototype's questions

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// rates: at every rate a component takes (nsc_desc min_rate .. max_rate, 11025 .. 192000) the engine
-// is finite, bounded, sounds, is silent within its tail, and holds its pitch at 48 kHz within
+// rates: at every rate a component takes (nsc_desc min_rate .. max_rate: from the engine's min_rate,
+// 11025 unless its traits declare a higher one, to 192000) the engine is finite, bounded, sounds, is
+// silent within its tail, and holds its pitch at 48 kHz within
 // EngineInfo::conformance.rate_cents (3 by default) or, at a rate its traits list in
 // rate_tolerances (a known fault, measured, with its reason), within that rate's bound
 // (docs/conformance.md). The rate test of contract.cpp, moved here unchanged; its exemptions are now
@@ -99,6 +100,7 @@ TEST_CASE("rates: at every rate from min_rate to max_rate, finite, bounded, with
 		const float f48 = pitch_hz(ref.held, 48000);
 		for (size_t i = 0; i < std::size(kRates); i++) {
 			const int rate = kRates[i];
+			if (rate < info().min_rate) continue; // (below the rates it is made for: its component refuses them)
 			const dsp::RateTolerance* x = dsp::rate_tolerance(info().conformance, rate);
 			CAPTURE(std::string(info().name));
 			CAPTURE(p);
@@ -126,7 +128,8 @@ TEST_CASE("rates: at every rate from min_rate to max_rate, finite, bounded, with
 	std::string table;
 	for (size_t i = 0; i < std::size(kRates); i++) {
 		char s[48];
-		std::snprintf(s, sizeof s, " %d:%s%.1f", kRates[i], unpitched[i] ? "(no pitch) " : "", static_cast<double>(worst[i]));
+		if (kRates[i] < info().min_rate) std::snprintf(s, sizeof s, " %d:(refused)", kRates[i]);
+		else std::snprintf(s, sizeof s, " %d:%s%.1f", kRates[i], unpitched[i] ? "(no pitch) " : "", static_cast<double>(worst[i]));
 		table += s;
 	}
 	MESSAGE(std::string(info().name) << ": cents from 48 kHz, every preset's worst:" << table);

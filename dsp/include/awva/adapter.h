@@ -18,6 +18,7 @@
 //       static constexpr Conformance conformance = {...};          // optional: the checks' tolerances
 //       static constexpr PresetTuning preset_tuning[] = {{"flute", {...}}};  // optional (engine.h)
 //       static constexpr RateTolerance rate_tolerances[] = {{192000, ...}};  // optional (engine.h)
+//       static constexpr int min_rate = 22050;     // optional: the lowest rate it is made for (11025)
 //   };
 //
 // The engine's struct Engine has `strisy::GlobalControls g; strisy::VoiceControls vc[MAX_VOICES];
@@ -52,6 +53,11 @@ namespace detail {
 template <class T> constexpr const char* title() {
 	if constexpr (requires { T::title; }) return T::title;
 	return nullptr;
+}
+// the traits' min_rate, if they have one: an engine unstable or out of tune below some rate says so
+template <class T> constexpr int min_rate() {
+	if constexpr (requires { T::min_rate; }) return T::min_rate;
+	return EngineInfo{}.min_rate;
 }
 
 template <class Native, class FastMemory, class LargeMemory>
@@ -206,7 +212,7 @@ template <class T> struct Adapter {
 	    std::is_empty_v<typename T::FastMemory> ? 0 : sizeof(typename T::FastMemory),
 	    std::is_empty_v<typename T::LargeMemory> ? 0 : sizeof(typename T::LargeMemory), detail::num_presets<T>(),
 	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>(), detail::preset_heroes<T>(), detail::num_preset_heroes<T>(),
-	    detail::title<T>(), detail::conformance<T>()};
+	    detail::title<T>(), detail::conformance<T>(), detail::min_rate<T>()};
 };
 
 

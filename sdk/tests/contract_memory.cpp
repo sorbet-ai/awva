@@ -96,7 +96,7 @@ TEST_CASE("memory: init, playing, presets, parameters, reset and other rates wri
 	});
 	m.e->reset();
 	(void)run(*m.e, k, blocks(0.5), [&](int b) { phrase(k, b); });
-	for (int rate : {11025, 192000}) {
+	for (int rate : {info().min_rate, 192000}) { // (its lowest rate and the highest)
 		m.init(rate);
 		Keys kr(nvoices(), rate);
 		(void)run(*m.e, kr, blocks(1.0, rate), [&](int b) { phrase(kr, b); });

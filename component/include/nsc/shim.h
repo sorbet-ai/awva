@@ -44,7 +44,8 @@ static_assert(NSC_MAX_EVENTS == awva::sdk::TimedMidi::MAX_EVENTS && NSC_MAX_NOTE
 
 
 template <dsp::VoiceEngine E> struct Shim {
-	// the sample rates the engines are made for (outside, some go silent or loud: hosts refuse them)
+	// the sample rates a component takes: from its engine's min_rate (EngineInfo, MIN_RATE at the
+	// lowest) to MAX_RATE (outside, an engine may go silent or loud: hosts refuse them)
 	static constexpr int32_t MIN_RATE = 11025, MAX_RATE = 192000;
 	struct State {
 		awva::sdk::TimedMidi midi; // the 2 ms steps in integer frames, the notes and their host ids
@@ -65,6 +66,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
 	static_assert(E::info.budget.max_voices <= 16, "16 voices at most");
+	static_assert(E::info.min_rate >= MIN_RATE && E::info.min_rate < MAX_RATE, "min_rate: 11025 Hz or more, under MAX_RATE");
 
 	static State& st(void* p) { return *static_cast<State*>(p); }
 	static const State& st(const void* p) { return *static_cast<const State*>(p); }
@@ -147,7 +149,7 @@ template <dsp::VoiceEngine E> struct Shim {
 			d.max_voices = in.budget.max_voices;
 			d.instr_per_block = in.budget.instr_per_block;
 			d.tail_seconds = in.budget.tail_seconds;
-			d.min_rate = MIN_RATE;
+			d.min_rate = E::info.min_rate;
 			d.max_rate = MAX_RATE;
 			d.state_bytes = static_cast<uint32_t>(sizeof(State));
 			d.fast_bytes = static_cast<uint32_t>(in.fast_bytes); // (0: none; an empty region is still passed)
@@ -165,7 +167,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	}
 
 	static int32_t init(void* state, void* fast, void* large, int32_t sr, int32_t nv) {
-		if (sr < MIN_RATE || sr > MAX_RATE) return -1;
+		if (sr < E::info.min_rate || sr > MAX_RATE) return -1;
 		State* s = new (state) State(nv, sr);
 		for (auto& c : s->vc) c = dsp::voice_at_rest;
 		s->g = dsp::globals_at_rest;
