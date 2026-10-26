@@ -505,6 +505,27 @@ def _render_notes(item, stream):
     return [(n['t_on'] - t0, n['t_off'] - t0, m) for n, (_, _, m) in zip(sn, rn)]
 
 
+PATH_TAIL = 80  # chars below a run's folder: b<k>/<short id>/strike/calibrated_<i>.render.f32.json, with room
+
+
+def short_id(phrase_id):
+    """a phrase's folder name in a gate run: 10 hex of the SHA-1 of its id (ids run past 60 characters, and
+    Windows refuses paths over 260); the run's phrases.json maps them back"""
+    return hashlib.sha1(phrase_id.encode()).hexdigest()[:10]
+
+
+def _run_folder(run_dir, items):
+    """make a run's folder, its phrases.json ({short id: phrase id}) in it; refused, before any render, where
+    its deepest file would pass Windows' 260 characters"""
+    full = os.path.abspath(run_dir)
+    if os.name == 'nt' and len(full) + PATH_TAIL > 259:
+        raise env.EnvError(f"{full}: {len(full)} characters, and a render goes up to {PATH_TAIL} below it, past Windows' 260 "
+                           '(set AWVA_FIT_WORK to a shorter folder)')
+    os.makedirs(run_dir, exist_ok=True)
+    with open(os.path.join(run_dir, 'phrases.json'), 'w', encoding='utf-8', newline='\n') as f:
+        json.dump({short_id(it.id): it.id for it in items}, f, indent=1)
+
+
 def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, voicing='mono', keep=False):
     """the gate's verdict of candidate over baseline; its renders and streams (run_dir) are deleted when it
     finishes, pass or fail, unless keep (or reuse, which needs them for the next run)"""
@@ -522,11 +543,12 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, v
 
 
 def _run(inst, candidate, baseline, items, builds, run_dir, workers, log, reuse, voicing):
+    _run_folder(run_dir, items)
     lock = threading.Lock()
 
     def one(bi, item):
         label, factory = builds[bi]
-        d = os.path.join(run_dir, f'b{bi}', item.id)  # its own folder per run, build and phrase
+        d = os.path.join(run_dir, f'b{bi}', short_id(item.id))  # its own folder per run, build and phrase
         os.makedirs(d, exist_ok=True)
         render = factory(item)
         path = os.path.join(d, 'strike', 'calibrated.csv')
