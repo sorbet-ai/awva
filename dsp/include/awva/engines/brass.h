@@ -19,7 +19,7 @@ struct brass {
 	static constexpr const char* name = "brass";
 	static constexpr const char* title = "Brass";
 	static constexpr const char* summary = "brass: a lip source and a physical bore, bell, mutes (9 presets)";
-	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_shake | in_pedal;
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
 	static constexpr Budget budget = {::brass::MAX_VOICES, 30000, 2.0f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"brassiness", "lip_loud", "tone_hz", "breath", "mute", "release", "vibrato", "pair"}};

@@ -18,7 +18,7 @@ struct reed {
 	static constexpr const char* name = "reed";
 	static constexpr const char* title = "Reed";
 	static constexpr const char* summary = "single reed: clarinet to saxophone, one model, tilt morphs the bore";
-	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_shake;
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel;
 	static constexpr Budget budget = {::reed::MAX_VOICES, 20000, 2.0f};
 	// the rates whose pitch is further from 48 kHz than the default 3 cents, each a known fault with its
 	// bound (a cent or two above every preset's worst, measured 2026-10-25; contract_rates.cpp)

@@ -15,8 +15,8 @@ Header `dsp/include/awva/voice_accordion.h`, traits `dsp/include/awva/engines/ac
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
 | pressure | `pressure`, 0 released .. 1 MIDI 2.0's full scale (engines take up to 1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
 | timbre | `timbre`, -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: Registered Per-Note Controller 74, CC74 (bipolar) |
-| shake | `acc_abs`, the accelerometer's magnitude in g (1 at rest) | the instrument's motion sensor (not from MIDI) |
-| pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
+| sustain | `sustain`, 0 .. 1 (3/16 at rest) | CC64 |
+| acceleration | `motion.accel_g`, the acceleration's magnitude in g (1 at rest) | a host's motion sensor (not from MIDI yet) |
 
 An input not listed makes no difference to the sound; each listed one changes it in at least one preset (the contract suite checks both). What each does in this engine: "Playing" below. MIDI in detail: [Playing with MIDI 2.0 and MPE](../midi.md).
 
@@ -97,7 +97,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 32000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 1 s of the last release |
-| engine object | 3.19922 KB (3276 bytes) (on a 64-bit host) |
+| engine object | 3.1875 KB (3264 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | none |
 

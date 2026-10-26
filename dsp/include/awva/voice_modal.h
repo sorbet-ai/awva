@@ -198,7 +198,7 @@ struct VoiceState {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
@@ -317,7 +317,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.lim_gain = 1.0f;
 	e.peak_prev = 0.0f;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	for (int n = 0; n < BLOCK; n++) {
 		e.mix[n] = 0.0f;
 		e.delay[n] = 0.0f;
@@ -428,7 +428,7 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 	// decay over the keyboard: T60 ~ (f0 / f_C4)^-alpha
 	const real pitch_decay = exp2_poly(Q.keytrack * (c.pitch - 60.0f) * (1.0f / 12.0f));
 	// damper: engages as the key is lifted (fully at release), lifted by the sustain pedal
-	const real ped = 1.0f - clampr(e.g.pedal, 0.0f, 1.0f) * Q.pedal;
+	const real ped = 1.0f - clampr(e.g.sustain, 0.0f, 1.0f) * Q.pedal;
 	const real damp = DAMP_SIGMA * Q.damper * ped * ped * clampr(1.0f - pres * e.inv_lift, 0.0f, 1.0f);
 
 	// --- strike ---------------------------------------------------------------------------------
@@ -607,7 +607,7 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 
 static inline void process(Engine& e, real* __restrict__ output) {
 	// gyro -> vibraphone motor (depth follows rotation, ~0.5 s fade after it stops)
-	const real rot = fabsf(e.g.rot_x) + fabsf(e.g.rot_y) + fabsf(e.g.rot_z);
+	const real rot = fabsf(e.g.motion.spin[0]) + fabsf(e.g.motion.spin[1]) + fabsf(e.g.motion.spin[2]);
 	const real gt = rmin(1.5f * rot, 1.0f);
 	e.gyro += (gt > e.gyro ? 0.05f : 0.0015f) * (gt - e.gyro);
 	if (!(e.gyro > 1e-4f)) e.gyro = 0.0f;

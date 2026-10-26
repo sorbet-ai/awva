@@ -73,7 +73,7 @@ TEST_CASE("midi in: MPE members bend, press and tilt their own notes") {
 	send(m, {{0xb0, 101, 0}, {0xb0, 100, 6}, {0xb0, 6, 0}});
 	CHECK(m.members() == 0);
 	send(m, {{0xb0, 64, 127}}); // sustain -> pedal
-	CHECK(m.globals().pedal == 1.0f);
+	CHECK(m.globals().sustain == 1.0f);
 }
 
 TEST_CASE("midi in: more notes than voices: a released voice first, then the quietest held one") {

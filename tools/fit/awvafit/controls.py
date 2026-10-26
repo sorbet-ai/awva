@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
 """Engine-level controls (.ctl, what awva_render --ctl plays and --ctl-out writes): float32 per
-32-sample block, 10 voices x (pitch, pressure, pressure_rate, timbre), then the 8 globals.
+32-sample block, 10 voices x (pitch, pressure, pressure_rate, timbre), then the instrument's 5
+(sustain, accel_g, spin x 3).
 
   c = Ctl(seconds); c.note(voice, t0, note, P, v, hold); c.write('x.ctl')   synthesise scripted notes
-  read(path) -> (voices [blocks, 10, 4], globals [blocks, 8])
+  read(path) -> (voices [blocks, 10, 4], globals [blocks, 5])
   note_events(vc)    the notes in the controls: voice, onset and release block, note, strike, sustain
   held_runs(vc)      every press as (voice, b_on, b_off), in time order (no note-jump split)
 
@@ -17,7 +18,7 @@ from .render import BLOCK, CTL_VOICES, CTL_WIDTH, read_ctl
 
 SR = 48000
 K = 0.033
-GLOB = [1, 0, 0, -1, 0, 0, 0, 3 / 16]  # the instrument at rest (dsp::globals_at_rest)
+GLOB = [3 / 16, 1, 0, 0, 0]  # the instrument at rest (awva::instrument_at_rest)
 
 read = read_ctl
 

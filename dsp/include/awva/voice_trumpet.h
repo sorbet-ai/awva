@@ -227,7 +227,7 @@ struct VoiceState {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
@@ -404,7 +404,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * PI * 12.0f / sr;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	for (int v = 0; v < MAX_VOICES; v++) {
 		VoiceState& s = e.vs[v];
 		s = VoiceState();
@@ -694,7 +694,7 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
 	if (vpres > 0.1f) s.vneg = 0.0f;
 	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
-	const real ped = clampr(e.g.pedal, 0.0f, 1.0f);
+	const real ped = clampr(e.g.sustain, 0.0f, 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);
 	const real fac_acc = e.k.fac_acc;
@@ -999,7 +999,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 		}
 	}
 	{
-		const real sh = clampr(e.g.acc_abs - 1.1f, 0.0f, 1.0f);
+		const real sh = clampr(e.g.motion.accel_g - 1.1f, 0.0f, 1.0f);
 		e.shake_pk = rmax(sh, e.shake_pk * (1.0f - e.block_dt * 2.5f));
 		e.shake += 0.03f * (e.shake_pk - e.shake);
 	}

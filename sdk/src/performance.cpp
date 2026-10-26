@@ -44,7 +44,7 @@ class Scripted final : public Player {
 public:
 	Scripted(const ScriptedPerformance& p, int voices) :
 	    p_(p), nv_(voices) {}
-	void block(int b, NoteControls* vc, dsp::GlobalControls& g) override { p_.block(b, nv_, vc, g); }
+	void block(int b, NoteControls* vc, dsp::InstrumentControls& g) override { p_.block(b, nv_, vc, g); }
 	[[nodiscard]] double seconds() const override { return 17.5; }
 	[[nodiscard]] std::string describe() const override {
 		return std::string("scripted performance \"") + p_.name + "\" (" + file_identity(p_.header) + ")";
@@ -59,7 +59,7 @@ class Keys final : public Player {
 public:
 	Keys(std::string path, std::vector<harness::RecEvent> ev, int sample_rate) :
 	    path_(std::move(path)), ev_(std::move(ev)), sr_(sample_rate) {}
-	void block(int b, NoteControls* vc, dsp::GlobalControls&) override {
+	void block(int b, NoteControls* vc, dsp::InstrumentControls&) override {
 		// the last event of each voice up to this block (the controls hold between messages)
 		const double t = static_cast<double>(b) * dsp::BLOCK / sr_;
 		for (; k_ < ev_.size() && ev_[k_].t <= t; k_++) {
@@ -92,7 +92,7 @@ public:
 	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
 		in_->midi().set_legato(legato);
 	}
-	void block(int b, NoteControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, NoteControls* vc, dsp::InstrumentControls& g) override {
 		// in integer frames (timed_midi.h, the component's rule): an event at its frame (its time,
 		// rounded to the nearest frame), taken at the first 2 ms step at or after it; the steps due
 		// by this block's start run first
@@ -132,7 +132,7 @@ public:
 	    path_(std::move(path)), p_(std::move(p)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
 		in_->midi().set_legato(legato);
 	}
-	void block(int b, NoteControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, NoteControls* vc, dsp::InstrumentControls& g) override {
 		const uint64_t start = static_cast<uint64_t>(b) * dsp::BLOCK;
 		for (; k_ < p_.size() && p_[k_].frame <= start; k_++) (void)in_->ump(p_[k_].frame, p_[k_].w);
 		in_->advance(start);

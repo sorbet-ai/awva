@@ -8,7 +8,7 @@
 namespace awva::sdk {
 
 MidiVoices::MidiVoices(int voices) :
-    g_(dsp::globals_at_rest), nv_(std::clamp(voices, 1, MAX_VOICES)) {
+    g_(dsp::instrument_at_rest), nv_(std::clamp(voices, 1, MAX_VOICES)) {
 	vc_.fill(note_at_rest);
 	alloc_.set_voices(nv_);
 }

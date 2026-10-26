@@ -254,7 +254,7 @@ struct LargeMemory {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	LargeMemory* large; // the host's (init)
@@ -282,7 +282,7 @@ static inline void reset_voice(Engine& e, int v) {
 static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.sr = (real)sample_rate;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	e.shake = 0.0f;
 	e.dc1 = 0.0f;
 	e.dcx = 0.0f;
@@ -545,7 +545,7 @@ static inline void process_voice(Engine& e, int v) {
 
 static inline void process(Engine& e, real* __restrict__ output) {
 	// shake: accelerometer magnitude above rest, smoothed per block
-	const real sh = clampr((e.g.acc_abs - 1.15f) * 0.8f, 0.0f, 1.0f);
+	const real sh = clampr((e.g.motion.accel_g - 1.15f) * 0.8f, 0.0f, 1.0f);
 	e.shake += (sh > e.shake ? 0.2f : 0.02f) * (sh - e.shake);
 	if (!(e.shake == e.shake)) e.shake = 0.0f;
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;

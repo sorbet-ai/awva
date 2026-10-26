@@ -243,7 +243,7 @@ struct VoiceState {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
@@ -309,7 +309,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.sr = (real)sample_rate;
 	e.inv_sr = 1.0f / e.sr;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	e.bel = 0.0f;
 	e.rev_g = 1.0f;
 	e.rev_t = -1.0f;
@@ -597,14 +597,14 @@ static inline void bellows(Engine& e, real dt) {
 	if (!(e.bel == e.bel)) e.bel = 0.0f;
 
 	bool trig = false;
-	const real ped = e.g.pedal;
+	const real ped = e.g.sustain;
 	if (!e.pedal_dn && ped > 0.6f) {
 		e.pedal_dn = 1;
 		trig = trig || q.rev_pedal > 0.5f;
 	} else if (e.pedal_dn && ped < 0.4f) {
 		e.pedal_dn = 0;
 	}
-	const real a = fabsf(e.g.acc_abs - 1.0f);
+	const real a = fabsf(e.g.motion.accel_g - 1.0f);
 	e.shake_t += dt;
 	if (e.shake_arm && a > 0.8f && e.shake_t > 0.08f) {
 		e.shake_arm = 0;

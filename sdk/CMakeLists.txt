@@ -124,7 +124,7 @@ namespace perf_${id} {
 #include \"${header}\"
 }
 
-static void perf_block(int b, int nv, awva::NoteControls* vc, awva::dsp::GlobalControls& g) {
+static void perf_block(int b, int nv, awva::NoteControls* vc, awva::InstrumentControls& g) {
 	perf_${id}::Ctl v[NVOICES_MAX];
 	float gl[8];
 	perf_${id}::block_controls(b, v, nv, gl);
@@ -135,7 +135,7 @@ static void perf_block(int b, int nv, awva::NoteControls* vc, awva::dsp::GlobalC
 		vc[i].timbre = v[i].but_y;
 		vc[i].gate = v[i].pres > 0.0f;
 	}
-	g = {gl[0], gl[1], gl[2], gl[3], gl[4], gl[5], gl[6], gl[7]};
+	g = {gl[7], {gl[0], {gl[4], gl[5], gl[6]}}}; // (the performances' globals: acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal)
 }
 
 extern const awva::sdk::ScriptedPerformance awva_perf_${id};
@@ -236,7 +236,7 @@ if(AWVA_RENDER_VOICE IN_LIST AWVA_ENGINES)
 #include <string.h>
 #include \"${_perf}\"
 
-static void perf_block(int b, int nv, awva::NoteControls* vc, awva::dsp::GlobalControls& g) {
+static void perf_block(int b, int nv, awva::NoteControls* vc, awva::InstrumentControls& g) {
 	Ctl v[NVOICES_MAX];
 	float gl[8];
 	block_controls(b, v, nv, gl);
@@ -247,7 +247,7 @@ static void perf_block(int b, int nv, awva::NoteControls* vc, awva::dsp::GlobalC
 		vc[i].timbre = v[i].but_y;
 		vc[i].gate = v[i].pres > 0.0f;
 	}
-	g = {gl[0], gl[1], gl[2], gl[3], gl[4], gl[5], gl[6], gl[7]};
+	g = {gl[7], {gl[0], {gl[4], gl[5], gl[6]}}}; // (the performances' globals: acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal)
 }
 static const awva::sdk::ScriptedPerformance perf = {\"custom\", \"${_perf}\", SAMPLERATE, NVOICES_MAX, perf_block};
 

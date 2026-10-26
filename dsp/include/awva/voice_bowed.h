@@ -208,7 +208,7 @@ struct BodyCoef {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
@@ -337,7 +337,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.ts_k = 6.2831853f * 1300.0f / e.sr; // tone shelf corner
 	e.shake = 1.0f;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	set_preset(e, DEFAULT_PRESET);
 	e.ps = e.p;
 	e.ew = 0;
@@ -453,7 +453,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	const real t60s = pizz ? clampf(p.pizz_decay * exp2_fast((60.0f - note) * (1.0f / 36.0f)), 0.05f, 8.0f) : clampf(p.damp * exp2_fast((40.0f - note) * (1.0f / 24.0f)), 0.3f, 8.0f);
 	real t60 = t60s;
 	if (pres <= 0.0f) {
-		const real ped = clampf(e.g.pedal, 0.0f, 1.0f);
+		const real ped = clampf(e.g.sustain, 0.0f, 1.0f);
 		t60 = rmin(t60s, clampf(p.rel + p.rel_ped * ped * ped, 0.02f, 20.0f) * (1.0f + clampf(p.rel_lift, 0.0f, 20.0f) * rmin(s.lift, 1.0f)));
 	}
 	real gl = exp2_fast(-9.9657843f / (f0 * t60)); // loop gain per period for t60
@@ -1041,12 +1041,12 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	}
 	for (int n = 0; n < BLOCK; n++) output[n] = 0.0f;
 	// shaking the instrument moves the bow: speed modulation, strong shakes reverse it (tremolo)
-	const real acc_abs = clampf(e.g.acc_abs, 0.0f, 4.0f);
+	const real acc_abs = clampf(e.g.motion.accel_g, 0.0f, 4.0f);
 	e.shake += 0.3f * (acc_abs - e.shake);
 	if (bad(e.shake, 10.0f)) e.shake = 1.0f;
 	const real trem = 1.0f - clampf(e.ps.trem, 0.0f, 2.0f) * rmin(rmax(e.shake - 1.08f, 0.0f), 1.4f);
 	// rotation shifts the body resonances
-	const real rot = clampf(e.g.rot_x + e.g.rot_y + e.g.rot_z, -1.0f, 1.0f);
+	const real rot = clampf(e.g.motion.spin[0] + e.g.motion.spin[1] + e.g.motion.spin[2], -1.0f, 1.0f);
 	const real body_shift = exp2_fast(clampf(e.ps.body_rot, -2.0f, 2.0f) * rot);
 	e.seed_budget = SEED_BUDGET;
 	for (int v = 0; v < e.nvoices; v++) process_voice(e, v, trem, body_shift, output);

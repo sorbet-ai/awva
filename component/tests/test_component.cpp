@@ -76,7 +76,7 @@ void render_both(const char* id, int preset, sdk::Player& player, double seconds
 		dll.c().set_preset(dll.in.state, preset);
 	}
 	std::vector<dsp::NoteControls> va(NV, dsp::note_at_rest), vb(NV, dsp::note_at_rest);
-	dsp::GlobalControls ga = dsp::globals_at_rest, gb = dsp::globals_at_rest;
+	dsp::InstrumentControls ga = dsp::instrument_at_rest, gb = dsp::instrument_at_rest;
 	const int blocks = static_cast<int>(seconds * SR / NSC_BLOCK);
 	std::vector<float> a(static_cast<size_t>(blocks) * NSC_BLOCK), b(a.size());
 	for (int k = 0; k < blocks; k++) {
@@ -271,19 +271,16 @@ class Moving final : public sdk::Player {
 public:
 	explicit Moving(std::unique_ptr<sdk::Player> p) :
 	    p_(std::move(p)) {}
-	void block(int b, dsp::NoteControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, dsp::NoteControls* vc, dsp::InstrumentControls& g) override {
 		p_->block(b, vc, g);
 		const double t = static_cast<double>(b) * NSC_BLOCK / SR;
 		const double s = std::sin(2.0 * 3.14159265358979 * 6.0 * t);
-		g.acc_abs = static_cast<float>(t > 1.0 && t < 3.0 ? 1.0 + 1.3 * s * s : 1.0);
-		g.acc_x = static_cast<float>(0.3 * std::sin(1.1 * t));
-		g.acc_y = static_cast<float>(0.2 * std::sin(0.7 * t));
-		g.acc_z = static_cast<float>(-1.0 + 0.1 * std::sin(0.5 * t));
-		g.rot_x = static_cast<float>(0.4 * std::sin(1.7 * t));
-		g.rot_y = static_cast<float>(0.3 * std::sin(1.3 * t));
-		g.rot_z = static_cast<float>(0.2 * std::sin(0.9 * t));
+		g.motion.accel_g = static_cast<float>(t > 1.0 && t < 3.0 ? 1.0 + 1.3 * s * s : 1.0);
+		g.motion.spin[0] = static_cast<float>(0.4 * std::sin(1.7 * t));
+		g.motion.spin[1] = static_cast<float>(0.3 * std::sin(1.3 * t));
+		g.motion.spin[2] = static_cast<float>(0.2 * std::sin(0.9 * t));
 		const double pd = t < 2.0 ? 0.0 : (t < 3.0 ? t - 2.0 : (t < 4.0 ? 4.0 - t : 0.0));
-		g.pedal = static_cast<float>(3.0 / 16 + (13.0 / 16) * pd);
+		g.sustain = static_cast<float>(3.0 / 16 + (13.0 / 16) * pd);
 	}
 	[[nodiscard]] double seconds() const override { return p_->seconds(); }
 	[[nodiscard]] std::string describe() const override { return "moving (shake, tilt, turn, pedal) " + p_->describe(); }
@@ -298,7 +295,7 @@ std::vector<float> render_linked(const char* id, int preset, sdk::Player& player
 	linked.init(SR, NV);
 	if (preset >= 0) linked.set_preset(preset);
 	std::vector<dsp::NoteControls> v(NV, dsp::note_at_rest);
-	dsp::GlobalControls g = dsp::globals_at_rest;
+	dsp::InstrumentControls g = dsp::instrument_at_rest;
 	const int blocks = static_cast<int>(seconds * SR / NSC_BLOCK);
 	std::vector<float> a(static_cast<size_t>(blocks) * NSC_BLOCK);
 	for (int k = 0; k < blocks; k++) {
@@ -321,7 +318,7 @@ TEST_CASE("every engine's library renders bit for bit as linked in with the glob
 			Moving moving(sdk::scripted_player("default", NV, SR, &err));
 			render_both(id, preset, moving, 5.0);
 			// were the globals live? (reported: the contract checks that every declared input counts)
-			if (e->info->inputs & (dsp::in_shake | dsp::in_accel | dsp::in_rotation | dsp::in_pedal)) {
+			if (e->info->inputs & (dsp::in_sustain | dsp::in_accel | dsp::in_spin)) {
 				auto still = sdk::scripted_player("default", NV, SR, &err);
 				Moving moved(sdk::scripted_player("default", NV, SR, &err));
 				const bool moves = !same(render_linked(id, preset, *still, 5.0), render_linked(id, preset, moved, 5.0));
@@ -703,7 +700,7 @@ std::vector<float> render_midi_file(const char* id, const std::string& path, int
 	sdk::Engine e(*sdk::find_engine(id));
 	e.init(sr, NV);
 	std::vector<dsp::NoteControls> vc(NV, dsp::note_at_rest);
-	dsp::GlobalControls g = dsp::globals_at_rest;
+	dsp::InstrumentControls g = dsp::instrument_at_rest;
 	std::vector<float> out(static_cast<size_t>(frames));
 	for (int b = 0; b * NSC_BLOCK < frames; b++) {
 		player->block(b, vc.data(), g);

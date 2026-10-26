@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 	// MIDI in, in integer frames (awva_sdk/timed_midi.h): each message
 	// queued at its frame, and every 2 ms (96 frames at 48 kHz) a step runs the ones due
 	auto midi = std::make_unique<sdk::TimedMidi>(NV, SR); // (some kilobytes: on the heap)
-	awva::GlobalControls g = awva::globals_at_rest;
+	awva::InstrumentControls g = awva::instrument_at_rest;
 	const auto frame_of = [](double t) { return t <= 0 ? uint64_t{0} : static_cast<uint64_t>(std::llround(t * SR)); };
 	size_t next = 0;
 

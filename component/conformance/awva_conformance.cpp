@@ -789,7 +789,7 @@ TEST_CASE("voices: process_voices() is silent at rest, a pressed voice sounds, t
 		Instance in;
 		REQUIRE(in.init(rate) == 0);
 		std::vector<nsc_voice> v(static_cast<size_t>(nvoices()), nsc_voice{69.0f, 0, 0, 0, 0, 0, 0});
-		const nsc_globals g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+		const nsc_globals g = {3.0f / 16, 1.0f, {0.0f, 0.0f, 0.0f}};
 		const int nc = channels();
 		std::vector<float> buf(static_cast<size_t>(nc) * NSC_BLOCK), all;
 		std::vector<float*> o(static_cast<size_t>(nc));

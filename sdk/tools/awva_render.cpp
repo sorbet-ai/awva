@@ -15,7 +15,7 @@
 //                       (awva/midi_in.h: up-converted to MIDI 2.0)
 //     --ump FILE.ump    timed UMP packets, a text file (awva_sdk/performance.h: ump_player), the same way
 //     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (pitch, pressure, pressure_rate, timbre),
-//                       then the 8 globals (what --ctl-out writes, or an embedded host's capture)
+//                       then the instrument's 5 (sustain, accel_g, spin x 3) (what --ctl-out writes, or an embedded host's capture)
 //   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s, a MIDI
 //                     file's length + 2 s, a controls file's blocks), plus --tail
 //   --tail S          seconds after the input's own length (default 0)
@@ -68,7 +68,7 @@ namespace dsp = awva;
 
 namespace {
 
-constexpr int CTL_VOICES = 10, CTL_WIDTH = CTL_VOICES * 4 + 8;
+constexpr int CTL_VOICES = 10, CTL_WIDTH = CTL_VOICES * 4 + 5;
 
 [[noreturn]] void fail(const std::string& msg) {
 	std::fprintf(stderr, "awva_render: %s\n", msg.c_str());
@@ -148,7 +148,7 @@ class ControlsPlayer final : public sdk::Player {
 public:
 	ControlsPlayer(std::string path, std::vector<float> c, int voices, int sample_rate) :
 	    path_(std::move(path)), c_(std::move(c)), nv_(voices), sr_(sample_rate) {}
-	void block(int b, dsp::NoteControls* vc, dsp::GlobalControls& g) override {
+	void block(int b, dsp::NoteControls* vc, dsp::InstrumentControls& g) override {
 		if (static_cast<size_t>(b) >= blocks()) return; // past the end: everything stays
 		const float* c = &c_[static_cast<size_t>(b) * CTL_WIDTH];
 		for (int v = 0; v < nv_ && v < CTL_VOICES; v++) {
@@ -159,7 +159,7 @@ public:
 			vc[v].gate = vc[v].pressure > 0.0f;
 		}
 		const float* gg = c + CTL_VOICES * 4;
-		g = {gg[0], gg[1], gg[2], gg[3], gg[4], gg[5], gg[6], gg[7]};
+		g = {gg[0], {gg[1], {gg[2], gg[3], gg[4]}}};
 	}
 	[[nodiscard]] double seconds() const override { return static_cast<double>(blocks()) * dsp::BLOCK / sr_; }
 	[[nodiscard]] std::string describe() const override {
@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
 	const int channels = use_fx ? 2 : 1;
 	std::vector<float> out(static_cast<size_t>(nblocks) * dsp::BLOCK * channels);
 	std::vector<dsp::NoteControls> vc(static_cast<size_t>(nv), dsp::note_at_rest);
-	dsp::GlobalControls g = dsp::globals_at_rest;
+	dsp::InstrumentControls g = dsp::instrument_at_rest;
 	// the engine gets a moved copy (the player writes only what changes): transposed, the list's notes
 	const bool moved = transpose != 0.0f || !notes.empty();
 	std::vector<dsp::NoteControls> ev(static_cast<size_t>(nv));
@@ -421,7 +421,7 @@ int main(int argc, char** argv) {
 				const dsp::NoteControls c = v < nv ? to[v] : dsp::note_at_rest;
 				ctl_rec.insert(ctl_rec.end(), {c.pitch, c.pressure, c.pressure_rate, c.timbre});
 			}
-			ctl_rec.insert(ctl_rec.end(), {g.acc_abs, g.acc_x, g.acc_y, g.acc_z, g.rot_x, g.rot_y, g.rot_z, g.pedal});
+			ctl_rec.insert(ctl_rec.end(), {g.sustain, g.motion.accel_g, g.motion.spin[0], g.motion.spin[1], g.motion.spin[2]});
 		}
 		const auto t0 = std::chrono::steady_clock::now();
 		float buf[dsp::BLOCK];

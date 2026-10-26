@@ -545,18 +545,13 @@ const std::vector<Probe>& input_probes() {
 	    {dsp::in_timbre, "timbre", [](Keys& k, int b) { for (NoteControls& c : k.vc) c.timbre = static_cast<float>(0.9 * std::sin(2 * M_PI * 2 * t_of(b))); }},
 	    {dsp::in_velocity, "velocity", [](Keys& k, int b) { for (NoteControls& c : k.vc) c.velocity = static_cast<float>(0.5 + 0.5 * std::sin(2 * M_PI * 3 * t_of(b))); }},
 	    {dsp::in_release, "release", [](Keys& k, int b) { for (NoteControls& c : k.vc) c.release = static_cast<float>(0.5 + 0.5 * std::sin(2 * M_PI * 4 * t_of(b))); }},
-	    {dsp::in_shake, "shake", [](Keys& k, int b) { const double s = std::sin(2 * M_PI * 3 * t_of(b)); k.g.acc_abs = static_cast<float>(1 + 2.5 * s * s); }},
-	    {dsp::in_accel, "acceleration", [](Keys& k, int b) {
-		     k.g.acc_x = static_cast<float>(std::sin(2 * M_PI * 0.5 * t_of(b)));
-		     k.g.acc_y = static_cast<float>(std::sin(2 * M_PI * 0.7 * t_of(b)));
-		     k.g.acc_z = static_cast<float>(-std::cos(2 * M_PI * 0.3 * t_of(b)));
+	    {dsp::in_accel, "acceleration", [](Keys& k, int b) { const double s = std::sin(2 * M_PI * 3 * t_of(b)); k.g.motion.accel_g = static_cast<float>(1 + 2.5 * s * s); }},
+	    {dsp::in_spin, "spin", [](Keys& k, int b) {
+		     k.g.motion.spin[0] = static_cast<float>(0.8 * std::sin(2 * M_PI * 0.9 * t_of(b)));
+		     k.g.motion.spin[1] = static_cast<float>(0.8 * std::sin(2 * M_PI * 1.3 * t_of(b) + 1));
+		     k.g.motion.spin[2] = static_cast<float>(0.8 * std::sin(2 * M_PI * 1.7 * t_of(b) + 2));
 	     }},
-	    {dsp::in_rotation, "rotation", [](Keys& k, int b) {
-		     k.g.rot_x = static_cast<float>(0.8 * std::sin(2 * M_PI * 0.9 * t_of(b)));
-		     k.g.rot_y = static_cast<float>(0.8 * std::sin(2 * M_PI * 1.3 * t_of(b) + 1));
-		     k.g.rot_z = static_cast<float>(0.8 * std::sin(2 * M_PI * 1.7 * t_of(b) + 2));
-	     }},
-	    {dsp::in_pedal, "pedal", [](Keys& k, int) { k.g.pedal = 1.0f; }},
+	    {dsp::in_sustain, "sustain", [](Keys& k, int) { k.g.sustain = 1.0f; }},
 	};
 	return probes;
 }
@@ -649,7 +644,7 @@ GuardRender guard_render(int preset, bool guarded) {
 	sdk::Engine e = fresh(preset);
 	const int nv = e.voices();
 	std::vector<NoteControls> vc(static_cast<size_t>(nv), dsp::note_at_rest);
-	GlobalControls g = dsp::globals_at_rest;
+	InstrumentControls g = dsp::instrument_at_rest;
 	std::vector<float> target(static_cast<size_t>(nv), 0.0f), rate(static_cast<size_t>(nv), 0.0f);
 	uint32_t rng = 0x9e3779b9u + static_cast<uint32_t>(preset + 1);
 	const auto u = [&rng]() {
@@ -690,10 +685,10 @@ GuardRender guard_render(int preset, bool guarded) {
 		}
 		if (b < playing) {
 			const double s = std::sin(2.0 * 3.14159265358979 * 6.0 * t);
-			g.acc_abs = static_cast<float>(t > 2.0 ? 1.0 + 1.5 * s * s : 1.0);
-			g.pedal = static_cast<float>(0.5 + 0.5 * std::sin(0.7 * t));
+			g.motion.accel_g = static_cast<float>(t > 2.0 ? 1.0 + 1.5 * s * s : 1.0);
+			g.sustain = static_cast<float>(0.5 + 0.5 * std::sin(0.7 * t));
 		} else {
-			g = dsp::globals_at_rest;
+			g = dsp::instrument_at_rest;
 		}
 		float out[dsp::BLOCK];
 		float* const o[1] = {out};

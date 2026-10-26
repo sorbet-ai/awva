@@ -34,7 +34,7 @@ RateRun run_at(int rate, int preset) {
 	e.init(rate, nvoices());
 	if (preset >= 0) e.set_preset(preset);
 	std::vector<NoteControls> vc(static_cast<size_t>(e.voices()), dsp::note_at_rest);
-	GlobalControls g = dsp::globals_at_rest;
+	InstrumentControls g = dsp::instrument_at_rest;
 	const float dt = static_cast<float>(dsp::BLOCK) / static_cast<float>(rate); // a block, s
 	const int held_blocks = static_cast<int>(1.0f / dt), total = static_cast<int>((1.0f + info().budget.tail_seconds + 0.5f) / dt);
 	RateRun r;

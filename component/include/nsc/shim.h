@@ -38,7 +38,7 @@ namespace dsp = awva;
 static_assert(sizeof(nsc_voice) == sizeof(dsp::NoteControls) && offsetof(nsc_voice, release) == offsetof(dsp::NoteControls, release) &&
         offsetof(nsc_voice, gate) == offsetof(dsp::NoteControls, gate),
     "nsc_voice is dsp::NoteControls");
-static_assert(sizeof(nsc_globals) == sizeof(dsp::GlobalControls), "nsc_globals is dsp::GlobalControls");
+static_assert(sizeof(nsc_globals) == sizeof(dsp::InstrumentControls), "nsc_globals is dsp::InstrumentControls");
 using awva::preset::fnv1a; // (the parameters' ids, the schema hash: preset.h's)
 using awva::preset::fnv1a_word;
 static_assert(NSC_MAX_EVENTS == awva::sdk::TimedMidi::MAX_EVENTS && NSC_MAX_NOTE_IDS == awva::sdk::TimedMidi::NOTES, "ended()'s guarantee is TimedMidi's");
@@ -50,7 +50,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	static constexpr int32_t MIN_RATE = 11025, MAX_RATE = 192000;
 	struct State {
 		awva::sdk::TimedMidi midi; // the 2 ms steps in integer frames, the notes and their host ids
-		dsp::GlobalControls g;
+		dsp::InstrumentControls g;
 		float output;   // the output level (the component's own parameter, after the engine's)
 		uint64_t frame; // frames rendered by process()
 		int32_t sample_rate, voices;
@@ -169,7 +169,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	static int32_t init(void* state, void* fast, void* large, int32_t sr, int32_t nv) {
 		if (sr < E::info.min_rate || sr > MAX_RATE) return -1;
 		State* s = new (state) State(nv, sr);
-		s->g = dsp::globals_at_rest;
+		s->g = dsp::instrument_at_rest;
 		s->engine.init(*static_cast<typename E::FastMemory*>(fast), *static_cast<typename E::LargeMemory*>(large), sr, nv);
 		for (int i = 0; i < E::info.num_params; i++) s->defaults[i] = *s->engine.param(i);
 		return 0;
@@ -177,7 +177,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	static void reset(void* state) {
 		State& s = st(state);
 		s.midi.reset(); // (afresh, legato kept; the notes' ids end: ended() hands them out)
-		s.g = dsp::globals_at_rest;
+		s.g = dsp::instrument_at_rest;
 		s.frame = 0;
 		s.engine.reset();
 	}
@@ -203,7 +203,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	}
 	static void process_voices(void* state, const nsc_voice* vc, const nsc_globals* g, float* const* out) {
 		const ScopedNoDenormals no_denormals;
-		st(state).engine.process(reinterpret_cast<const dsp::NoteControls*>(vc), *reinterpret_cast<const dsp::GlobalControls*>(g), out);
+		st(state).engine.process(reinterpret_cast<const dsp::NoteControls*>(vc), *reinterpret_cast<const dsp::InstrumentControls*>(g), out);
 		level(st(state), out);
 	}
 	static int32_t active_voices(const void* state) { return st(state).engine.active_voices(); }

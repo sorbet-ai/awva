@@ -41,7 +41,7 @@ Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of t
 | channels | 1 (mono) |
 | CPU | 1600 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 1 s of the last release |
-| engine object | 688 bytes (on a 64-bit host) |
+| engine object | 676 bytes (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | none |
 

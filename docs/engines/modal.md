@@ -16,8 +16,8 @@ Header `dsp/include/awva/voice_modal.h`, traits `dsp/include/awva/engines/modal.
 | pressure | `pressure`, 0 released .. 1 MIDI 2.0's full scale (engines take up to 1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
 | pressure rate | `pressure_rate`, how fast the pressure moves: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
 | timbre | `timbre`, -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: Registered Per-Note Controller 74, CC74 (bipolar) |
-| rotation | `rot_x`, `rot_y`, `rot_z`, about -1 .. 1 | the instrument's gyroscope (not from MIDI) |
-| pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
+| sustain | `sustain`, 0 .. 1 (3/16 at rest) | CC64 |
+| spin | `motion.spin[3]`, the angular rate about each axis, -1 .. 1 | a host's gyroscope (not from MIDI yet) |
 
 An input not listed makes no difference to the sound; each listed one changes it in at least one preset (the contract suite checks both). What each does in this engine: "Playing" below. MIDI in detail: [Playing with MIDI 2.0 and MPE](../midi.md).
 
@@ -74,7 +74,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 18000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 5 s of the last release |
-| engine object | 5.13281 KB (5256 bytes) (on a 64-bit host) |
+| engine object | 5.125 KB (5248 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | none |
 

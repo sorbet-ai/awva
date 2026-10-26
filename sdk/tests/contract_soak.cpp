@@ -56,7 +56,7 @@ TEST_CASE("soak: chaos, every voice held, the decay: finite, bounded, then silen
 			if (f == 1) { // (the preset's values back: the tail is declared for them)
 				for (int i = 0; i < e.num_params(); i++) e.set_param(i, preset_values[static_cast<size_t>(i)]);
 				for (int v = 0; v < e.voices(); v++) k.press(v, static_cast<float>(36 + 5 * v), 1.0f);
-				k.g = dsp::globals_at_rest;
+				k.g = dsp::instrument_at_rest;
 			}
 			if (f == 2) k.release_all();
 			for (int b = 0; b < n[f]; b++) {

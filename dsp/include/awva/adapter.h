@@ -21,7 +21,7 @@
 //       static constexpr int min_rate = 22050;     // optional: the lowest rate it is made for (11025)
 //   };
 //
-// The engine's struct Engine has `strisy::GlobalControls g; awva::NoteControls vc[MAX_VOICES];
+// The engine's struct Engine has `awva::InstrumentControls g; awva::NoteControls vc[MAX_VOICES];
 // int nvoices;`, and, with presets, `int preset`. Live parameters come from strisy::EngineParams<Engine>.
 #ifndef AWVA_ADAPTER_H_
 #define AWVA_ADAPTER_H_
@@ -154,7 +154,7 @@ template <class T> struct Adapter {
 		saved.restore(e);
 	}
 
-	void process(const NoteControls* vc, const GlobalControls& g, float* const* out) {
+	void process(const NoteControls* vc, const InstrumentControls& g, float* const* out) {
 		e.g = g;
 		for (int v = 0; v < e.nvoices; v++) e.vc[v] = vc[v];
 		T::process(e, out[0]);

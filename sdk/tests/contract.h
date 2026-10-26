@@ -25,7 +25,7 @@ namespace contract {
 
 namespace dsp = awva;
 namespace sdk = awva::sdk;
-using dsp::GlobalControls;
+using dsp::InstrumentControls;
 using dsp::NoteControls;
 
 constexpr int SR = 48000;
@@ -98,7 +98,7 @@ inline void gate_of(NoteControls& c) { c.gate = c.pressure > 0.0f; }
 struct Keys {
 	std::vector<NoteControls> vc;
 	std::vector<float> target;
-	GlobalControls g = dsp::globals_at_rest;
+	InstrumentControls g = dsp::instrument_at_rest;
 	int rate = SR;
 	explicit Keys(int nv, int sample_rate = SR) :
 	    vc(static_cast<size_t>(nv), dsp::note_at_rest), target(static_cast<size_t>(nv), 0.0f), rate(sample_rate) {}
@@ -203,14 +203,14 @@ inline void fuzz_controls(Rng& r, Keys& k) {
 		gate_of(c);
 	}
 	if (r.next() < 0.02f) {
-		k.g.acc_abs = r.range(0.0f, 3.5f);
-		k.g.acc_x = r.range(-1.0f, 1.0f);
-		k.g.acc_y = r.range(-1.0f, 1.0f);
-		k.g.acc_z = r.range(-1.0f, 1.0f);
-		k.g.rot_x = r.range(-1.0f, 1.0f);
-		k.g.rot_y = r.range(-1.0f, 1.0f);
-		k.g.rot_z = r.range(-1.0f, 1.0f);
-		k.g.pedal = r.range(0.0f, 1.0f);
+		k.g.motion.accel_g = r.range(0.0f, 3.5f);
+		(void)r.range(-1.0f, 1.0f); // (the draw an acceleration axis took: the same phrase as before)
+		(void)r.range(-1.0f, 1.0f); // (the draw an acceleration axis took: the same phrase as before)
+		(void)r.range(-1.0f, 1.0f); // (the draw an acceleration axis took: the same phrase as before)
+		k.g.motion.spin[0] = r.range(-1.0f, 1.0f);
+		k.g.motion.spin[1] = r.range(-1.0f, 1.0f);
+		k.g.motion.spin[2] = r.range(-1.0f, 1.0f);
+		k.g.sustain = r.range(0.0f, 1.0f);
 	}
 }
 

@@ -20,8 +20,8 @@ struct trumpet {
 	static constexpr const char* name = "trumpet";
 	static constexpr const char* title = "Trumpet";
 	static constexpr const char* summary = "physical trumpet: lips, mouthpiece and bore, played like the brass trumpet (1 preset)";
-	// pres the breath, vpres the attack, but_y the lips (lip_tilt); acc_abs and the pedal
-	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_shake | in_pedal;
+	// pressure the breath, pressure_rate the attack, timbre the lips (lip_tilt); motion.accel_g and sustain
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
 	static constexpr Budget budget = {::trumpet::MAX_VOICES, 44000, 2.0f}; // profile.sh 42288; silent 0.25 s after the release
 	// the hero parameters (the contract suite checks the names)
 	// the new model's: brassiness, the bell and the radiation's brightness, the tongue, the loudest

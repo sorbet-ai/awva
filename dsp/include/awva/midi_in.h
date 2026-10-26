@@ -311,7 +311,7 @@ private:
 //   bool zone_master(int channel)          an RPN 0 on this channel is the zone master's own range
 //   void set_bend_range(float semitones)   the notes' new bend range
 //   void zone_configured(int channel, int members)  an MCM came (e.g. a host's MIDI out follows it)
-//   void set_pedal(float)                  0 .. 1
+//   void set_sustain(float)                CC64, 0 .. 1
 //   bool bends_out_on(int channel)         the host sends its own notes' bends on this channel (a
 //                                          pitch bend from it is an echo, not the instrument's)
 //   void bend_moved(float delta)           the instrument's bend changes by delta (before the notes)
@@ -335,7 +335,7 @@ public:
 				return true;
 			}
 			if (data1 == 64) {
-				h.set_pedal((float)data2 * (1.0f / 127.0f));
+				h.set_sustain((float)data2 * (1.0f / 127.0f));
 				return true;
 			}
 			return false;
@@ -370,7 +370,7 @@ public:
 			return true;
 		}
 		if (status == 0xb0 && d1 == 64) {
-			h.set_pedal(unsigned32(w1));
+			h.set_sustain(unsigned32(w1));
 			return true;
 		}
 		if (status == 0xe0) {

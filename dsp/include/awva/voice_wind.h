@@ -269,7 +269,7 @@ struct LargeMemory {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset, kind;
@@ -348,7 +348,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.inv_sr = 1.0f / e.sr;
 	e.corr_sr = e.sr / 48000.0f; // (exactly 1 at 48 kHz)
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	e.shake = 0.0f;
 	e.vph = 0.0f;
 	e.hp_s = e.lp_s = 0.0f;
@@ -792,7 +792,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	e.inv_1mp0 = 1.0f / (1.0f - clampr(q.speak, 0.02f, 0.6f));
 	e.inv_p0 = 1.0f / clampr(q.speak, 0.02f, 0.6f);
 	e.p_low = (sr * (1.0f / 440.0f)) * pow2((69.0f - e.low_note) * (1.0f / 12.0f));
-	const real sh = clampr((e.g.acc_abs - 1.15f) * 0.8f, 0.0f, 1.0f);
+	const real sh = clampr((e.g.motion.accel_g - 1.15f) * 0.8f, 0.0f, 1.0f);
 	e.shake += (sh > e.shake ? 0.2f : 0.02f) * (sh - e.shake);
 	if (!(e.shake == e.shake)) e.shake = 0.0f;
 	e.vph += clampr(q.vib_hz, 0.1f, 12.0f) * (BLOCK / sr);

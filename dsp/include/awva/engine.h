@@ -41,12 +41,8 @@ namespace dsp = ::awva;
 
 inline constexpr int BLOCK = strisy::BLOCK; // samples per process() call
 
-using strisy::GlobalControls;
 using strisy::ParamDesc;
 using strisy::ParamKind;
-
-// the instrument at rest: accelerometer 1 g down, no rotation, pedal 3/16
-inline constexpr GlobalControls globals_at_rest = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
 
 // ---------------------------------------------------------------------------------------------
 // What an engine declares about itself
@@ -59,10 +55,9 @@ enum Input : uint32_t {
 	in_timbre = 1u << 2,        // NoteControls::timbre
 	in_velocity = 1u << 3,      // NoteControls::velocity
 	in_release = 1u << 4,       // NoteControls::release
-	in_shake = 1u << 5,         // acc_abs
-	in_accel = 1u << 6,         // acc_x, acc_y, acc_z
-	in_rotation = 1u << 7,      // rot_x, rot_y, rot_z
-	in_pedal = 1u << 8,         // pedal
+	in_sustain = 1u << 5,       // InstrumentControls::sustain
+	in_accel = 1u << 6,         // InstrumentControls::motion.accel_g
+	in_spin = 1u << 7,          // InstrumentControls::motion.spin
 };
 
 // Where a host puts an engine's memory. The engine object itself is always Placement::tcm.
@@ -221,7 +216,7 @@ concept PlainData = std::is_trivially_default_constructible_v<T> && std::is_triv
 template <class E>
 concept VoiceEngine = PlainData<E> && PlainData<typename E::FastMemory> && PlainData<typename E::LargeMemory> &&
     requires(E& e, const E& ce, typename E::FastMemory& f, typename E::LargeMemory& l,
-        const NoteControls* vc, const GlobalControls& g, float* const* out, int i, float v) {
+        const NoteControls* vc, const InstrumentControls& g, float* const* out, int i, float v) {
 	    { E::info } -> std::convertible_to<const EngineInfo&>;
 	    { e.init(f, l, i, i) } -> std::same_as<void>;
 	    { e.reset() } -> std::same_as<void>;

@@ -86,7 +86,9 @@ typedef struct nsc_voice {
 
 /* the instrument's controls: accelerometer (g), gyroscope, pedal */
 typedef struct nsc_globals {
-	float acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal;
+	float sustain; /* CC64, 0 .. 1 */
+	float accel_g; /* the acceleration's magnitude in g (1 at rest) */
+	float spin[3]; /* the angular rate about each axis, -1 .. 1 */
 } nsc_globals;
 
 /* a UMP packet (1 to 4 words, by its message type) at a frame of the block */

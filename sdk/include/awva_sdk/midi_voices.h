@@ -46,7 +46,7 @@ public:
 	// held notes are forgotten on a switch, and the voices beyond the first go quiet
 	void set_legato(bool on);
 	[[nodiscard]] bool legato() const { return legato_on_; }
-	[[nodiscard]] const dsp::GlobalControls& globals() const { return g_; }
+	[[nodiscard]] const dsp::InstrumentControls& globals() const { return g_; }
 	[[nodiscard]] int notes_held() const;
 	[[nodiscard]] int members() const { return in_.members(); }
 
@@ -65,7 +65,7 @@ public:
 	[[nodiscard]] bool zone_master(int channel) const { return channel == 0; }
 	void set_bend_range(float semitones) { bend_range_ = semitones; }
 	void zone_configured(int, int) {}
-	void set_pedal(float p) { g_.pedal = p; }
+	void set_sustain(float p) { g_.sustain = p; }
 	[[nodiscard]] bool bends_out_on(int) const { return false; }
 	void bend_moved(float) {}
 	// VoiceAllocator's host: a note slot's key is down, its level floor
@@ -83,7 +83,7 @@ private:
 	voices::VoiceAllocator<midi::NOTES, 16> alloc_;
 	static constexpr int MAX_VOICES = 16;
 	std::array<NoteControls, MAX_VOICES> vc_;
-	dsp::GlobalControls g_;
+	dsp::InstrumentControls g_;
 	int nv_ = 0;
 	voices::Legato<midi::NOTES> legato_;
 	bool legato_on_ = false;

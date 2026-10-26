@@ -19,8 +19,8 @@ struct wind {
 	static constexpr const char* name = "wind";
 	static constexpr const char* title = "Wind";
 	static constexpr const char* summary = "woodwinds: reed and jet driven bores, cylindrical and conical (9 presets)";
-	// pres, vpres, but_y (the embouchure), acc_abs (the saxes' growl); the pedal is not read
-	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_shake;
+	// pressure, pressure_rate, timbre (the embouchure), motion.accel_g (the saxes' growl); sustain is not read
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel;
 	static constexpr Budget budget = {::wind::MAX_VOICES, 20000, 2.0f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"}};

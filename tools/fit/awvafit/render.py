@@ -27,7 +27,7 @@ from . import env
 
 BLOCK = 32
 CTL_VOICES = 10
-CTL_WIDTH = CTL_VOICES * 4 + 8
+CTL_WIDTH = CTL_VOICES * 4 + 5
 
 
 class RenderError(RuntimeError):
@@ -146,7 +146,7 @@ class Renderer:
 
 
 def read_ctl(path):
-    """engine controls (.ctl): (voices [blocks, 10, 4] = pitch, pressure, pressure_rate, timbre; globals [blocks, 8])"""
+    """engine controls (.ctl): (voices [blocks, 10, 4] = pitch, pressure, pressure_rate, timbre; globals [blocks, 5] = sustain, accel_g, spin x 3)"""
     c = np.fromfile(path, np.float32).reshape(-1, CTL_WIDTH)
     return c[:, :4 * CTL_VOICES].reshape(-1, CTL_VOICES, 4), c[:, 4 * CTL_VOICES:]
 

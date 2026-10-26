@@ -13,12 +13,6 @@ namespace strisy {
 // samples per process() call
 static constexpr int BLOCK = 32;
 
-// the whole instrument: the accelerometer (in g; acc_abs its magnitude, 1 at rest), the gyroscope
-// (rot_*, about -1 .. 1) and the pedal (0 .. 1)
-struct GlobalControls {
-	float acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal;
-};
-
 } // namespace strisy
 
 namespace awva {
@@ -37,6 +31,19 @@ struct NoteControls {
 
 // a note at rest: A4, no pressure
 inline constexpr NoteControls note_at_rest = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0};
+
+// The whole instrument at block rate: MIDI 2.0's sustain pedal and, from a host with a motion
+// sensor (or from MIDI: Assignable Controllers), its motion as physical quantities.
+struct InstrumentControls {
+	float sustain; // CC64, 0 .. 1
+	struct Motion {
+		float accel_g; // the magnitude of the acceleration in g (1 at rest)
+		float spin[3]; // the angular rate about each axis, -1 .. 1 = the sensor's full scale
+	} motion;
+};
+
+// the instrument at rest: 1 g, no spin, the sustain pedal at 3/16
+inline constexpr InstrumentControls instrument_at_rest = {3.0f / 16, {1.0f, {0.0f, 0.0f, 0.0f}}};
 
 } // namespace awva
 

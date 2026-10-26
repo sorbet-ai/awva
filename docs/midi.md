@@ -17,7 +17,7 @@ Every way of playing an engine ends in one place: a decoder of MIDI 2.0 Universa
 
 These are `awva::NoteControls` (`dsp/include/awva/controls.h`).
 
-The globals are `acc_abs`, `acc_x/y/z` (the accelerometer, in g), `rot_x/y/z` (the gyroscope) and `pedal` (0 .. 1). Each engine page lists which of them the engine reads.
+The instrument's controls (`awva::InstrumentControls`) are `sustain` (CC64, 0 .. 1) and, from a host with a motion sensor, `motion.accel_g` (the acceleration's magnitude in g, 1 at rest) and `motion.spin[3]` (the angular rate about each axis, -1 .. 1). Each engine page lists which of them the engine reads.
 
 ## From MPE
 
@@ -42,7 +42,7 @@ On every channel outside an MPE zone (the master channel, or all of them without
 | CC1 (the mod wheel) | `timbre`, 0 .. 1 |
 | CC74 | `timbre`, 64 = 0 |
 | pitch bend | the instrument's bend (±2 semitones), which every note follows |
-| CC64 | `pedal` |
+| CC64 | `sustain` |
 
 With every note slot held (16), a new note takes the oldest.
 
@@ -55,7 +55,7 @@ The same mapping, at MIDI 2.0's resolution:
 - **Pitch bend and CC74** are bipolar by the specification: the centre 0x80000000 is exactly 0, and each side is scaled to its own end.
 - **Registered Per-Note Controller 3** (Pitch 7.25) sets a note's own absolute pitch.
 - **Registered Per-Note Controller 74** sets a note's own `timbre`; the channel's CC74 then leaves that note alone.
-- **Registered Controllers** 0 and 6 are the bend range and the MCM; CC64 is the pedal.
+- **Registered Controllers** 0 and 6 are the bend range and the MCM; CC64 is `sustain`.
 
 Where MPE can carry a value, the engines get the same float from MPE and from MIDI 2.0. Where it can't (finer velocities, pressures and bends, a note's own pitch), they follow the finer value.
 

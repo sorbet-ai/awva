@@ -29,7 +29,7 @@ struct VoiceState {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	real sr;
@@ -51,7 +51,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.sr = (real)sample_rate;
 	e.amp_coef = 1.0f / (1.0f + 0.005f * e.sr); // one-pole, about 5 ms
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	for (int v = 0; v < e.nvoices; v++) {
 		e.vc[v] = awva::note_at_rest;
 		e.vs[v] = {1.0f, 0.0f, 0.0f};

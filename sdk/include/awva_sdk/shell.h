@@ -55,14 +55,14 @@ public:
 	int ended_notes(int32_t* ids, int max);
 
 	// or the voices' controls directly (a controller's own sensors, OSC, a test): from now on these, not MIDI
-	void set_controls(const NoteControls* vc, const GlobalControls& g);
+	void set_controls(const NoteControls* vc, const InstrumentControls& g);
 
 	// frames of stereo output
 	void process(float* left, float* right, int frames);
 
 	// the controls the engine got in the last block
 	[[nodiscard]] const NoteControls* controls() const { return vc_.data(); }
-	[[nodiscard]] const GlobalControls& globals() const { return g_; }
+	[[nodiscard]] const InstrumentControls& globals() const { return g_; }
 
 	[[nodiscard]] int sample_rate() const { return sr_; }
 	[[nodiscard]] int voices() const { return nv_; }
@@ -77,7 +77,7 @@ private:
 	bool fx_on_;
 	bool direct_ = false; // set_controls() was used
 	std::vector<NoteControls> vc_;
-	GlobalControls g_;
+	InstrumentControls g_;
 	uint64_t frames_ = 0; // frames rendered
 	uint64_t out_ = 0;    // frames handed out
 

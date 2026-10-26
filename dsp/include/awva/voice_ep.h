@@ -154,7 +154,7 @@ struct VoiceState {
 };
 
 struct Engine {
-	strisy::GlobalControls g;
+	awva::InstrumentControls g;
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
@@ -315,7 +315,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.wph2 = 0.37f;
 	e.wob = 0.0f;
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
-	e.g = {1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 3.0f / 16};
+	e.g = awva::instrument_at_rest;
 	for (int n = 0; n < BLOCK; n++) {
 		e.out[n] = 0.0f;
 		e.mix[n] = 0.0f;
@@ -539,7 +539,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (!s.active) return;
 
 	// --- decays and rotations -------------------------------------------------------------------
-	const real lift = clampr((e.g.pedal - 0.2f) * (1.0f / 0.6f), 0.0f, 1.0f);
+	const real lift = clampr((e.g.sustain - 0.2f) * (1.0f / 0.6f), 0.0f, 1.0f);
 	// damper: fully on when released, starts touching below DAMP_PRES (a slow lift damps gradually)
 	const real dtarget = (1.0f - lift) * (1.0f - lift) * clampr(1.0f - pres * (1.0f / DAMP_PRES), 0.0f, 1.0f);
 	s.damp += 0.1f * (dtarget - s.damp);
