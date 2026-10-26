@@ -25,7 +25,7 @@ Environment (no path is written in the code):
 | `AWVA_FIT_WORK` | the work directory: renders, features, fits, packs (one folder per instrument) |
 | `AWVA_REFS` | the recordings' cache, filled by `sources fetch` or `sources import` |
 | `AWVA_CAPTURES` | optional: engine controls captured from an embedded host (`<input>.ctl`) |
-| `AWVA_REC` | the recorded key streams (default `tools/harness/rec`) |
+| `AWVA_REC` | the recorded key streams the brass family's existing fit set uses (default `tools/harness/rec`); not test material |
 | `AWVA_VERDICTS` | the renders behind the listener verdicts, for the back-test (`awvafit/verdicts.json` gives the layout) |
 | `FFMPEG` | ffmpeg, for FLAC and for the decoders that use it (default: on the PATH) |
 
@@ -41,7 +41,7 @@ python -m awvafit sources import <dir> sax brass           # or take files alrea
 python -m awvafit segment <file.aiff> --method runs        # cut a recording into notes
 python -m awvafit measure <file.aiff>                      # the standard measures of every note
 python -m awvafit loudness <file>...                       # BS.1770 integrated LUFS
-python -m awvafit stimuli out/notes.csv --notes 62,67      # test notes at the strikes and pressures of the takes
+python -m awvafit stimuli out/notes.csv --notes 62,67      # test notes at the strikes and pressures measured from the datasets
 python -m awvafit robust flute 0 59 98                     # every note at three pressures must speak
 python -m awvafit backtest --require attack,jtfs           # the distances on the listener verdict pairs
 python -m awvafit backtest --goodsounds                    # which distances separate Good-sounds' good takes from bad
@@ -75,7 +75,7 @@ The block is always 32 samples. Renders are deterministic: the engines seed thei
 | module | what |
 |---|---|
 | `render` | `awva_render` from Python: `Renderer.render(...)`, `.params(...)`; the `.ctl` layout |
-| `keys`, `controls`, `phrases`, `stimuli` | the inputs:<br>- key streams as a keyboard's scanner reports them, and the default key layout;<br>- engine-level controls and the note events in them;<br>- the standard expression phrases and the listening phrases;<br>- test notes from the recorded takes |
+| `keys`, `controls`, `phrases`, `stimuli` | the inputs:<br>- key streams as a keyboard's scanner reports them, and the default key layout;<br>- engine-level controls and the note events in them;<br>- the standard expression phrases and the listening phrases;<br>- test notes at the strikes and pressures measured from the datasets' phrase streams |
 | `sources`, `sources.json`, `archives.json` | the recordings: source, licence, citation, size and SHA-256 per file, and the Zenodo archives (SHA-256, members checked by CRC-32). `fetch`, `import`, `verify`. Permissive sources only, plus URMP and Bach10 for fitting and evaluation only |
 | `labels`, `segment`, `audio` | the recordings' file names (Iowa, MTG, VSCO), and cutting them into notes (the lanes' five methods). AIFF and WAV are read here; FLAC through soundfile or ffmpeg |
 | `features` | `frames`: frame features of a render on its controls.<br>`notes`: the lanes' three per-note analyses, exactly.<br>`measures`: harmonics, HNR, attack, sustain pitch, settle time, brightness, tilt, dynamics.<br>`loudness`: BS.1770.<br>`ranking`: the distances tested against listener verdicts |

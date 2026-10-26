@@ -104,7 +104,7 @@ The research lane tested candidate distances against listener verdicts, by ear, 
 - at strikes of 0.07–0.12 the rejected builds start 11–12 dB weaker in the first 80 ms;
 - at 0.3 and above the builds are the same.
 
-A set of medium and hard strikes misses it whatever the metric. `stimuli` draws test notes from the takes in `tools/harness/rec`: their held notes strike at a median of about 0.3, a quarter under 0.21. `stimuli.strike_set` is the soft-strike set (0.07, 0.12, 0.2, 0.3).
+A set of medium and hard strikes misses it whatever the metric. `stimuli` draws test notes from real playing: the strikes and pressures of the phrase sets' key streams, whose control is inferred from the recordings (ChoraleBricks: the held notes' median strike runs from 0.32 for the flute to 0.91 for the clarinet; the builder anchors inferred pressure at 0.4, so the pressure spread is relative). `stimuli.strike_set` is the soft-strike set (0.07, 0.12, 0.2, 0.3). Proper recorded takes on a pressure-sensing controller will come later; the takes in `tools/harness/rec` are not test material.
 
 | distance | use | the back-test |
 |---|---|---|

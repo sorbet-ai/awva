@@ -1,31 +1,31 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
-"""Test notes from recorded playing: the strikes and pressures of the recorded takes
-(tools/harness/rec), and note sets drawn from them.
+"""Test notes at the strikes and pressures real players use, measured from the datasets: the phrase
+sets' key streams (phraseset; ChoraleBricks now, URMP and Bach10 when they are on disk), whose control
+is inferred from the recordings (pressure from the level, the strike from how fast each attack rises).
+Proper recorded takes on a pressure-sensing controller will come later; the takes in tools/harness/rec
+are not used as test material.
 
 A metric can only see what the stimuli exercise. The trumpet's stage-2 regression (tagged slow-attack)
-shows only at soft strikes (0.07-0.3; the takes' median strike is about 0.25): at 0.3 and above the
-builds are the same, so a set of medium and hard strikes misses it. Draw the test notes from the
-takes, with the soft strikes in.
+shows only at soft strikes (0.07-0.3): at 0.3 and above the builds are the same, so a set of medium and
+hard strikes misses it. Draw the test notes from real playing, with the soft strikes in.
 
-  dist = playing(rec_dir)               every press of the takes: strike, sustain pressure, length
-  dist.quantiles()                      their quantiles
-  s, sched = note_set(notes, dist)      a key stream: every note at the takes' soft strikes (0.07-0.3)
-                                        and at the pressure quantiles; the schedule of what was played
+  dist = playing()                      every press of the phrase set (family=..., kind=... to narrow it):
+                                        strike, sustain pressure, length
+  dist.quantiles(); dist.held()         their quantiles; the notes held 0.25 s or more
+  s, sched = note_set(notes, dist)      a key stream: every note at the strike quantiles (and always
+                                        0.07) x the pressure quantiles; the schedule of what was played
   s, sched = strike_set(notes, (0.07, 0.12, 0.2, 0.3), P=0.4)   the research lane's soft-strike set
 
-Measured through the key path when a renderer is set (what the engines get: the strike is the
-highest vpres in a note's first 60 ms, the pressure its median from 120 ms on). Without one, from the
-raw key rows (a key's rows from pres > 0 to pres = 0; the highest velo in the first 60 ms / 8191,
-the time-weighted median pres from 120 ms on): the raw velocities read higher than the key path's.
+From the raw key rows (a key's rows from pres > 0 to pres = 0; the highest velo in the first 60 ms /
+8191, the time-weighted median pres from 120 ms on), or, with a renderer, through the key path (what the
+engines get: the highest vpres in a note's first 60 ms, the median pressure from 120 ms on).
 """
-import glob
 import os
 from dataclasses import dataclass
 
 import numpy as np
 
-from . import env
 from .keys import Stream
 
 FULL = 8191.0
@@ -43,8 +43,7 @@ class Playing:
                     length=dict(zip(q, np.quantile(self.lengths, q))))
 
     def held(self, min_s=0.25):
-        """the notes held at least min_s (what a sustained test note stands for: the takes' held notes
-        strike at a median of about 0.3, a quarter of them under 0.21)"""
+        """the notes held at least min_s (what a sustained test note stands for)"""
         m = self.lengths >= min_s
         return Playing(self.strikes[m], self.pressures[m], self.lengths[m])
 
@@ -53,7 +52,7 @@ class Playing:
 
 
 def presses(path):
-    """[(strike, pressure, length s)] of every press in one take"""
+    """[(strike, pressure, length s)] of every press in one key stream"""
     a = np.genfromtxt(path, delimiter=',', skip_header=1)
     out = []
     for kid in np.unique(a[:, 2]):
@@ -96,14 +95,14 @@ def presses_through_key_path(path, renderer, workdir):
     return [(e['strike'], e['P'], (e['b_off'] - e['b_on']) * 32 / 48000) for e in note_events(read(base + '.ctl')[0])]
 
 
-def playing(rec_dir=None, renderer=None):
-    """the takes' presses: through the key path with a renderer (what the engines see; the default when
-    AWVA_RENDER is set), else from the raw key rows"""
-    if renderer is None and os.environ.get('AWVA_RENDER'):
-        from .render import Renderer
-        renderer = Renderer()
+def playing(streams=None, renderer=None, set_name='choralebricks', family=None, kind=None):
+    """the presses of key streams (default: every stream of a phrase set, narrowed by family and kind):
+    from the raw rows, or through the key path with a renderer"""
+    if streams is None:
+        from . import phraseset
+        streams = sorted({i.stream for i in phraseset.load(set_name, family, kind)})
     rows = []
-    for f in sorted(glob.glob(os.path.join(rec_dir or env.rec_dir(), '*.csv'))):
+    for f in streams:
         if renderer is not None:
             import tempfile
             with tempfile.TemporaryDirectory() as d:
@@ -127,8 +126,8 @@ def strike_set(notes, strikes=(0.07, 0.12, 0.2, 0.3), P=0.4, hold=1.6, gap=0.9):
 
 
 def note_set(notes, dist=None, strike_q=(0.1, 0.25, 0.5), pressure_q=(0.25, 0.5, 0.75), hold=1.6, gap=0.9):
-    """every note at the strike quantiles of the takes' held notes (and always the softest, 0.07) x
-    their pressure quantiles"""
+    """every note at the strike quantiles of the held notes (and always the softest, 0.07) x their
+    pressure quantiles"""
     dist = (dist or playing()).held()
     strikes = sorted({float(np.clip(np.quantile(dist.strikes, q), SOFT[0], 1.0)) for q in strike_q} | {SOFT[0]})
     pressures = [float(np.quantile(dist.pressures, q)) for q in pressure_q]

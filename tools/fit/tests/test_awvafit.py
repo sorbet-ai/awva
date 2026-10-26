@@ -245,13 +245,23 @@ class Registry(unittest.TestCase):
 
 
 class Stimuli(unittest.TestCase):
-    def test_the_takes(self):
+    def test_the_playing(self):
+        """strikes and pressures read back from key streams (generated here: the dataset's phrase
+        streams in use)"""
         from awvafit import stimuli
-        d = stimuli.playing(renderer=None) if not os.environ.get('AWVA_RENDER') else stimuli.playing()
-        self.assertGreater(len(d.strikes), 100)
+        paths = []
+        for k, (v, P, hold) in enumerate([(0.2, 0.3, 0.5), (0.5, 0.4, 0.8), (0.8, 0.6, 0.3), (0.3, 0.45, 0.05)]):
+            s = keys.Stream()
+            s.press(0.0, v, P, hold=hold, note=62)
+            paths.append(os.path.join(TMP, f'p{k}.csv'))
+            s.write(paths[-1], notes=False)
+        d = stimuli.playing(streams=paths)
+        self.assertEqual(len(d.strikes), 4)
+        np.testing.assert_allclose(sorted(d.pressures[:3]), [0.3, 0.4, 0.6], atol=0.01)
         h = d.held()
-        self.assertTrue(0.1 < np.median(h.strikes) < 0.6)
-        s, sched = stimuli.note_set([62, 67], d)
+        self.assertEqual(len(h.strikes), 3)  # the 50 ms press isn't a held note
+        self.assertTrue(np.all(np.diff(d.strikes[:3]) > 0))  # a harder strike reads harder
+        s, sched = stimuli.note_set([62, 67], h)
         self.assertIn(0.07, {x['v'] for x in sched})  # the softest strike is always in
         s, sched = stimuli.strike_set([62], (0.07, 0.3))
         self.assertEqual([x['dyn'] for x in sched], ['s0.07', 's0.3'])

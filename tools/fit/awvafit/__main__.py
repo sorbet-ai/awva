@@ -10,7 +10,7 @@
   loudness <file>...                             integrated LUFS (BS.1770-4)
   robust <engine> <preset> <lo> <hi> [--pressures 0.12,0.4,0.9] [name=value ...]
   pack <config.json> <out dir> --renderer NAME=PATH ...
-  stimuli <out.csv> [--notes 62,67,..] [--soft]   test notes from the recorded takes (or the soft-strike set)
+  stimuli <out.csv> [--notes 62,67,..] [--soft]   test notes at the datasets' strikes and pressures (or the soft-strike set)
   backtest [--metrics a,b] [--require a,b] [--json f]   every metric on the listener verdict pairs
   backtest --goodsounds [--metrics a,b] [--json f]       which distances separate Good-sounds' good takes from bad
   phraseset list|render|score [--set choralebricks] [--family f] [--kind legato_line] [--id ID] [--limit n]
