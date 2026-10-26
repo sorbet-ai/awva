@@ -69,13 +69,15 @@ TEST_CASE("ump: a sensor's 14-bit codes are exact in MIDI 2.0's 32-bit scales, w
 }
 
 TEST_CASE("ump: every float pitch from 0.25 to 128 is exact in Pitch 7.25") {
-	for (float p = 0.25f; p < 128.0f; p = std::nextafter(p, 200.0f)) {
+	float p = 0.25f;
+	while (p < 128.0f) {
 		const uint32_t u = ump::to_pitch725(p);
 		if (!same(ump::pitch725(u), p)) {
 			FAIL("not exact: " << p);
 			break;
 		}
 		if (p > 1.0f) p += 0.0009f; // (above 1 a sample of the floats; below it every one)
+		p = std::nextafter(p, 200.0f);
 	}
 }
 

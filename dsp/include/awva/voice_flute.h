@@ -594,10 +594,7 @@ static inline void process_voice(Engine& e, int vi) {
 	fingering(note, P.low_note, P.overblow >= 0.5f, mode, bnote);
 	// outside the instrument's range: the edge's player; above it the fundamental of a short pipe
 	const bool outr = note < P.range_lo || note > P.range_hi;
-	if (note > P.range_hi) {
-		mode = 1;
-		bnote = note;
-	}
+	if (note > P.range_hi) bnote = note;
 	const real fs = rmin(note_freq(note), 0.3f * e.sr);                                            // sounding
 	const real f1 = rmin(note_freq(bnote), 0.3f * e.sr);                                           // the bore's fundamental
 	const real oct = ((outr ? clampr(note, P.range_lo, P.range_hi) : note) - 72.0f) * (1.0f / 12); // octaves re C5
