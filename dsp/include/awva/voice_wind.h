@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * Wind: physically modelled woodwinds with presets (traits: engines/wind.h, -DWIND_PRESET=n on the host).
- * API: the voice_<name>.h shape (engine.h, adapter.h); live parameters: strisy::EngineParams.
+ * API: the voice_<name>.h shape (engine.h, adapter.h); live parameters: awva::EngineParams.
  *
  * Presets (realistic separate instruments, level matched):
  *   0 clarinet       B-flat clarinet: hollow chalumeau (odd harmonics), clear clarion
@@ -71,7 +71,7 @@
 namespace wind {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr float GLIDE_S = 0.010f; // a slur's fingering change (note_glide.h)
 static constexpr int MAX_VOICES = 10;
 
@@ -97,8 +97,8 @@ static constexpr real JET_AMP = 0.05f;
 static constexpr real JET_H2 = 1.0f;
 
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 [[nodiscard]] static inline real clampr(real x, real lo, real hi) { return rmin(rmax(x, lo), hi); }
 
 [[nodiscard]] static inline real fsqrt(real x) {
@@ -306,7 +306,7 @@ struct Engine {
 	real vph; // vibrato phase (turns)
 	// shared output stage
 	real hp_s, lp_s; // radiation highpass / brightness lowpass states
-	strisy::SvfState f1s, f2s, nbs;
+	awva::SvfState f1s, f2s, nbs;
 	real dc1, dcx;
 	VoiceState vs[MAX_VOICES];
 	real mix[BLOCK];  // voices
@@ -374,7 +374,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.shake = 0.0f;
 	e.vph = 0.0f;
 	e.hp_s = e.lp_s = 0.0f;
-	e.f1s = e.f2s = e.nbs = strisy::SvfState();
+	e.f1s = e.f2s = e.nbs = awva::SvfState();
 	e.dc1 = e.dcx = 0.0f;
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = e.nmix[n] = 0.0f;
 	for (int v = 0; v < MAX_VOICES; v++) {
@@ -676,7 +676,7 @@ static inline void process_voice(Engine& e, int v) {
 		b.bb0 = b.ba1 = b.ba2 = 0.0f;
 	} else {
 		fc = rmax(fc, 2.0f * f0);
-		const real K = strisy::tan0(rmin(fc * 3.1415927f * isr, 1.2f));
+		const real K = awva::tan0(rmin(fc * 3.1415927f * isr, 1.2f));
 		const real bn = 1.0f / (1.0f + 1.4142136f * K + K * K);
 		b.bb0 = K * K * bn;
 		b.ba1 = 2.0f * (K * K - 1.0f) * bn;
@@ -819,57 +819,57 @@ static inline void process_voice(Engine& e, int v) {
 	return n;
 }
 
-[[nodiscard]] static inline strisy::SvfCoef svf_hz(real hz, real sr, real Q) {
-	return strisy::svf_from_g(strisy::tan0(clampr(hz, 20.0f, 0.4f * sr) * 3.1415927f / sr), Q);
+[[nodiscard]] static inline awva::SvfCoef svf_hz(real hz, real sr, real Q) {
+	return awva::svf_from_g(awva::tan0(clampr(hz, 20.0f, 0.4f * sr) * 3.1415927f / sr), Q);
 }
 
 // ---------------------------------------------------------------------------------------------
 // Live parameters
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
 static constexpr ParamEntry param_table[] = {
-    {{"level", "breath", 0.1f, 4.0f, strisy::ParamKind::continuous}, &Params::level},
-    {{"speak", "breath", 0.03f, 0.5f, strisy::ParamKind::continuous}, &Params::speak},      // pressure where the tone speaks
-    {{"dyn", "breath", 0.4f, 1.5f, strisy::ParamKind::continuous}, &Params::dyn},           // drive at full pressure (reeds <= 0.94)
-    {{"attack", "breath", 0.5f, 60.0f, strisy::ParamKind::continuous}, &Params::attack},    // breath smoothing (ms)
-    {{"dyn_gain", "breath", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::dyn_gain}, // loudness also scaled by breath
-    {{"tongue", "artic", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::tongue},      // pressure kick of a fast strike
-    {{"tongue_noise", "artic", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::tongue_noise},
-    {{"reed_open", "reed", 0.08f, 0.7f, strisy::ParamKind::continuous}, &Params::reed_open}, // embouchure looseness
-    {{"reed_freq", "reed", 1500.0f, 8000.0f, strisy::ParamKind::continuous}, &Params::reed_freq},
-    {{"reed_damp", "reed", 0.2f, 1.5f, strisy::ParamKind::continuous}, &Params::reed_damp},
-    {{"loss", "bore", 0.9f, 0.995f, strisy::ParamKind::continuous}, &Params::loss},
-    {{"lattice", "bore", 300.0f, 6000.0f, strisy::ParamKind::continuous}, &Params::lattice},  // tone-hole cutoff (Hz)
-    {{"lat_breath", "bore", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::lat_breath}, // octaves brighter per pressure
-    {{"apex", "bore", 0.15f, 0.5f, strisy::ParamKind::continuous}, &Params::apex},            // cone apex share (lowest note; the default 0.5, the DSP clamps to 0.5)
-    {{"apex_lp", "bore", 1.5f, 20.0f, strisy::ParamKind::continuous}, &Params::apex_lp},
-    {{"jet", "bore", 0.4f, 0.6f, strisy::ParamKind::continuous}, &Params::jet},         // flute jet delay (of period)
-    {{"jet_off", "bore", 0.0f, 0.8f, strisy::ParamKind::continuous}, &Params::jet_off}, // flute jet offset
-    {{"body", "tone", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::body},       // (the flute: 3)
-    {{"rad_hp", "tone", 20.0f, 2000.0f, strisy::ParamKind::continuous}, &Params::rad_hp},
-    {{"bright", "tone", 500.0f, 16000.0f, strisy::ParamKind::continuous}, &Params::bright},
-    {{"br_breath", "tone", 0.0f, 8.0f, strisy::ParamKind::continuous}, &Params::br_breath},
-    {{"f1_hz", "tone", 150.0f, 5000.0f, strisy::ParamKind::continuous}, &Params::f1_hz},
-    {{"f1_db", "tone", -12.0f, 15.0f, strisy::ParamKind::continuous}, &Params::f1_db},
-    {{"f2_hz", "tone", 300.0f, 8000.0f, strisy::ParamKind::continuous}, &Params::f2_hz},
-    {{"f2_db", "tone", -12.0f, 15.0f, strisy::ParamKind::continuous}, &Params::f2_db},
-    {{"f_q", "tone", 0.5f, 6.0f, strisy::ParamKind::continuous}, &Params::f_q},
-    {{"breath", "noise", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::breath}, // audible breath
-    {{"turb", "noise", 0.0f, 0.15f, strisy::ParamKind::continuous}, &Params::turb},    // turbulence on the drive
-    {{"noise_hz", "noise", 300.0f, 8000.0f, strisy::ParamKind::continuous}, &Params::noise_hz},
-    {{"tilt_bright", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::tilt_bright},
-    {{"tilt_breath", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::tilt_breath},
-    {{"growl", "expr", 0.0f, 0.8f, strisy::ParamKind::continuous}, &Params::growl},
-    {{"growl_from", "expr", 0.5f, 1.5f, strisy::ParamKind::continuous}, &Params::growl_from},
-    {{"vib", "mod", 0.0f, 0.6f, strisy::ParamKind::continuous}, &Params::vib}, // automatic vibrato, semitones
-    {{"vib_hz", "mod", 2.0f, 8.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
-    {{"vib_breath", "mod", 0.0f, 0.3f, strisy::ParamKind::continuous}, &Params::vib_breath},
-    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life},         // micro-randomness
-    {{"instrument", "bore", 0.0f, 8.0f, strisy::ParamKind::steps}, &Params::instrument}, // instruments[]: kind, lowest note, tuning
+    {{"level", "breath", 0.1f, 4.0f, awva::ParamKind::continuous}, &Params::level},
+    {{"speak", "breath", 0.03f, 0.5f, awva::ParamKind::continuous}, &Params::speak},      // pressure where the tone speaks
+    {{"dyn", "breath", 0.4f, 1.5f, awva::ParamKind::continuous}, &Params::dyn},           // drive at full pressure (reeds <= 0.94)
+    {{"attack", "breath", 0.5f, 60.0f, awva::ParamKind::continuous}, &Params::attack},    // breath smoothing (ms)
+    {{"dyn_gain", "breath", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::dyn_gain}, // loudness also scaled by breath
+    {{"tongue", "artic", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tongue},      // pressure kick of a fast strike
+    {{"tongue_noise", "artic", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::tongue_noise},
+    {{"reed_open", "reed", 0.08f, 0.7f, awva::ParamKind::continuous}, &Params::reed_open}, // embouchure looseness
+    {{"reed_freq", "reed", 1500.0f, 8000.0f, awva::ParamKind::continuous}, &Params::reed_freq},
+    {{"reed_damp", "reed", 0.2f, 1.5f, awva::ParamKind::continuous}, &Params::reed_damp},
+    {{"loss", "bore", 0.9f, 0.995f, awva::ParamKind::continuous}, &Params::loss},
+    {{"lattice", "bore", 300.0f, 6000.0f, awva::ParamKind::continuous}, &Params::lattice},  // tone-hole cutoff (Hz)
+    {{"lat_breath", "bore", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::lat_breath}, // octaves brighter per pressure
+    {{"apex", "bore", 0.15f, 0.5f, awva::ParamKind::continuous}, &Params::apex},            // cone apex share (lowest note; the default 0.5, the DSP clamps to 0.5)
+    {{"apex_lp", "bore", 1.5f, 20.0f, awva::ParamKind::continuous}, &Params::apex_lp},
+    {{"jet", "bore", 0.4f, 0.6f, awva::ParamKind::continuous}, &Params::jet},         // flute jet delay (of period)
+    {{"jet_off", "bore", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::jet_off}, // flute jet offset
+    {{"body", "tone", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::body},       // (the flute: 3)
+    {{"rad_hp", "tone", 20.0f, 2000.0f, awva::ParamKind::continuous}, &Params::rad_hp},
+    {{"bright", "tone", 500.0f, 16000.0f, awva::ParamKind::continuous}, &Params::bright},
+    {{"br_breath", "tone", 0.0f, 8.0f, awva::ParamKind::continuous}, &Params::br_breath},
+    {{"f1_hz", "tone", 150.0f, 5000.0f, awva::ParamKind::continuous}, &Params::f1_hz},
+    {{"f1_db", "tone", -12.0f, 15.0f, awva::ParamKind::continuous}, &Params::f1_db},
+    {{"f2_hz", "tone", 300.0f, 8000.0f, awva::ParamKind::continuous}, &Params::f2_hz},
+    {{"f2_db", "tone", -12.0f, 15.0f, awva::ParamKind::continuous}, &Params::f2_db},
+    {{"f_q", "tone", 0.5f, 6.0f, awva::ParamKind::continuous}, &Params::f_q},
+    {{"breath", "noise", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::breath}, // audible breath
+    {{"turb", "noise", 0.0f, 0.15f, awva::ParamKind::continuous}, &Params::turb},    // turbulence on the drive
+    {{"noise_hz", "noise", 300.0f, 8000.0f, awva::ParamKind::continuous}, &Params::noise_hz},
+    {{"tilt_bright", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tilt_bright},
+    {{"tilt_breath", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tilt_breath},
+    {{"growl", "expr", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::growl},
+    {{"growl_from", "expr", 0.5f, 1.5f, awva::ParamKind::continuous}, &Params::growl_from},
+    {{"vib", "mod", 0.0f, 0.6f, awva::ParamKind::continuous}, &Params::vib}, // automatic vibrato, semitones
+    {{"vib_hz", "mod", 2.0f, 8.0f, awva::ParamKind::continuous}, &Params::vib_hz},
+    {{"vib_breath", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::vib_breath},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life},         // micro-randomness
+    {{"instrument", "bore", 0.0f, 8.0f, awva::ParamKind::steps}, &Params::instrument}, // instruments[]: kind, lowest note, tuning
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
@@ -877,8 +877,8 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 static inline void process(Engine& e, real* __restrict__ output) {
 	// smooth the live parameters towards the written values (~50 ms time constant: bore and reed
 	// edits then glide the pitch of a held note by a few cents instead of stepping it; the glide
-	// arrives, strisy::glide_param)
-	for (const ParamEntry& r : param_table) e.ps.*r.m = strisy::glide_param(e.ps.*r.m, e.p.*r.m, 0.012f, r.d);
+	// arrives, awva::glide_param)
+	for (const ParamEntry& r : param_table) e.ps.*r.m = awva::glide_param(e.ps.*r.m, e.p.*r.m, 0.012f, r.d);
 	const Params& q = e.ps;
 	const real sr = e.sr;
 	e.kp = 1.0f - pow2(-1442.7f * BLOCK * e.inv_sr / clampr(q.attack, 0.3f, 100.0f));
@@ -898,10 +898,10 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	const real chp = 1.0f - pow2(-clampr(q.rad_hp, 10.0f, 5000.0f) * (6.2831853f * 1.442695f) / sr);
 	const real clp = 1.0f - pow2(-clampr(q.bright, 200.0f, 20000.0f) * (6.2831853f * 1.442695f) / sr);
 	const real fq = clampr(q.f_q, 0.3f, 8.0f);
-	const strisy::SvfCoef c1 = svf_hz(q.f1_hz, sr, fq), c2 = svf_hz(q.f2_hz, sr, fq);
+	const awva::SvfCoef c1 = svf_hz(q.f1_hz, sr, fq), c2 = svf_hz(q.f2_hz, sr, fq);
 	const real g1 = (db2lin(clampr(q.f1_db, -24.0f, 24.0f)) - 1.0f) * c1.k;
 	const real g2 = (db2lin(clampr(q.f2_db, -24.0f, 24.0f)) - 1.0f) * c2.k;
-	const strisy::SvfCoef cn = svf_hz(q.noise_hz, sr, 0.7f);
+	const awva::SvfCoef cn = svf_hz(q.noise_hz, sr, 0.7f);
 	real hp = e.hp_s, lpo = e.lp_s, a1 = e.f1s.ic1, a2 = e.f1s.ic2, b1 = e.f2s.ic1, b2 = e.f2s.ic2;
 	real n1 = e.nbs.ic1, n2 = e.nbs.ic2;
 	real s1 = e.dc1, xp = e.dcx;
@@ -947,7 +947,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 
 } // namespace wind
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<wind::Engine> {
 	static constexpr int count = wind::NUM_LIVE_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &wind::param_table[i].d : nullptr; }
@@ -956,7 +956,7 @@ template <> struct EngineParams<wind::Engine> {
 		if (i >= 0 && i < count && wind::param_table[i].m == &wind::Params::instrument) wind::instrument_changed(e);
 	}
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -969,7 +969,7 @@ namespace wind {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/wind/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

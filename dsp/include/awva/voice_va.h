@@ -45,15 +45,15 @@
 namespace va {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 16;
 static constexpr int CTRL = 8; // control rate divider (6.1 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
 static constexpr int NCV = 4; // interpolated control values: G, N, drive, gain
 static_assert(BLOCK % CTRL == 0, "CTRL must divide BLOCK");
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
 // Sound design parameters. Notation: y = smoothed forward/back tilt (+ y_off), yn = max(-y, 0)
 // (tilted back), yp = max(y, 0) (tilted forward); b = brightness 0..1.1 from the level; acc = strike
@@ -148,7 +148,7 @@ struct Engine {
 	Params ps; // smoothed copy used by the DSP (de-zippers live edits, ~13 ms)
 	real pi_sr, ph_scale, ctrl_dt, block_dt, sr;
 	real vib_inc, pwm_inc;
-	strisy::SvfCoef lv_c, ty_c;
+	awva::SvfCoef lv_c, ty_c;
 	real shake_pk, shake, gyro; // global motion envelopes
 	real dc, dc_c;              // master DC blocker
 	VoiceState vs[MAX_VOICES];
@@ -164,7 +164,7 @@ struct Engine {
 	return x * (1.0f - 0.148148148f * x * x);
 }
 
-[[nodiscard]] static inline real note_freq(real note) { return 8.1757989f * strisy::fastpow2(rmax(note, 0.0f) * (1.0f / 12)); }
+[[nodiscard]] static inline real note_freq(real note) { return 8.1757989f * awva::fastpow2(rmax(note, 0.0f) * (1.0f / 12)); }
 
 // parabolic sine of a phase in [0, 1)
 [[nodiscard]] static inline real psin(real ph) {
@@ -191,7 +191,7 @@ static inline void reset_voice(VoiceState& s) {
 static inline void update_derived(Engine& e) {
 	e.vib_inc = e.p.vib_hz * e.block_dt;
 	e.pwm_inc = e.p.pwm_hz * e.block_dt;
-	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * e.p.lv_hz), 0.5f); // critically damped
+	e.lv_c = awva::svf_from_g(awva::tan0(e.pi_sr * CTRL * e.p.lv_hz), 0.5f); // critically damped
 }
 
 // e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
@@ -214,7 +214,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.ph_scale = 4294967296.0f / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
-	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f); // 12 Hz
+	e.ty_c = awva::svf_from_g(awva::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f); // 12 Hz
 	e.shake_pk = e.shake = e.gyro = 0.0f;
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * 3.14159265f * 12.0f / sr; // 12 Hz
@@ -372,7 +372,7 @@ static inline void process_voice(Engine& e, int v) {
 	real fB;
 	if (bsync) {
 		const real sync_st = yp * (P.sync0 + P.sync_yp * yp + P.sync_env * b0 + P.acc_sync * s.acc);
-		fB = rmin(fA * strisy::fastpow2(sync_st * (1.0f / 12)), fmaxB);
+		fB = rmin(fA * awva::fastpow2(sync_st * (1.0f / 12)), fmaxB);
 	} else {
 #ifdef VA_TEST_CLEAN
 		fB = fA;
@@ -419,7 +419,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real ped = rmin(rmax(e.g.sustain, 0.0f), 1.0f);
 	const real rel_tc = (P.rel_min + P.rel_ped * ped * ped) / (1.0f + P.rel_vneg * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? P.held_tc : rel_tc);
-	const real acc_tc = P.acc_t0 * strisy::fastpow2((132.0f - note) * P.acc_key); // 0.16 s at note 60 (classic)
+	const real acc_tc = P.acc_t0 * awva::fastpow2((132.0f - note) * P.acc_key); // 0.16 s at note 60 (classic)
 	const real fac_acc = 1.0f - e.ctrl_dt / (life_on ? acc_tc * l_at : acc_tc);
 	const real pc = pres * (P.pc_a + P.pc_b * pres);
 	real cut0 = P.cut_key * note + P.cut_base + P.cut_drift * drift[2] - P.cut_yn * yn + P.cut_yp * yp;
@@ -428,7 +428,7 @@ static inline void process_voice(Engine& e, int v) {
 	// ---- control rate: level, accent, cutoff -> ladder coefficients ---------------------------
 	{
 		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc;
-		const strisy::SvfCoef lc = e.lv_c;
+		const awva::SvfCoef lc = e.lv_c;
 		const real pi_sr = e.pi_sr;
 		const real acc_amp = P.acc_amp, cut_env = P.cut_env, acc_cut = P.acc_cut;
 		const real dr_base = P.dr_base, dr_env = P.dr_env, acc_drive = P.acc_drive, gain = life_on ? P.gain * l_lv : P.gain;
@@ -441,7 +441,7 @@ static inline void process_voice(Engine& e, int v) {
 			const real b = bl * (1.5f - 0.5f * bl);
 			const real cut = rmin(cut0 + cut_env * b + acc_cut * acc, 128.0f); // (note_freq clamps at 0)
 			const real f = rmin(note_freq(cut), 16000.0f);
-			// G = g/(1+g), g = tan(x) as the [7/6] Pade of strisy::svf_pade, one division
+			// G = g/(1+g), g = tan(x) as the [7/6] Pade of awva::svf_pade, one division
 			const real x = pi_sr * f, x2 = x * x;
 			const real gN = x * (135135.0f + x2 * (-17325.0f + x2 * (378.0f - x2)));
 			const real D = 135135.0f + x2 * (-62370.0f + x2 * (3150.0f - 28.0f * x2));
@@ -654,87 +654,87 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // Writes go to e.p; the DSP follows through the smoothed copy e.ps, so edits never step or click.
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
 static constexpr ParamEntry param_table[] = {
     // level: pressure to loudness
-    {{"gain", "level", 0.5f, 5.0f, strisy::ParamKind::continuous}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
-    {{"pres_sq", "level", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::pc_b},
-    {{"pres_hz", "level", 1.0f, 200.0f, strisy::ParamKind::continuous}, &Params::lv_hz},      // pressure smoothing: low = slow swell
-    {{"hold_decay", "level", 0.005f, 1.0f, strisy::ParamKind::continuous}, &Params::held_tc}, // fastest fall while held (s)
+    {{"gain", "level", 0.5f, 5.0f, awva::ParamKind::continuous}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
+    {{"pres_sq", "level", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pc_b},
+    {{"pres_hz", "level", 1.0f, 200.0f, awva::ParamKind::continuous}, &Params::lv_hz},      // pressure smoothing: low = slow swell
+    {{"hold_decay", "level", 0.005f, 1.0f, awva::ParamKind::continuous}, &Params::held_tc}, // fastest fall while held (s)
     // release
-    {{"release", "release", 0.02f, 4.0f, strisy::ParamKind::continuous}, &Params::rel_min},   // tail time constant (s)
-    {{"rel_pedal", "release", 0.0f, 6.0f, strisy::ParamKind::continuous}, &Params::rel_ped},  // + rel_pedal * pedal^2
-    {{"rel_speed", "release", 0.0f, 8.0f, strisy::ParamKind::continuous}, &Params::rel_vneg}, // fast lift shortens the tail
+    {{"release", "release", 0.02f, 4.0f, awva::ParamKind::continuous}, &Params::rel_min},   // tail time constant (s)
+    {{"rel_pedal", "release", 0.0f, 6.0f, awva::ParamKind::continuous}, &Params::rel_ped},  // + rel_pedal * pedal^2
+    {{"rel_speed", "release", 0.0f, 8.0f, awva::ParamKind::continuous}, &Params::rel_vneg}, // fast lift shortens the tail
     // accent (strike)
-    {{"acc_level", "accent", 0.0f, 2.5f, strisy::ParamKind::continuous}, &Params::acc_amp},
-    {{"acc_decay", "accent", 0.005f, 0.4f, strisy::ParamKind::continuous}, &Params::acc_t0},  // s at the top note
-    {{"acc_key", "accent", 0.0f, 0.06f, strisy::ParamKind::continuous}, &Params::acc_key},    // longer decay low: 2^((132-note)*acc_key)
-    {{"acc_cutoff", "accent", 0.0f, 48.0f, strisy::ParamKind::continuous}, &Params::acc_cut}, // semitones
-    {{"acc_drive", "accent", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::acc_drive},
-    {{"acc_sync", "accent", 0.0f, 24.0f, strisy::ParamKind::continuous}, &Params::acc_sync},   // semitones (with forward tilt)
-    {{"acc_pitch", "accent", -1.0f, 1.0f, strisy::ParamKind::continuous}, &Params::acc_pitch}, // semitones, decays with the accent
+    {{"acc_level", "accent", 0.0f, 2.5f, awva::ParamKind::continuous}, &Params::acc_amp},
+    {{"acc_decay", "accent", 0.005f, 0.4f, awva::ParamKind::continuous}, &Params::acc_t0},  // s at the top note
+    {{"acc_key", "accent", 0.0f, 0.06f, awva::ParamKind::continuous}, &Params::acc_key},    // longer decay low: 2^((132-note)*acc_key)
+    {{"acc_cutoff", "accent", 0.0f, 48.0f, awva::ParamKind::continuous}, &Params::acc_cut}, // semitones
+    {{"acc_drive", "accent", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::acc_drive},
+    {{"acc_sync", "accent", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::acc_sync},   // semitones (with forward tilt)
+    {{"acc_pitch", "accent", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::acc_pitch}, // semitones, decays with the accent
     // filter
-    {{"cut_base", "filter", -20.0f, 80.0f, strisy::ParamKind::continuous}, &Params::cut_base}, // closed cutoff, note number
-    {{"cut_key", "filter", 0.0f, 1.2f, strisy::ParamKind::continuous}, &Params::cut_key},      // keytracking
-    {{"cut_env", "filter", 0.0f, 80.0f, strisy::ParamKind::continuous}, &Params::cut_env},     // opening by pressure (semitones)
-    {{"cut_back", "filter", -24.0f, 24.0f, strisy::ParamKind::continuous}, &Params::cut_yn},   // lowered by back tilt
-    {{"cut_fwd", "filter", -24.0f, 24.0f, strisy::ParamKind::continuous}, &Params::cut_yp},    // raised by forward tilt
-    {{"res", "filter", 0.0f, 0.98f, strisy::ParamKind::continuous}, &Params::res_base},        // 0.98 ~ self-oscillation
-    {{"res_back", "filter", -0.5f, 0.98f, strisy::ParamKind::continuous}, &Params::res_yn},
-    {{"res_fwd", "filter", -0.5f, 0.98f, strisy::ParamKind::continuous}, &Params::res_yp}, // subtracted with forward tilt
-    {{"bass_comp", "filter", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::bass_comp},
-    {{"drive", "filter", 0.1f, 3.0f, strisy::ParamKind::continuous}, &Params::dr_base},
-    {{"drive_env", "filter", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::dr_env},
+    {{"cut_base", "filter", -20.0f, 80.0f, awva::ParamKind::continuous}, &Params::cut_base}, // closed cutoff, note number
+    {{"cut_key", "filter", 0.0f, 1.2f, awva::ParamKind::continuous}, &Params::cut_key},      // keytracking
+    {{"cut_env", "filter", 0.0f, 80.0f, awva::ParamKind::continuous}, &Params::cut_env},     // opening by pressure (semitones)
+    {{"cut_back", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yn},   // lowered by back tilt
+    {{"cut_fwd", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yp},    // raised by forward tilt
+    {{"res", "filter", 0.0f, 0.98f, awva::ParamKind::continuous}, &Params::res_base},        // 0.98 ~ self-oscillation
+    {{"res_back", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yn},
+    {{"res_fwd", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yp}, // subtracted with forward tilt
+    {{"bass_comp", "filter", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::bass_comp},
+    {{"drive", "filter", 0.1f, 3.0f, awva::ParamKind::continuous}, &Params::dr_base},
+    {{"drive_env", "filter", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::dr_env},
     // oscillators (back/fwd: how much tilting back/forward reduces or adds)
-    {{"saw", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::saw},
-    {{"saw_back", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::saw_yn},
-    {{"saw_fwd", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::saw_yp},
-    {{"saw2", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::c_lvl},
-    {{"saw2_back", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::c_yn},
-    {{"saw2_fwd", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::c_yp},
-    {{"saw2_detune", "osc", -0.5f, 0.5f, strisy::ParamKind::continuous}, &Params::c_det}, // semitones
-    {{"pulse", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pul0},
-    {{"pulse_back", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pul_yn},
-    {{"pwm", "osc", 0.0f, 0.4f, strisy::ParamKind::continuous}, &Params::pwm_depth},
-    {{"pwm_hz", "osc", 0.05f, 8.0f, strisy::ParamKind::continuous}, &Params::pwm_hz},
-    {{"sub", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::sub},
-    {{"sub_base", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::sub0},
-    {{"sub_back", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::sub_yn},
-    {{"sub_fwd", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::sub_yp},
-    {{"b_sync", "osc", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::b_sync}, // B synced to A, or free detuned saw
-    {{"b_level", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::b_lvl0},
-    {{"b_fwd", "osc", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::b_yp},
-    {{"b_detune", "osc", -0.5f, 0.5f, strisy::ParamKind::continuous}, &Params::b_det}, // semitones down (free mode)
-    {{"sync", "osc", 0.0f, 24.0f, strisy::ParamKind::continuous}, &Params::sync0},     // sync ratio, semitones (x fwd tilt)
-    {{"sync_fwd", "osc", 0.0f, 24.0f, strisy::ParamKind::continuous}, &Params::sync_yp},
-    {{"sync_env", "osc", 0.0f, 24.0f, strisy::ParamKind::continuous}, &Params::sync_env}, // sync sweep by pressure
-    {{"tilt_home", "osc", -1.0f, 1.0f, strisy::ParamKind::continuous}, &Params::y_off},   // rest position on the tilt morph
+    {{"saw", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw},
+    {{"saw_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw_yn},
+    {{"saw_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw_yp},
+    {{"saw2", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::c_lvl},
+    {{"saw2_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::c_yn},
+    {{"saw2_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::c_yp},
+    {{"saw2_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::c_det}, // semitones
+    {{"pulse", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pul0},
+    {{"pulse_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pul_yn},
+    {{"pwm", "osc", 0.0f, 0.4f, awva::ParamKind::continuous}, &Params::pwm_depth},
+    {{"pwm_hz", "osc", 0.05f, 8.0f, awva::ParamKind::continuous}, &Params::pwm_hz},
+    {{"sub", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub},
+    {{"sub_base", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub0},
+    {{"sub_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub_yn},
+    {{"sub_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub_yp},
+    {{"b_sync", "osc", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::b_sync}, // B synced to A, or free detuned saw
+    {{"b_level", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::b_lvl0},
+    {{"b_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::b_yp},
+    {{"b_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::b_det}, // semitones down (free mode)
+    {{"sync", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync0},     // sync ratio, semitones (x fwd tilt)
+    {{"sync_fwd", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync_yp},
+    {{"sync_env", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync_env}, // sync sweep by pressure
+    {{"tilt_home", "osc", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::y_off},   // rest position on the tilt morph
     // modulation
-    {{"drift", "mod", 0.0f, 0.3f, strisy::ParamKind::continuous}, &Params::drift_a}, // semitones
-    {{"saw2_drift", "mod", 0.0f, 0.3f, strisy::ParamKind::continuous}, &Params::c_drift},
-    {{"cut_drift", "mod", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::cut_drift},
-    {{"gyro_chorus", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::gyro_det}, // detune from rotation
-    {{"vibrato", "mod", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::vib_depth},    // shake vibrato, semitones
-    {{"vib_hz", "mod", 1.0f, 9.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
-    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life}, // micro-randomness
+    {{"drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::drift_a}, // semitones
+    {{"saw2_drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::c_drift},
+    {{"cut_drift", "mod", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::cut_drift},
+    {{"gyro_chorus", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::gyro_det}, // detune from rotation
+    {{"vibrato", "mod", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::vib_depth},    // shake vibrato, semitones
+    {{"vib_hz", "mod", 1.0f, 9.0f, awva::ParamKind::continuous}, &Params::vib_hz},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life}, // micro-randomness
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 } // namespace va
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<va::Engine> {
 	static constexpr int count = va::NUM_LIVE_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &va::param_table[i].d : nullptr; }
 	static float* ptr(va::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(va::param_table[i].m)) : nullptr; }
 	static void changed(va::Engine& e, int) { va::update_derived(e); }
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -747,7 +747,7 @@ namespace va {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/va/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

@@ -10,7 +10,7 @@
  *   void init(Engine&, int sample_rate);
  *   void process(Engine&, const real* in, real* out_l, real* out_r);   // BLOCK samples each
  *   void set_bypass(Engine&, bool);   // all stages fade out (~20 ms) and stop; parameters are kept
- *   live parameters through strisy::EngineParams<fx::Engine> (target 1 of the parameter protocol)
+ *   live parameters through awva::EngineParams<fx::Engine> (target 1 of the parameter protocol)
  *
  * Chain (mono -> stereo):
  *   1. drive   gentle cubic saturation with a little asymmetry (DC-blocked), and a tilt EQ
@@ -61,13 +61,13 @@
 namespace fx {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int HB = BLOCK / 2; // half-rate samples per block
 static constexpr int LSEG = 16;      // limiter segment = look-ahead
 static constexpr int PH_CTRL = 8;    // phaser coefficient update interval
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
 // ---------------------------------------------------------------------------------------------
 // Buffers
@@ -124,7 +124,7 @@ enum {
 };
 
 struct ParamInfo {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	float def;      // default
 	float off;      // value forced while bypassed (NO_OFF: keep)
 	uint8_t smooth; // 1: smoothed per block, 0: used directly (rates, times, switches)
@@ -132,34 +132,34 @@ struct ParamInfo {
 static constexpr float NO_OFF = -1e9f;
 
 static constexpr ParamInfo PARAMS[NPARAM] = {
-    {{"drive", "drive", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.0f, 0.0f, 1},            // saturation amount
-    {{"tilt", "drive", -1.0f, 1.0f, strisy::ParamKind::continuous}, 0.0f, 0.0f, 1},            // tilt EQ around 700 Hz, +-6 dB
-    {{"phmix", "phaser", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.0f, 0.0f, 1},           // 1 = classic 50/50 (deepest notches)
-    {{"phrate", "phaser", 0.05f, 8.0f, strisy::ParamKind::continuous}, 0.5f, NO_OFF, 0},       // Hz
-    {{"phdepth", "phaser", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.7f, NO_OFF, 1},       // sweep +-1.5 octaves at 1
-    {{"phfb", "phaser", 0.0f, 0.85f, strisy::ParamKind::continuous}, 0.3f, NO_OFF, 1},         // feedback (resonance)
-    {{"phfreq", "phaser", 100.0f, 4000.0f, strisy::ParamKind::continuous}, 600.0f, NO_OFF, 1}, // sweep centre, Hz
-    {{"chmix", "chorus", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.25f, 0.0f, 1},          // wet amount
-    {{"chrate", "chorus", 0.05f, 5.0f, strisy::ParamKind::continuous}, 0.3f, NO_OFF, 0},       // Hz
-    {{"chdepth", "chorus", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.25f, NO_OFF, 1},      // 0..3 ms modulation
-    {{"chens", "chorus", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.0f, NO_OFF, 1},         // fast 6 Hz ensemble shimmer
-    {{"trdepth", "trem", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.0f, 0.0f, 1},
-    {{"trrate", "trem", 0.5f, 12.0f, strisy::ParamKind::continuous}, 4.5f, NO_OFF, 0},         // Hz
-    {{"trstereo", "trem", 0.0f, 1.0f, strisy::ParamKind::continuous}, 1.0f, NO_OFF, 1},        // 0 tremolo, 1 auto-pan
-    {{"dlmix", "delay", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.0f, 0.0f, 1},            // echo level
-    {{"dltime", "delay", 20.0f, 650.0f, strisy::ParamKind::continuous}, 330.0f, NO_OFF, 0},    // ms per repeat
-    {{"dlfb", "delay", 0.0f, 0.95f, strisy::ParamKind::continuous}, 0.35f, NO_OFF, 1},         // feedback per repeat
-    {{"dltone", "delay", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.5f, NO_OFF, 1},         // feedback low-pass 1..12 kHz
-    {{"dlpp", "delay", 0.0f, 1.0f, strisy::ParamKind::continuous}, 1.0f, NO_OFF, 1},           // 0 mono echo, 1 ping-pong
-    {{"rvmix", "reverb", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.15f, 0.0f, 1},          // reverb level
-    {{"rvpre", "reverb", 0.0f, 150.0f, strisy::ParamKind::continuous}, 12.0f, NO_OFF, 0},      // pre-delay, ms
-    {{"rvdecay", "reverb", 0.2f, 15.0f, strisy::ParamKind::continuous}, 2.0f, NO_OFF, 1},      // RT60, s
-    {{"rvdamp", "reverb", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.45f, NO_OFF, 1},       // tank damping 12 kHz..375 Hz
-    {{"rvlowcut", "reverb", 20.0f, 600.0f, strisy::ParamKind::continuous}, 150.0f, NO_OFF, 1}, // input low cut, Hz
-    {{"rvmod", "reverb", 0.0f, 1.0f, strisy::ParamKind::continuous}, 0.5f, NO_OFF, 1},         // tank modulation
-    {{"level", "out", 0.0f, 2.0f, strisy::ParamKind::continuous}, 1.0f, 1.0f, 1},              // output gain
-    {{"width", "out", 0.0f, 2.0f, strisy::ParamKind::continuous}, 1.0f, 1.0f, 1},              // stereo width
-    {{"bypass", "out", 0.0f, 1.0f, strisy::ParamKind::toggle}, 0.0f, NO_OFF, 0},
+    {{"drive", "drive", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},            // saturation amount
+    {{"tilt", "drive", -1.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},            // tilt EQ around 700 Hz, +-6 dB
+    {{"phmix", "phaser", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},           // 1 = classic 50/50 (deepest notches)
+    {{"phrate", "phaser", 0.05f, 8.0f, awva::ParamKind::continuous}, 0.5f, NO_OFF, 0},       // Hz
+    {{"phdepth", "phaser", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.7f, NO_OFF, 1},       // sweep +-1.5 octaves at 1
+    {{"phfb", "phaser", 0.0f, 0.85f, awva::ParamKind::continuous}, 0.3f, NO_OFF, 1},         // feedback (resonance)
+    {{"phfreq", "phaser", 100.0f, 4000.0f, awva::ParamKind::continuous}, 600.0f, NO_OFF, 1}, // sweep centre, Hz
+    {{"chmix", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.25f, 0.0f, 1},          // wet amount
+    {{"chrate", "chorus", 0.05f, 5.0f, awva::ParamKind::continuous}, 0.3f, NO_OFF, 0},       // Hz
+    {{"chdepth", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.25f, NO_OFF, 1},      // 0..3 ms modulation
+    {{"chens", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, NO_OFF, 1},         // fast 6 Hz ensemble shimmer
+    {{"trdepth", "trem", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},
+    {{"trrate", "trem", 0.5f, 12.0f, awva::ParamKind::continuous}, 4.5f, NO_OFF, 0},         // Hz
+    {{"trstereo", "trem", 0.0f, 1.0f, awva::ParamKind::continuous}, 1.0f, NO_OFF, 1},        // 0 tremolo, 1 auto-pan
+    {{"dlmix", "delay", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},            // echo level
+    {{"dltime", "delay", 20.0f, 650.0f, awva::ParamKind::continuous}, 330.0f, NO_OFF, 0},    // ms per repeat
+    {{"dlfb", "delay", 0.0f, 0.95f, awva::ParamKind::continuous}, 0.35f, NO_OFF, 1},         // feedback per repeat
+    {{"dltone", "delay", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.5f, NO_OFF, 1},         // feedback low-pass 1..12 kHz
+    {{"dlpp", "delay", 0.0f, 1.0f, awva::ParamKind::continuous}, 1.0f, NO_OFF, 1},           // 0 mono echo, 1 ping-pong
+    {{"rvmix", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.15f, 0.0f, 1},          // reverb level
+    {{"rvpre", "reverb", 0.0f, 150.0f, awva::ParamKind::continuous}, 12.0f, NO_OFF, 0},      // pre-delay, ms
+    {{"rvdecay", "reverb", 0.2f, 15.0f, awva::ParamKind::continuous}, 2.0f, NO_OFF, 1},      // RT60, s
+    {{"rvdamp", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.45f, NO_OFF, 1},       // tank damping 12 kHz..375 Hz
+    {{"rvlowcut", "reverb", 20.0f, 600.0f, awva::ParamKind::continuous}, 150.0f, NO_OFF, 1}, // input low cut, Hz
+    {{"rvmod", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.5f, NO_OFF, 1},         // tank modulation
+    {{"level", "out", 0.0f, 2.0f, awva::ParamKind::continuous}, 1.0f, 1.0f, 1},              // output gain
+    {{"width", "out", 0.0f, 2.0f, awva::ParamKind::continuous}, 1.0f, 1.0f, 1},              // stereo width
+    {{"bypass", "out", 0.0f, 1.0f, awva::ParamKind::toggle}, 0.0f, NO_OFF, 0},
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -521,7 +521,7 @@ static FX_NOINLINE void stage_drive(Engine& e) {
 [[nodiscard]] static inline float phaser_coef(const Engine& e, float phase) {
 	float f = e.s[P_PH_FREQ] * exp2_(1.5f * e.s[P_PH_DEPTH] * sin2pi(phase));
 	f = clampf(f, 20.0f, 7000.0f);
-	const float t = strisy::tan0(3.14159265f * f * e.inv_sr);
+	const float t = awva::tan0(3.14159265f * f * e.inv_sr);
 	return (t - 1.0f) / (t + 1.0f);
 }
 
@@ -1341,7 +1341,7 @@ static inline void process(Engine& e, const real* __restrict__ in, real* __restr
 
 } // namespace fx
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<fx::Engine> {
 	static constexpr int count = fx::NPARAM;
 	static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &fx::PARAMS[i].d : nullptr; }

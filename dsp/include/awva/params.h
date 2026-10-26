@@ -8,10 +8,10 @@
 
 #include <stdint.h>
 
-namespace strisy {
+namespace awva {
 
 // Live-editable parameters. An engine with parameters specializes
-// strisy::EngineParams<its Engine>; the default here means "no parameters".
+// awva::EngineParams<its Engine>; the default here means "no parameters".
 // ptr() returns the live value, changed() is called (in the synth thread) after it was written,
 // so the engine can recompute derived values. Values are clamped to [min, max] before writing.
 // What a parameter's values mean; the number is the kind's stable code.
@@ -67,6 +67,6 @@ inline constexpr float kGlideStep = 1e-3f;
 }
 [[nodiscard]] inline float glide_param(float a, float t, float k, const ParamDesc& d) { return glide_value(a, t, k, d.max - d.min); }
 
-} // namespace strisy
+} // namespace awva
 
 #endif // AWVA_PARAMS_H_

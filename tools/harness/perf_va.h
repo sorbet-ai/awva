@@ -240,7 +240,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 #endif
 namespace va {
 static void va_test_hook(Engine& e) {
-	typedef strisy::EngineParams<Engine> EP;
+	typedef awva::EngineParams<Engine> EP;
 	static uint32_t r = 2654435761u * (uint32_t)VA_LIVE_SEED + 7u;
 	static int b = 0;
 	static float pold[4];
@@ -249,7 +249,7 @@ static void va_test_hook(Engine& e) {
 		e.nvoices = 10;
 		int bad = 0;
 		for (int i = 0; i < EP::count; i++) {
-			const strisy::ParamDesc* d = EP::desc(i);
+			const awva::ParamDesc* d = EP::desc(i);
 			for (int j = 0; j < i; j++)
 				if (!strcmp(d->name, EP::desc(j)->name) || EP::ptr(e, i) == EP::ptr(e, j)) { fprintf(stderr, "!! duplicate param %s\n", d->name); bad++; }
 			for (int k = 0; k < NUM_PRESETS; k++) {
@@ -291,7 +291,7 @@ static void va_test_hook(Engine& e) {
 		static float orig = 0;
 		const int seg = (int)(0.3 * SAMPLERATE / BLOCK);
 		const int i = (b / seg) % EP::count, j = b % seg;
-		const strisy::ParamDesc* d = EP::desc(i);
+		const awva::ParamDesc* d = EP::desc(i);
 		float* p = EP::ptr(e, i);
 		if (j == 0) orig = *p;
 		if (j % 4 == 0) {
@@ -299,7 +299,7 @@ static void va_test_hook(Engine& e) {
 			float x = u < 0.25f ? orig + (d->min - orig) * u * 4 : u < 0.75f ? d->min + (d->max - d->min) * (u - 0.25f) * 2
 			          : d->max + (orig - d->max) * (u - 0.75f) * 4;
 			if (j + 4 >= seg) x = orig;
-			if (d->kind == strisy::ParamKind::toggle) x = u < 0.5f ? 1.0f - orig : orig;
+			if (d->kind == awva::ParamKind::toggle) x = u < 0.5f ? 1.0f - orig : orig;
 #ifdef VA_LIVE_LOG
 			if (j == 0) fprintf(stderr, "W %d %s %g\n", b, d->name, orig);
 #endif
@@ -310,10 +310,10 @@ static void va_test_hook(Engine& e) {
 #endif
 	if (VA_LIVE_EVERY > 0 && b % (VA_LIVE_EVERY > 0 ? VA_LIVE_EVERY : 1) == 0) {
 		const int i = (int)(rnd() * EP::count);
-		const strisy::ParamDesc* d = EP::desc(i);
+		const awva::ParamDesc* d = EP::desc(i);
 		const float a = rnd();
-		float x = d->kind == strisy::ParamKind::toggle ? (a < 0.5f ? 0.0f : 1.0f) : a < 0.1f ? d->min : a < 0.2f ? d->max : d->min + (d->max - d->min) * rnd();
-		if (d->kind == strisy::ParamKind::steps) x = (float)(int)(x + 0.5f);
+		float x = d->kind == awva::ParamKind::toggle ? (a < 0.5f ? 0.0f : 1.0f) : a < 0.1f ? d->min : a < 0.2f ? d->max : d->min + (d->max - d->min) * rnd();
+		if (d->kind == awva::ParamKind::steps) x = (float)(int)(x + 0.5f);
 #ifdef VA_LIVE_LOG
 		fprintf(stderr, "W %d %s %g\n", b, d->name, x);
 #endif

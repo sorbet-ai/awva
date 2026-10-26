@@ -3,7 +3,7 @@
 /**
  * Accordion: physically modelled free reeds with registers, musette tuning, reed chambers,
  * cassotto and a shared bellows (traits: engines/accordion.h; -DACCORDION_PRESET=n on the host).
- * API: the voice_<name>.h shape (engine.h, adapter.h); live parameters: strisy::EngineParams.
+ * API: the voice_<name>.h shape (engine.h, adapter.h); live parameters: awva::EngineParams.
  *
  * Presets (level matched):
  *   0 clarinet   one 8' reed
@@ -86,7 +86,7 @@
 namespace accordion {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int NRANK = 5; // 16', 8' (1st, cassotto), 8' sharp, 8' flat, 4'
 static constexpr int NBUS = 4;  // 16', 8' first, 8' musette, 4'
@@ -94,8 +94,8 @@ static constexpr int FADE_BLOCKS = 4;
 static constexpr int rank_bus[NRANK] = {0, 1, 2, 2, 3};
 static constexpr real rank_oct[NRANK] = {0.5f, 1.0f, 1.0f, 1.0f, 2.0f};
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 [[nodiscard]] static inline real clampr(real x, real lo, real hi) { return rmin(rmax(x, lo), hi); }
 
 [[nodiscard]] static inline real fsqrt(real x) {
@@ -271,8 +271,8 @@ struct Engine {
 	uint32_t nseed; // note-on counter
 	// output stage (per bus: radiation difference, chamber, cassotto)
 	real up[NBUS];
-	strisy::SvfState chs[NBUS], cas[NBUS];
-	strisy::SvfState gr1, gr2;
+	awva::SvfState chs[NBUS], cas[NBUS];
+	awva::SvfState gr1, gr2;
 	real casmix; // cassotto amount, smoothed
 	VoiceState vs[MAX_VOICES];
 	real bus[NBUS][BLOCK];
@@ -333,10 +333,10 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.nseed = 0;
 	for (int b = 0; b < NBUS; b++) {
 		e.up[b] = 0.0f;
-		e.chs[b] = e.cas[b] = strisy::SvfState();
+		e.chs[b] = e.cas[b] = awva::SvfState();
 		for (int n = 0; n < BLOCK; n++) e.bus[b][n] = 0.0f;
 	}
-	e.gr1 = e.gr2 = strisy::SvfState();
+	e.gr1 = e.gr2 = awva::SvfState();
 	for (int v = 0; v < MAX_VOICES; v++) {
 		e.vc[v] = awva::note_at_rest;
 		e.vs[v].seed = 0;
@@ -629,8 +629,8 @@ static inline void process_voice(Engine& e, int v) {
 	return n;
 }
 
-[[nodiscard]] static inline strisy::SvfCoef svf_hz(real hz, real sr, real Q) {
-	return strisy::svf_from_g(strisy::tan0(clampr(hz, 20.0f, 0.42f * sr) * 3.1415927f / sr), Q);
+[[nodiscard]] static inline awva::SvfCoef svf_hz(real hz, real sr, real Q) {
+	return awva::svf_from_g(awva::tan0(clampr(hz, 20.0f, 0.42f * sr) * 3.1415927f / sr), Q);
 }
 
 // bellows: the shared pressure, reversal triggers and the reversal's pressure dip
@@ -695,7 +695,7 @@ static inline void glide_params(Engine& e); // (after the parameter table)
 
 static inline void process(Engine& e, real* __restrict__ output) {
 	// smooth the live parameters towards the written values (~55 ms; the glide arrives,
-	// strisy::glide_param)
+	// awva::glide_param)
 	{
 		glide_params(e);
 		// a rank switched off fades out, then stops
@@ -708,7 +708,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	const real sr = e.sr;
 	const real dt = (real)BLOCK * e.inv_sr;
 	bellows(e, dt);
-	e.casmix = strisy::glide_value(e.casmix, q.cassotto > 0.5f ? 1.0f : 0.0f, 0.03f, 1.0f); // (it arrives)
+	e.casmix = awva::glide_value(e.casmix, q.cassotto > 0.5f ? 1.0f : 0.0f, 0.03f, 1.0f); // (it arrives)
 
 	for (int b = 0; b < NBUS; b++)
 		for (int n = 0; n < BLOCK; n++) e.bus[b][n] = 0.0f;
@@ -719,12 +719,12 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	static constexpr real ch_qm[NBUS] = {0.8f, 1.0f, 1.0f, 2.5f};
 	static constexpr real ch_dbo[NBUS] = {0.0f, 0.0f, 0.0f, -7.0f};
 	const real rad = sr * (1.0f / (6.2831853f * 1000.0f)); // du/dt normalized at 1 kHz
-	const strisy::SvfCoef cc = svf_hz(q.cas_hz, sr, 0.8f);
+	const awva::SvfCoef cc = svf_hz(q.cas_hz, sr, 0.8f);
 	const real leak = clampr(q.cas_leak, 0.0f, 1.0f);
 	real mix[BLOCK];
 	for (int n = 0; n < BLOCK; n++) mix[n] = 0.0f;
 	for (int b = 0; b < NBUS; b++) {
-		const strisy::SvfCoef ch = svf_hz(q.ch_hz * ch_f[b], sr, clampr(q.ch_q * ch_qm[b], 0.3f, 10.0f));
+		const awva::SvfCoef ch = svf_hz(q.ch_hz * ch_f[b], sr, clampr(q.ch_q * ch_qm[b], 0.3f, 10.0f));
 		const real gch = (db2lin(clampr(q.ch_db + ch_dbo[b], -12.0f, 24.0f)) - 1.0f) * ch.k;
 		const real cm = b < 2 ? e.casmix : 0.0f;
 		real u0 = e.up[b];
@@ -754,8 +754,8 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	}
 
 	// grille and body: resonant lowpass, then a gentle second one; level, soft limit above 4
-	const strisy::SvfCoef g1 = svf_hz(q.grille_hz, sr, 1.6f);
-	const strisy::SvfCoef g2 = svf_hz(q.grille_hz * 1.6f, sr, 0.55f);
+	const awva::SvfCoef g1 = svf_hz(q.grille_hz, sr, 1.6f);
+	const awva::SvfCoef g2 = svf_hz(q.grille_hz * 1.6f, sr, 0.55f);
 	const real lvl = clampr(q.level, 0.0f, 4.0f) * 0.65f;
 	real b1 = e.gr1.ic1, b2 = e.gr1.ic2, c1 = e.gr2.ic1, c2 = e.gr2.ic2;
 	for (int n = 0; n < BLOCK; n++) {
@@ -779,74 +779,74 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // Live parameters
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
 static constexpr ParamEntry param_table[] = {
-    {{"level", "register", 0.0f, 4.0f, strisy::ParamKind::continuous}, &Params::level},
-    {{"r16", "register", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::r16},      // 16' bassoon
-    {{"r8", "register", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::r8a},       // 8' clarinet
-    {{"r8_sharp", "register", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::r8b}, // 8' sharp (violin, musette)
-    {{"r8_flat", "register", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::r8c},  // 8' flat (musette)
-    {{"r4", "register", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::r4},        // 4' piccolo
-    {{"beat", "musette", 0.0f, 12.0f, strisy::ParamKind::continuous}, &Params::beat},    // Hz at A4
-    {{"beat_flat", "musette", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::beat_flat},
-    {{"beat_track", "musette", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::beat_track}, // 0 Hz .. 1 cents
-    {{"cassotto", "register", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::cassotto},
-    {{"bellows", "bellows", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::bellows}, // 0 per note .. 1 one bellows
-    {{"curve", "bellows", 0.3f, 1.5f, strisy::ParamKind::continuous}, &Params::curve},     // pressure curve exponent
-    {{"bel_ms", "bellows", 5.0f, 300.0f, strisy::ParamKind::continuous}, &Params::bel_ms},
-    {{"valve", "bellows", 0.05f, 1.0f, strisy::ParamKind::continuous}, &Params::valve}, // pressure for a full pallet
-    {{"throttle", "bellows", 0.05f, 1.5f, strisy::ParamKind::continuous}, &Params::throttle},
-    {{"chamber_ms", "bellows", 1.0f, 100.0f, strisy::ParamKind::continuous}, &Params::chamber_ms},
-    {{"release_ms", "bellows", 3.0f, 200.0f, strisy::ParamKind::continuous}, &Params::release_ms},
-    {{"speak_ms", "reed", 5.0f, 300.0f, strisy::ParamKind::continuous}, &Params::speak_ms},
-    {{"low_slow", "reed", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::low_slow},
-    {{"thresh", "reed", 0.005f, 0.3f, strisy::ParamKind::continuous}, &Params::thresh},
-    {{"amp", "reed", 0.5f, 5.0f, strisy::ParamKind::continuous}, &Params::amp},
-    {{"rest", "reed", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::rest},
-    {{"push", "reed", 0.0f, 1.2f, strisy::ParamKind::continuous}, &Params::push},
-    {{"gap", "reed", 0.02f, 0.6f, strisy::ParamKind::continuous}, &Params::gap},
-    {{"exit", "reed", 0.05f, 1.5f, strisy::ParamKind::continuous}, &Params::exit},
-    {{"down", "reed", 0.0f, 2.5f, strisy::ParamKind::continuous}, &Params::down},
-    {{"constrict", "reed", 0.3f, 4.0f, strisy::ParamKind::continuous}, &Params::constrict},
-    {{"pump", "reed", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::pump},
-    {{"flat", "reed", 0.0f, 30.0f, strisy::ParamKind::continuous}, &Params::flat},      // cents at full pressure
-    {{"bend", "reed", 0.0f, 100.0f, strisy::ParamKind::continuous}, &Params::bend},     // pallet bend, cents
-    {{"spread", "reed", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::spread},   // tuning tolerance, cents
-    {{"voicing", "reed", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::voicing}, // level across the compass
-    {{"ch_hz", "tone", 500.0f, 5000.0f, strisy::ParamKind::continuous}, &Params::ch_hz},
-    {{"ch_db", "tone", 0.0f, 20.0f, strisy::ParamKind::continuous}, &Params::ch_db},
-    {{"ch_q", "tone", 0.4f, 5.0f, strisy::ParamKind::continuous}, &Params::ch_q},
-    {{"cas_hz", "tone", 400.0f, 4000.0f, strisy::ParamKind::continuous}, &Params::cas_hz},
-    {{"cas_leak", "tone", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::cas_leak},
-    {{"grille_hz", "tone", 2000.0f, 12000.0f, strisy::ParamKind::continuous}, &Params::grille_hz},
-    {{"tilt", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::tilt},
-    {{"rev_pedal", "expr", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::rev_pedal},
-    {{"rev_shake", "expr", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::rev_shake},
-    {{"rev_ms", "expr", 20.0f, 300.0f, strisy::ParamKind::continuous}, &Params::rev_ms},
-    {{"life", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life}, // micro-randomness
+    {{"level", "register", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::level},
+    {{"r16", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r16},      // 16' bassoon
+    {{"r8", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r8a},       // 8' clarinet
+    {{"r8_sharp", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r8b}, // 8' sharp (violin, musette)
+    {{"r8_flat", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r8c},  // 8' flat (musette)
+    {{"r4", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r4},        // 4' piccolo
+    {{"beat", "musette", 0.0f, 12.0f, awva::ParamKind::continuous}, &Params::beat},    // Hz at A4
+    {{"beat_flat", "musette", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::beat_flat},
+    {{"beat_track", "musette", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::beat_track}, // 0 Hz .. 1 cents
+    {{"cassotto", "register", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::cassotto},
+    {{"bellows", "bellows", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::bellows}, // 0 per note .. 1 one bellows
+    {{"curve", "bellows", 0.3f, 1.5f, awva::ParamKind::continuous}, &Params::curve},     // pressure curve exponent
+    {{"bel_ms", "bellows", 5.0f, 300.0f, awva::ParamKind::continuous}, &Params::bel_ms},
+    {{"valve", "bellows", 0.05f, 1.0f, awva::ParamKind::continuous}, &Params::valve}, // pressure for a full pallet
+    {{"throttle", "bellows", 0.05f, 1.5f, awva::ParamKind::continuous}, &Params::throttle},
+    {{"chamber_ms", "bellows", 1.0f, 100.0f, awva::ParamKind::continuous}, &Params::chamber_ms},
+    {{"release_ms", "bellows", 3.0f, 200.0f, awva::ParamKind::continuous}, &Params::release_ms},
+    {{"speak_ms", "reed", 5.0f, 300.0f, awva::ParamKind::continuous}, &Params::speak_ms},
+    {{"low_slow", "reed", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::low_slow},
+    {{"thresh", "reed", 0.005f, 0.3f, awva::ParamKind::continuous}, &Params::thresh},
+    {{"amp", "reed", 0.5f, 5.0f, awva::ParamKind::continuous}, &Params::amp},
+    {{"rest", "reed", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::rest},
+    {{"push", "reed", 0.0f, 1.2f, awva::ParamKind::continuous}, &Params::push},
+    {{"gap", "reed", 0.02f, 0.6f, awva::ParamKind::continuous}, &Params::gap},
+    {{"exit", "reed", 0.05f, 1.5f, awva::ParamKind::continuous}, &Params::exit},
+    {{"down", "reed", 0.0f, 2.5f, awva::ParamKind::continuous}, &Params::down},
+    {{"constrict", "reed", 0.3f, 4.0f, awva::ParamKind::continuous}, &Params::constrict},
+    {{"pump", "reed", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pump},
+    {{"flat", "reed", 0.0f, 30.0f, awva::ParamKind::continuous}, &Params::flat},      // cents at full pressure
+    {{"bend", "reed", 0.0f, 100.0f, awva::ParamKind::continuous}, &Params::bend},     // pallet bend, cents
+    {{"spread", "reed", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::spread},   // tuning tolerance, cents
+    {{"voicing", "reed", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::voicing}, // level across the compass
+    {{"ch_hz", "tone", 500.0f, 5000.0f, awva::ParamKind::continuous}, &Params::ch_hz},
+    {{"ch_db", "tone", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::ch_db},
+    {{"ch_q", "tone", 0.4f, 5.0f, awva::ParamKind::continuous}, &Params::ch_q},
+    {{"cas_hz", "tone", 400.0f, 4000.0f, awva::ParamKind::continuous}, &Params::cas_hz},
+    {{"cas_leak", "tone", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::cas_leak},
+    {{"grille_hz", "tone", 2000.0f, 12000.0f, awva::ParamKind::continuous}, &Params::grille_hz},
+    {{"tilt", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tilt},
+    {{"rev_pedal", "expr", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::rev_pedal},
+    {{"rev_shake", "expr", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::rev_shake},
+    {{"rev_ms", "expr", 20.0f, 300.0f, awva::ParamKind::continuous}, &Params::rev_ms},
+    {{"life", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life}, // micro-randomness
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 // one block of every live parameter's glide: 0.012 of the way (as before, bit for bit, while that
-// is more than strisy::kGlideStep of the range), then onto the written value
+// is more than awva::kGlideStep of the range), then onto the written value
 static inline void glide_params(Engine& e) {
-	for (const ParamEntry& r : param_table) e.ps.*r.m = strisy::glide_param(e.ps.*r.m, e.p.*r.m, 0.012f, r.d);
+	for (const ParamEntry& r : param_table) e.ps.*r.m = awva::glide_param(e.ps.*r.m, e.p.*r.m, 0.012f, r.d);
 }
 
 } // namespace accordion
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<accordion::Engine> {
 	static constexpr int count = accordion::NUM_LIVE_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &accordion::param_table[i].d : nullptr; }
 	static float* ptr(accordion::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(accordion::param_table[i].m)) : nullptr; }
 	static void changed(accordion::Engine&, int) {} // the DSP follows e.p through its smoothed copy
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -859,7 +859,7 @@ namespace accordion {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/accordion/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

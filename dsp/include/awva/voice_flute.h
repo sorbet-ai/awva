@@ -105,10 +105,10 @@
 namespace flute {
 
 using real = float;
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
@@ -293,7 +293,7 @@ struct Engine {
 	Params ps;        // smoothed copy used by the DSP
 	BulkMemory* bulk; // the host's (init): delay lines
 	real sr, inv_sr, pi_sr, dt, ctrl_dt, block_dt;
-	strisy::SvfCoef lv_c, ty_c;
+	awva::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
 	real dc, dc_c;
 	VoiceState vs[MAX_VOICES];
@@ -429,7 +429,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 }
 
 static inline void update_derived(Engine& e) {
-	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
+	e.lv_c = awva::svf_from_g(awva::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
 }
 
 // after the parameters of preset index were set (set_preset, or a preset loaded by name)
@@ -458,7 +458,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.dt = 1.0f / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
-	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
+	e.ty_c = awva::svf_from_g(awva::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.shake_pk = e.shake = 0.0f;
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * PI * 12.0f / sr;
@@ -635,7 +635,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real kl = 0.5f * RHO / (clampr(P.vortex, 0.1f, 5.0f) * clampr(P.vortex, 0.1f, 5.0f));
 
 	// radiation
-	const strisy::SvfCoef tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 500.0f, rmin(16000.0f, 0.4f * e.sr)), clampr(P.tone_q, 0.5f, 4.0f));
+	const awva::SvfCoef tcf = awva::svf_pade(e.pi_sr * clampr(P.tone_hz, 500.0f, rmin(16000.0f, 0.4f * e.sr)), clampr(P.tone_q, 0.5f, 4.0f));
 	real gain = clampr(P.gain, 0.0f, 100.0f) * 1e-3f;
 	if (note > P.range_hi) gain *= exp2s(clampr(P.out_db, -24.0f, 6.0f) * (1.0f / 6.0206f));
 
@@ -659,7 +659,7 @@ static inline void process_voice(Engine& e, int vi) {
 	{
 		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, accf = s.accf, tn = s.tn, gate = s.gate, vph = s.vib_ph;
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
-		const strisy::SvfCoef lc = e.lv_c;
+		const awva::SvfCoef lc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, acc_in);
 			tn = rmax(tn * fac_tn, tn_in);
@@ -755,14 +755,14 @@ static inline void process_voice(Engine& e, int vi) {
 	const real deltad = 1.2732395f * fsqrt(2.0f * h * Wj);
 	const real ksrc = RHO * deltad / SM * e.sr; // Pa per (m^3/s) per sample
 	const real qmax = bj * Hj * U;
-	const strisy::SvfCoef jrc = strisy::svf_pade(e.pi_sr * clampr(P.jet_st * U / h, 100.0f, 0.4f * e.sr), 0.5f);
+	const awva::SvfCoef jrc = awva::svf_pade(e.pi_sr * clampr(P.jet_st * U / h, 100.0f, 0.4f * e.sr), 0.5f);
 	// turbulence: deflection noise re b, growing with U (re 25 m/s)
 	const real ur = U * (1.0f / 25.0f);
 	const real tz = rmax(P.turb, 0.0f) * ur * h / bj;
-	const strisy::SvfCoef tzc = strisy::svf_pade(e.pi_sr * clampr(P.turb_hz, 100.0f, rmin(12000.0f, 0.4f * e.sr)), 0.7f);
+	const awva::SvfCoef tzc = awva::svf_pade(e.pi_sr * clampr(P.turb_hz, 100.0f, rmin(12000.0f, 0.4f * e.sr)), 0.7f);
 	// edge noise radiated directly: a band at st U / h, level ~ U^3
 	const real fh = clampr(P.hiss_st * U / h, 300.0f, 0.4f * e.sr);
-	const strisy::SvfCoef hzc = strisy::svf_pade(e.pi_sr * fh, 0.8f);
+	const awva::SvfCoef hzc = awva::svf_pade(e.pi_sr * fh, 0.8f);
 	const real hz_amp = rmax(P.hiss, 0.0f) * ur * ur * ur * 1000.0f;
 
 	// ---- audio rate: jet, window, bore ---------------------------------------------------------
@@ -964,12 +964,12 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // live parameters
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
-static constexpr strisy::ParamKind C_ = strisy::ParamKind::continuous;
-static constexpr strisy::ParamKind T_ = strisy::ParamKind::toggle;
+static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
+static constexpr awva::ParamKind T_ = awva::ParamKind::toggle;
 
 static constexpr ParamEntry param_table[] = {
     {{"gain", "level", 0.0f, 100.0f, C_}, &Params::gain},
@@ -1040,14 +1040,14 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 } // namespace flute
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<flute::Engine> {
 	static constexpr int count = flute::NUM_LIVE_PARAMS;
 	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &flute::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(flute::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(flute::param_table[i].m)) : nullptr; }
 	static void changed(flute::Engine& e, int) { flute::update_derived(e); }
 };
-} // namespace strisy
+} // namespace awva
 
 // ---------------------------------------------------------------------------------------------
 // The factory presets: presets/flute/NN-<name>.preset.json, the files themselves (presets/flute.inc,
@@ -1059,7 +1059,7 @@ namespace flute {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/flute/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

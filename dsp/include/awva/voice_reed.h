@@ -62,7 +62,7 @@
 namespace reed {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 
 // delay lines: main tube up to (1 - BETA_SAX) * period, short tube up to period / 2.
@@ -173,7 +173,7 @@ static constexpr real FCS = 6.0f;
 #endif
 }
 
-[[nodiscard]] static inline real clampr(real x, real lo, real hi) { return strisy::rmin(strisy::rmax(x, lo), hi); }
+[[nodiscard]] static inline real clampr(real x, real lo, real hi) { return awva::rmin(awva::rmax(x, lo), hi); }
 
 // measured tuning correction: samples of extra loop delay (reed dynamics, inharmonicity of the
 // lossy cone apex), for the clarinet (m = 0), middle and saxophone (m = 1) points of the morph, at notes
@@ -192,7 +192,7 @@ static constexpr real CORR_MID[14] = {0.33f, 0.56f, 0.47f, 0.49f, 0.46f, 0.50f, 
 	return c0 + m * (4.0f * ch - 3.0f * c0 - c1) + m * m * (2.0f * c0 + 2.0f * c1 - 4.0f * ch);
 }
 
-// 2^p for any |p| < 60 (strisy::fastpow2 is only valid for p >= 0), relative error ~1e-7; block rate
+// 2^p for any |p| < 60 (awva::fastpow2 is only valid for p >= 0), relative error ~1e-7; block rate
 [[nodiscard]] static inline real pow2(real p) {
 	p = clampr(p, -60.0f, 60.0f);
 	int w = (int)p;
@@ -368,7 +368,7 @@ static inline void process_voice(Engine& e, int v) {
 		const real dt = (real)BLOCK / e.sr;
 		s.lpo *= 1.0f - dt * 10.0f;
 		const auto flick = [&](real& x, real tc) {
-			const real k = strisy::rmin(dt / tc, 1.0f);
+			const real k = awva::rmin(dt / tc, 1.0f);
 			x = clampr(x + k * (1.732f * __builtin_sqrtf(2.0f / k) * rnd() - x), -3.0f, 3.0f);
 		};
 		flick(s.lnf, 0.01f);
@@ -380,7 +380,7 @@ static inline void process_voice(Engine& e, int v) {
 		note += 0.01f * life * (s.lpo + 1.6f * s.lnf + 1.2f * s.lns);
 		l_br = 1.0f + life * (s.lbo + 0.04f * s.lbr);
 		l_lv = 1.0f + 0.05f * life * s.llv;
-		l_nz = strisy::rmax(1.0f + life * (s.lnn - 1.0f + 0.35f * s.lnz), 0.0f);
+		l_nz = awva::rmax(1.0f + life * (s.lnn - 1.0f + 0.35f * s.lnz), 0.0f);
 		l_tg = 1.0f + life * (s.ltg - 1.0f);
 	}
 
@@ -390,7 +390,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (s.pres_s < 1e-6f) s.pres_s = 0.0f; // no denormals in the decays
 	const real ps = s.pres_s;
 	s.by_s += 0.03f * (clampr(c.timbre, -1.0f, 1.0f) - s.by_s); // ~20 ms
-	s.tongue = strisy::rmax(s.tongue * 0.96f, vplev);           // ~25 ms decay
+	s.tongue = awva::rmax(s.tongue * 0.96f, vplev);             // ~25 ms decay
 	if (s.tongue < 1e-6f) s.tongue = 0.0f;
 	const real tg = s.tongue;
 
@@ -406,8 +406,8 @@ static inline void process_voice(Engine& e, int v) {
 	// bore has no resonances, so the reed can't squeak there); the cutoff tracks pitch for high notes
 	real fc = (FC0 + (FC1 - FC0) * m) * (0.85f + 0.3f * ps);
 	if (life_on) fc *= l_br;
-	fc = strisy::rmax(fc, FCTRACK * f0);
-	const real K = strisy::tan0(strisy::rmin(fc * 3.1415927f / sr, 1.2f));
+	fc = awva::rmax(fc, FCTRACK * f0);
+	const real K = awva::tan0(awva::rmin(fc * 3.1415927f / sr, 1.2f));
 	const real bnorm = 1.0f / (1.0f + 1.4142136f * K + K * K);
 	const real bb0 = K * K * bnorm;
 	const real ba1 = 2.0f * (K * K - 1.0f) * bnorm;
@@ -420,8 +420,8 @@ static inline void process_voice(Engine& e, int v) {
 	// reed: mass-spring, centered finite differences (stable for omega*T < 2)
 	const real zeta = 0.30f + ZS * m;
 	real fr = (FR - 600.0f * m);
-	fr = strisy::rmax(fr, FRK * f0);
-	const real wr = strisy::rmin(fr * 6.2831853f / sr, 1.4f);
+	fr = awva::rmax(fr, FRK * f0);
+	const real wr = awva::rmin(fr * 6.2831853f / sr, 1.4f);
 	const real qr = QR;
 	const real A = 1.0f / (wr * wr), B = qr / (2.0f * wr);
 	const real ia0 = 1.0f / (A + B);
@@ -451,7 +451,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real dd1 = (D1 - d1s) * (1.0f / BLOCK), dd2 = (D2 - d2s) * (1.0f / BLOCK);
 
 	// breath gamma with tongue kick, interpolated over the block
-	const real gam_t = strisy::rmin(gamma_of(ps) * (1.0f + (life_on ? 0.35f * l_tg : 0.35f) * tg), G_MAX);
+	const real gam_t = awva::rmin(gamma_of(ps) * (1.0f + (life_on ? 0.35f * l_tg : 0.35f) * tg), G_MAX);
 	const real gam0 = s.gam;
 	const real dgam = (gam_t - gam0) * (1.0f / BLOCK);
 	// breath noise: relative noise on gamma (turbulence, more when soft) and audible breath
@@ -464,7 +464,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (life_on) nout *= l_nz;
 	// growl: pushed hard, or shaking
 	const real gr_t = clampr((ps - e.growl_from) * 3.0f, 0.0f, 1.0f) + e.shake;
-	s.growl += 0.05f * (strisy::rmin(gr_t, 1.2f) - s.growl);
+	s.growl += 0.05f * (awva::rmin(gr_t, 1.2f) - s.growl);
 	if (s.growl < 1e-6f) s.growl = 0.0f;
 	const real gdep = 0.45f * s.growl;
 	const real gf = clampr(0.5f * f0 + 3.0f, 25.0f, 140.0f);
@@ -473,7 +473,7 @@ static inline void process_voice(Engine& e, int v) {
 	real outg_t = 1.2f * (0.30f + 0.70f * clampr(ps, 0.0f, 1.2f));
 	if (life_on) outg_t *= l_lv;
 	// presence band: k * bandpass, Q 0.9, around 2.2 (clarinet) .. 2.6 kHz (sax)
-	const strisy::SvfCoef prc = strisy::svf_from_g(strisy::tan0((2200.0f + 400.0f * m) * 3.1415927f / sr), 0.9f);
+	const awva::SvfCoef prc = awva::svf_from_g(awva::tan0((2200.0f + 400.0f * m) * 3.1415927f / sr), 0.9f);
 	// soft = darker (more internal wave), loud = brighter (more presence)
 	const real psc = clampr(ps, 0.0f, 1.3f);
 	const real kpr = (2.0f + 2.0f * m) * (0.1f + 0.9f * psc * psc) * prc.k;
@@ -540,7 +540,7 @@ static inline void process_voice(Engine& e, int v) {
 		const real x = rb * (pm1 - gm1) + r1 * x1 + r2 * x2;
 		x2 = x1;
 		x1 = x;
-		const real W = zeta * strisy::rmax(1.0f + x, 0.0f);
+		const real W = zeta * awva::rmax(1.0f + x, 0.0f);
 		const real X = gamn - V;
 		const real aX = fabsf(X);
 		const real uabs = 0.5f * W * (fsqrt(W * W + 4.0f * aX) - W);
@@ -561,7 +561,7 @@ static inline void process_voice(Engine& e, int v) {
 		(void)v2;
 		const real y = og * (tx + kbi * bi + kpr * v1 + nout * nz);
 		mix[n] += y;
-		peak = strisy::rmax(peak, fabsf(y));
+		peak = awva::rmax(peak, fabsf(y));
 	}
 	s.widx = widx;
 	s.rng = rng;
@@ -632,12 +632,12 @@ static inline void process(Engine& e, real* __restrict__ output) {
 }
 
 // the live parameters: the growl's onset pressure, life
-inline constexpr strisy::ParamDesc growl_from_desc = {"growl_from", "expr", 0.5f, 1.5f, strisy::ParamKind::continuous};
-inline constexpr strisy::ParamDesc life_desc = {"life", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous};
+inline constexpr awva::ParamDesc growl_from_desc = {"growl_from", "expr", 0.5f, 1.5f, awva::ParamKind::continuous};
+inline constexpr awva::ParamDesc life_desc = {"life", "expr", 0.0f, 1.0f, awva::ParamKind::continuous};
 
 } // namespace reed
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<reed::Engine> {
 	static constexpr int count = 2;
 	static constexpr const ParamDesc* desc(int i) { return i == 0 ? &reed::growl_from_desc : i == 1 ? &reed::life_desc :
@@ -646,6 +646,6 @@ template <> struct EngineParams<reed::Engine> {
 		                                                                                 nullptr; }
 	static void changed(reed::Engine&, int) {}
 };
-} // namespace strisy
+} // namespace awva
 
 #endif // VOICE_REED_H_

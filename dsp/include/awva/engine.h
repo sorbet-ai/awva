@@ -39,10 +39,6 @@ namespace awva {
 // (code that says dsp:: inside awva:: finds the contract)
 namespace dsp = ::awva;
 
-inline constexpr int BLOCK = strisy::BLOCK; // samples per process() call
-
-using strisy::ParamDesc;
-using strisy::ParamKind;
 
 // ---------------------------------------------------------------------------------------------
 // What an engine declares about itself

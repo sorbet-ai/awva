@@ -43,13 +43,13 @@
 namespace modal {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int NMODES = 12;
 static constexpr int NSLOT = NMODES + 4; // + 4 dummy (always zero) slots to pad the mode list
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
 // ---------------------------------------------------------------------------------------------
 // Presets
@@ -121,7 +121,7 @@ static constexpr real CLIP = 7.5f;
 #endif
 
 // ---------------------------------------------------------------------------------------------
-// Live parameters (strisy::EngineParams below). A preset sets all of them; writes can
+// Live parameters (awva::EngineParams below). A preset sets all of them; writes can
 // arrive between any two blocks. None of them moves a partial frequency: mallet and tone values act
 // at the next strike, decay/damper values change decay rates (smoothed), tremolo and rub change
 // amplitudes only.
@@ -155,28 +155,28 @@ static constexpr int NUM_PARAMS = (int)(sizeof(Params) / sizeof(float));
 [[nodiscard]] static constexpr const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
-static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
-    {"level", "level", 0.1f, 3.0f, strisy::ParamKind::continuous},
-    {"thresh", "mallet", 0.005f, 0.2f, strisy::ParamKind::continuous},
-    {"span", "mallet", 0.2f, 1.5f, strisy::ParamKind::continuous},
-    {"hard", "mallet", 0.2f, 1.2f, strisy::ParamKind::continuous},
-    {"hardvel", "mallet", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"tilt", "mallet", 0.0f, 0.5f, strisy::ParamKind::continuous},
-    {"mute", "mallet", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"upper", "tone", 0.0f, 2.0f, strisy::ParamKind::continuous},
-    {"decay", "decay", 0.1f, 4.0f, strisy::ParamKind::continuous},
-    {"keytrack", "decay", 0.0f, 1.5f, strisy::ParamKind::continuous},
-    {"hfdamp", "decay", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"damper", "damper", 0.0f, 2.0f, strisy::ParamKind::continuous},
-    {"lift", "damper", 0.02f, 0.5f, strisy::ParamKind::continuous},
-    {"pedal", "damper", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"trem", "trem", 0.0f, 1.0f, strisy::ParamKind::toggle},
-    {"tremrate", "trem", 1.0f, 10.0f, strisy::ParamKind::continuous},
-    {"tremdepth", "trem", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"tremthr", "trem", 0.2f, 1.2f, strisy::ParamKind::continuous},
-    {"rub", "rub", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"rubnoise", "rub", 0.0f, 0.3f, strisy::ParamKind::continuous},
-    {"model", "model", 0.0f, 5.0f, strisy::ParamKind::steps},
+static constexpr awva::ParamDesc param_desc[NUM_PARAMS] = {
+    {"level", "level", 0.1f, 3.0f, awva::ParamKind::continuous},
+    {"thresh", "mallet", 0.005f, 0.2f, awva::ParamKind::continuous},
+    {"span", "mallet", 0.2f, 1.5f, awva::ParamKind::continuous},
+    {"hard", "mallet", 0.2f, 1.2f, awva::ParamKind::continuous},
+    {"hardvel", "mallet", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"tilt", "mallet", 0.0f, 0.5f, awva::ParamKind::continuous},
+    {"mute", "mallet", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"upper", "tone", 0.0f, 2.0f, awva::ParamKind::continuous},
+    {"decay", "decay", 0.1f, 4.0f, awva::ParamKind::continuous},
+    {"keytrack", "decay", 0.0f, 1.5f, awva::ParamKind::continuous},
+    {"hfdamp", "decay", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"damper", "damper", 0.0f, 2.0f, awva::ParamKind::continuous},
+    {"lift", "damper", 0.02f, 0.5f, awva::ParamKind::continuous},
+    {"pedal", "damper", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"trem", "trem", 0.0f, 1.0f, awva::ParamKind::toggle},
+    {"tremrate", "trem", 1.0f, 10.0f, awva::ParamKind::continuous},
+    {"tremdepth", "trem", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"tremthr", "trem", 0.2f, 1.2f, awva::ParamKind::continuous},
+    {"rub", "rub", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"rubnoise", "rub", 0.0f, 0.3f, awva::ParamKind::continuous},
+    {"model", "model", 0.0f, 5.0f, awva::ParamKind::steps},
 };
 
 struct VoiceState {
@@ -659,7 +659,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 } // namespace modal
 
 // live parameters for the host (see params.h)
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<modal::Engine> {
 	static constexpr int count = modal::NUM_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &modal::param_desc[i] : nullptr; }
@@ -673,7 +673,7 @@ template <> struct EngineParams<modal::Engine> {
 		}
 	}
 };
-} // namespace strisy
+} // namespace awva
 
 // ---------------------------------------------------------------------------------------------
 // The factory presets: presets/modal/NN-<name>.preset.json, the files themselves (presets/modal.inc,
@@ -685,7 +685,7 @@ namespace modal {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/modal/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

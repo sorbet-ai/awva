@@ -77,10 +77,10 @@
 namespace clarinet {
 
 using real = float;
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 // the reed speaks: the mouthpiece pressure's oscillation (peak, re gamma) from SPK_LO (not yet) to
@@ -247,7 +247,7 @@ struct Engine {
 	real r48;            // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
 	real kj, kd, sj, sd; // the breath fluctuations' per-block rates and their noise scales (any rate)
 	real low_note;
-	strisy::SvfCoef lv_c, ty_c, tone_c;
+	awva::SvfCoef lv_c, ty_c, tone_c;
 	real t1, t2; // tone filter (shared: every voice plays the same preset)
 	real dc, dc_c;
 	VoiceState vs[MAX_VOICES];
@@ -416,7 +416,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 }
 
 static inline void update_derived(Engine& e) {
-	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * clampr(e.p.lv_hz, 1.0f, 400.0f)), 0.5f);
+	e.lv_c = awva::svf_from_g(awva::tan0(e.pi_sr * CTRL * clampr(e.p.lv_hz, 1.0f, 400.0f)), 0.5f);
 }
 
 // the instrument of e.p: its lowest note
@@ -458,7 +458,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.kd = rmin(0.004f * e.r48, 1.0f);
 	e.sj = fsqrt((0.15f * (2.0f - e.kj)) / (e.kj * (2.0f - 0.15f)));
 	e.sd = fsqrt((0.004f * (2.0f - e.kd)) / (e.kd * (2.0f - 0.004f)));
-	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
+	e.ty_c = awva::svf_from_g(awva::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.t1 = e.t2 = 0.0f;
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * PI * 12.0f / sr;
@@ -631,7 +631,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real t0 = tanp(rmin(0.5f * w0, 1.3f));
 	const real gs = tanp(e.pi_sr * clampr(P.lat_hz, 100.0f, 0.4f * e.sr));
 	const real lq = clampr(P.lat_q, 0.3f, 0.7071f);
-	const strisy::SvfCoef lc = strisy::svf_from_g(gs, lq);
+	const awva::SvfCoef lc = awva::svf_from_g(gs, lq);
 	const real Dfing = (real)s.mode * 0.5f * e.sr / f0; // the fingering's round trip (samples)
 	real g0, Gl;
 	{
@@ -746,7 +746,7 @@ static inline void process_voice(Engine& e, int vi) {
 	{
 		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, accf = s.accf, tn = s.tn, bg = s.bgate, gt = s.gt, sp = s.spk;
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
-		const strisy::SvfCoef lcv = e.lv_c;
+		const awva::SvfCoef lcv = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vplev);
 			tn = rmax(tn * fac_tn, vnlev);
@@ -958,13 +958,13 @@ static inline void process_block(Engine& e, real* __restrict__ output) {
 			ps[i] = fabsf(d) <= 1e-5f * rmax(fabsf(pt[i]), 1.0f) ? pt[i] : ps[i] + rmin(0.05f * e.r48, 1.0f) * d;
 		}
 	}
-	e.tone_c = strisy::svf_pade(e.pi_sr * clampr(e.ps.tone_hz, 500.0f, 0.45f * e.sr), clampr(e.ps.tone_q, 0.5f, 2.0f));
+	e.tone_c = awva::svf_pade(e.pi_sr * clampr(e.ps.tone_hz, 500.0f, 0.45f * e.sr), clampr(e.ps.tone_q, 0.5f, 2.0f));
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;
 	for (int v = 0; v < e.nvoices; v++) process_voice(e, v);
 	// master: the tone low-pass, a DC blocker, then a gentle soft clip with a ceiling of 4.2
 	real dc = e.dc, t1 = e.t1, t2 = e.t2;
 	const real dcc = e.dc_c;
-	const strisy::SvfCoef tc = e.tone_c;
+	const awva::SvfCoef tc = e.tone_c;
 	for (int n = 0; n < BLOCK; n++) {
 		real tb, x;
 		SVF_TICK(e.mix[n], t1, t2, tc, tb, x);
@@ -998,11 +998,11 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // live parameters
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
-static constexpr strisy::ParamKind C_ = strisy::ParamKind::continuous;
+static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 
 static constexpr ParamEntry param_table[] = {
     {{"gain", "level", 0.1f, 100.0f, C_}, &Params::gain},
@@ -1049,14 +1049,14 @@ static constexpr ParamEntry param_table[] = {
     {{"slur", "attack", 0.0f, 1.0f, C_}, &Params::slur},
     {{"tune", "attack", -100.0f, 100.0f, C_}, &Params::tune},
     {{"pitch_t", "attack", 0.003f, 0.3f, C_}, &Params::pitch_t},
-    {{"instrument", "bore", 0.0f, 1.0f, strisy::ParamKind::steps}, &Params::instrument}, // instruments[]: the lowest note
+    {{"instrument", "bore", 0.0f, 1.0f, awva::ParamKind::steps}, &Params::instrument}, // instruments[]: the lowest note
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 } // namespace clarinet
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<clarinet::Engine> {
 	static constexpr int count = clarinet::NUM_LIVE_PARAMS;
 	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &clarinet::param_table[i].d : nullptr; }
@@ -1066,7 +1066,7 @@ template <> struct EngineParams<clarinet::Engine> {
 		clarinet::update_derived(e);
 	}
 };
-} // namespace strisy
+} // namespace awva
 
 // ---------------------------------------------------------------------------------------------
 // The factory presets: presets/clarinet/NN-<name>.preset.json, the files themselves
@@ -1078,7 +1078,7 @@ namespace clarinet {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/clarinet/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

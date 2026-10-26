@@ -10,7 +10,7 @@
 
 #include "dspmath.h"
 
-namespace strisy {
+namespace awva {
 
 // With the prewarped integrator gain g = tan(pi F / SR) and the damping k = 1/Q, one sample of
 // input v0 and integrator states ic1, ic2 is
@@ -51,13 +51,13 @@ struct SvfState {
 // one sample: input v0, states s1, s2 (updated), coefficients c; out1 = v1, out2 = v2
 #define SVF_TICK(v0, s1, s2, c, out1, out2) \
 	do { \
-		::strisy::real e_ = (v0) - (s2); \
+		::awva::real e_ = (v0) - (s2); \
 		(out1) = (c).a * (s1) + (c).ga * e_; \
 		(out2) = (s2) + (c).ga * (s1) + (c).g2a * e_; \
 		(s1) = 2.0f * (out1) - (s1); \
 		(s2) = 2.0f * (out2) - (s2); \
 	} while (0)
 
-} // namespace strisy
+} // namespace awva
 
 #endif // AWVA_SVF_H_

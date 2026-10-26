@@ -28,10 +28,10 @@ bool set_param(const char* nv) {
 	if (!eq) return false;
 	const std::string name(nv, eq);
 	const float v = std::strtof(eq + 1, nullptr);
-	using EP = strisy::EngineParams<clarinet::Engine>;
+	using EP = awva::EngineParams<clarinet::Engine>;
 	for (int i = 0; i < EP::count; i++)
 		if (name == EP::desc(i)->name) {
-			const strisy::ParamDesc* d = EP::desc(i);
+			const awva::ParamDesc* d = EP::desc(i);
 			*EP::ptr(eng, i) = std::fmin(std::fmax(v, d->min), d->max);
 			EP::changed(eng, i);
 			return true;

@@ -81,10 +81,10 @@
 namespace trumpet {
 
 using real = float;
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr float GLIDE_S = 0.010f; // a slur's valve change (note_glide.h)
 static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
@@ -241,7 +241,7 @@ struct Engine {
 	BulkMemory* bulk;     // the host's (init): the others'
 	real sr, inv_sr, pi_sr, dt, ctrl_dt, block_dt;
 	int glide_n; // a slur's valve change, in blocks (GLIDE_S)
-	strisy::SvfCoef lv_c, ty_c;
+	awva::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
 	real dc, dc_c;
 	VoiceState vs[MAX_VOICES];
@@ -252,7 +252,7 @@ struct Engine {
 	// what every voice's block uses from the parameters alone (block_coefs, once per block)
 	struct Coefs {
 		real q, lw, Cc, Mb, iRp, alpha, beta, a1, one_m, Gd, gd, Gr, fr, br, fac_acc, fac_tn, pcv, shake, flut_inc;
-		strisy::SvfCoef tcf;
+		awva::SvfCoef tcf;
 	} k;
 };
 
@@ -381,7 +381,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 }
 
 static inline void update_derived(Engine& e) {
-	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
+	e.lv_c = awva::svf_from_g(awva::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
 }
 
 // e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
@@ -406,7 +406,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
 	e.glide_n = awva::NoteGlide::blocks_for(GLIDE_S, sr, BLOCK);
-	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
+	e.ty_c = awva::svf_from_g(awva::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.shake_pk = e.shake = 0.0f;
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * PI * 12.0f / sr;
@@ -486,7 +486,7 @@ static inline void block_coefs(Engine& e) {
 	const real grr = tanp(e.pi_sr * fr);
 	k.fr = fr;
 	k.Gr = grr / (1.0f + grr);
-	k.tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 200.0f, f_top(e, 16000.0f)), clampr(P.tone_q, 0.5f, 4.0f));
+	k.tcf = awva::svf_pade(e.pi_sr * clampr(P.tone_hz, 200.0f, f_top(e, 16000.0f)), clampr(P.tone_q, 0.5f, 4.0f));
 	k.br = rmax(P.breath, 0.0f);
 	k.fac_acc = 1.0f - e.ctrl_dt / rmax(P.acc_t, 0.005f);
 	k.fac_tn = 1.0f - e.ctrl_dt / 0.006f;
@@ -700,7 +700,7 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 
 	// radiation filters
 	const real fr = e.k.fr, Gr = e.k.Gr;
-	const strisy::SvfCoef tcf = e.k.tcf;
+	const awva::SvfCoef tcf = e.k.tcf;
 	// (1 + (rad_hz / f0)^2)^(low_comp / 2): low notes keep their weight through the radiation high-pass
 	const real rq = fr / f0;
 	const real lcomp = rmin(exp2s(0.5f * rmax(P.low_comp, 0.0f) * log2s(1.0f + rq * rq)), 4.0f);
@@ -724,7 +724,7 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, accf = s.accf, tn = s.tn, gate = s.gate, fph = s.flut_ph;
 		// the lungs and the mouth follow the key slowly (the breath smoother); the tongue's accent is fast
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
-		const strisy::SvfCoef lc = e.lv_c;
+		const awva::SvfCoef lc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vplev);
 			tn = rmax(tn * fac_tn, vplev);
@@ -1036,11 +1036,11 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // live parameters
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
-static constexpr strisy::ParamKind C_ = strisy::ParamKind::continuous;
+static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 
 static constexpr ParamEntry param_table[] = {
     {{"gain", "level", 0.05f, 20.0f, C_}, &Params::gain},
@@ -1094,14 +1094,14 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 } // namespace trumpet
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<trumpet::Engine> {
 	static constexpr int count = trumpet::NUM_LIVE_PARAMS;
 	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &trumpet::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(trumpet::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(trumpet::param_table[i].m)) : nullptr; }
 	static void changed(trumpet::Engine& e, int) { trumpet::update_derived(e); }
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -1114,7 +1114,7 @@ namespace trumpet {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/trumpet/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

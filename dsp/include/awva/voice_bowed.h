@@ -64,7 +64,7 @@
 namespace bowed {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int NECK_LEN = 2048;  // >= longest string loop (note 18: 2060 samples, clamped)
 static constexpr int BRIDGE_LEN = 512; // >= max bow distance from the bridge (beta <= 0.22: 450)
@@ -93,8 +93,8 @@ struct BulkMemory {
 #define BOWED_ASSERT(cond)
 #endif
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
 // ---------------------------------------------------------------------------------------------
 // Sound design parameters (all floats: they are the live parameters, see EngineParams below)
@@ -239,7 +239,7 @@ struct Engine {
 // 2^x for x in [-60, 60]: fastpow2 is only accurate for positive arguments
 [[nodiscard]] static inline real exp2_fast(real x) {
 	x = rmin(rmax(x, -60.0f), 60.0f);
-	return strisy::fastpow2(x + 64.0f) * 5.421010862e-20f; // 2^-64
+	return awva::fastpow2(x + 64.0f) * 5.421010862e-20f; // 2^-64
 }
 
 // sin and cos for |x| <= pi/2 (as in voice_sine.h)
@@ -464,7 +464,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	const real vib_amt = clampf((s.age - p.vib_delay) * 3.0f, 0.0f, 1.0f) * clampf(p.vib, 0.0f, 60.0f) * 0.01f;
 	const real note = life_on ? note0 + vib_amt * sin_turn(s.vib_ph) + 0.01f * l_cents : note0 + vib_amt * sin_turn(s.vib_ph);
 
-	const real p2 = strisy::fastpow2(note * (1.0f / 12.0f));
+	const real p2 = awva::fastpow2(note * (1.0f / 12.0f));
 	const real f0 = 8.1757989156f * p2;
 	const real L = rmin(e.c_period / p2, (real)(NECK_LEN - 8));
 	const real w0 = e.two_pi_sr * f0; // <= 0.86 rad
@@ -615,7 +615,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 		for (int k = 0; k < NB; k++) {
 			// the bridge hill scales less with the size
 			const real f = body_f[k] * (k == NB - 1 ? fsqrt(sz) : sz);
-			const real K = strisy::tan0(rmin(e.pi_sr * f, 1.2f));
+			const real K = awva::tan0(rmin(e.pi_sr * f, 1.2f));
 			const real KQ = K / (body_q[k] * (k == NB - 1 ? 1.0f : qs));
 			const real norm = 1.0f / (1.0f + KQ + K * K);
 			const real gk = (k == NB - 1 ? clampf(p.hill, 0.0f, 3.0f) : body_g[k] * bamt);
@@ -991,48 +991,48 @@ static inline void process_section(Engine& e, real* __restrict__ output) {
 // live parameter table
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 static constexpr ParamEntry param_table[] = {
-    {{"gain", "level", 0.0f, 4.0f, strisy::ParamKind::continuous}, &Params::gain},
-    {{"force_lo", "bow", 0.3f, 1.6f, strisy::ParamKind::continuous}, &Params::force_lo},        // force/speed at light pressure
-    {{"force_hi", "bow", 0.3f, 1.6f, strisy::ParamKind::continuous}, &Params::force_hi},        // at full pressure (> 1.1: raucous)
-    {{"force_over", "bow", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::force_over},    // grit beyond pressure 1 (0: none)
-    {{"speed_curve", "bow", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::speed_curve},  // 0 linear .. 1 quadratic dynamics
-    {{"rosin", "bow", 0.0f, 0.2f, strisy::ParamKind::continuous}, &Params::rosin},              // bow noise texture
-    {{"pos", "position", 0.05f, 0.2f, strisy::ParamKind::continuous}, &Params::pos},            // bow position (fraction of string)
-    {{"pos_tilt", "position", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::pos_tilt},   // tilt range (octaves)
-    {{"pos_press", "position", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pos_press}, // light bow drifts to the fingerboard
-    {{"damp", "string", 0.5f, 10.0f, strisy::ParamKind::continuous}, &Params::damp},            // ring time (s) at note 40
-    {{"bright", "string", 0.3f, 3.0f, strisy::ParamKind::continuous}, &Params::bright},         // corner sharpness
-    {{"tone_lo", "string", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::tone_lo},       // treble at light pressure
-    {{"tone_hi", "string", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::tone_hi},       // treble at full pressure
-    {{"body_size", "body", 0.2f, 1.5f, strisy::ParamKind::continuous}, &Params::body_size},     // violin 1, viola .8, cello .45, bass .3
-    {{"body_track", "body", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::body_track},   // body follows the register
-    {{"body_amt", "body", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::body_amt},
-    {{"body_q", "body", 0.3f, 3.0f, strisy::ParamKind::continuous}, &Params::body_q},
-    {{"hill", "body", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::hill}, // bridge hill brilliance
-    {{"direct", "body", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::direct},
-    {{"acc_force", "accent", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::acc_force}, // strike: bite / scratch
-    {{"acc_time", "accent", 0.002f, 0.2f, strisy::ParamKind::continuous}, &Params::acc_time},
-    {{"acc_noise", "accent", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::acc_noise},
-    {{"acc_bright", "accent", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::acc_bright},
-    {{"rel", "release", 0.02f, 3.0f, strisy::ParamKind::continuous}, &Params::rel},           // ring after a slow release (s)
-    {{"rel_ped", "release", 0.0f, 10.0f, strisy::ParamKind::continuous}, &Params::rel_ped},   // + pedal
-    {{"rel_lift", "release", 0.0f, 20.0f, strisy::ParamKind::continuous}, &Params::rel_lift}, // x after a quick lift-off
-    {{"vibrato", "mod", 0.0f, 60.0f, strisy::ParamKind::continuous}, &Params::vib},           // automatic vibrato (cents)
-    {{"vib_hz", "mod", 2.0f, 9.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
-    {{"vib_delay", "mod", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::vib_delay},
-    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life},          // micro-randomness
-    {{"tremolo", "mod", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::trem},       // shake -> bow
-    {{"body_rot", "mod", -2.0f, 2.0f, strisy::ParamKind::continuous}, &Params::body_rot}, // rotation -> body (octaves)
-    {{"ensemble", "section", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::ens},   // two more players
-    {{"ens_detune", "section", 0.0f, 25.0f, strisy::ParamKind::continuous}, &Params::ens_detune},
-    {{"ens_spread", "section", 2.0f, 25.0f, strisy::ParamKind::continuous}, &Params::ens_spread}, // timing spread (ms)
-    {{"pizz", "pizz", 0.0f, 1.0f, strisy::ParamKind::toggle}, &Params::pizz},                     // plucked instead of bowed
-    {{"pizz_decay", "pizz", 0.1f, 5.0f, strisy::ParamKind::continuous}, &Params::pizz_decay},     // ring (s) at note 60
-    {{"pizz_bright", "pizz", 0.2f, 5.0f, strisy::ParamKind::continuous}, &Params::pizz_bright},
+    {{"gain", "level", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::gain},
+    {{"force_lo", "bow", 0.3f, 1.6f, awva::ParamKind::continuous}, &Params::force_lo},        // force/speed at light pressure
+    {{"force_hi", "bow", 0.3f, 1.6f, awva::ParamKind::continuous}, &Params::force_hi},        // at full pressure (> 1.1: raucous)
+    {{"force_over", "bow", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::force_over},    // grit beyond pressure 1 (0: none)
+    {{"speed_curve", "bow", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::speed_curve},  // 0 linear .. 1 quadratic dynamics
+    {{"rosin", "bow", 0.0f, 0.2f, awva::ParamKind::continuous}, &Params::rosin},              // bow noise texture
+    {{"pos", "position", 0.05f, 0.2f, awva::ParamKind::continuous}, &Params::pos},            // bow position (fraction of string)
+    {{"pos_tilt", "position", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pos_tilt},   // tilt range (octaves)
+    {{"pos_press", "position", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pos_press}, // light bow drifts to the fingerboard
+    {{"damp", "string", 0.5f, 10.0f, awva::ParamKind::continuous}, &Params::damp},            // ring time (s) at note 40
+    {{"bright", "string", 0.3f, 3.0f, awva::ParamKind::continuous}, &Params::bright},         // corner sharpness
+    {{"tone_lo", "string", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::tone_lo},       // treble at light pressure
+    {{"tone_hi", "string", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::tone_hi},       // treble at full pressure
+    {{"body_size", "body", 0.2f, 1.5f, awva::ParamKind::continuous}, &Params::body_size},     // violin 1, viola .8, cello .45, bass .3
+    {{"body_track", "body", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::body_track},   // body follows the register
+    {{"body_amt", "body", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::body_amt},
+    {{"body_q", "body", 0.3f, 3.0f, awva::ParamKind::continuous}, &Params::body_q},
+    {{"hill", "body", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::hill}, // bridge hill brilliance
+    {{"direct", "body", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::direct},
+    {{"acc_force", "accent", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::acc_force}, // strike: bite / scratch
+    {{"acc_time", "accent", 0.002f, 0.2f, awva::ParamKind::continuous}, &Params::acc_time},
+    {{"acc_noise", "accent", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::acc_noise},
+    {{"acc_bright", "accent", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::acc_bright},
+    {{"rel", "release", 0.02f, 3.0f, awva::ParamKind::continuous}, &Params::rel},           // ring after a slow release (s)
+    {{"rel_ped", "release", 0.0f, 10.0f, awva::ParamKind::continuous}, &Params::rel_ped},   // + pedal
+    {{"rel_lift", "release", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::rel_lift}, // x after a quick lift-off
+    {{"vibrato", "mod", 0.0f, 60.0f, awva::ParamKind::continuous}, &Params::vib},           // automatic vibrato (cents)
+    {{"vib_hz", "mod", 2.0f, 9.0f, awva::ParamKind::continuous}, &Params::vib_hz},
+    {{"vib_delay", "mod", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::vib_delay},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life},          // micro-randomness
+    {{"tremolo", "mod", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::trem},       // shake -> bow
+    {{"body_rot", "mod", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::body_rot}, // rotation -> body (octaves)
+    {{"ensemble", "section", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::ens},   // two more players
+    {{"ens_detune", "section", 0.0f, 25.0f, awva::ParamKind::continuous}, &Params::ens_detune},
+    {{"ens_spread", "section", 2.0f, 25.0f, awva::ParamKind::continuous}, &Params::ens_spread}, // timing spread (ms)
+    {{"pizz", "pizz", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::pizz},                     // plucked instead of bowed
+    {{"pizz_decay", "pizz", 0.1f, 5.0f, awva::ParamKind::continuous}, &Params::pizz_decay},     // ring (s) at note 60
+    {{"pizz_bright", "pizz", 0.2f, 5.0f, awva::ParamKind::continuous}, &Params::pizz_bright},
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
@@ -1053,7 +1053,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 		// the values that reshape the string's motion (force window, bow position, corner
 		// rounding) move slower (~150 ms), so the motion and its pitch correction follow smoothly
 		// (and the body size: a fast moving resonance bends the pitch of what passes through it).
-		// A live edit's glide arrives (strisy::glide_param: back at a value it sounds as if it
+		// A live edit's glide arrives (awva::glide_param: back at a value it sounds as if it
 		// was never moved); a preset change glides as it always has (the goldens: a preset's
 		// renders start with the glide from the default preset)
 		for (int i = 0; i < NUM_LIVE_PARAMS; i++) {
@@ -1063,7 +1063,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 			const real k = slow ? 0.006f : 0.03f;
 			real& a = e.ps.*r.m;
 			if (e.live >> i & 1) {
-				a = strisy::glide_param(a, e.p.*r.m, k, r.d);
+				a = awva::glide_param(a, e.p.*r.m, k, r.d);
 			} else {
 				real x = e.p.*r.m;
 				if (!(x == x)) x = a; // ignore NaN writes
@@ -1104,7 +1104,7 @@ static inline void update_derived(Engine&) {}
 
 } // namespace bowed
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<bowed::Engine> {
 	static constexpr int count = bowed::NUM_LIVE_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &bowed::param_table[i].d : nullptr; }
@@ -1114,7 +1114,7 @@ template <> struct EngineParams<bowed::Engine> {
 		bowed::update_derived(e);
 	}
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -1127,7 +1127,7 @@ namespace bowed {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/bowed/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

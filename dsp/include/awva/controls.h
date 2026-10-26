@@ -8,14 +8,10 @@
 
 #include <stdint.h>
 
-namespace strisy {
-
-// samples per process() call
-static constexpr int BLOCK = 32;
-
-} // namespace strisy
-
 namespace awva {
+
+// samples per process() call: the engines' block
+inline constexpr int BLOCK = 32;
 
 // One note's expression at block rate, in MIDI 2.0's terms: what a voice of an engine reads. The
 // MIDI mapping (sdk: NoteMapper) writes it from MIDI; a test may write it directly.

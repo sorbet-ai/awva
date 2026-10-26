@@ -86,7 +86,7 @@
 namespace brass {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6.1 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
@@ -124,8 +124,8 @@ static constexpr real KCAP = BRASS_KCAP;
 static constexpr real KCAP = 0.3f;
 #endif
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
 // the bore delay lines, 8 KB per voice: the host gives them to the engine (engine contract,
 // engines/brass.h; e.g. AXI SRAM)
@@ -242,7 +242,7 @@ struct Engine {
 	Params p;         // parameters as set (presets, live edits)
 	Params ps;        // smoothed copy used by the DSP (de-zippers live edits)
 	real sr, pi_sr, ph_scale, ctrl_dt, block_dt;
-	strisy::SvfCoef lv_c, ty_c;
+	awva::SvfCoef lv_c, ty_c;
 	real shake_pk, shake; // global shake envelope
 	real dc, dc_c;        // master DC blocker
 	VoiceState vs[MAX_VOICES];
@@ -269,7 +269,7 @@ struct Engine {
 
 [[nodiscard]] static inline real note_freq(real note) { return 8.1757989f * exp2s(note * (1.0f / 12)); }
 
-// tan(x) for 0 <= x < ~1.4 ([7/6] Pade, as strisy::svf_pade)
+// tan(x) for 0 <= x < ~1.4 ([7/6] Pade, as awva::svf_pade)
 [[nodiscard]] static inline real tanp(real x) {
 	const real x2 = x * x;
 	return x * (135135.0f + x2 * (-17325.0f + x2 * (378.0f - x2))) / (135135.0f + x2 * (-62370.0f + x2 * (3150.0f - 28.0f * x2)));
@@ -358,7 +358,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 }
 
 static inline void update_derived(Engine& e) {
-	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f); // critically damped
+	e.lv_c = awva::svf_from_g(awva::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f); // critically damped
 }
 
 // Select a preset; callable between blocks at any time (after init). Sounding voices continue with
@@ -383,7 +383,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.ph_scale = 4294967296.0f / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
-	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f); // 12 Hz
+	e.ty_c = awva::svf_from_g(awva::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f); // 12 Hz
 	e.shake_pk = e.shake = 0.0f;
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * 3.14159265f * 12.0f / sr;
@@ -509,8 +509,8 @@ static inline void audio_bore(Engine& e, VoiceState& s, float* __restrict__ B1, 
 
 // radiation high-pass, cup formant, tone low-pass, mute, gain: e.vout in place
 template <bool MUTE>
-static inline void audio_body(Engine& e, VoiceState& s, real Gr, const strisy::SvfCoef& cupc, real cupG,
-    const strisy::SvfCoef& mc, real mdep, real wh, real wb, real wl, real gain) {
+static inline void audio_body(Engine& e, VoiceState& s, real Gr, const awva::SvfCoef& cupc, real cupG,
+    const awva::SvfCoef& mc, real mdep, real wh, real wb, real wl, real gain) {
 	real rs = s.rs, c1 = s.c1, c2 = s.c2, t1 = s.t1, t2 = s.t2, m1 = s.m1, m2 = s.m2;
 	real ta = s.ctrl_prev[7], tga = s.ctrl_prev[8], tg2a = s.ctrl_prev[9];
 	real* __restrict__ out = e.vout;
@@ -535,7 +535,7 @@ static inline void audio_body(Engine& e, VoiceState& s, real Gr, const strisy::S
 			SVF_TICK(hp, c1, c2, cupc, bp, lo);
 			const real y = hp + cupG * bp;
 			// tone / bell low-pass (level dependent, interpolated coefficients)
-			const strisy::SvfCoef tc = {ta, tga, tg2a, 0.0f};
+			const awva::SvfCoef tc = {ta, tga, tg2a, 0.0f};
 			real tb, ty;
 			SVF_TICK(y, t1, t2, tc, tb, ty);
 			real o2 = ty;
@@ -740,17 +740,17 @@ static inline void process_voice(Engine& e, int v) {
 	const real Gr = gr / (1.0f + gr);
 	const real cq = rmin(rmax(P.cup_q, 0.3f), 8.0f);
 	const real fcup = rmin(rmax(P.cup_hz, 50.0f), 8000.0f);
-	const strisy::SvfCoef cupc0 = strisy::svf_pade(e.pi_sr * fcup, cq);
-	const strisy::SvfCoef cupc = {cupc0.a, cupc0.ga, cupc0.g2a, 1.0f / cq};
+	const awva::SvfCoef cupc0 = awva::svf_pade(e.pi_sr * fcup, cq);
+	const awva::SvfCoef cupc = {cupc0.a, cupc0.ga, cupc0.g2a, 1.0f / cq};
 	const real cupG = rmin(rmax(P.cup_g, 0.0f), 6.0f) / cq; // band-pass (peak gain Q) -> boost cup_g
 	const real mdep = rmin(rmax(P.mute, 0.0f), 1.0f);
 	const bool mute_on = mdep > 0.0f;
-	strisy::SvfCoef mc = {0, 0, 0, 1};
+	awva::SvfCoef mc = {0, 0, 0, 1};
 	real wh = 0, wb = 0, wl = 0;
 	if (mute_on) {
 		const real mq = rmin(rmax(P.mute_q, 0.3f), 12.0f);
 		const real fm = rmin(rmax(P.mute_hz * exp2s(P.wah * y), 100.0f), 8000.0f);
-		const strisy::SvfCoef m0 = strisy::svf_pade(e.pi_sr * fm, mq);
+		const awva::SvfCoef m0 = awva::svf_pade(e.pi_sr * fm, mq);
 		mc = {m0.a, m0.ga, m0.g2a, 1.0f / mq};
 		// a resonance swept up sits on weaker harmonics: keep the open (forward) wah as loud as closed
 		const real wcomp = exp2s(rmin(rmax(0.8f * P.wah * y, -2.0f), 2.0f));
@@ -785,7 +785,7 @@ static inline void process_voice(Engine& e, int v) {
 	// ---- control rate: breath level, accent, lip closure, tone ----------------------------------
 	{
 		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, tn = s.tn, sc = s.sc, fph = s.flut_ph;
-		const strisy::SvfCoef lc = e.lv_c;
+		const awva::SvfCoef lc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vplev);
 			sc = rmax(sc * fac_sc, vplev);
@@ -808,7 +808,7 @@ static inline void process_voice(Engine& e, int v) {
 			if (fph >= 1.0f) fph -= 1.0f;
 			const real am = 1.0f - shake * (0.5f + 0.5f * psin(fph));
 			const real ft = rmin(tone_lo * exp2s(P.tone_dyn * (lb - 1.0f) + tone_y), 16000.0f);
-			const strisy::SvfCoef tcf = strisy::svf_pade(e.pi_sr * rmax(ft, 40.0f), tq);
+			const awva::SvfCoef tcf = awva::svf_pade(e.pi_sr * rmax(ft, 40.0f), tq);
 			real* cv = e.ctrl[k];
 			cv[0] = amp * am * pnorm * (0.5f / a1); // the fundamental follows the breath level
 			cv[1] = c;
@@ -1060,81 +1060,81 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // Writes go to e.p; the DSP follows through the smoothed copy e.ps, so edits never step or click.
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
 static constexpr ParamEntry param_table[] = {
     // level
-    {{"gain", "level", 0.1f, 6.0f, strisy::ParamKind::continuous}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
-    {{"pres_sq", "level", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::pc_b},
-    {{"pres_hz", "level", 2.0f, 200.0f, strisy::ParamKind::continuous}, &Params::lv_hz},   // breath response speed
-    {{"release", "level", 0.005f, 1.0f, strisy::ParamKind::continuous}, &Params::rel},     // lip stop time constant (s)
-    {{"rel_pedal", "level", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::rel_ped}, // + rel_pedal * pedal^2
+    {{"gain", "level", 0.1f, 6.0f, awva::ParamKind::continuous}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
+    {{"pres_sq", "level", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pc_b},
+    {{"pres_hz", "level", 2.0f, 200.0f, awva::ParamKind::continuous}, &Params::lv_hz},   // breath response speed
+    {{"release", "level", 0.005f, 1.0f, awva::ParamKind::continuous}, &Params::rel},     // lip stop time constant (s)
+    {{"rel_pedal", "level", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::rel_ped}, // + rel_pedal * pedal^2
     // lips
-    {{"lip_soft", "lips", -2.0f, 0.8f, strisy::ParamKind::continuous}, &Params::lip_soft},  // lip closure when soft (-2 = pure)
-    {{"lip_loud", "lips", -2.0f, 0.85f, strisy::ParamKind::continuous}, &Params::lip_loud}, // lip closure when loud (0.85 = buzzy)
-    {{"lip_tilt", "lips", -0.5f, 0.5f, strisy::ParamKind::continuous}, &Params::lip_tilt},  // forward tilt brightens the lips
-    {{"jitter", "lips", 0.0f, 20.0f, strisy::ParamKind::continuous}, &Params::jitter},      // cents
-    {{"breath", "lips", 0.0f, 0.8f, strisy::ParamKind::continuous}, &Params::breath},       // breath turbulence
+    {{"lip_soft", "lips", -2.0f, 0.8f, awva::ParamKind::continuous}, &Params::lip_soft},  // lip closure when soft (-2 = pure)
+    {{"lip_loud", "lips", -2.0f, 0.85f, awva::ParamKind::continuous}, &Params::lip_loud}, // lip closure when loud (0.85 = buzzy)
+    {{"lip_tilt", "lips", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::lip_tilt},  // forward tilt brightens the lips
+    {{"jitter", "lips", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::jitter},      // cents
+    {{"breath", "lips", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::breath},       // breath turbulence
     // bore
-    {{"brassiness", "bore", 0.0f, 60.0f, strisy::ParamKind::continuous}, &Params::brass},    // wave steepening (samples at ff)
-    {{"bore_decay", "bore", 0.005f, 0.2f, strisy::ParamKind::continuous}, &Params::bore_t},  // resonance decay (s): bloom, tail
-    {{"bell_hz", "bore", 150.0f, 4000.0f, strisy::ParamKind::continuous}, &Params::bell_hz}, // bell reflection cutoff
+    {{"brassiness", "bore", 0.0f, 60.0f, awva::ParamKind::continuous}, &Params::brass},    // wave steepening (samples at ff)
+    {{"bore_decay", "bore", 0.005f, 0.2f, awva::ParamKind::continuous}, &Params::bore_t},  // resonance decay (s): bloom, tail
+    {{"bell_hz", "bore", 150.0f, 4000.0f, awva::ParamKind::continuous}, &Params::bell_hz}, // bell reflection cutoff
     // body
-    {{"rad_hz", "body", 20.0f, 2000.0f, strisy::ParamKind::continuous}, &Params::rad_hz},  // radiation high-pass
-    {{"cup_hz", "body", 150.0f, 3000.0f, strisy::ParamKind::continuous}, &Params::cup_hz}, // mouthpiece formant
-    {{"cup_q", "body", 0.5f, 5.0f, strisy::ParamKind::continuous}, &Params::cup_q},
-    {{"cup_gain", "body", 0.0f, 4.0f, strisy::ParamKind::continuous}, &Params::cup_g},
-    {{"tone_hz", "body", 500.0f, 12000.0f, strisy::ParamKind::continuous}, &Params::tone_hz}, // bell low-pass at ff
-    {{"tone_q", "body", 0.5f, 2.0f, strisy::ParamKind::continuous}, &Params::tone_q},
-    {{"tone_dyn", "body", 0.0f, 4.0f, strisy::ParamKind::continuous}, &Params::tone_dyn},    // octaves darker when soft
-    {{"tilt_tone", "body", -2.0f, 2.0f, strisy::ParamKind::continuous}, &Params::tilt_tone}, // tilt: octaves (back = darker/closed)
+    {{"rad_hz", "body", 20.0f, 2000.0f, awva::ParamKind::continuous}, &Params::rad_hz},  // radiation high-pass
+    {{"cup_hz", "body", 150.0f, 3000.0f, awva::ParamKind::continuous}, &Params::cup_hz}, // mouthpiece formant
+    {{"cup_q", "body", 0.5f, 5.0f, awva::ParamKind::continuous}, &Params::cup_q},
+    {{"cup_gain", "body", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::cup_g},
+    {{"tone_hz", "body", 500.0f, 12000.0f, awva::ParamKind::continuous}, &Params::tone_hz}, // bell low-pass at ff
+    {{"tone_q", "body", 0.5f, 2.0f, awva::ParamKind::continuous}, &Params::tone_q},
+    {{"tone_dyn", "body", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::tone_dyn},    // octaves darker when soft
+    {{"tilt_tone", "body", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::tilt_tone}, // tilt: octaves (back = darker/closed)
     // mute
-    {{"mute", "mute", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::mute}, // depth
-    {{"mute_hz", "mute", 300.0f, 5000.0f, strisy::ParamKind::continuous}, &Params::mute_hz},
-    {{"mute_q", "mute", 0.5f, 10.0f, strisy::ParamKind::continuous}, &Params::mute_q},
-    {{"mute_hp", "mute", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::mute_hp}, // straight-mute character
-    {{"mute_bp", "mute", 0.0f, 4.0f, strisy::ParamKind::continuous}, &Params::mute_bp}, // harmon character
-    {{"mute_lp", "mute", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::mute_lp},
-    {{"wah", "mute", -2.0f, 2.0f, strisy::ParamKind::continuous}, &Params::wah}, // tilt: mute resonance octaves
+    {{"mute", "mute", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::mute}, // depth
+    {{"mute_hz", "mute", 300.0f, 5000.0f, awva::ParamKind::continuous}, &Params::mute_hz},
+    {{"mute_q", "mute", 0.5f, 10.0f, awva::ParamKind::continuous}, &Params::mute_q},
+    {{"mute_hp", "mute", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::mute_hp}, // straight-mute character
+    {{"mute_bp", "mute", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::mute_bp}, // harmon character
+    {{"mute_lp", "mute", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::mute_lp},
+    {{"wah", "mute", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::wah}, // tilt: mute resonance octaves
     // attack
-    {{"tongue", "attack", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::tongue},     // strike sensitivity
-    {{"acc_level", "attack", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::acc_amp}, // accent overshoot
-    {{"acc_decay", "attack", 0.01f, 0.3f, strisy::ParamKind::continuous}, &Params::acc_t},
-    {{"acc_bright", "attack", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::acc_bright},
-    {{"scoop", "attack", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::scoop},     // semitones from below
-    {{"blat", "attack", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::blat},       // attack buzz (semitones)
-    {{"t_noise", "attack", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::t_noise}, // tongue "t" noise
-    {{"slur", "attack", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::slur},       // articulation on legato changes
+    {{"tongue", "attack", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::tongue},     // strike sensitivity
+    {{"acc_level", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::acc_amp}, // accent overshoot
+    {{"acc_decay", "attack", 0.01f, 0.3f, awva::ParamKind::continuous}, &Params::acc_t},
+    {{"acc_bright", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::acc_bright},
+    {{"scoop", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::scoop},     // semitones from below
+    {{"blat", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::blat},       // attack buzz (semitones)
+    {{"t_noise", "attack", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::t_noise}, // tongue "t" noise
+    {{"slur", "attack", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::slur},       // articulation on legato changes
     // modulation
-    {{"vibrato", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::vib}, // delayed lip vibrato (semitones)
-    {{"vib_hz", "mod", 2.0f, 9.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
-    {{"flutter", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::flutter}, // shake -> flutter tongue
-    {{"flut_hz", "mod", 8.0f, 40.0f, strisy::ParamKind::continuous}, &Params::flut_hz},
-    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life}, // micro-randomness
+    {{"vibrato", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::vib}, // delayed lip vibrato (semitones)
+    {{"vib_hz", "mod", 2.0f, 9.0f, awva::ParamKind::continuous}, &Params::vib_hz},
+    {{"flutter", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::flutter}, // shake -> flutter tongue
+    {{"flut_hz", "mod", 8.0f, 40.0f, awva::ParamKind::continuous}, &Params::flut_hz},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life}, // micro-randomness
     // growl
-    {{"growl", "growl", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::growl},           // depth (0 = off)
-    {{"growl_from", "growl", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::growl_from}, // pressure where it sets in
-    {{"growl_hz", "growl", 10.0f, 80.0f, strisy::ParamKind::continuous}, &Params::growl_hz},   // throat flutter rate
+    {{"growl", "growl", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::growl},           // depth (0 = off)
+    {{"growl_from", "growl", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::growl_from}, // pressure where it sets in
+    {{"growl_hz", "growl", 10.0f, 80.0f, awva::ParamKind::continuous}, &Params::growl_hz},   // throat flutter rate
     // section
-    {{"pair", "section", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pair},      // second player level
-    {{"detune", "section", 0.0f, 30.0f, strisy::ParamKind::continuous}, &Params::detune}, // cents
+    {{"pair", "section", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pair},      // second player level
+    {{"detune", "section", 0.0f, 30.0f, awva::ParamKind::continuous}, &Params::detune}, // cents
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 } // namespace brass
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<brass::Engine> {
 	static constexpr int count = brass::NUM_LIVE_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &brass::param_table[i].d : nullptr; }
 	static float* ptr(brass::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(brass::param_table[i].m)) : nullptr; }
 	static void changed(brass::Engine& e, int) { brass::update_derived(e); }
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -1147,7 +1147,7 @@ namespace brass {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/brass/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

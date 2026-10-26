@@ -42,7 +42,7 @@ struct NoteGlide {
 		}
 		return note;
 	}
-	// the blocks of a transition of seconds at a sample rate (block of strisy::BLOCK samples)
+	// the blocks of a transition of seconds at a sample rate (block of awva::BLOCK samples)
 	[[nodiscard]] static int blocks_for(float seconds, float sample_rate, int block) {
 		const int n = (int)(seconds * sample_rate / (float)block + 0.5f);
 		return n < 1 ? 1 : n;

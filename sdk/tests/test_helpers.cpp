@@ -21,21 +21,21 @@ TEST_CASE("dspmath: fastpow2 (p >= 0, as the engines use it) and tan0 approximat
 	for (int k = 0; k <= 87; k++) {
 		const float p = 0.137f * static_cast<float>(k);
 		CAPTURE(p);
-		CHECK(std::fabs(strisy::fastpow2(p) / std::exp2(p) - 1.0f) < 1e-4f);
+		CHECK(std::fabs(awva::fastpow2(p) / std::exp2(p) - 1.0f) < 1e-4f);
 	}
 	for (int k = 1; k < 30; k++) {
 		const float a = 0.01f * static_cast<float>(k);
-		CHECK(std::fabs(strisy::tan0(a) / std::tan(a) - 1.0f) < 1e-3f); // (K_f0: up to ~4 kHz at 48 kHz)
+		CHECK(std::fabs(awva::tan0(a) / std::tan(a) - 1.0f) < 1e-3f); // (K_f0: up to ~4 kHz at 48 kHz)
 	}
-	CHECK(strisy::rmax(1.0f, 2.0f) == 2.0f);
-	CHECK(strisy::rmin(1.0f, 2.0f) == 1.0f);
+	CHECK(awva::rmax(1.0f, 2.0f) == 2.0f);
+	CHECK(awva::rmin(1.0f, 2.0f) == 1.0f);
 }
 
 TEST_CASE("svf: unity gain at DC, -3 dB at the cutoff for Q = 0.707, Pade tan") {
 	const float sr = 48000.0f, fc = 1000.0f;
-	const strisy::SvfCoef c = strisy::svf_from_g(std::tan(3.14159265f * fc / sr), 0.70710678f);
+	const awva::SvfCoef c = awva::svf_from_g(std::tan(3.14159265f * fc / sr), 0.70710678f);
 	// DC: the lowpass settles at the input
-	strisy::SvfState s{0, 0};
+	awva::SvfState s{0, 0};
 	float v1 = 0, v2 = 0;
 	for (int n = 0; n < 20000; n++) SVF_TICK(1.0f, s.ic1, s.ic2, c, v1, v2);
 	CHECK(v2 == doctest::Approx(1.0f).epsilon(1e-4));
@@ -51,7 +51,7 @@ TEST_CASE("svf: unity gain at DC, -3 dB at the cutoff for Q = 0.707, Pade tan") 
 	for (int k = 0; k < 11; k++) {
 		const float f = 50.0f * std::pow(1.7f, static_cast<float>(k));
 		const float x = 3.14159265f * f / sr;
-		const strisy::SvfCoef a = strisy::svf_pade(x, 2.0f), b = strisy::svf_from_g(std::tan(x), 2.0f);
+		const awva::SvfCoef a = awva::svf_pade(x, 2.0f), b = awva::svf_from_g(std::tan(x), 2.0f);
 		CAPTURE(f);
 		CHECK(a.a == doctest::Approx(b.a).epsilon(1e-5));
 		CHECK(a.ga == doctest::Approx(b.ga).epsilon(1e-5));
@@ -60,24 +60,24 @@ TEST_CASE("svf: unity gain at DC, -3 dB at the cutoff for Q = 0.707, Pade tan") 
 }
 
 TEST_CASE("params: write_param clamps, rounds unless continuous, ignores NaN") {
-	const strisy::ParamDesc cont{"c", "g", -1.0f, 1.0f, strisy::ParamKind::continuous};
-	const strisy::ParamDesc steps{"s", "g", 0.0f, 8.0f, strisy::ParamKind::steps};
+	const awva::ParamDesc cont{"c", "g", -1.0f, 1.0f, awva::ParamKind::continuous};
+	const awva::ParamDesc steps{"s", "g", 0.0f, 8.0f, awva::ParamKind::steps};
 	float v = 0.5f;
-	CHECK(!strisy::write_param(&cont, &v, NAN));
+	CHECK(!awva::write_param(&cont, &v, NAN));
 	CHECK(v == 0.5f);
-	CHECK(!strisy::write_param(nullptr, &v, 0.1f));
-	CHECK(!strisy::write_param(&cont, nullptr, 0.1f));
-	CHECK(strisy::write_param(&cont, &v, 0.25f));
+	CHECK(!awva::write_param(nullptr, &v, 0.1f));
+	CHECK(!awva::write_param(&cont, nullptr, 0.1f));
+	CHECK(awva::write_param(&cont, &v, 0.25f));
 	CHECK(v == 0.25f);
-	CHECK(strisy::write_param(&cont, &v, 7.0f));
+	CHECK(awva::write_param(&cont, &v, 7.0f));
 	CHECK(v == 1.0f);
-	CHECK(strisy::write_param(&cont, &v, -INFINITY));
+	CHECK(awva::write_param(&cont, &v, -INFINITY));
 	CHECK(v == -1.0f);
-	CHECK(strisy::write_param(&steps, &v, 2.4f));
+	CHECK(awva::write_param(&steps, &v, 2.4f));
 	CHECK(v == 2.0f);
-	CHECK(strisy::write_param(&steps, &v, 2.6f));
+	CHECK(awva::write_param(&steps, &v, 2.6f));
 	CHECK(v == 3.0f);
-	CHECK(strisy::write_param(&steps, &v, 100.0f));
+	CHECK(awva::write_param(&steps, &v, 100.0f));
 	CHECK(v == 8.0f);
 }
 

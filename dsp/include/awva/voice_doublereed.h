@@ -97,10 +97,10 @@
 namespace doublereed {
 
 using real = float;
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
@@ -258,7 +258,7 @@ struct Engine {
 	BulkMemory* bulk; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt, block_dt;
 	int glide_n; // a slur's fingering change, in blocks (GLIDE_S)
-	strisy::SvfCoef lv_c, ty_c;
+	awva::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
 	real dc, dc_c;
 	VoiceState vs[MAX_VOICES];
@@ -392,7 +392,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 }
 
 static inline void update_derived(Engine& e) {
-	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
+	e.lv_c = awva::svf_from_g(awva::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
 }
 
 // after the parameters of preset index were set (set_preset, or a preset loaded by name: -1)
@@ -416,7 +416,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.ctrl_dt = (real)CTRL / sr;
 	e.block_dt = (real)BLOCK / sr;
 	e.glide_n = awva::NoteGlide::blocks_for(GLIDE_S, sr, BLOCK);
-	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
+	e.ty_c = awva::svf_from_g(awva::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.shake_pk = e.shake = 0.0f;
 	e.dc = 0.0f;
 	e.dc_c = 2.0f * PI * 12.0f / sr;
@@ -577,7 +577,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real fc = clampr(rmax(P.lat_hz * exp2s(P.lat_reg * oct), 1.2f * f0), 50.0f, 0.42f * sr);
 	const real lq = clampr(P.lat_q, 0.4f, 4.0f);
 	const real glc = tanp(e.pi_sr * fc);
-	const strisy::SvfCoef lc = strisy::svf_from_g(glc, lq);
+	const awva::SvfCoef lc = awva::svf_from_g(glc, lq);
 	// the loop delay at the note: the input impedance peaks where the reflection's phase makes the
 	// input's susceptance vanish (lossless): tan(theta / 2) = X, X = Z0 (w C - 1 / (w La)) (warped)
 	const real t0 = tanp(rmin(PI / P0, 1.3f));
@@ -664,7 +664,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real frd = clampr(P.rad_hz, 10.0f, 4000.0f);
 	const real grr = tanp(e.pi_sr * frd);
 	const real Gr = grr / (1.0f + grr);
-	const strisy::SvfCoef tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 200.0f, 16000.0f), clampr(P.tone_q, 0.5f, 4.0f));
+	const awva::SvfCoef tcf = awva::svf_pade(e.pi_sr * clampr(P.tone_hz, 200.0f, 16000.0f), clampr(P.tone_q, 0.5f, 4.0f));
 	const real gain = clampr(P.gain, 0.0f, 100.0f) * 1e-4f;
 
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
@@ -686,7 +686,7 @@ static inline void process_voice(Engine& e, int vi) {
 		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, racc = s.racc, accf = s.accf, tn = s.tn, gate = s.gate, fph = s.flut_ph;
 		// the lungs follow the key slowly (the breath smoother); the tongue's accent is fast
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
-		const strisy::SvfCoef bc = e.lv_c;
+		const awva::SvfCoef bc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vstrike);
 			racc = rmax(racc * fac_acc, vrate);
@@ -903,11 +903,11 @@ static inline void process(Engine& e, real* __restrict__ output) {
 // live parameters
 
 struct ParamEntry {
-	strisy::ParamDesc d;
+	awva::ParamDesc d;
 	real Params::*m;
 };
 
-static constexpr strisy::ParamKind C_ = strisy::ParamKind::continuous;
+static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 
 static constexpr ParamEntry param_table[] = {
     {{"gain", "level", 0.05f, 100.0f, C_}, &Params::gain},
@@ -968,14 +968,14 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 
 } // namespace doublereed
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<doublereed::Engine> {
 	static constexpr int count = doublereed::NUM_LIVE_PARAMS;
 	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &doublereed::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(doublereed::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(doublereed::param_table[i].m)) : nullptr; }
 	static void changed(doublereed::Engine& e, int) { doublereed::update_derived(e); }
 };
-} // namespace strisy
+} // namespace awva
 
 // ---------------------------------------------------------------------------------------------
 // The factory presets: presets/doublereed/NN-<name>.preset.json, the files themselves
@@ -987,7 +987,7 @@ namespace doublereed {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/doublereed/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }

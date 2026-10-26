@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 	eng.bulk = &mem;
 	clarinet::init(eng, 48000, 1);
 	clarinet::set_preset(eng, preset);
-	using EP = strisy::EngineParams<clarinet::Engine>;
+	using EP = awva::EngineParams<clarinet::Engine>;
 	for (int a = 4; a < argc; a++) {
 		const char* eq = std::strchr(argv[a], '=');
 		const std::string nm(static_cast<const char*>(argv[a]), eq);

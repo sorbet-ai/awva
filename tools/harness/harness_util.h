@@ -68,12 +68,12 @@ namespace harness {
 // a parameter write as every host applies it (params.h, write_param): NaN ignored,
 // clamped to [min, max], rounded unless continuous, then changed()
 template <class E> inline void param_write(E& e, int i, float value) {
-	using P = strisy::EngineParams<E>;
-	const strisy::ParamDesc* d = P::desc(i);
+	using P = awva::EngineParams<E>;
+	const awva::ParamDesc* d = P::desc(i);
 	float* p = P::ptr(e, i);
 	if (!d || !p || value != value) return;
 	float v = value < d->min ? d->min : (value > d->max ? d->max : value);
-	if (d->kind != strisy::ParamKind::continuous) v = static_cast<float>(static_cast<int>(v + (v >= 0 ? 0.5f : -0.5f)));
+	if (d->kind != awva::ParamKind::continuous) v = static_cast<float>(static_cast<int>(v + (v >= 0 ? 0.5f : -0.5f)));
 	*p = v;
 	P::changed(e, i);
 }

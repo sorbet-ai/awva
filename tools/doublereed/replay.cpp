@@ -44,7 +44,7 @@ struct Set {
 template <class E, class InitF, class ProcF>
 int run(const char* ename, InitF initf, ProcF procf, const std::vector<Set>& sets, const std::vector<std::pair<std::string, std::string>>& jobs,
     const std::string& check, bool list) {
-	using EP = strisy::EngineParams<E>;
+	using EP = awva::EngineParams<E>;
 	static E e;
 	if (list) {
 		std::memset(static_cast<void*>(&e), 0, sizeof e);
@@ -54,7 +54,7 @@ int run(const char* ename, InitF initf, ProcF procf, const std::vector<Set>& set
 		}
 		initf(e);
 		for (int i = 0; i < EP::count; i++) {
-			const strisy::ParamDesc* d = EP::desc(i);
+			const awva::ParamDesc* d = EP::desc(i);
 			std::printf("%s %s %g %g %g\n", d->name, d->group, (double)d->min, (double)d->max, (double)*EP::ptr(e, i));
 		}
 		return 0;

@@ -185,14 +185,14 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 #endif
 namespace bowed {
 static void bowed_test_hook(Engine& e) {
-	typedef strisy::EngineParams<Engine> EP;
+	typedef awva::EngineParams<Engine> EP;
 	static uint32_t r = 2654435761u + 7u;
 	static int b = 0;
 	auto rnd = [&]() { r = r * 1664525u + 1013904223u; return (float)(r >> 8) * (1.0f / 16777216.0f); };
 	if (b == 0) {
 		int bad = 0;
 		for (int i = 0; i < EP::count; i++) {
-			const strisy::ParamDesc* d = EP::desc(i);
+			const awva::ParamDesc* d = EP::desc(i);
 			for (int j = 0; j < i; j++)
 				if (!strcmp(d->name, EP::desc(j)->name) || EP::ptr(e, i) == EP::ptr(e, j)) { fprintf(stderr, "!! duplicate param %s\n", d->name); bad++; }
 			for (int k = 0; k < NUM_PRESETS; k++) {
@@ -206,9 +206,9 @@ static void bowed_test_hook(Engine& e) {
 	b++;
 	if (b % BOWED_LIVE_EVERY == 0) {
 		int i = (int)(rnd() * EP::count) % EP::count;
-		const strisy::ParamDesc* d = EP::desc(i);
+		const awva::ParamDesc* d = EP::desc(i);
 		float x = d->min + rnd() * (d->max - d->min);
-		if (d->kind == strisy::ParamKind::toggle) x = x > 0.5f * (d->min + d->max) ? d->max : d->min;
+		if (d->kind == awva::ParamKind::toggle) x = x > 0.5f * (d->min + d->max) ? d->max : d->min;
 		*EP::ptr(e, i) = x;
 		EP::changed(e, i);
 	}

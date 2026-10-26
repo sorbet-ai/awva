@@ -12,12 +12,12 @@
 #include <math.h>
 #include <stdint.h>
 
-namespace strisy {
+namespace awva {
 
-// the sample type: float; STRISY_REAL=double builds the engines in double (a host-side check of
+// the sample type: float; AWVA_REAL=double builds the engines in double (a host-side check of
 // an algorithm apart from float rounding)
-#ifdef STRISY_REAL
-using real = STRISY_REAL;
+#ifdef AWVA_REAL
+using real = AWVA_REAL;
 #else
 using real = float;
 #endif
@@ -52,6 +52,6 @@ using real = float;
 [[nodiscard]] static inline real rmax(real a, real b) { return sizeof(real) == sizeof(float) ? (real)fmaxf((float)a, (float)b) : (real)fmax(a, b); }
 [[nodiscard]] static inline real rmin(real a, real b) { return sizeof(real) == sizeof(float) ? (real)fminf((float)a, (float)b) : (real)fmin(a, b); }
 
-} // namespace strisy
+} // namespace awva
 
 #endif // AWVA_DSPMATH_H_

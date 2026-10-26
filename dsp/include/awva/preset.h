@@ -148,7 +148,7 @@ struct Preset {
 template <class Desc> [[nodiscard]] constexpr uint32_t schema_hash(int n, Desc desc) {
 	uint32_t h = 2166136261u;
 	for (int i = 0; i < n; i++) {
-		const strisy::ParamDesc* d = desc(i);
+		const awva::ParamDesc* d = desc(i);
 		h = fnv1a_word(h, fnv1a(d->name));
 		h = fnv1a_word(h, float_bits(d->min));
 		h = fnv1a_word(h, float_bits(d->max));
@@ -524,9 +524,9 @@ template <int N> constexpr void note(Str<NAME> (&list)[N], int& count, const cha
 	if (count < N) list[count].set(name);
 	count++;
 }
-[[nodiscard]] constexpr float write_rule(const strisy::ParamDesc& d, float v) {
+[[nodiscard]] constexpr float write_rule(const awva::ParamDesc& d, float v) {
 	float x = v < d.min ? d.min : (v > d.max ? d.max : v);
-	if (d.kind != strisy::ParamKind::continuous) x = static_cast<float>(static_cast<int>(x + (x >= 0 ? 0.5f : -0.5f)));
+	if (d.kind != awva::ParamKind::continuous) x = static_cast<float>(static_cast<int>(x + (x >= 0 ? 0.5f : -0.5f)));
 	return x;
 }
 } // namespace detail
@@ -542,7 +542,7 @@ template <class Desc> constexpr void resolve(const Preset& p, const char* engine
 		return;
 	}
 	for (int i = 0; i < n; i++) {
-		const strisy::ParamDesc* d = desc(i);
+		const awva::ParamDesc* d = desc(i);
 		const float* v = p.param(d->name);
 		if (!v) {
 			values[i] = defaults[i];
@@ -592,7 +592,7 @@ template <int N, class Desc> [[nodiscard]] consteval Factory<N> factory(const ch
 	if (!f.name.set(p.title.c_str())) detail::factory_preset_is_wrong("a title longer than a name");
 	if (p.num_params != N) detail::factory_preset_is_wrong("not every parameter, or one too many");
 	for (int i = 0; i < N; i++) {
-		const strisy::ParamDesc* d = desc(i);
+		const awva::ParamDesc* d = desc(i);
 		const float* v = p.param(d->name);
 		if (!v) detail::factory_preset_is_wrong("a parameter missing");
 		if (float_bits(detail::write_rule(*d, *v)) != float_bits(*v)) detail::factory_preset_is_wrong("a value out of its range");
@@ -602,7 +602,7 @@ template <int N, class Desc> [[nodiscard]] consteval Factory<N> factory(const ch
 }
 
 // The factory presets of an engine from their files' texts Json[0 .. Count): factories<P, Json,
-// Count>[i], P its strisy::EngineParams (count, a constexpr desc). Each preset is read in a constant
+// Count>[i], P its awva::EngineParams (count, a constexpr desc). Each preset is read in a constant
 // evaluation of its own (factory_preset<P, Json, I>), within any compiler's step limit.
 template <class P, const char* const* Json, int I>
 inline constexpr Factory<P::count> factory_preset = factory<P::count>(Json[I], [](int k) { return P::desc(k); });

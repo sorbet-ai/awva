@@ -26,7 +26,7 @@
 //   };
 //
 // The engine's struct Engine has `awva::InstrumentControls g; awva::NoteControls vc[MAX_VOICES];
-// int nvoices;`, and, with presets, `int preset`. Live parameters come from strisy::EngineParams<Engine>.
+// int nvoices;`, and, with presets, `int preset`. Live parameters come from awva::EngineParams<Engine>.
 #ifndef AWVA_ADAPTER_H_
 #define AWVA_ADAPTER_H_
 
@@ -84,7 +84,7 @@ inline void attach(Native& e, StreamMemory& f, BulkMemory& l) {
 
 // the live parameters of a native engine, saved and written back (reset() keeps them)
 template <class Native> struct SavedParams {
-	using P = strisy::EngineParams<Native>;
+	using P = awva::EngineParams<Native>;
 	float v[P::count > 0 ? P::count : 1];
 	void save(Native& e) {
 		for (int i = 0; i < P::count; i++) v[i] = *P::ptr(e, i);
@@ -152,7 +152,7 @@ template <class T> struct Adapter {
 	using Native = typename T::Engine;
 	using StreamMemory = typename T::StreamMemory;
 	using BulkMemory = typename T::BulkMemory;
-	using Params = strisy::EngineParams<Native>;
+	using Params = awva::EngineParams<Native>;
 	static constexpr bool has_presets = requires { T::num_presets; };
 	// the traits' init_writes_memory (engine.h), false if they don't say
 	static constexpr bool init_writes_memory = awva::init_writes_memory<T>;
@@ -223,7 +223,7 @@ template <class T> struct Adapter {
 	[[nodiscard]] static constexpr const ParamDesc* param_desc(int i) { return Params::desc(i); }
 	[[nodiscard]] float* param(int i) { return Params::ptr(e, i); }
 	[[nodiscard]] bool set_param(int i, float v) {
-		if (!strisy::write_param(Params::desc(i), Params::ptr(e, i), v)) return false;
+		if (!awva::write_param(Params::desc(i), Params::ptr(e, i), v)) return false;
 		Params::changed(e, i);
 		return true;
 	}
@@ -236,7 +236,7 @@ template <class T> struct Adapter {
 	    .cost = T::cost,
 	    .regions = detail::regions<Native, typename T::StreamMemory, typename T::BulkMemory>(),
 	    .num_presets = detail::num_presets<T>(),
-	    .num_params = strisy::EngineParams<typename T::Engine>::count,
+	    .num_params = awva::EngineParams<typename T::Engine>::count,
 	    .heroes = detail::heroes<T>(),
 	    .preset_heroes = detail::preset_heroes<T>(),
 	    .num_preset_heroes = detail::num_preset_heroes<T>(),
@@ -262,7 +262,7 @@ template <class T> struct EffectAdapter {
 	using Native = typename T::Engine;
 	using StreamMemory = typename T::StreamMemory;
 	using BulkMemory = typename T::BulkMemory;
-	using Params = strisy::EngineParams<Native>;
+	using Params = awva::EngineParams<Native>;
 	static_assert(PlainData<Native>, "an effect is plain data");
 
 
@@ -286,12 +286,12 @@ template <class T> struct EffectAdapter {
 	[[nodiscard]] static const ParamDesc* param_desc(int i) { return Params::desc(i); }
 	[[nodiscard]] float* param(int i) { return Params::ptr(e, i); }
 	[[nodiscard]] bool set_param(int i, float v) {
-		if (!strisy::write_param(Params::desc(i), Params::ptr(e, i), v)) return false;
+		if (!awva::write_param(Params::desc(i), Params::ptr(e, i), v)) return false;
 		Params::changed(e, i);
 		return true;
 	}
 	static constexpr EffectInfo info = {T::name, T::summary, T::inputs, T::outputs, T::cost,
-	    detail::regions<Native, typename T::StreamMemory, typename T::BulkMemory>(), strisy::EngineParams<typename T::Engine>::count,
+	    detail::regions<Native, typename T::StreamMemory, typename T::BulkMemory>(), awva::EngineParams<typename T::Engine>::count,
 	    detail::heroes<T>()};
 };
 

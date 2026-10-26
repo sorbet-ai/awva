@@ -20,7 +20,7 @@
 namespace sine {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 16;
 
 struct VoiceState {
@@ -66,7 +66,7 @@ static inline void process(Engine& e, real* output) {
 		real target = c.pressure > 0.0f ? c.pressure : 0.0f;
 		if (target == 0.0f && st.amp < 1e-6f) continue; // silent voice: skip
 		// block-rate rotation coefficients for the note's frequency
-		real w = 2.0f * 3.14159265f * 8.1757989f * strisy::fastpow2(c.pitch * (1.0f / 12.0f)) / e.sr;
+		real w = 2.0f * 3.14159265f * 8.1757989f * awva::fastpow2(c.pitch * (1.0f / 12.0f)) / e.sr;
 		w = w < 1.5707963f ? w : 1.5707963f; // up to SR/4
 		real cw = cos_poly(w), sw = sin_poly(w);
 		real cc = st.c, ss = st.s, amp = st.amp;

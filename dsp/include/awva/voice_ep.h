@@ -60,12 +60,12 @@
 namespace ep {
 
 using real = float;
-static constexpr int BLOCK = strisy::BLOCK;
+static constexpr int BLOCK = awva::BLOCK;
 static constexpr int MAX_VOICES = 10;
 static constexpr int NM = 4; // modes per voice
 
-using strisy::rmax;
-using strisy::rmin;
+using awva::rmax;
+using awva::rmin;
 
 // ---------------------------------------------------------------------------------------------
 // Sound design parameters (all floats: they are the live parameters, see EngineParams below)
@@ -171,7 +171,7 @@ struct Engine {
 	Params p;
 	real sr, inv_sr, w_hz, block_dt;
 	// master
-	strisy::SvfCoef body_c, tone_c;
+	awva::SvfCoef body_c, tone_c;
 	real b1, b2, t1, t2, dc, dc_c;
 	real grit_L, grit_iL, grit_b, grit_sb;
 	// tape wobble
@@ -229,7 +229,7 @@ struct Engine {
 	y = y * (1.5f - 0.5f * x * y * y);
 	return y;
 }
-// tan(x) for 0 <= x < 1.5 ([7/6] Pade, as strisy::svf_pade)
+// tan(x) for 0 <= x < 1.5 ([7/6] Pade, as awva::svf_pade)
 [[nodiscard]] static inline real tan_pade(real x) {
 	const real x2 = x * x;
 	return x * (135135.0f + x2 * (-17325.0f + x2 * (378.0f - x2))) /
@@ -281,9 +281,9 @@ static inline void reset_voice(VoiceState& s) {
 static inline void derive(Engine& e) {
 	const Params& P = e.p;
 	const real ft = clampr(P.tone, 200.0f, 0.4f * e.sr);
-	e.tone_c = strisy::svf_from_g(tan_pade(3.14159265f * ft * e.inv_sr), 0.707f);
+	e.tone_c = awva::svf_from_g(tan_pade(3.14159265f * ft * e.inv_sr), 0.707f);
 	const real fb = clampr(P.bodyhz, 30.0f, 0.4f * e.sr);
-	e.body_c = strisy::svf_from_g(tan_pade(3.14159265f * fb * e.inv_sr), 0.9f);
+	e.body_c = awva::svf_from_g(tan_pade(3.14159265f * fb * e.inv_sr), 0.9f);
 	const real gr = clampr(P.grit, 0.0f, 1.0f);
 	e.grit_L = 6.0f - 5.1f * gr; // soft clip ceiling: 6 (clean) .. 0.9 (gritty)
 	e.grit_iL = 1.0f / e.grit_L;
@@ -698,15 +698,15 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	const real wt = wd * (0.8f * sin_turn(e.wph1) + 0.2f * sin_turn(e.wph2));
 	e.wob += 0.2f * (wt - e.wob); // smooth, so depth changes never jump the pitch
 	if (!(fabsf(e.wob) < 2.0f)) e.wob = 0.0f;
-	// ~30 ms glide of the frequency-ratio parameters; it arrives (strisy::glide_value, over the
+	// ~30 ms glide of the frequency-ratio parameters; it arrives (awva::glide_value, over the
 	// ranges ratio_targets clamps them to)
 	{
 		real tb, to, tbr, ttr;
 		ratio_targets(e.p, tb, to, tbr, ttr);
-		e.sm_beat = strisy::glide_value(e.sm_beat, tb, 0.02f, 1.0f);
-		e.sm_boct = strisy::glide_value(e.sm_boct, to, 0.02f, 50.0f / 1200.0f);
-		e.sm_bratio = strisy::glide_value(e.sm_bratio, tbr, 0.02f, 30.0f - 1.5f);
-		e.sm_tratio = strisy::glide_value(e.sm_tratio, ttr, 0.02f, 40.0f - 2.0f);
+		e.sm_beat = awva::glide_value(e.sm_beat, tb, 0.02f, 1.0f);
+		e.sm_boct = awva::glide_value(e.sm_boct, to, 0.02f, 50.0f / 1200.0f);
+		e.sm_bratio = awva::glide_value(e.sm_bratio, tbr, 0.02f, 30.0f - 1.5f);
+		e.sm_tratio = awva::glide_value(e.sm_tratio, ttr, 0.02f, 40.0f - 2.0f);
 	}
 
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;
@@ -714,7 +714,7 @@ static inline void process(Engine& e, real* __restrict__ output) {
 
 	// master: body EQ -> amp grit -> tone low-pass -> DC blocker -> safety ceiling
 	const real body = clampr(e.p.body, -0.95f, 3.0f);
-	const strisy::SvfCoef bc = e.body_c, tc = e.tone_c;
+	const awva::SvfCoef bc = e.body_c, tc = e.tone_c;
 	const real kb = body * bc.k; // k * v1 is the unity-peak band-pass
 	const real L = e.grit_L, iL = e.grit_iL, gb = e.grit_b, gsb = e.grit_sb;
 	real b1 = e.b1, b2 = e.b2, t1 = e.t1, t2 = e.t2, dc = e.dc;
@@ -741,34 +741,34 @@ static inline void process(Engine& e, real* __restrict__ output) {
 }
 
 
-// the live parameters (strisy::EngineParams below), in their order
-static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
-    {"hard", "hammer", 0.3f, 3.0f, strisy::ParamKind::continuous},
-    {"vsens", "hammer", 0.5f, 4.0f, strisy::ParamKind::continuous},
-    {"dyn", "hammer", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"decay", "tine", 0.2f, 30.0f, strisy::ParamKind::continuous},
-    {"dkey", "tine", 0.0f, 1.5f, strisy::ParamKind::continuous},
-    {"prompt", "tine", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"bell", "tine", 0.0f, 2.0f, strisy::ParamKind::continuous},
-    {"bratio", "tine", 2.0f, 16.0f, strisy::ParamKind::continuous},
-    {"bdecay", "tine", 0.05f, 5.0f, strisy::ParamKind::continuous},
-    {"tick", "tine", 0.0f, 1.5f, strisy::ParamKind::continuous},
-    {"tratio", "tine", 6.0f, 30.0f, strisy::ParamKind::continuous},
-    {"beat", "tonebar", 0.0f, 0.5f, strisy::ParamKind::continuous},
-    {"bcents", "tonebar", 0.0f, 25.0f, strisy::ParamKind::continuous},
-    {"align", "pickup", 0.3f, 1.6f, strisy::ParamKind::continuous},
-    {"tilt", "pickup", 0.0f, 0.6f, strisy::ParamKind::continuous},
-    {"drive", "pickup", 0.2f, 4.0f, strisy::ParamKind::continuous},
-    {"dig", "pickup", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"wurli", "pickup", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"damper", "damper", 0.0f, 3.0f, strisy::ParamKind::continuous},
-    {"gain", "amp", 0.0f, 8.0f, strisy::ParamKind::continuous},
-    {"grit", "amp", 0.0f, 1.0f, strisy::ParamKind::continuous},
-    {"tone", "amp", 800.0f, 16000.0f, strisy::ParamKind::continuous},
-    {"bodyhz", "amp", 60.0f, 4000.0f, strisy::ParamKind::continuous},
-    {"body", "amp", -0.9f, 2.0f, strisy::ParamKind::continuous},
-    {"wobble", "mod", 0.0f, 40.0f, strisy::ParamKind::continuous},
-    {"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous},
+// the live parameters (awva::EngineParams below), in their order
+static constexpr awva::ParamDesc param_desc[NUM_PARAMS] = {
+    {"hard", "hammer", 0.3f, 3.0f, awva::ParamKind::continuous},
+    {"vsens", "hammer", 0.5f, 4.0f, awva::ParamKind::continuous},
+    {"dyn", "hammer", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"decay", "tine", 0.2f, 30.0f, awva::ParamKind::continuous},
+    {"dkey", "tine", 0.0f, 1.5f, awva::ParamKind::continuous},
+    {"prompt", "tine", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"bell", "tine", 0.0f, 2.0f, awva::ParamKind::continuous},
+    {"bratio", "tine", 2.0f, 16.0f, awva::ParamKind::continuous},
+    {"bdecay", "tine", 0.05f, 5.0f, awva::ParamKind::continuous},
+    {"tick", "tine", 0.0f, 1.5f, awva::ParamKind::continuous},
+    {"tratio", "tine", 6.0f, 30.0f, awva::ParamKind::continuous},
+    {"beat", "tonebar", 0.0f, 0.5f, awva::ParamKind::continuous},
+    {"bcents", "tonebar", 0.0f, 25.0f, awva::ParamKind::continuous},
+    {"align", "pickup", 0.3f, 1.6f, awva::ParamKind::continuous},
+    {"tilt", "pickup", 0.0f, 0.6f, awva::ParamKind::continuous},
+    {"drive", "pickup", 0.2f, 4.0f, awva::ParamKind::continuous},
+    {"dig", "pickup", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"wurli", "pickup", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"damper", "damper", 0.0f, 3.0f, awva::ParamKind::continuous},
+    {"gain", "amp", 0.0f, 8.0f, awva::ParamKind::continuous},
+    {"grit", "amp", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"tone", "amp", 800.0f, 16000.0f, awva::ParamKind::continuous},
+    {"bodyhz", "amp", 60.0f, 4000.0f, awva::ParamKind::continuous},
+    {"body", "amp", -0.9f, 2.0f, awva::ParamKind::continuous},
+    {"wobble", "mod", 0.0f, 40.0f, awva::ParamKind::continuous},
+    {"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous},
 };
 static constexpr real Params::*const param_members[NUM_PARAMS] = {
     &Params::hard,
@@ -803,14 +803,14 @@ static constexpr real Params::*const param_members[NUM_PARAMS] = {
 // ---------------------------------------------------------------------------------------------
 // Live parameters
 
-namespace strisy {
+namespace awva {
 template <> struct EngineParams<ep::Engine> {
 	static constexpr int count = ep::NUM_PARAMS;
 	static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < ep::NUM_PARAMS) ? &ep::param_desc[i] : nullptr; }
 	static float* ptr(ep::Engine& e, int i) { return (i >= 0 && i < ep::NUM_PARAMS) ? &(e.p.*ep::param_members[i]) : nullptr; }
 	static void changed(ep::Engine& e, int) { ep::derive(e); }
 };
-} // namespace strisy
+} // namespace awva
 
 
 // ---------------------------------------------------------------------------------------------
@@ -823,7 +823,7 @@ namespace ep {
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/ep/: a file per preset");
 
 [[nodiscard]] static constexpr const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
-	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+	return awva::preset::factories<awva::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
 [[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
