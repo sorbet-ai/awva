@@ -212,6 +212,7 @@ struct VoiceState {
 	real tlev; // the strike the tongue has held the reed for
 	int age;   // blocks since the note started from silence
 	real sage; // seconds since the note's strike (a start, or a new note): the window a strike counts in
+	int was_held; // the key was held in the last block (a press on a voice still sounding its release)
 	// bore
 	real l1, l2; // lattice lowpass (SVF) states
 	real D;      // loop delay (samples)
@@ -359,6 +360,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.tlev = 0.0f;
 	s.age = 0;
 	s.sage = 0.0f;
+	s.was_held = 0;
 	s.l1 = s.l2 = 0.0f;
 	s.D = 100.0f;
 	s.w = 0;
@@ -463,6 +465,11 @@ static inline void process_voice(Engine& e, int vi) {
 		start = true;
 	}
 
+	// a press: a start, or the key pressed again on a voice still sounding its release (the same note
+	// played again): its articulation as a start's (the strike's window, the tongue), the state kept
+	const bool press = start || (held && !s.was_held);
+	s.was_held = held;
+
 	// ---- block rate: the player and the instrument for this note ----------------------------------
 	const bool jump = start || fabsf(note - s.note_prev) >= 1.0f;
 	if (jump && !start && held) {
@@ -472,7 +479,7 @@ static inline void process_voice(Engine& e, int vi) {
 	if (jump) s.vneg = 0.0f;
 	// only a strike strikes: the key's speed counts while the note starts (STRIKE_WIN after a start or a
 	// new note); later in the note a swell of the pressure (a positive vpres) is breath, not the tongue
-	s.sage = jump ? 0.0f : rmin(s.sage + e.block_dt, 1.0f);
+	s.sage = (jump || press) ? 0.0f : rmin(s.sage + e.block_dt, 1.0f);
 	const bool striking = s.sage < STRIKE_WIN;
 	const real vstrike = striking ? vplev : 0.0f; // the accent's strike
 	const real vrate = striking ? vrlev : 0.0f;   // the attack rate's
@@ -487,8 +494,8 @@ static inline void process_voice(Engine& e, int vi) {
 		s.pm_prev = 0.0f;
 	}
 	// a strike opens the tongue: fast for a hard one
-	if (vrate > 0.05f && (start || vrate > s.racc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vrate), 0.0005f), 1.0f);
-	if (start && vrate <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
+	if (vrate > 0.05f && (press || vrate > s.racc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vrate), 0.0005f), 1.0f);
+	if (press && vrate <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
 
 	const real by = clampr(cc.timbre, -1.0f, 1.0f);
 	if (start) {
@@ -704,7 +711,7 @@ static inline void process_voice(Engine& e, int vi) {
 	float* __restrict__ B = e.large->bore[vi];
 	// a tongued start: while the strike rises (the first ~16 ms of a note from silence) the tongue
 	// holds the reed closed, more for a harder strike; at its peak it lets it go
-	if (start) {
+	if (press) {
 		s.age = 0;
 		s.tlev = 0.0f;
 	} else if (s.age < 1000) {
