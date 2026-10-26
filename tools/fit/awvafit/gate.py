@@ -49,7 +49,8 @@ is the groups' mean.
 
 The range check (awvafit.range_check): every note of the instrument's range, soft, mid, loud and short, must speak,
 sit on its partial within 15 cents, not flip and start within 150 ms; a candidate with a failing note
-fails, whatever its phrases say.
+fails, whatever its phrases say, if the baseline plays that note; a failing note the baseline shares is
+reported (both fail it), not counted.
 
 The verdict:
   identical  candidate and baseline within a floor of each other on every measure: nothing to hear
@@ -582,9 +583,15 @@ def verdict(inst, candidate, baseline, per_item, ranges=None):
     better = [g for g in ok if groups[g]['cand'] < groups[g]['base']]
     worse = [g for g in ok if groups[g]['cand'] - groups[g]['base'] > 1.0]
     identical = all(v['between'] is None or v['between'] < 1.0 for v in z.values())
-    range_fail = bool(ranges and ranges[0]['failures'])
-    if range_fail:
-        v = 'fail'  # a note that doesn't speak, sits on the wrong partial or flips fails whatever else
+    # a note the candidate breaks that the baseline doesn't: a regression, whatever else; a failing note
+    # the baseline shares is reported, not counted
+    new_fails, shared = [], []
+    if ranges:
+        base_fails = {(f['midi'], f['dyn']) for f in ranges[1]['failures']}
+        for f in ranges[0]['failures']:
+            (shared if (f['midi'], f['dyn']) in base_fails else new_fails).append(f)
+    if new_fails:
+        v = 'fail'
     elif identical:
         v = 'identical'
     elif tc < tb and len(better) > len(ok) / 2 and not worse:
@@ -593,6 +600,7 @@ def verdict(inst, candidate, baseline, per_item, ranges=None):
         v = 'fail'
     return dict(instrument=inst, candidate=candidate, baseline=baseline, verdict=v, total=dict(cand=tc, base=tb),
                 better_groups=better, worse_groups=worse, groups=groups, measures=z,
+                range_new=new_fails, range_shared=shared,
                 range=dict(candidate=ranges[0]['failures'], baseline=ranges[1]['failures'],
                            notes=dict(candidate=ranges[0]['notes'], baseline=ranges[1]['notes'])) if ranges else None,
                 phrases=[p['id'] for p in per_item], per_phrase=per_item)
@@ -616,6 +624,12 @@ def table(res):
         lines.append(f"fit set: {fs['declared']}" + (f" ({len(fs['tracks'])} recordings, none held out)" if 'tracks' in fs else ''))
     if res.get('range'):
         nm = lambda m: labels.name(m)  # noqa: E731
+        if res.get('range_shared'):
+            lines.append('both builds fail ' + ', '.join(f"{nm(f['midi'])} {f['dyn']}" for f in res['range_shared'])
+                         + ' (shared with the baseline: reported, not a regression)')
+        if res.get('range_new'):
+            lines.append('the candidate breaks ' + ', '.join(f"{nm(f['midi'])} {f['dyn']}" for f in res['range_new'])
+                         + ', which the baseline plays: a regression')
         for who in ('candidate', 'baseline'):
             fl = res['range'][who]
             lines.append(f"range check, {who}: " + ('every note passes' if not fl else
