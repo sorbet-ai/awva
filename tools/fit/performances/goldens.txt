@@ -2,18 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # The musical test performances' golden hashes on main's engines (sdk/CMakeLists.txt: awva_render.musical.*).
 # <performance> <engine> <preset number> <hash of the dry render>. Update: tools/fit/regress/goldens.py
-brass/brass_legato.ump brass 0 f8d5ca670cdf95e7
-brass/brass_swell.ump brass 0 f9e2171dfbbe7c94
-brass/brass_tongued.ump brass 0 f9c4454d51109aae
-clarinet/clarinet_legato.ump wind 0 49df4fa9a0f4c203
-clarinet/clarinet_swell.ump wind 0 4937451bee97ea8b
-clarinet/clarinet_tongued.ump wind 0 4f854460dd51ebd1
-doublereed/doublereed_legato.ump wind 6 4ec64acbe9f8eb17
-doublereed/doublereed_swell.ump wind 6 f96e307098735137
-doublereed/doublereed_tongued.ump wind 6 7731cbe8d8714436
-flute/flute_legato.ump wind 8 66f4bb1103176272
-flute/flute_swell.ump wind 8 d2f6d5c32de54fde
-flute/flute_tongued.ump wind 8 0b0941285b258667
-sax/sax_legato.ump wind 3 f1fa154095c5eb67
-sax/sax_swell.ump wind 3 14cc1a0cd37429d9
-sax/sax_tongued.ump wind 3 3267e6ec123863d3
+brass/brass_legato.ump brass 0 120927ac41ab79c1
+brass/brass_swell.ump brass 0 4707f34f80a483f8
+brass/brass_tongued.ump brass 0 a6572bdc3de0a24b
+clarinet/clarinet_legato.ump wind 0 5ab14d1e10d45f13
+clarinet/clarinet_swell.ump wind 0 ab05a05c5b255e65
+clarinet/clarinet_tongued.ump wind 0 4a4afea448e63e30
+doublereed/doublereed_legato.ump wind 6 fda3c6294b4dc1ed
+doublereed/doublereed_swell.ump wind 6 46e6494aaa8c868c
+doublereed/doublereed_tongued.ump wind 6 ed35fd9a0b307e44
+flute/flute_legato.ump wind 8 650f16567ea95b37
+flute/flute_swell.ump wind 8 9b3a85ba1c38c87f
+flute/flute_tongued.ump wind 8 e669f02b463e2e25
+sax/sax_legato.ump wind 3 b3c4c0abdc0c795c
+sax/sax_swell.ump wind 3 f978acc5349f9b9e
+sax/sax_tongued.ump wind 3 ff45b81efcf592e0

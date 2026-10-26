@@ -400,8 +400,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURREN
 endif()
 
 # The golden renders (sdk/tests/goldens/renders.txt): every engine and preset on the scripted
-# performances and the recorded takes, and every engine on the MIDI phrases (MPE, MIDI 2.0; also in
-# mono legato), each checked against its FNV-1a 64 hash: a change of any engine's output or of the
+# performances and the recorded takes, and every engine on the MIDI phrases (MPE, MIDI 2.0, a
+# sensor's; also in mono legato; at the default control rate and at 500 Hz), each checked against its FNV-1a 64 hash: a change of any engine's output or of the
 # MIDI mapping fails here. Only a build of the SDK itself (a project that includes it may add engines
 # of its own). After an intended change: tools/goldens/update.sh <build dir> (and say so).
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -457,9 +457,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     if(v IN_LIST AWVA_PERFORMANCES) # its own performance, tools/harness/perf_<v>.h
       _golden(golden.${v}.perf --engine ${v} --perf ${v})
     endif()
+    # the MIDI phrases at the default control rate (every block) and at an embedded host's 500 Hz
     foreach(ph IN ITEMS mpe midi2 sensor)
       _golden(golden.${v}.${ph} --engine ${v} --ump "${_golden_dir}/${ph}.ump")
       _golden(golden.${v}.${ph}.legato --engine ${v} --ump "${_golden_dir}/${ph}.ump" --legato)
+      _golden(golden.${v}.${ph}.500hz --engine ${v} --ump "${_golden_dir}/${ph}.ump" --control-hz 500)
+      _golden(golden.${v}.${ph}.legato.500hz --engine ${v} --ump "${_golden_dir}/${ph}.ump" --legato --control-hz 500)
     endforeach()
   endforeach()
   _golden(golden.va.p5.fx --engine va --preset 5 --perf default --fx)

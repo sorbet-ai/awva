@@ -3,7 +3,7 @@
 // blocks: through the SDK's Shell (shell.h, a plugin's host side) the size of the host's calls
 // makes no difference: MIDI 2.0 and MPE events at their frames, played in calls of 1, 7, 32, 256
 // frames and of random sizes, give the same samples bit for bit (the Shell promises it: an event
-// is taken at the first 2 ms step at or after its frame, timed_midi.h). The first and last preset.
+// is taken at the first control step at or after its frame, timed_midi.h). The first and last preset.
 // (The component's own host side, late events included, is awva_conformance's "blocks".)
 #include <algorithm>
 #include <cmath>
@@ -57,7 +57,7 @@ std::vector<Msg> messages() {
 // the Shell in calls of `call` frames (0: random 1..1024), each message given in the call its
 // frame falls in, at its offset there
 std::vector<float> through_shell(int preset, const std::vector<Msg>& msgs, int frames, int call) {
-	sdk::Shell s(entry(), SR, nvoices(), false);
+	sdk::Shell s(entry(), sdk::HostConfig{SR, 0, nvoices()}, false);
 	if (preset >= 0) s.set_preset(preset);
 	std::vector<float> l(static_cast<size_t>(frames)), r(static_cast<size_t>(frames));
 	size_t k = 0;

@@ -7,9 +7,10 @@
 
 namespace awva::sdk {
 
-Shell::Shell(const EngineEntry& engine, int sample_rate, int voices, bool fx) :
-    engine_(engine), fx_(fx_effect()), midi_(std::make_unique<TimedMidi>(std::min(voices, engine.info->max_voices), sample_rate)), sr_(sample_rate),
-    nv_(std::min(voices, engine.info->max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), note_at_rest),
+Shell::Shell(const EngineEntry& engine, const HostConfig& host, bool fx) :
+    engine_(engine), fx_(fx_effect()),
+    midi_(std::make_unique<TimedMidi>(HostConfig{host.sample_rate, host.control_hz, std::min(host.voices, engine.info->max_voices)})),
+    sr_(host.sample_rate), nv_(std::min(host.voices, engine.info->max_voices)), fx_on_(fx), vc_(static_cast<size_t>(nv_), note_at_rest),
     g_(dsp::instrument_at_rest) {
 	engine_.init(sr_, nv_);
 	fx_.init(sr_);
@@ -44,7 +45,7 @@ int Shell::ended_notes(int32_t* ids, int max) {
 
 void Shell::render_block() {
 	if (!direct_) {
-		midi_->advance(frames_); // the 2 ms steps due by this block's start (timed_midi.h)
+		midi_->advance(frames_); // the control steps due by this block's start (timed_midi.h)
 		for (int v = 0; v < nv_; v++) vc_[static_cast<size_t>(v)] = midi_->midi().voices()[v];
 		g_ = midi_->midi().globals();
 	}

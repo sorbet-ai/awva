@@ -126,7 +126,7 @@ The standard performance is about 4 s at the rate under test:
 - MPE in MIDI 1.0, with one Note Off sent as a Note On of velocity 0;
 - the sustain pedal.
 
-Its events are off the 2 ms grid and off block starts. Every Note On carries an id.
+Its events are off the control grids and off block starts. Every Note On carries an id.
 
 ## Render hashes
 

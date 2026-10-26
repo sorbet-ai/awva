@@ -3,13 +3,13 @@
 //
 // mpe_file: a standard MIDI file, MPE or plain, through an awva engine with the SDK's MIDI in
 // (awva_sdk/timed_midi.h over midi_voices.h: the decoder and the voice allocator,
-// in 2 ms steps).
+// a step every engine block).
 //
 //   mpe_file IN.mid OUT.wav [ENGINE [PRESET]]   render (32-bit float WAV, mono); prints the hash
 //   mpe_file --demo OUT.mid                     write a short MPE demo file to play
 //
 // The render is what `awva_render --engine ENGINE --midi IN.mid` renders, sample for sample: the
-// same integer-frame 2 ms steps, voices and length (the hash it prints is the renderer's).
+// same integer-frame steps, voices and length (the hash it prints is the renderer's).
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -114,9 +114,10 @@ int main(int argc, char** argv) {
 	engine.init(SR, NV);
 	if (argc > 4) engine.set_preset(std::atoi(argv[4]));
 
-	// MIDI in, in integer frames (awva_sdk/timed_midi.h): each message
-	// queued at its frame, and every 2 ms (96 frames at 48 kHz) a step runs the ones due
-	auto midi = std::make_unique<sdk::TimedMidi>(NV, SR); // (some kilobytes: on the heap)
+	// MIDI in, in integer frames (awva_sdk/timed_midi.h): each message queued at its frame, and
+	// at every engine block (the default control rate: HostConfig::control_hz 0) a step runs the
+	// ones due
+	auto midi = std::make_unique<sdk::TimedMidi>(sdk::HostConfig{SR, 0, NV}); // (some kilobytes: on the heap)
 	awva::InstrumentControls g = awva::instrument_at_rest;
 	const auto frame_of = [](double t) { return t <= 0 ? uint64_t{0} : static_cast<uint64_t>(std::llround(t * SR)); };
 	size_t next = 0;

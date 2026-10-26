@@ -168,7 +168,7 @@ constexpr uint32_t ump2(uint32_t status, uint32_t ch, uint32_t index = 0) { retu
 // The standard performance at a rate: MIDI 2.0 notes on channels 1..8 with their velocities,
 // pressure, pitch bends and CC74 (the y), a key struck again while held, MIDI 1.0 notes in UMP
 // (MPE), one with a Note On of velocity 0 for its Note Off, the sustain pedal; every Note On with
-// an id (from *next_id). The events are off the 2 ms grid and off block starts; the last release
+// an id (from *next_id). The events are off the control grids and off block starts; the last release
 // is at 3.2 s.
 [[nodiscard]] std::vector<Ev> performance(int rate, int32_t* next_id) {
 	std::vector<Ev> v;

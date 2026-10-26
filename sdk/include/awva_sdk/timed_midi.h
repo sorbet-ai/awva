@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // MIDI with time, in integer frames: the one step rule of the component (component/include/nsc),
-// the Shell and the renderer's MIDI player. MIDI is taken in 2 ms steps:
-// step k is at frame ceil(k sr / 500) (at 48 kHz every 96 frames, at 44.1 kHz 88 or 89, never
-// drifting); before a block that starts at frame f, every step at or before f runs, each with the
-// events whose frame is at or before the step's. An event is UMP (MIDI 2.0 channel voice, type 4;
+// the Shell and the renderer's MIDI player. MIDI is taken in steps of the host's control rate
+// (HostConfig::control_hz): at h Hz step k is at frame ceil(k sr / h) (500 Hz: at 48 kHz every 96
+// frames, at 44.1 kHz 88 or 89, never drifting); at 0 (the default) every engine block, step k at
+// frame k BLOCK. Before a block that starts at frame f, every step at or before f runs, each with
+// the events whose frame is at or before the step's. The voices' level decay and the strike's
+// fade a step follow from their time constants (MidiVoices::set_step): at 500 Hz they are the
+// 2 ms factors themselves. An event is UMP (MIDI 2.0 channel voice, type 4;
 // MIDI 1.0 in UMP, type 2) or MIDI 1.0 bytes. Fixed size, no heap (it can live in a component's
 // state).
 //
@@ -33,6 +36,7 @@
 #include <cstring>
 #include <new>
 
+#include "awva_sdk/host_config.h"
 #include "awva_sdk/midi_voices.h"
 
 // The tables' sizes, a build's (a host with little RAM sets them smaller; the descriptor of a
@@ -46,8 +50,15 @@
 
 namespace awva::sdk {
 
-[[nodiscard]] constexpr uint64_t step_frame(uint64_t k, int sample_rate) {
-	return (k * static_cast<uint64_t>(sample_rate) + 499u) / 500u;
+// the frame of step k: at control_hz > 0 ceil(k sample_rate / control_hz), at 0 k BLOCK
+[[nodiscard]] constexpr uint64_t step_frame(uint64_t k, int sample_rate, int control_hz) {
+	if (control_hz <= 0) return k * static_cast<uint64_t>(dsp::BLOCK);
+	const uint64_t h = static_cast<uint64_t>(control_hz);
+	return (k * static_cast<uint64_t>(sample_rate) + h - 1u) / h;
+}
+// a step's length in seconds (at control_hz > 0 the nominal 1 / control_hz)
+[[nodiscard]] constexpr double step_seconds(int sample_rate, int control_hz) {
+	return control_hz > 0 ? 1.0 / control_hz : static_cast<double>(dsp::BLOCK) / sample_rate;
 }
 
 class TimedMidi {
@@ -57,8 +68,22 @@ public:
 	static constexpr int MAX_EVENTS = AWVA_MIDI_QUEUE;       // events a block, for the guarantee above
 	static constexpr int ENDED = QUEUE + MAX_EVENTS + NOTES; // ids ended at once, until ended() hands them out
 
-	explicit TimedMidi(int voices, int sample_rate) :
-	    midi_(voices), sr_(sample_rate), voices_(voices) {}
+	explicit TimedMidi(const HostConfig& c) :
+	    midi_(c.voices), sr_(c.sample_rate), hz_(c.control_hz < 0 ? 0 : c.control_hz), voices_(c.voices) {
+		midi_.set_step(step_seconds(sr_, hz_));
+	}
+
+	// another control rate (Hz; 0: every engine block), from the next step on: the grid starts
+	// again at the frame the last advance() reached
+	void set_control_hz(int hz) {
+		hz_ = hz < 0 ? 0 : hz;
+		midi_.set_step(step_seconds(sr_, hz_));
+		if (steps_ > 0) {
+			base_ = now_;
+			steps_ = 1; // (the step at now_ has run)
+		}
+	}
+	[[nodiscard]] int control_hz() const { return hz_; }
 
 	// Back to the start, as a fresh TimedMidi (a host's reset: the engine goes silent), mono legato
 	// kept. The guarantee holds through it: every tracked note's id, and the id of every queued Note
@@ -73,9 +98,10 @@ public:
 		// (in place: a MidiVoices is kilobytes, which a temporary would put on the caller's stack)
 		midi_.~MidiVoices();
 		new (&midi_) MidiVoices(voices_);
+		midi_.set_step(step_seconds(sr_, hz_));
 		midi_.set_legato(legato);
 		queued_ = 0;
-		steps_ = now_ = 0;
+		steps_ = now_ = base_ = 0;
 		for (Note& t : notes_) t = Note{};
 		ages_ = 0;
 	}
@@ -98,8 +124,8 @@ public:
 	// the steps due by a block that starts at frame f
 	void advance(uint64_t f) {
 		int taken = 0;
-		for (; step_frame(steps_, sr_) <= f; steps_++) {
-			const uint64_t fs = step_frame(steps_, sr_);
+		for (; base_ + step_frame(steps_, sr_, hz_) <= f; steps_++) {
+			const uint64_t fs = base_ + step_frame(steps_, sr_, hz_);
 			for (; taken < queued_ && queue_[taken].frame <= fs; taken++) feed(queue_[taken]);
 			midi_.step();
 		}
@@ -225,10 +251,10 @@ private:
 	}
 
 	MidiVoices midi_;
-	int sr_, voices_;
+	int sr_, hz_, voices_;
 	Event queue_[QUEUE];
 	int queued_ = 0;
-	uint64_t steps_ = 0, now_ = 0;
+	uint64_t steps_ = 0, now_ = 0, base_ = 0;
 	Note notes_[NOTES];
 	uint64_t ages_ = 0;
 	int32_t done_[ENDED];

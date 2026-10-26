@@ -39,7 +39,7 @@ Two ways in, each with a small example in `examples/` that the tests build and r
   build/sdk/examples/c_host build/sdk/components va va.wav
   ```
 
-- **From C++, through the SDK.** Link `awva_sdk` and `awva_engines` and use the engines directly, with the SDK's MIDI in (`sdk::TimedMidi` over `sdk::MidiVoices`: MIDI 2.0, MIDI 1.0 and MPE decoded and given voices in 2 ms steps). [`examples/mpe_file/mpe_file.cpp`](examples/mpe_file/mpe_file.cpp) renders a standard MIDI file, MPE or plain, sample for sample as `awva_render --midi` does; `--demo` writes an MPE file to try.
+- **From C++, through the SDK.** Link `awva_sdk` and `awva_engines` and use the engines directly, with the SDK's MIDI in (`sdk::TimedMidi` over `sdk::MidiVoices`: MIDI 2.0, MIDI 1.0 and MPE decoded and given voices, in steps of the host's control rate). [`examples/mpe_file/mpe_file.cpp`](examples/mpe_file/mpe_file.cpp) renders a standard MIDI file, MPE or plain, sample for sample as `awva_render --midi` does; `--demo` writes an MPE file to try.
 
   ```
   build/sdk/examples/mpe_file --demo demo.mid && build/sdk/examples/mpe_file demo.mid demo.wav va

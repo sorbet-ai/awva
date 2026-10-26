@@ -6,9 +6,10 @@
 // voices (awva/voice_allocator.h, awva/legato.h). What an instrument does beyond them (its MIDI
 // out, its other CCs) a host on the PC doesn't need.
 //
-// Time: MIDI is taken in fixed steps of awva::ump::STEP_SECONDS (2 ms): message() and ump() queue,
-// step() runs one step (the voices' level decay, the strike fade if one is fading, then the
-// messages queued since the last step). The controls of each voice are in voices().
+// Time: MIDI is taken in fixed steps, the host's control rate (set_step(): 2 ms unless it says
+// another): message() and ump() queue, step() runs one step (the voices' level decay, the strike
+// fade if one is fading, then the messages queued since the last step), each factor from its time
+// constant. The controls of each voice are in voices().
 #ifndef AWVA_SDK_MIDI_VOICES_H_
 #define AWVA_SDK_MIDI_VOICES_H_
 
@@ -41,8 +42,13 @@ public:
 	}
 	// one UMP packet (MIDI 2.0: type 4, two words; MIDI 1.0: type 2, w1 unused), for the next step
 	bool ump(uint32_t w0, uint32_t w1);
-	// one 2 ms step: the voices' level decay, the strike fade, then the queued messages
+	// one step: the voices' level decay, the strike fade, then the queued messages
 	void step();
+	// the step's length in seconds (2 ms unless set)
+	void set_step(double seconds) {
+		alloc_.set_step(seconds);
+		dec_.set_step(seconds);
+	}
 
 	[[nodiscard]] const NoteControls* voices() const { return vc_.data(); }
 	[[nodiscard]] int num_voices() const { return nv_; }

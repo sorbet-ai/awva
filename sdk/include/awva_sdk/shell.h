@@ -3,11 +3,11 @@
 // The host shell: what a plugin (VST3, CLAP, AU) or a standalone app wraps. One engine and the
 // master effects, played by MIDI/MPE (midi_voices.h) or directly by voice
 // signals, rendering any number of frames per call (the engines run 32-sample blocks, rendered
-// when the previous one is used up). MIDI is taken every 2 ms: a message takes
-// effect at the next 2 ms step. Not real-time safe in its constructor and set_engine();
+// when the previous one is used up). MIDI is taken in steps of the control rate (host_config.h;
+// every engine block by default): a message takes effect at the next step. Not real-time safe in its constructor and set_engine();
 // process() and midi() don't allocate.
 //
-//   Shell s(*awva::sdk::find_engine("va"), 48000);
+//   Shell s(*awva::sdk::find_engine("va"), awva::sdk::HostConfig{48000});
 //   s.set_preset(5);
 //   s.midi(0x90, 60, 100);           // MIDI in (applied at the next block)
 //   s.midi(0x80, 60, 0, 17);         // ... at frame 17 of the next process() call
@@ -26,8 +26,9 @@ namespace awva::sdk {
 
 class Shell {
 public:
-	// voices: the engine's voices (at most its max_voices); fx: the master effects on
-	Shell(const EngineEntry& engine, int sample_rate, int voices = 10, bool fx = true);
+	// host: the sample rate, the control rate MIDI is taken at (host_config.h; 0, the default:
+	// every engine block) and the engine's voices (at most its max_voices); fx: the master effects on
+	Shell(const EngineEntry& engine, const HostConfig& host, bool fx = true);
 
 	void set_engine(const EngineEntry& engine); // a new engine, from silence (MIDI state kept)
 	[[nodiscard]] Engine& engine() { return engine_; }
@@ -36,7 +37,7 @@ public:
 	void set_preset(int i) { engine_.set_preset(i); }
 
 	// MIDI in, at a frame: offset is the message's frame in the next process() call (a plugin
-	// host's sample offset; 0: now). It is taken at the first 2 ms step at or after its frame
+	// host's sample offset; 0: now). It is taken at the first control step at or after its frame
 	// (timed_midi.h: the component's and the renderer's rule, in integer frames), so where it
 	// lands doesn't depend on the call sizes. A Note On may carry the host's note id (-1: none),
 	// handed back by ended_notes() when the note has ended. false: the queue is full.
