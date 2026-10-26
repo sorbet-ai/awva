@@ -63,6 +63,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 #ifdef CLARINET_TEST_HOOK
 #include <stdio.h>
@@ -130,105 +131,31 @@ struct Params {
 	// air
 	real breath; // turbulence: rides on the flow's pulsating part (none before the reed speaks)
 	// attack
-	real tongue;   // strike sensitivity
-	real acc_amp;  // the breath built up behind the tongue: overshoot
-	real acc_t;    // its decay (s)
-	real tongue_t; // tongue release time of a soft "d" (s); a hard strike is ~16x faster
-	real tongue_f; // the tongue's push on the reed (re p_M)
-	real slur;     // articulation on a legato note change
-	real tune;     // cents
-	real pitch_t;  // the player's ear: pitch correction time constant (s)
+	real tongue;     // strike sensitivity
+	real acc_amp;    // the breath built up behind the tongue: overshoot
+	real acc_t;      // its decay (s)
+	real tongue_t;   // tongue release time of a soft "d" (s); a hard strike is ~16x faster
+	real tongue_f;   // the tongue's push on the reed (re p_M)
+	real slur;       // articulation on a legato note change
+	real tune;       // cents
+	real pitch_t;    // the player's ear: pitch correction time constant (s)
+	real instrument; // which instrument (instruments[]): its lowest note, where the registers start
 };
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-[[nodiscard]] static inline Params bb_params() {
-	Params p;
-	p.gain = 7.9f;
-	p.pc_a = 0.728985f;
-	p.pc_b = 0.061114f;
-	p.lv_hz = 9.86625f;
-	p.rel = 0.04f;
-	p.rel_ped = 0.4f;
-	p.p_soft = 1.10267f;
-	p.g_loud = 0.975684f;
-	p.g_reg = -0.050039f;
-	p.p_curve = 1.50129f;
-	p.zeta = 0.122233f;
-	p.zeta_reg = 0.703614f;
-	p.reed_hz = 3374.04f;
-	p.reed_q = 0.985047f;
-	p.lay = 5.51467f;
-	p.emb = 0.4f;
-	p.emb_bend = 25.0f;
-	p.bore_r = 7.3f;
-	p.wall = 0.300944f;
-	p.lat_hz = 5398.78f;
-	p.lat_q = 0.412101f;
-	p.reg_pos = 0.163394f;
-	p.reg_tau = 1.11067f;
-	p.reg_r = 0.908371f;
-	p.alt_rel = 26.836f;
-	p.tone_hz = 6533.46f;
-	p.tone_q = 0.7f;
-	p.breath = 0.049328f;
-	p.tongue = 1.9972f;
-	p.acc_amp = 0.214979f;
-	p.acc_t = 0.137027f;
-	p.tongue_t = 0.00412f;
-	p.tongue_f = 2.24762f;
-	p.slur = 0.1f;
-	p.tune = 0.0f;
-	p.pitch_t = 0.01f;
-	return p;
-}
-
-[[nodiscard]] static inline Params bass_params() {
-	Params p = bb_params();
-	p.bore_r = 11.5f;
-	p.gain = 12.8f;
-	p.pc_a = 0.158017f;
-	p.pc_b = 1.22392f;
-	p.p_soft = 1.10382f;
-	p.g_loud = 0.850178f;
-	p.g_reg = 0.248487f;
-	p.p_curve = 1.34263f;
-	p.zeta = 0.421016f;
-	p.zeta_reg = -0.060286f;
-	p.reed_hz = 3902.62f;
-	p.reed_q = 0.429167f;
-	p.lay = 6.62451f;
-	p.wall = 0.333727f;
-	p.lat_hz = 1309.0f;
-	p.lat_q = 0.998319f;
-	p.reg_pos = 0.399927f;
-	p.reg_tau = 1.72639f;
-	p.reg_r = 1.99752f;
-	p.alt_rel = 23.2888f;
-	p.tone_hz = 4900.37f;
-	p.breath = 0.037078f;
-	p.tongue = 0.535943f;
-	p.acc_amp = 0.54148f;
-	p.acc_t = 0.052691f;
-	p.tongue_t = 0.005152f;
-	p.tongue_f = 2.72717f;
-	p.lv_hz = 3.80885f;
-	return p;
-}
-
-struct PresetInfo {
-	const char* name;
-	real low_note; // the lowest note (all holes closed): the registers start from it
+// the instruments: the lowest note of each (all holes closed: the registers start from it); the
+// parameter instrument picks one
+static constexpr int NUM_INSTRUMENTS = 2;
+static constexpr real instrument_low[NUM_INSTRUMENTS] = {
+    50.0f, // B-flat clarinet, sounding D3
+    34.0f, // the low-C bass clarinet, sounding Bb1
 };
+
+// the factory presets: presets/clarinet/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 2;
-static constexpr PresetInfo preset_info[NUM_PRESETS] = {
-    {"clarinet", 50.0f},      // B-flat clarinet, sounding D3
-    {"bass clarinet", 34.0f}, // the low-C bass clarinet, sounding Bb1
-};
-
-[[nodiscard]] static inline const char* preset_name(int i) { return preset_info[(i >= 0 && i < NUM_PRESETS) ? i : 0].name; }
-
-[[nodiscard]] static inline Params preset_params(int i) { return i == 1 ? bass_params() : bb_params(); }
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef CLARINET_PRESET
 static constexpr int DEFAULT_PRESET = CLARINET_PRESET;
@@ -437,13 +364,23 @@ static inline void update_derived(Engine& e) {
 	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * clampr(e.p.lv_hz, 1.0f, 400.0f)), 0.5f);
 }
 
+// the instrument of e.p: its lowest note
+static inline void instrument_changed(Engine& e) {
+	e.low_note = instrument_low[(int)clampr(e.p.instrument, 0.0f, (real)(NUM_INSTRUMENTS - 1))];
+}
+
+// e.p, as a preset leaves it, takes effect (index: the factory preset, -1 a preset by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
+	e.ps = e.p;
+	instrument_changed(e);
+	update_derived(e);
+}
+
 static inline void set_preset(Engine& e, int i) {
 	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
 	e.p = preset_params(i);
-	e.ps = e.p;
-	e.low_note = preset_info[i].low_note;
-	update_derived(e);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {
@@ -977,6 +914,7 @@ static constexpr ParamEntry param_table[] = {
     {{"slur", "attack", 0.0f, 1.0f, C_}, &Params::slur},
     {{"tune", "attack", -100.0f, 100.0f, C_}, &Params::tune},
     {{"pitch_t", "attack", 0.003f, 0.3f, C_}, &Params::pitch_t},
+    {{"instrument", "bore", 0.0f, 1.0f, strisy::ParamKind::steps}, &Params::instrument}, // instruments[]: the lowest note
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
@@ -986,10 +924,36 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 namespace strisy {
 template <> struct EngineParams<clarinet::Engine> {
 	static constexpr int count = clarinet::NUM_LIVE_PARAMS;
-	[[nodiscard]] static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &clarinet::param_table[i].d : nullptr; }
+	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &clarinet::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(clarinet::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(clarinet::param_table[i].m)) : nullptr; }
-	static void changed(clarinet::Engine& e, int) { clarinet::update_derived(e); }
+	static void changed(clarinet::Engine& e, int i) {
+		if (i >= 0 && i < count && clarinet::param_table[i].m == &clarinet::Params::instrument) clarinet::instrument_changed(e);
+		clarinet::update_derived(e);
+	}
 };
 } // namespace strisy
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/clarinet/NN-<name>.preset.json, the files themselves
+// (presets/clarinet.inc, tools/presets_inc.cmake), each read at compile time; a file that isn't
+// every parameter in range doesn't compile (awva/preset.h factory).
+
+namespace clarinet {
+#include "presets/clarinet.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/clarinet/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace clarinet
 
 #endif // VOICE_CLARINET_H_

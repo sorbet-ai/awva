@@ -18,6 +18,7 @@ struct clarinet {
 	// init() writes every byte of its LargeMemory (every voice's four delay lines): no zeroing on a switch (engine.h)
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "clarinet";
+	static constexpr const char* title = "Clarinet";
 	static constexpr const char* summary = "physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets)";
 	// pres the breath, vpres the tongue, but_y the embouchure; the pedal lengthens the release
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_pedal;

@@ -11,7 +11,7 @@
 # Studio developer shell). Then, with the recordings under <samples>/{bb_clarinet,bass_clarinet}/:
 #   python -I tools/clarinet/refs.py <samples> $CLARINET_WORK/refs.pkl
 #   python -I tools/clarinet/fit.py <tag> <preset 0|1> <run> --start best.json --workers 3
-#   python -I tools/clarinet/bake.py dsp/include/awva/voice_clarinet.h <bb best.json> <bass best.json> [gains]
+#   python -I tools/clarinet/bake.py presets/clarinet <bb best.json> <bass best.json> [gains]; cmake -P tools/presets_inc.cmake
 # (numpy, scipy, cma)
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
