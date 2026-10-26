@@ -24,12 +24,9 @@
  *            Wall losses grow with sqrt(f) and the length (viscothermal, bore_r), fitted per
  *            note by a one-pole
  *   TONE HOLES  the open tone-hole lattice reflects the low frequencies (-1) and passes the high
- *            ones out (a fourth-order cutoff, flat below and steep above it, as a lattice's): below
- *            it the bore has its odd resonances, above it none, so the internal spectrum falls
- *            there and the radiated one carries the rest. The cutoff's steepness keeps the reed's
- *            two transitions per period short: each passes the flow's maximum, a pulse twice per
- *            period, and at 2 f0 (an impedance minimum) the end radiates that flow as it is, so
- *            a soft cutoff made the chalumeau's 2nd harmonic about 10 dB too strong
+ *            ones out (a two-pole cutoff): below it the bore has
+ *            its odd resonances, above it none, so the internal spectrum falls there and the
+ *            radiated one carries the rest
  *   RADIATION  the flow through the open end, differentiated (a monopole), then a tone low-pass
  *   TUNING   the bore length is solved per block (Newton) so that the input impedance, register
  *            hole and lattice included, peaks at the note together with the reed's own reactance:
@@ -40,8 +37,7 @@
  *   pressure   breath: mouth pressure from just above the threshold (pp, round, nearly odd
  *              harmonics only) to a beating reed (ff, bright)
  *   strike     tonguing: the tongue holds the reed shut against the built-up breath and lets it
- *              go, faster for a harder strike, with an accent: the note starts with the reed, not
- *              with air; none = a breath attack
+ *              go, faster for a harder strike, with an accent and a "t"; none = a breath attack
  *   release    the breath stops, the bore rings out (the pedal lengthens the release)
  *   tilt fwd/back  embouchure: forward firmer (a smaller reed opening: brighter, a little sharp),
  *              back looser (darker, flatter)
@@ -50,7 +46,7 @@
  * Every element is passive or bounded: the jet only draws on the mouth pressure, the bore loop has
  * gain < 1, the register hole is a passive shunt; the reed's excursion is clamped; a per-voice guard
  * resets a voice whose state is non-finite or absurd; the master has a DC blocker and a soft ceiling.
- * Cost: about 34k QEMU instructions per block (10 voices, the default performance); per voice-sample
+ * Cost: about 32k QEMU instructions per block (10 voices, the default performance); per voice-sample
  * one square root and ~90 FP operations, per block the bore's impedance at the note (a few complex
  * evaluations). Memory: the bore delay lines, 10 KB per voice, as long as 192 kHz needs (LargeMemory,
  * 102.4 KB). Below 44.1 kHz the bass clarinet's reed squeals (engines/clarinet.h min_rate).
@@ -131,7 +127,9 @@ struct Params {
 	real tone_hz; // tone low-pass (the room, the microphone)
 	real tone_q;  //
 	// air
-	real breath; // turbulence: rides on the flow's pulsating part (none before the reed speaks)
+	real breath;  // turbulence (riding on the flow)
+	real wander;  // the player's breath is never quite steady: slow and fast fluctuations (re gamma)
+	real t_noise; // tongue "t"
 	// attack
 	real tongue;     // strike sensitivity
 	real acc_amp;    // the breath built up behind the tongue: overshoot
@@ -172,7 +170,7 @@ struct VoiceState {
 	// register hole: its flow, the last incoming sum, its openness (0 shut, 1 open) and target
 	real q, aprev, hole, hole_t;
 	// lattice and wall-loss filter states, the last radiated flow
-	real l1, l2, l3, l4, ls, rprev;
+	real l1, l2, ls, rprev;
 	real DB, DBp; // section B round trip (samples): this block's target, the last block's
 	int nbu;      // section B's upward delay (whole samples, fixed while a note is held)
 	int dA;       // section A, each way (whole samples)
@@ -184,7 +182,7 @@ struct VoiceState {
 	real bgate;     // the breath (0 .. 1)
 	real gt;        // the tongue: 0 on the reed, 1 off
 	real gt_rate;   // its release rate (per control step)
-	real acc;       // accent envelope
+	real acc, tn;   // accent and tongue noise envelopes
 	real accf;      // the accent's pressure
 	real ty1, ty2;  // tilt smoother
 	real gth;       // threshold mouth pressure (gamma)
@@ -194,8 +192,8 @@ struct VoiceState {
 	// the player's ear: the mouthpiece pressure's period from its zero crossings, the bore trimmed
 	// onto the note (cents)
 	real xlp, xhp, xprev, tlast, pprev, trim;
-	real um; // the jet's mean flow (the turbulence rides on the rest)
-	uint32_t nrng;
+	real jn, dr; // breath fluctuations: fast (~25 Hz) and slow (~3 Hz)
+	uint32_t rng, nrng;
 	int held_prev;
 	int active;
 };
@@ -209,7 +207,8 @@ struct Engine {
 	Params ps;          // smoothed copy used by the DSP
 	LargeMemory* large; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt;
-	real r48; // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
+	real r48;            // 48 kHz / the rate: a per-sample or per-block rate made for 48 kHz, scaled (exactly 1 there)
+	real kj, kd, sj, sd; // the breath fluctuations' per-block rates and their noise scales (any rate)
 	real low_note;
 	strisy::SvfCoef lv_c, ty_c, tone_c;
 	real t1, t2; // tone filter (shared: every voice plays the same preset)
@@ -219,6 +218,7 @@ struct Engine {
 	real mix[BLOCK];
 	real gmc[NCTRL]; // mouth pressure at the control points
 	real gtc[NCTRL]; // tongue gate at the control points
+	real tnc[NCTRL]; // tongue noise at the control points
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -311,6 +311,11 @@ static inline void sincosr(real a, real& s, real& c) {
 #endif
 }
 
+[[nodiscard]] static inline real block_noise(uint32_t& r) {
+	r = r * 1664525u + 1013904223u;
+	return (real)(int32_t)r * 4.656613e-10f;
+}
+
 [[nodiscard]] static inline real sat(real x) {
 	x = clampr(x, -1.5f, 1.5f);
 	return x * (1.0f - 0.148148148f * x * x);
@@ -341,7 +346,7 @@ static inline void clear_lines(Engine& e, int v) {
 static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.x1 = s.x2 = s.pe = s.gam = 0.0f;
 	s.q = s.aprev = s.hole = s.hole_t = 0.0f;
-	s.l1 = s.l2 = s.l3 = s.l4 = s.ls = s.rprev = 0.0f;
+	s.l1 = s.l2 = s.ls = s.rprev = 0.0f;
 	s.DB = s.DBp = 100.0f;
 	s.nbu = 50;
 	s.dA = 20;
@@ -350,11 +355,12 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.lv1 = s.lv2 = s.amp = s.bgate = 0.0f;
 	s.gt = 1.0f;
 	s.gt_rate = 0.0f;
-	s.acc = s.accf = s.um = 0.0f;
+	s.acc = s.tn = s.accf = 0.0f;
 	s.ty1 = s.ty2 = 0.0f;
 	s.gth = 0.34f;
 	s.vneg = 0.0f;
 	s.level = 0.0f;
+	s.jn = s.dr = 0.0f;
 	s.xlp = s.xhp = s.xprev = 0.0f;
 	s.tlast = -1e4f;
 	s.pprev = 0.0f;
@@ -393,6 +399,12 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.pi_sr = PI / sr;
 	e.ctrl_dt = (real)CTRL / sr;
 	e.r48 = 48000.0f / sr;
+	// the fluctuations were made at 48 kHz (blocks of 32): the same bandwidth and variance at any
+	// rate (a one-pole's variance is a / (2 - a) of its input's)
+	e.kj = rmin(0.15f * e.r48, 1.0f);
+	e.kd = rmin(0.004f * e.r48, 1.0f);
+	e.sj = fsqrt((0.15f * (2.0f - e.kj)) / (e.kj * (2.0f - 0.15f)));
+	e.sd = fsqrt((0.004f * (2.0f - e.kd)) / (e.kd * (2.0f - 0.004f)));
 	e.ty_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * BLOCK * 12.0f), 0.5f);
 	e.t1 = e.t2 = 0.0f;
 	e.dc = 0.0f;
@@ -404,6 +416,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		s = VoiceState();
 		reset_voice(e, s, v);
 		s.nrng = 0x85EBCA6Bu * (uint32_t)(v + 3) + 999u;
+		s.rng = 0x9E3779B9u * (uint32_t)(v + 1) + 12345u;
 		s.note_prev = 69.0f;
 		s.active = 0;
 	}
@@ -447,8 +460,6 @@ struct Bore {
 static int clarinet_dbg_imp = 0;
 static long clarinet_dbg_n = 0, clarinet_dbg_len = 0;
 static float* clarinet_dbg_p = nullptr;
-static float* clarinet_dbg_u = nullptr;
-static float* clarinet_dbg_x = nullptr;
 #endif
 
 // ---------------------------------------------------------------------------------------------
@@ -466,7 +477,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real low = e.low_note;
 	real note = clampr(cc.note, 0.0f, 132.0f);
-	while (note > low + 52.0f) note -= 12.0f;
+	while (note > low + 46.0f) note -= 12.0f;
 	while (note < 30.0f) note += 12.0f; // (the delay lines' longest bore)
 	const bool held = pres > 0.0f;
 	bool start = false;
@@ -491,7 +502,7 @@ static inline void process_voice(Engine& e, int vi) {
 		s.x1 = s.x2 = s.pe = 0.0f;
 		s.lv1 = s.lv2 = s.amp = s.bgate = 0.0f;
 		s.gam = 0.0f;
-		s.acc = s.accf = s.um = 0.0f;
+		s.acc = s.accf = s.tn = 0.0f;
 	}
 	// the tongue: a strike holds the reed and lets it go (faster for a harder one); a press
 	// without one is a breath attack
@@ -517,6 +528,12 @@ static inline void process_voice(Engine& e, int vi) {
 		s.ty2 = ty2;
 	}
 	tilt = clampr(tilt, -1.0f, 1.0f);
+	// the breath's life: a fast flutter and a slow wander (each about unit variance)
+	s.jn += e.kj * (4.5f * e.sj * block_noise(s.rng) - s.jn);
+	s.jn = clampr(s.jn, -4.0f, 4.0f);
+	s.dr += e.kd * (40.0f * e.sd * block_noise(s.rng) - s.dr);
+	s.dr = clampr(s.dr, -4.0f, 4.0f);
+	const real wob = 1.0f + clampr(P.wander, 0.0f, 0.2f) * (0.4f * s.jn + 0.8f * s.dr);
 
 	// the fingering: register by the note re the lowest (the register is kept through bends)
 	if (jump) {
@@ -557,12 +574,8 @@ static inline void process_voice(Engine& e, int vi) {
 	// and 6 f0, alpha ~ sqrt(f) / r): the round trip D of the fingering
 	const real t0 = tanp(rmin(0.5f * w0, 1.3f));
 	const real gs = tanp(e.pi_sr * clampr(P.lat_hz, 100.0f, 0.4f * e.sr));
-	// the lattice: a fourth-order cutoff (two sections), Butterworth at lat_q = 1 (flat to the
-	// cutoff, then steep), softer below; never above 1 (passive)
-	const real lq = 0.5412f;
-	const real lq2 = 1.3066f * clampr(P.lat_q, 0.3f, 1.0f);
+	const real lq = clampr(P.lat_q, 0.3f, 0.7071f);
 	const strisy::SvfCoef lc = strisy::svf_from_g(gs, lq);
-	const strisy::SvfCoef lc2 = strisy::svf_from_g(gs, lq2);
 	const real Dfing = (real)s.mode * 0.5f * e.sr / f0; // the fingering's round trip (samples)
 	real g0, Gl;
 	{
@@ -582,7 +595,7 @@ static inline void process_voice(Engine& e, int vi) {
 		// the end's reflection at the note: -g0 / (1 + i W_l) / (1 - W_s^2 + i W_s / Q)
 		Bore b;
 		const real Wl = t0 / gl, Ws = t0 / gs;
-		b.rend = cmul(cmul(cinv({1.0f, Wl}), cinv({1.0f - Ws * Ws, Ws / lq})), cinv({1.0f - Ws * Ws, Ws / lq2}));
+		b.rend = cmul(cinv({1.0f, Wl}), cinv({1.0f - Ws * Ws, Ws / lq}));
 		b.rend = {-g0 * b.rend.re, -g0 * b.rend.im};
 		b.w0 = w0;
 		// register hole: open in the clarion and above
@@ -665,17 +678,19 @@ static inline void process_voice(Engine& e, int vi) {
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);
 	const real fac_acc = 1.0f - e.ctrl_dt / rmax(P.acc_t, 0.005f);
+	const real fac_tn = 1.0f - e.ctrl_dt / 0.006f;
 	const real fac_bg = rmin(e.ctrl_dt / (held ? 0.004f : rel_tc), 1.0f);
 	const real pcl = pres * (P.pc_a + P.pc_b * pres);
 	const real g_lo = s.gth * clampr(P.p_soft, 0.5f, 3.0f);
 	const real g_hi = rmax(clampr(P.g_loud * exp2s(P.g_reg * oct), 0.1f, 1.5f), g_lo + 0.02f);
 	const real pcv = clampr(P.p_curve, 0.3f, 3.0f);
 	{
-		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, accf = s.accf, bg = s.bgate, gt = s.gt;
+		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, accf = s.accf, tn = s.tn, bg = s.bgate, gt = s.gt;
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
 		const strisy::SvfCoef lcv = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vplev);
+			tn = rmax(tn * fac_tn, vplev);
 			real t1, ls;
 			SVF_TICK(rmin(pcl, 2.0f), lv1, lv2, lcv, t1, ls);
 			amp = rmax(rmax(ls, 0.0f), amp * fac);
@@ -685,14 +700,16 @@ static inline void process_voice(Engine& e, int vi) {
 			// breath -> mouth pressure (amp^p_curve: exp2s(p_curve log2 amp) without libm)
 			const real a = rmin(amp + accf, 1.5f);
 			const real ap = (pcv != 1.0f && a > 1e-6f) ? exp2s(pcv * log2s(a)) : a;
-			e.gmc[k] = clampr(bg * (g_lo + (g_hi - g_lo) * ap) / eo, 0.0f, 1.6f);
+			e.gmc[k] = clampr(bg * (g_lo + (g_hi - g_lo) * ap) * wob / eo, 0.0f, 1.6f);
 			e.gtc[k] = gt;
+			e.tnc[k] = P.t_noise * tn * tn;
 		}
 		s.lv1 = lv1;
 		s.lv2 = lv2;
 		s.amp = amp;
 		s.acc = acc;
 		s.accf = accf;
+		s.tn = tn;
 		s.bgate = bg;
 		s.gt = gt;
 	}
@@ -702,9 +719,9 @@ static inline void process_voice(Engine& e, int vi) {
 	float* __restrict__ Au = e.large->a_up[vi];
 	float* __restrict__ Bd = e.large->b_dn[vi];
 	float* __restrict__ Bu = e.large->b_up[vi];
-	real x1 = s.x1, x2 = s.x2, pe = s.pe, q = s.q, aprev = s.aprev, l1 = s.l1, l2 = s.l2, l3 = s.l3, l4 = s.l4, lsv = s.ls, rprev = s.rprev, um = s.um;
+	real x1 = s.x1, x2 = s.x2, pe = s.pe, q = s.q, aprev = s.aprev, l1 = s.l1, l2 = s.l2, lsv = s.ls, rprev = s.rprev;
 	real gam = s.gam;
-	const real k_um = 0.002f * e.r48, k_xhp = 0.004f * e.r48; // (time constants made at 48 kHz)
+	const real k_xhp = 0.004f * e.r48; // (time constants made at 48 kHz)
 	uint32_t w = s.w, nr = s.nrng;
 	const uint32_t dA = (uint32_t)s.dA, nbu = (uint32_t)s.nbu;
 	// section B's downward (fractional) delay ramps over the block
@@ -728,6 +745,7 @@ static inline void process_voice(Engine& e, int vi) {
 	for (int k = 0; k < NCTRL; k++) {
 		const real dg = (e.gmc[k] - gam) * (1.0f / CTRL);
 		const real gtk = e.gtc[k];
+		const real tnl = e.tnc[k];
 		const real tpush = tf * (1.0f - gtk);
 		for (int j = 0; j < CTRL; j++) {
 			gam += dg;
@@ -745,18 +763,13 @@ static inline void process_voice(Engine& e, int vi) {
 			u = Pd < 0.0f ? -u : u;
 			nr = nr * 1664525u + 1013904223u;
 			const real nz = (real)(int32_t)nr * 4.656613e-10f;
-			um += k_um * (u - um);
-			u += nz * br * (u - um);
+			u += nz * (br * rmax(u, 0.0f) + tnl * gtk);
 #ifdef CLARINET_TEST_HOOK
 			if (clarinet_dbg_imp && vi == 0) u = clarinet_dbg_n == 0 ? 1.0f : 0.0f;
 #endif
 			const real p = 2.0f * pin + u;
 #ifdef CLARINET_TEST_HOOK
 			if (vi == 0 && clarinet_dbg_p && clarinet_dbg_n < clarinet_dbg_len) clarinet_dbg_p[clarinet_dbg_n] = p;
-			if (vi == 0 && clarinet_dbg_u && clarinet_dbg_n < clarinet_dbg_len) {
-				clarinet_dbg_u[clarinet_dbg_n] = u;
-				clarinet_dbg_x[clarinet_dbg_n] = x;
-			}
 			if (vi == 0) clarinet_dbg_n++;
 #endif
 			pe = p - gam - tpush + lay * rmax(-1.0f - x, 0.0f);
@@ -797,9 +810,8 @@ static inline void process_voice(Engine& e, int vi) {
 			const real fm1 = fr - 1.0f, fm2 = fr - 2.0f, fp1 = fr + 1.0f;
 			const real h0 = -fr * fm1 * fm2 * (1.0f / 6), h1 = fp1 * fm1 * fm2 * 0.5f, h2 = -fp1 * fr * fm2 * 0.5f, h3 = fp1 * fr * fm1 * (1.0f / 6);
 			const real inc = h0 * y0 + h1 * y1 + h2 * y2 + h3 * y3;
-			real v1, lp0, lp;
-			SVF_TICK(inc, l1, l2, lc, v1, lp0);
-			SVF_TICK(lp0, l3, l4, lc2, v1, lp);
+			real v1, lp;
+			SVF_TICK(inc, l1, l2, lc, v1, lp);
 			const real vl = (lp - lsv) * Gl;
 			const real lo = vl + lsv;
 			lsv = lo + vl;
@@ -821,14 +833,11 @@ static inline void process_voice(Engine& e, int vi) {
 	s.aprev = aprev;
 	s.l1 = l1;
 	s.l2 = l2;
-	s.l3 = l3;
-	s.l4 = l4;
 	s.ls = lsv;
 	s.rprev = rprev;
 	s.gam = gam;
 	s.w = w;
 	s.nrng = nr;
-	s.um = um;
 	s.DBp = s.DB;
 	s.hole += rmin(0.2f * e.r48, 1.0f) * (s.hole_t - s.hole);
 	s.xlp = xlp;
@@ -843,7 +852,7 @@ static inline void process_voice(Engine& e, int vi) {
 	}
 
 	// guard: non-finite or absurd state -> reset this voice and drop its block
-	const real st = fabsf(s.x1) + fabsf(s.pe) + fabsf(s.q) + fabsf(s.l1) + fabsf(s.l2) + fabsf(s.l3) + fabsf(s.l4) + fabsf(s.ls) + fabsf(s.rprev) + fabsf(s.amp) + fabsf(s.gam);
+	const real st = fabsf(s.x1) + fabsf(s.pe) + fabsf(s.q) + fabsf(s.l1) + fabsf(s.l2) + fabsf(s.ls) + fabsf(s.rprev) + fabsf(s.amp) + fabsf(s.gam);
 	if (!(peak < 1e3f) || !(st < 1e5f)) {
 		reset_voice(e, s, vi);
 		s.active = 0;
@@ -909,15 +918,15 @@ static constexpr ParamEntry param_table[] = {
     {{"p_curve", "breath", 0.3f, 3.0f, C_}, &Params::p_curve},
     {{"zeta", "reed", 0.05f, 1.2f, C_}, &Params::zeta},
     {{"zeta_reg", "reed", -1.0f, 1.0f, C_}, &Params::zeta_reg},
-    {{"reed_hz", "reed", 500.0f, 10000.0f, C_}, &Params::reed_hz},
+    {{"reed_hz", "reed", 500.0f, 6000.0f, C_}, &Params::reed_hz},
     {{"reed_q", "reed", 0.05f, 1.2f, C_}, &Params::reed_q},
     {{"lay", "reed", 0.0f, 12.0f, C_}, &Params::lay},
     {{"emb", "reed", -1.5f, 1.5f, C_}, &Params::emb},
     {{"emb_bend", "reed", -100.0f, 100.0f, C_}, &Params::emb_bend},
     {{"bore_r", "bore", 3.0f, 20.0f, C_}, &Params::bore_r},
     {{"wall", "bore", 0.0f, 5.0f, C_}, &Params::wall},
-    {{"lat_hz", "bore", 300.0f, 8000.0f, C_}, &Params::lat_hz},
-    {{"lat_q", "bore", 0.3f, 1.0f, C_}, &Params::lat_q}, // 1: Butterworth (passive: |R| <= 1)
+    {{"lat_hz", "bore", 300.0f, 5000.0f, C_}, &Params::lat_hz},
+    {{"lat_q", "bore", 0.3f, 0.7f, C_}, &Params::lat_q}, // (passive: |R| <= 1)
     {{"reg_pos", "bore", 0.03f, 0.42f, C_}, &Params::reg_pos},
     {{"reg_tau", "bore", 0.1f, 10.0f, C_}, &Params::reg_tau},
     {{"reg_r", "bore", 0.0f, 2.0f, C_}, &Params::reg_r},
@@ -925,6 +934,8 @@ static constexpr ParamEntry param_table[] = {
     {{"tone_hz", "radiation", 1000.0f, 20000.0f, C_}, &Params::tone_hz},
     {{"tone_q", "radiation", 0.5f, 2.0f, C_}, &Params::tone_q},
     {{"breath", "air", 0.0f, 1.0f, C_}, &Params::breath},
+    {{"wander", "air", 0.0f, 0.2f, C_}, &Params::wander},
+    {{"t_noise", "air", 0.0f, 1.0f, C_}, &Params::t_noise},
     {{"tongue", "attack", 0.0f, 2.0f, C_}, &Params::tongue},
     {{"acc_level", "attack", 0.0f, 1.0f, C_}, &Params::acc_amp},
     {{"acc_decay", "attack", 0.01f, 0.3f, C_}, &Params::acc_t},

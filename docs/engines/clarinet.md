@@ -39,39 +39,41 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 
 | id | name | group | min | max | default | kind |
 |---|---|---|---|---|---|---|
-| `1b5426fe` | `gain` | level | 0.1 | 100 | 7.9 | continuous |
-| `75245e0b` | `pres_lin` | level | 0 | 1 | 0.728985 | continuous |
-| `1b755ad8` | `pres_sq` | level | 0 | 1.5 | 0.061114 | continuous |
-| `14a92b36` | `pres_hz` | level | 2 | 200 | 9.86625 | continuous |
+| `1b5426fe` | `gain` | level | 0.1 | 100 | 10.2 | continuous |
+| `75245e0b` | `pres_lin` | level | 0 | 1 | 0.585375 | continuous |
+| `1b755ad8` | `pres_sq` | level | 0 | 1.5 | 0.416054 | continuous |
+| `14a92b36` | `pres_hz` | level | 2 | 200 | 20.569 | continuous |
 | `1036ae7e` | `release` | level | 0.005 | 1 | 0.04 | continuous |
 | `c7d91eff` | `rel_pedal` | level | 0 | 3 | 0.4 | continuous |
-| `f4ada648` | `p_soft` | breath | 0.8 | 2 | 1.10267 | continuous |
-| `e754ff5f` | `g_loud` | breath | 0.3 | 1.4 | 0.975684 | continuous |
-| `e68ca377` | `g_reg` | breath | -0.5 | 0.5 | -0.050039 | continuous |
-| `b3a3844b` | `p_curve` | breath | 0.3 | 3 | 1.50129 | continuous |
-| `657428bf` | `zeta` | reed | 0.05 | 1.2 | 0.122233 | continuous |
-| `d63bf2aa` | `zeta_reg` | reed | -1 | 1 | 0.703614 | continuous |
-| `e79a6f74` | `reed_hz` | reed | 500 | 10000 | 3374.04 | continuous |
-| `47cc72a1` | `reed_q` | reed | 0.05 | 1.2 | 0.985047 | continuous |
-| `4d6071e5` | `lay` | reed | 0 | 12 | 5.51467 | continuous |
+| `f4ada648` | `p_soft` | breath | 0.8 | 2 | 0.95028 | continuous |
+| `e754ff5f` | `g_loud` | breath | 0.3 | 1.4 | 0.770122 | continuous |
+| `e68ca377` | `g_reg` | breath | -0.5 | 0.5 | -0.100848 | continuous |
+| `b3a3844b` | `p_curve` | breath | 0.3 | 3 | 1.04757 | continuous |
+| `657428bf` | `zeta` | reed | 0.05 | 1.2 | 0.260937 | continuous |
+| `d63bf2aa` | `zeta_reg` | reed | -1 | 1 | 0.499791 | continuous |
+| `e79a6f74` | `reed_hz` | reed | 500 | 6000 | 4749.94 | continuous |
+| `47cc72a1` | `reed_q` | reed | 0.05 | 1.2 | 0.537844 | continuous |
+| `4d6071e5` | `lay` | reed | 0 | 12 | 6.95634 | continuous |
 | `7e8ac38f` | `emb` | reed | -1.5 | 1.5 | 0.4 | continuous |
 | `02934c93` | `emb_bend` | reed | -100 | 100 | 25 | continuous |
 | `79cb4aa2` | `bore_r` | bore | 3 | 20 | 7.3 | continuous |
-| `a7262d15` | `wall` | bore | 0 | 5 | 0.300944 | continuous |
-| `9875d581` | `lat_hz` | bore | 300 | 8000 | 5398.78 | continuous |
-| `52aa6206` | `lat_q` | bore | 0.3 | 1 | 0.412101 | continuous |
-| `59d3f5e4` | `reg_pos` | bore | 0.03 | 0.42 | 0.163394 | continuous |
-| `9faaca68` | `reg_tau` | bore | 0.1 | 10 | 1.11067 | continuous |
-| `fca07064` | `reg_r` | bore | 0 | 2 | 0.908371 | continuous |
-| `81d60b50` | `alt_rel` | bore | 19 | 40 | 26.836 | continuous |
-| `53c95844` | `tone_hz` | radiation | 1000 | 20000 | 6533.46 | continuous |
+| `a7262d15` | `wall` | bore | 0 | 5 | 0.794358 | continuous |
+| `9875d581` | `lat_hz` | bore | 300 | 5000 | 3468.1 | continuous |
+| `52aa6206` | `lat_q` | bore | 0.3 | 0.7 | 0.350535 | continuous |
+| `59d3f5e4` | `reg_pos` | bore | 0.03 | 0.42 | 0.152096 | continuous |
+| `9faaca68` | `reg_tau` | bore | 0.1 | 10 | 0.995833 | continuous |
+| `fca07064` | `reg_r` | bore | 0 | 2 | 0.960028 | continuous |
+| `81d60b50` | `alt_rel` | bore | 19 | 40 | 26.5117 | continuous |
+| `53c95844` | `tone_hz` | radiation | 1000 | 20000 | 3077.53 | continuous |
 | `0cca7651` | `tone_q` | radiation | 0.5 | 2 | 0.7 | continuous |
-| `235d9fc7` | `breath` | air | 0 | 1 | 0.049328 | continuous |
-| `25a7329d` | `tongue` | attack | 0 | 2 | 1.9972 | continuous |
-| `6f1a0e5f` | `acc_level` | attack | 0 | 1 | 0.214979 | continuous |
-| `6f9d5d57` | `acc_decay` | attack | 0.01 | 0.3 | 0.137027 | continuous |
-| `fd47c156` | `tongue_t` | attack | 0.001 | 0.05 | 0.00412 | continuous |
-| `eb47a500` | `tongue_f` | attack | 0 | 4 | 2.24762 | continuous |
+| `235d9fc7` | `breath` | air | 0 | 1 | 0.024494 | continuous |
+| `f23b7114` | `wander` | air | 0 | 0.2 | 0.04533 | continuous |
+| `09ceaf46` | `t_noise` | air | 0 | 1 | 5.5e-05 | continuous |
+| `25a7329d` | `tongue` | attack | 0 | 2 | 1.62323 | continuous |
+| `6f1a0e5f` | `acc_level` | attack | 0 | 1 | 0.227953 | continuous |
+| `6f9d5d57` | `acc_decay` | attack | 0.01 | 0.3 | 0.054279 | continuous |
+| `fd47c156` | `tongue_t` | attack | 0.001 | 0.05 | 0.029923 | continuous |
+| `eb47a500` | `tongue_f` | attack | 0 | 4 | 1.7749 | continuous |
 | `72d5f1ed` | `slur` | attack | 0 | 1 | 0.1 | continuous |
 | `68410493` | `tune` | attack | -100 | 100 | 0 | continuous |
 | `af32797a` | `pitch_t` | attack | 0.003 | 0.3 | 0.01 | continuous |
@@ -85,7 +87,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 35000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 2.625 KB (2688 bytes) (on a 64-bit host) |
+| engine object | 2.71094 KB (2776 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 100 KB |
 
