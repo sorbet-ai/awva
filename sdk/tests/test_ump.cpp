@@ -136,7 +136,7 @@ TEST_CASE("ump: a MIDI note's strike: its velocity as the pressure rate, x0.6 a 
 	CHECK(same(h.last.release, ump::velocity16(0x80000000u)));
 }
 
-TEST_CASE("ump: a MIDI note's pressure stays at 1/127 or more while held; a sensor's note as it comes") {
+TEST_CASE("ump: a MIDI note's pressure stays at 1/127 or more while held, and a sensor's note's as it comes") {
 	ump::Decoder<16> d;
 	Host h;
 	send(d, h, ump::message(ump::op_note_on, 1, 60, 0, 0x80000000u));
