@@ -77,7 +77,7 @@
  * tools/target_render/profile.sh): oboe 28.4k, cor anglais 28.2k, bassoon 27.8k. Per voice-sample:
  * two square roots, two divisions, ~110 instructions; per block the loop delay's Newton step on the
  * small-signal loop gain.
- * Memory: the bore delay lines, 4 KB per voice (40 KB LargeMemory). Engine ~3 KB.
+ * Memory: the bore delay lines, 4 KB per voice (40 KB BulkMemory). Engine ~3 KB.
  */
 #ifndef VOICE_DOUBLEREED_H_
 #define VOICE_DOUBLEREED_H_
@@ -112,8 +112,8 @@ static constexpr real NOTE_LO = 31.5f;    // below: an octave up (the delay line
 static constexpr real NOTE_HI = 100.0f;   // above: an octave down
 static constexpr real STRIKE_WIN = 0.05f; // s: a strike counts while the note starts
 
-// the bore delay lines, placed by the host (engine SDK): LargeMemory (on an embedded target, its slower SRAM)
-struct LargeMemory {
+// the bore delay lines, placed by the host (engine SDK): BulkMemory (on an embedded target, its slower SRAM)
+struct BulkMemory {
 	alignas(32) float bore[MAX_VOICES][BLEN];
 };
 
@@ -195,7 +195,7 @@ static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only f
 //   2 bassoon      fitted to the University of Iowa MIS bassoon (pp/mf/ff chromatic scales); ref_note 46
 // The output gains put each preset's mf level at v1's.
 static constexpr int NUM_PRESETS = 3;
-[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static constexpr const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef DOUBLEREED_PRESET
@@ -208,10 +208,10 @@ struct VoiceState {
 	// reed: blade position y (m, 0 at rest, -h0 shut) and velocity; the input pressure, the cavity's
 	// flow and the near field's (apex inertance) flow
 	real y, yv, p, ic, ul;
-	real um;   // the jet's mean flow
-	real tlev; // the strike the tongue has held the reed for
-	int age;   // blocks since the note started from silence
-	real sage; // seconds since the note's strike (a start, or a new note): the window a strike counts in
+	real um;      // the jet's mean flow
+	real tlev;    // the strike the tongue has held the reed for
+	int age;      // blocks since the note started from silence
+	real sage;    // seconds since the note's strike (a start, or a new note): the window a strike counts in
 	int was_held; // the key was held in the last block (a press on a voice still sounding its release)
 	// bore
 	real l1, l2; // lattice lowpass (SVF) states
@@ -248,9 +248,9 @@ struct Engine {
 	awva::NoteControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	Params p;           // as set (preset, live edits)
-	Params ps;          // smoothed copy used by the DSP
-	LargeMemory* large; // the host's (init): the bore delay lines
+	Params p;         // as set (preset, live edits)
+	Params ps;        // smoothed copy used by the DSP
+	BulkMemory* bulk; // the host's (init): the bore delay lines
 	real sr, dt, pi_sr, ctrl_dt, block_dt;
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
@@ -382,7 +382,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.pth = 1000.0f;
 	s.Dff = 100.0f;
 	if (v >= 0 && v < MAX_VOICES)
-		for (int i = 0; i < BLEN; i++) e.large->bore[v][i] = 0.0f;
+		for (int i = 0; i < BLEN; i++) e.bulk->bore[v][i] = 0.0f;
 }
 
 static inline void update_derived(Engine& e) {
@@ -708,7 +708,7 @@ static inline void process_voice(Engine& e, int vi) {
 	}
 
 	// ---- audio rate: reed, input, bore, lattice --------------------------------------------------
-	float* __restrict__ B = e.large->bore[vi];
+	float* __restrict__ B = e.bulk->bore[vi];
 	// a tongued start: while the strike rises (the first ~16 ms of a note from silence) the tongue
 	// holds the reed closed, more for a harder strike; at its peak it lets it go
 	if (press) {
@@ -976,11 +976,11 @@ namespace doublereed {
 #include "presets/doublereed.inc"
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/doublereed/: a file per preset");
 
-[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+[[nodiscard]] static constexpr const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
 	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
-[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+[[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
 
 [[nodiscard]] static inline Params preset_params(int i) {
 	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);

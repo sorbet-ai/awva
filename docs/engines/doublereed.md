@@ -13,11 +13,11 @@ Header `dsp/include/awva/voice_doublereed.h`, traits `dsp/include/awva/engines/d
 | input | control | from MIDI |
 |---|---|---|
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
-| pressure | `pres`, 0 released .. 1 a firm press (up to ~1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
-| strike | `vpres`, the pressure's velocity: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
-| tilt y | `but_y`, forward/back tilt -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: CC74 (bipolar) |
-| shake | `acc_abs`, the accelerometer's magnitude in g (1 at rest) | the instrument's motion sensor (not from MIDI) |
-| pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
+| pressure | `pressure`, 0 released .. 1 MIDI 2.0's full scale (engines take up to 1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
+| pressure rate | `pressure_rate`, how fast the pressure moves: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
+| timbre | `timbre`, -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: Registered Per-Note Controller 74, CC74 (bipolar) |
+| sustain | `sustain`, 0 .. 1 (0 at rest) | CC64 |
+| acceleration | `motion.accel_g`, the acceleration's magnitude in g (1 at rest) | a host's motion sensor (not from MIDI yet) |
 
 An input not listed makes no difference to the sound; each listed one changes it in at least one preset (the contract suite checks both). What each does in this engine: "Playing" below. MIDI in detail: [Playing with MIDI 2.0 and MPE](../midi.md).
 
@@ -83,6 +83,8 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `4aac31a8` | `hiss` | air | 0 | 0.5 | 0 | continuous |
 | `09ceaf46` | `t_noise` | air | 0 | 1 | 0.000821 | continuous |
 | `25a7329d` | `tongue` | attack | 0 | 2 | 1.21443 | continuous |
+| `96f13303` | `att_rate` | attack | 0 | 2 | 1.21443 | continuous |
+| `972d507d` | `att_noise` | attack | 0 | 2 | 1.21443 | continuous |
 | `6f1a0e5f` | `acc_level` | attack | 0 | 1.5 | 1.45496 | continuous |
 | `6f9d5d57` | `acc_decay` | attack | 0.005 | 0.3 | 0.037843 | continuous |
 | `fd47c156` | `tongue_t` | attack | 0.0005 | 0.05 | 0.0008 | continuous |
@@ -92,17 +94,17 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `175c54d9` | `flutter` | mod | 0 | 1 | 0.6 | continuous |
 | `e6f3c1b1` | `flut_hz` | mod | 8 | 40 | 24 | continuous |
 
-## Budget and memory
+## Cost and memory
 
 | | |
 |---|---|
 | voices | up to 10 |
 | channels | 1 (mono) |
-| CPU | 29000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
-| tail | silent and idle within 2 s of the last release |
-| engine object | 2.86719 KB (2936 bytes) (on a 64-bit host) |
-| FastMemory | none |
-| LargeMemory | 40 KB |
+| CPU | 90.63 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
+| tail | silent and idle within 2.5 s of the last release |
+| hot (the engine object) | 3.07031 KB (3144 bytes) (on a 64-bit host) |
+| stream (StreamMemory) | none |
+| bulk (BulkMemory) | 40 KB |
 
 <!-- awva_docs: end -->
 

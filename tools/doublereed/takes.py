@@ -24,7 +24,7 @@ def rises(bintag, preset, params, tag):
     subprocess.run(cmd + jobs, check=True, capture_output=True)
     for fn in TAKES:
         x = np.fromfile(os.path.join(d, fn + '.f32'), np.float32)
-        c = np.fromfile(os.path.join(ROOT, 'takes', fn), np.float32).reshape(-1, 58)[:, :50].reshape(-1, 10, 5)
+        c = np.fromfile(os.path.join(ROOT, 'takes', fn), np.float32).reshape(-1, 45)[:, :40].reshape(-1, 10, 4)  # (awva_render --ctl: pitch, pressure, pressure_rate, timbre)
         held = c[:, :, 1] > 0
         anyh = held.any(1)
         for b in range(1, len(anyh)):

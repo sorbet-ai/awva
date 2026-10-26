@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// Renders the doublereed engine on engine-level control files (per 32-sample block 10 voices x (note,
-// pres, vpres, x, y) + 8 globals, float32) as the board's synth thread drives it: a zeroed Engine,
+// Renders the doublereed engine on engine-level control files (awva_render --ctl's layout: per 32-sample
+// block 10 voices x (pitch, pressure, pressure_rate, timbre), then the instrument's 5 (sustain, accel_g,
+// spin x 3), float32) as an embedded host drives it: a zeroed Engine,
 // init, set_preset, then per block the controls and process. --set name=value overrides live
 // parameters from the first block on, without their glide. The fitting tools' renderer.
 // Usage: replay --engine doublereed --preset N [--set name=v ...] --job in.ctl out.f32 [--job ...]
@@ -19,6 +20,7 @@
 #include "voice_doublereed.h"
 
 namespace {
+constexpr size_t CTL_WIDTH = 10 * 4 + 5; // (awva_render --ctl)
 constexpr int NV = 10, BLOCK = 32, SR = 48000;
 
 std::vector<float> read_f32(const std::string& path) {
@@ -46,9 +48,9 @@ int run(const char* ename, InitF initf, ProcF procf, const std::vector<Set>& set
 	static E e;
 	if (list) {
 		std::memset(static_cast<void*>(&e), 0, sizeof e);
-		if constexpr (requires { e.large; }) {
-			static std::remove_pointer_t<decltype(e.large)> lm0;
-			e.large = &lm0;
+		if constexpr (requires { e.bulk; }) {
+			static std::remove_pointer_t<decltype(e.bulk)> lm0;
+			e.bulk = &lm0;
 		}
 		initf(e);
 		for (int i = 0; i < EP::count; i++) {
@@ -60,19 +62,19 @@ int run(const char* ename, InitF initf, ProcF procf, const std::vector<Set>& set
 	int rc = 0;
 	for (const auto& job : jobs) {
 		const std::vector<float> ctl = read_f32(job.first);
-		const size_t nb = ctl.size() / 58;
+		const size_t nb = ctl.size() / CTL_WIDTH;
 		if (nb == 0) {
 			std::fprintf(stderr, "empty controls %s\n", job.first.c_str());
 			return 2;
 		}
 		std::memset(static_cast<void*>(&e), 0, sizeof e);
-		if constexpr (requires { e.fast; }) {
-			static std::remove_pointer_t<decltype(e.fast)> fm;
-			e.fast = &fm;
+		if constexpr (requires { e.stream; }) {
+			static std::remove_pointer_t<decltype(e.stream)> fm;
+			e.stream = &fm;
 		}
-		if constexpr (requires { e.large; }) {
-			static std::remove_pointer_t<decltype(e.large)> lm;
-			e.large = &lm;
+		if constexpr (requires { e.bulk; }) {
+			static std::remove_pointer_t<decltype(e.bulk)> lm;
+			e.bulk = &lm;
 		}
 		initf(e);
 		for (const Set& s : sets) {
@@ -89,10 +91,17 @@ int run(const char* ename, InitF initf, ProcF procf, const std::vector<Set>& set
 		if constexpr (requires { e.ps = e.p; }) e.ps = e.p; // no glide: the overrides from the start
 		std::vector<float> out(nb * BLOCK);
 		for (size_t b = 0; b < nb; b++) {
-			const float* c = &ctl[b * 58];
-			for (int v = 0; v < NV; v++) e.vc[v] = {c[5 * v], c[5 * v + 1], c[5 * v + 2], c[5 * v + 3], c[5 * v + 4]};
-			const float* g = c + 50;
-			e.g = {g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7]};
+			const float* c = &ctl[b * CTL_WIDTH];
+			for (int v = 0; v < NV; v++) {
+				awva::NoteControls& n = e.vc[v];
+				n.pitch = c[4 * v];
+				n.pressure = c[4 * v + 1];
+				n.pressure_rate = c[4 * v + 1] > 0.0f || c[4 * v + 2] < 0.0f ? c[4 * v + 2] : 0.0f; // (released: never positive)
+				n.timbre = c[4 * v + 3];
+				n.gate = n.pressure > 0.0f;
+			}
+			const float* g = c + 40;
+			e.g = {g[0], {g[1], {g[2], g[3], g[4]}}};
 			procf(e, out.data() + b * BLOCK);
 		}
 		size_t bad = 0;

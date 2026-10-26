@@ -14,7 +14,7 @@ These tools fitted the double reed engine's (`dsp/include/awva/voice_doublereed.
 | `diag.py`, `ramp.py`, `takediag.py`, `refdiag.py` | the jank diagnosis: notes at pressures and strikes, pressure ramps, the recorded key takes, the recordings' own life |
 | `robust.py`, `takes.py`, `probe.py`, `ctl.py` | every note speaking in its register; the takes' rise from the key; scripted notes |
 | `bake_dr.py` | fitted parameters into the preset files (`presets/doublereed/`), the cor anglais as the oboe's player on its geometry; then `cmake -P tools/presets_inc.cmake` |
-| `replay.cpp` | the renderer they use, `bin/<tag>/replay` (the build line is in its header) |
+| `replay.cpp` | the renderer they use, `bin/<tag>/replay` (the build line is in its header): engine controls files in awva_render --ctl's layout |
 
 `fit_dr.py` fits in the Track B way, not on the static spectrum alone. Its objective has these parts:
 - the sustain: harmonics, noise, the level across notes and dynamics, and the timbre's response to the dynamic;

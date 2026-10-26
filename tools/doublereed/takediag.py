@@ -17,7 +17,7 @@ for fn in TAKES:
     cp = os.path.join(ROOT, 'takes', fn); op = os.path.join(ROOT, 'tmp', 'td_' + fn + '.f32')
     subprocess.run([replay(bt), '--engine', eng, '--preset', pre, '--job', cp, op], check=True, capture_output=True)
     x = np.fromfile(op, np.float32)
-    c = np.fromfile(cp, np.float32).reshape(-1, 58)[:, :50].reshape(-1, 10, 5)
+    c = np.fromfile(cp, np.float32).reshape(-1, 45)[:, :40].reshape(-1, 10, 4)  # (awva_render --ctl: pitch, pressure, pressure_rate, timbre)
     held = c[:, :, 1] > 0; nh = held.sum(1)
     for v in range(10):
         h = held[:, v].astype(int); d = np.diff(np.concatenate([[0], h, [0]]))

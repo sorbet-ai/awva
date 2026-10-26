@@ -24,6 +24,7 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 | [bowed](engines/bowed.md) | bowed strings: friction-driven waveguide strings, modal body, section (9 presets) | 9 | 37 |
 | [brass](engines/brass.md) | brass: a lip source and a physical bore, bell, mutes (9 presets) | 9 | 43 |
 | [clarinet](engines/clarinet.md) | physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets) | 2 | 45 |
+| [doublereed](engines/doublereed.md) | physical double reeds: reed, conical bore and tone holes, a living player (oboe, cor anglais, bassoon) | 3 | 52 |
 | [ep](engines/ep.md) | electric pianos: modal tines and reeds, pickups, damper (14 presets) | 14 | 25 |
 | [flute](engines/flute.md) | physical flutes: an air jet on the edge of an open-open bore (flute, alto flute, piccolo) | 3 | 62 |
 | [modal](engines/modal.md) | tuned percussion: banks of damped resonators, struck or rubbed (6 presets) | 6 | 21 |
