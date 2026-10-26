@@ -35,7 +35,7 @@
  * Controls:
  *   pres   breath. Below ~0.12 (clarinet) .. 0.2 (sax) the reed doesn't speak: breath noise and a
  *          whispery bore resonance. Above it the tone blooms and gets louder and brighter;
- *          pushed hard (> ~1.05) a growl (hummed roughness) sets in. The register stays on the
+ *          pushed hard (> growl_from, a live parameter: 0.7) a growl (hummed roughness) sets in. The register stays on the
  *          fundamental over the whole pressure/tilt range (tested on notes 36..91).
  *   vpres  tonguing: a fast strike gives a pressure kick and a short tongue/breath noise burst
  *   but_y  backward = clarinet (cylindrical, hollow, odd harmonics, tighter embouchure),
@@ -43,6 +43,10 @@
  *          High notes (above ~E5) are pulled towards the middle of the morph.
  *   note   pitch, including vibrato/bends (sideways tilt)
  *   shake  (acc_abs > ~1.15) adds growl
+ *   life   (a live parameter, LIFE_DEFAULT after init) micro-randomness, never a vibrato:
+ *          every note a little different (start pitch offset that settles, brightness, tongue kick,
+ *          breath noise), a tiny broadband pitch, level, brightness and breath-noise flicker, each
+ *          voice its own
  * The per-sample loop has no divisions and no libm: one hardware vsqrt per sample on a Cortex-M7.
  */
 #ifndef VOICE_REED_H_
@@ -52,6 +56,7 @@
 #include <math.h>
 #include "controls.h"
 #include "dspmath.h"
+#include "params.h"
 #include "svf.h"
 
 namespace reed {
@@ -125,11 +130,17 @@ static constexpr real FCTRACK = REED_FCTRACK;
 #else
 static constexpr real FCTRACK = 2.0f;
 #endif
-// (host experiments: -DREED_GTH=...)
+// growl_from's value after init (host experiments: -DREED_GTH=...)
 #ifdef REED_GTH
 static constexpr real GTH = REED_GTH;
 #else
-static constexpr real GTH = 1.05f;
+static constexpr real GTH = 0.7f;
+#endif
+// life's value after init (host experiments: -DREED_LIFE=...)
+#ifdef REED_LIFE
+static constexpr real LIFE_DEFAULT = REED_LIFE;
+#else
+static constexpr real LIFE_DEFAULT = 0.0f;
 #endif
 // (host experiments: -DREED_NG=...)
 #ifdef REED_NG
@@ -243,6 +254,11 @@ struct VoiceState {
 	real n1, n1b, n2; // noise filter states
 	real gn;          // growl noise lowpass
 	real outg;        // output gain at the end of the last block
+	// life: per note (start pitch offset, decaying; brightness, tongue, breath noise factors) and
+	// flicker noises (pitch fast / slow, level, brightness, breath noise)
+	real lpo, lbo, ltg, lnn;
+	real lnf, lns, llv, lbr, lnz;
+	uint32_t lrng;
 };
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
@@ -258,8 +274,10 @@ struct Engine {
 	int nvoices;
 	BulkMemory* bulk; // the host's (init)
 	real sr;
-	real shake; // smoothed shake amount from acc_abs
-	real dc1;   // master DC blocker state
+	real shake;      // smoothed shake amount from acc_abs
+	real life;       // live parameter: micro-randomness (0 = none)
+	real growl_from; // live parameter: the pressure where the growl sets in (full ~0.33 above)
+	real dc1;        // master DC blocker state
 	real dcx;
 	VoiceState vs[MAX_VOICES];
 	real mix[BLOCK];
@@ -271,6 +289,8 @@ static inline void reset_voice(Engine& e, int v) {
 	real note = s.note_prev;
 	s = VoiceState();
 	s.rng = seed;
+	s.lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
+	s.ltg = s.lnn = 1.0f;
 	s.note_prev = note;
 	s.d1 = 100.0f;
 	s.d2 = 100.0f;
@@ -283,6 +303,8 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 	e.nvoices = nvoices < MAX_VOICES ? nvoices : MAX_VOICES;
 	e.g = awva::instrument_at_rest;
 	e.shake = 0.0f;
+	e.growl_from = GTH;
+	e.life = LIFE_DEFAULT;
 	e.dc1 = 0.0f;
 	e.dcx = 0.0f;
 	for (int n = 0; n < BLOCK; n++) e.mix[n] = 0.0f;
@@ -323,6 +345,45 @@ static inline void process_voice(Engine& e, int v) {
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f;
 	s.note_prev = note;
 
+	// life (micro-randomness, never a vibrato): every note draws its own small offsets (start pitch
+	// +-3 cents x life, settling in ~0.1 s; brightness +-8%, tongue kick +-25%, breath noise +-30%);
+	// one-pole noise flicker of unit spread: pitch (~10 ms and ~300 ms, ~2 cents rms at life 1),
+	// level (~120 ms, ~0.4 dB), brightness (~80 ms), breath noise (~50 ms). Off (life 0): the voice
+	// as without it.
+	const real life = clampr(e.life, 0.0f, 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_br = 1.0f, l_lv = 1.0f, l_nz = 1.0f, l_tg = 1.0f;
+	if (life_on) {
+		uint32_t r = s.lrng;
+		auto rnd = [&r]() {
+			r = r * 1664525u + 1013904223u;
+			return (real)(int32_t)r * (1.0f / 2147483648.0f);
+		};
+		if (jump || wake) {
+			s.lpo = 3.0f * rnd();
+			s.lbo = 0.08f * rnd();
+			s.ltg = 1.0f + 0.25f * rnd();
+			s.lnn = 1.0f + 0.3f * rnd();
+		}
+		const real dt = (real)BLOCK / e.sr;
+		s.lpo *= 1.0f - dt * 10.0f;
+		const auto flick = [&](real& x, real tc) {
+			const real k = strisy::rmin(dt / tc, 1.0f);
+			x = clampr(x + k * (1.732f * __builtin_sqrtf(2.0f / k) * rnd() - x), -3.0f, 3.0f);
+		};
+		flick(s.lnf, 0.01f);
+		flick(s.lns, 0.3f);
+		flick(s.llv, 0.12f);
+		flick(s.lbr, 0.08f);
+		flick(s.lnz, 0.05f);
+		s.lrng = r;
+		note += 0.01f * life * (s.lpo + 1.6f * s.lnf + 1.2f * s.lns);
+		l_br = 1.0f + life * (s.lbo + 0.04f * s.lbr);
+		l_lv = 1.0f + 0.05f * life * s.llv;
+		l_nz = strisy::rmax(1.0f + life * (s.lnn - 1.0f + 0.35f * s.lnz), 0.0f);
+		l_tg = 1.0f + life * (s.ltg - 1.0f);
+	}
+
 	// ---- block-rate controls
 	const real sr = e.sr;
 	s.pres_s += 0.25f * (pres - s.pres_s); // ~2.5 ms
@@ -344,6 +405,7 @@ static inline void process_voice(Engine& e, int v) {
 	// bell / tone hole lattice: 2-pole Butterworth lowpass in the main loop (above the cutoff the
 	// bore has no resonances, so the reed can't squeak there); the cutoff tracks pitch for high notes
 	real fc = (FC0 + (FC1 - FC0) * m) * (0.85f + 0.3f * ps);
+	if (life_on) fc *= l_br;
 	fc = strisy::rmax(fc, FCTRACK * f0);
 	const real K = strisy::tan0(strisy::rmin(fc * 3.1415927f / sr, 1.2f));
 	const real bnorm = 1.0f / (1.0f + 1.4142136f * K + K * K);
@@ -389,7 +451,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real dd1 = (D1 - d1s) * (1.0f / BLOCK), dd2 = (D2 - d2s) * (1.0f / BLOCK);
 
 	// breath gamma with tongue kick, interpolated over the block
-	const real gam_t = strisy::rmin(gamma_of(ps) * (1.0f + 0.35f * tg), G_MAX);
+	const real gam_t = strisy::rmin(gamma_of(ps) * (1.0f + (life_on ? 0.35f * l_tg : 0.35f) * tg), G_MAX);
 	const real gam0 = s.gam;
 	const real dgam = (gam_t - gam0) * (1.0f / BLOCK);
 	// breath noise: relative noise on gamma (turbulence, more when soft) and audible breath
@@ -398,16 +460,18 @@ static inline void process_voice(Engine& e, int v) {
 	// tongue adds a short burst at note onsets.
 	const real namt = NG * (0.5f + (1.0f - clampr(ps, 0.0f, 1.0f))) + 0.15f * tg;
 	const real nr = clampr(ps * (1.0f / 0.15f), 0.0f, 1.0f);
-	const real nout = NO * nr * nr * (1.0f - 0.85f * clampr((ps - 0.1f) * 4.0f, 0.0f, 1.0f)) + 0.06f * tg;
+	real nout = NO * nr * nr * (1.0f - 0.85f * clampr((ps - 0.1f) * 4.0f, 0.0f, 1.0f)) + 0.06f * tg;
+	if (life_on) nout *= l_nz;
 	// growl: pushed hard, or shaking
-	const real gr_t = clampr((ps - GTH) * 3.0f, 0.0f, 1.0f) + e.shake;
+	const real gr_t = clampr((ps - e.growl_from) * 3.0f, 0.0f, 1.0f) + e.shake;
 	s.growl += 0.05f * (strisy::rmin(gr_t, 1.2f) - s.growl);
 	if (s.growl < 1e-6f) s.growl = 0.0f;
 	const real gdep = 0.45f * s.growl;
 	const real gf = clampr(0.5f * f0 + 3.0f, 25.0f, 140.0f);
 	const uint32_t ginc = (uint32_t)(gf * (4294967296.0f / e.sr));
 	// output gain: more dynamic range than the physical amplitude alone
-	const real outg_t = 1.2f * (0.30f + 0.70f * clampr(ps, 0.0f, 1.2f));
+	real outg_t = 1.2f * (0.30f + 0.70f * clampr(ps, 0.0f, 1.2f));
+	if (life_on) outg_t *= l_lv;
 	// presence band: k * bandpass, Q 0.9, around 2.2 (clarinet) .. 2.6 kHz (sax)
 	const strisy::SvfCoef prc = strisy::svf_from_g(strisy::tan0((2200.0f + 400.0f * m) * 3.1415927f / sr), 0.9f);
 	// soft = darker (more internal wave), loud = brighter (more presence)
@@ -567,6 +631,21 @@ static inline void process(Engine& e, real* __restrict__ output) {
 	e.dcx = xp;
 }
 
+// the live parameters: the growl's onset pressure, life
+inline constexpr strisy::ParamDesc growl_from_desc = {"growl_from", "expr", 0.5f, 1.5f, strisy::ParamKind::continuous};
+inline constexpr strisy::ParamDesc life_desc = {"life", "expr", 0.0f, 1.0f, strisy::ParamKind::continuous};
+
 } // namespace reed
+
+namespace strisy {
+template <> struct EngineParams<reed::Engine> {
+	static constexpr int count = 2;
+	static constexpr const ParamDesc* desc(int i) { return i == 0 ? &reed::growl_from_desc : i == 1 ? &reed::life_desc :
+		                                                                                              nullptr; }
+	static float* ptr(reed::Engine& e, int i) { return i == 0 ? &e.growl_from : i == 1 ? &e.life :
+		                                                                                 nullptr; }
+	static void changed(reed::Engine&, int) {}
+};
+} // namespace strisy
 
 #endif // VOICE_REED_H_

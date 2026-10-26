@@ -25,6 +25,7 @@ struct reed {
 	static constexpr int max_voices = ::reed::MAX_VOICES;
 	static constexpr float tail_seconds = 2.0f;
 	static constexpr Cost cost = {62.5f};
+	static constexpr Heroes heroes = {{"growl_from", "life"}};
 	// the rates whose pitch is further from 48 kHz than the default 3 cents, each a known fault with its
 	// bound (a cent or two above every preset's worst, measured 2026-10-25; contract_rates.cpp)
 	static constexpr const char* rate_fault = "not diagnosed yet";
