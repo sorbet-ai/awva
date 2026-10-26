@@ -106,6 +106,7 @@ static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
 static constexpr real NOTE_LO = 31.5f;  // below: an octave up (the delay line's length)
 static constexpr real NOTE_HI = 100.0f; // above: an octave down
+static constexpr real STRIKE_WIN = 0.05f; // s: a strike counts while the note starts
 
 // the bore delay lines, placed by the host (engine SDK): LargeMemory (on an embedded target, its slower SRAM)
 struct LargeMemory {
@@ -204,6 +205,7 @@ struct VoiceState {
 	real um;   // the jet's mean flow
 	real tlev; // the strike the tongue has held the reed for
 	int age;   // blocks since the note started from silence
+	real sage; // seconds since the note's strike (a start, or a new note): the window a strike counts in
 	// bore
 	real l1, l2; // lattice lowpass (SVF) states
 	real D;      // loop delay (samples)
@@ -349,6 +351,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.y = s.yv = s.p = s.ic = s.ul = s.um = 0.0f;
 	s.tlev = 0.0f;
 	s.age = 0;
+	s.sage = 0.0f;
 	s.l1 = s.l2 = 0.0f;
 	s.D = 100.0f;
 	s.w = 0;
@@ -454,6 +457,10 @@ static inline void process_voice(Engine& e, int vi) {
 	const bool jump = start || fabsf(note - s.note_prev) >= 1.0f;
 	if (jump && !start && held) s.acc = rmax(s.acc, P.slur); // legato change: a small articulation
 	if (jump) s.vneg = 0.0f;
+	// only a strike strikes: the key's speed counts while the note starts (STRIKE_WIN after a start or a
+	// new note); later in the note a swell of the pressure (a positive vpres) is breath, not the tongue
+	s.sage = jump ? 0.0f : rmin(s.sage + e.block_dt, 1.0f);
+	const real vstrike = s.sage < STRIKE_WIN ? vplev : 0.0f;
 	s.note_prev = note;
 	if (start) {
 		// from silence: the reed at rest, the bore quiet
@@ -464,8 +471,8 @@ static inline void process_voice(Engine& e, int vi) {
 		s.pm_prev = 0.0f;
 	}
 	// a strike opens the tongue: fast for a hard one
-	if (vplev > 0.05f && (start || vplev > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vplev), 0.0005f), 1.0f);
-	if (start && vplev <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
+	if (vstrike > 0.05f && (start || vstrike > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vstrike), 0.0005f), 1.0f);
+	if (start && vstrike <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
 
 	const real by = clampr(cc.but_y, -1.0f, 1.0f);
 	if (start) {
@@ -648,8 +655,8 @@ static inline void process_voice(Engine& e, int vi) {
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
 		const strisy::SvfCoef bc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
-			acc = rmax(acc * fac_acc, vplev);
-			tn = rmax(tn * fac_tn, vplev);
+			acc = rmax(acc * fac_acc, vstrike);
+			tn = rmax(tn * fac_tn, vstrike);
 			real t1, ls;
 			SVF_TICK(rmin(pcl, 2.0f), lv1, lv2, bc, t1, ls);
 			amp = rmax(rmax(ls, 0.0f), amp * fac);
@@ -685,9 +692,9 @@ static inline void process_voice(Engine& e, int vi) {
 	} else if (s.age < 1000) {
 		s.age++;
 	}
-	if (s.age < 24 && vplev > s.tlev + 0.02f) {
-		s.tlev = vplev;
-		s.y = rmin(s.y, -h0 * clampr(P.tongue_shut, 0.0f, 1.2f) * vplev);
+	if (s.age < 24 && vstrike > s.tlev + 0.02f) {
+		s.tlev = vstrike;
+		s.y = rmin(s.y, -h0 * clampr(P.tongue_shut, 0.0f, 1.2f) * vstrike);
 		s.yv = rmin(s.yv, 0.0f);
 	}
 	real y = s.y, yv = s.yv, p = s.p, ic = s.ic, ul = s.ul, um = s.um;
