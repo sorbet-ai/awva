@@ -43,6 +43,7 @@ import os
 import numpy as np
 
 from . import keys, strike
+from .strike import rise_time  # noqa: F401  (re-exported)
 
 SR = 48000
 PRESSURES = tuple(float(p) for p in np.round(np.geomspace(0.04, 1.0, 12), 3))
@@ -296,9 +297,10 @@ def calibrated(item, render, workdir, overlap=0.03, refine=1, log=print):
     # every note's strike, calibrated in this stream (the slurred notes start from SLUR_STRIKE)
     shim = copy.copy(item)
     shim.stream = p1
-    path, srep = strike.calibrate(shim, render, os.path.join(workdir, 'strike'), refine=refine + 1, log=log, every=True)
+    rises = [strike.rise_time(rec, a, b) for a, b, _ in rec_notes(item)]
+    path, srep = strike.calibrate(shim, render, os.path.join(workdir, 'strike'), refine=refine + 1, log=log, every=True, rises=rises)
     rep.update(pressure_curves={str(n + 12 * o): {k: (v if not isinstance(v, list) else [round(float(z), 3) for z in v]) for k, v in c.items()}
-                                for n, c in cv.items()}, strike=srep['final'], targets=srep['targets'])
+                                for n, c in cv.items()}, strike=srep['final'], targets=srep['targets'], rise_targets=rises)
     return path, rep
 
 

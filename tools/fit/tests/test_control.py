@@ -111,6 +111,45 @@ class Restrike(unittest.TestCase):
         self.assertLess(max(v) / 8191, 0.12)  # no step where the hold starts
 
 
+class Ramp(unittest.TestCase):
+    def test_a_soft_strike_on_a_quick_ramp(self):
+        s = keys.Stream()
+        s.press(0.3, 0.2, 0.5, 0.3, note=62, ramp=0.02)
+        v = [r[4] / 8191 for r in s.rows]
+        self.assertLess(max(v), 0.21)
+        self.assertGreater(max(v), 0.15)
+        self.assertAlmostEqual(s.notes[0]['rise'], 0.02)
+        k = int(0.03 / keys.DT)
+        self.assertLess(max(v[k:k + 100]), 0.06)  # no velocity jump after the ramp (a second strike)
+
+    def test_restrike_sets_a_ramp(self):
+        src = stream(os.path.join(TMP, 'r.csv'))
+        new = strike.restrike(src, os.path.join(TMP, 'r2.csv'), {0: 0.15}, ramps={0: 0.03})
+        self.assertAlmostEqual(new[0]['rise'], 0.03)
+        self.assertTrue(new[0]['ramp'])
+
+    def test_rise_time(self):
+        x = np.concatenate([np.zeros(SR // 10), tone(220, 0.6)])
+        ramp = np.ones(len(x))
+        a = SR // 10
+        ramp[a:a + int(0.05 * SR)] = np.linspace(0, 1, int(0.05 * SR))
+        r = strike.rise_time(x * ramp, 0.1, 0.7)
+        self.assertAlmostEqual(r, 0.04, delta=0.012)  # 10 -> 90 % of a 50 ms linear ramp
+
+
+class Room(unittest.TestCase):
+    def test_a_room_measured_back(self):
+        from awvafit import room
+        rng = np.random.default_rng(2)
+        x = np.concatenate(sum([[0.1 * rng.standard_normal(int(0.8 * SR)), np.zeros(int(0.7 * SR))] for _ in range(6)], []))
+        x += 1e-5 * rng.standard_normal(len(x))
+        for rt, drr in ((0.3, 6.0), (0.6, 0.0), (0.4, 15.0)):
+            m = room.measure(room.apply(x, room.Room(rt, drr), SR, seed=1), SR)
+            self.assertAlmostEqual(m.rt60_s, rt, delta=0.05 * rt)
+            self.assertAlmostEqual(m.drr_db, drr, delta=1.5)
+        self.assertIsNone(room.measure(x, SR).rt60_s)  # dry: no decay to read
+
+
 class Bursts(unittest.TestCase):
     def test_a_bright_burst_in_a_held_note(self):
         from awvafit.features.transients import hf_bursts

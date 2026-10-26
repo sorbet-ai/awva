@@ -50,15 +50,19 @@ class Stream:
         self.rows = []
         self.notes = []
 
-    def press(self, t0, v, P, hold, rel=0.02, note=None, kid=None, bend=None, tilt=None, shape=None, avoid=()):
+    def press(self, t0, v, P, hold, rel=0.02, note=None, kid=None, bend=None, tilt=None, shape=None, avoid=(), ramp=None):
         """A key press at t0 (s): strike v (0..1), sustain pressure P, held `hold` s after the rise,
         released in `rel` s. On kid, else on a key that plays `note`. bend(t), tilt(t): x, y (-1..1)
-        over the press; shape(t): a pressure multiplier over the hold. Returns the release's end."""
+        over the press; shape(t): a pressure multiplier over the hold. Returns the release's end.
+        ramp: the rise's time (s) set apart from the strike: the pressure rises in `ramp` and the
+        velocity over the rise is scaled to peak at v (a soft strike on a quick ramp, or a hard one on a
+        slow ramp); without it the rise follows the strike, K pi P / (2 v)."""
         if kid is None:
             kid = key_for(note, avoid)
         v = max(v, 0.01)
-        tr = K * math.pi * P / (2 * v)
+        tr = K * math.pi * P / (2 * v) if ramp is None else ramp
         tr = max(tr, 0.004)
+        vscale = 1.0 if ramp is None else v / max(K * math.pi * P / (2 * tr), 1e-9)
         t_end = tr + hold
         t = 0.0
         vel_lp = 0.0
@@ -75,7 +79,8 @@ class Stream:
                 p = 0.0
             slope = (p - prev) / DT if t > 0 else p / DT
             prev = p
-            vel_lp += 0.5 * (K * slope - vel_lp)  # the scanner's velocity lags a little
+            sc = vscale if t <= tr else 1.0
+            vel_lp += 0.5 * (K * slope * sc - vel_lp)  # the scanner's velocity lags a little
             velo = max(min(vel_lp, 1.0), -1.0)
             x = bend(t) if bend else 0.0
             y = tilt(t) if tilt else 0.0
@@ -84,7 +89,8 @@ class Stream:
             if t >= t_end + rel:
                 break
             t += DT
-        self.notes.append(dict(t_on=t0, t_off=t0 + t_end, note=note if note is not None else note_of(kid), kid=kid, v=v, P=P, rise=tr))
+        self.notes.append(dict(t_on=t0, t_off=t0 + t_end, note=note if note is not None else note_of(kid), kid=kid, v=v, P=P, rise=tr,
+                               **({} if ramp is None else dict(ramp=True))))
         return t0 + t_end + rel
 
     def write(self, path, notes=True):

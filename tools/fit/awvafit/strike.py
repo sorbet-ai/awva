@@ -51,6 +51,7 @@ SR = 48000
 STRIKES = (0.05, 0.08, 0.12, 0.17, 0.25, 0.35, 0.5, 0.7, 1.0)
 SLUR = 0.1
 SPEAKS_DB = -6.0
+RAMP_MIN, RAMP_MAX = 0.004, 0.3
 
 
 def _windows(on, off):
@@ -76,14 +77,14 @@ def overshoot(x, on, off, sr=SR):
     return round(pk, 2), round(rr, 2)
 
 
-def sweep_stream(path, notes, Ps, strikes=STRIKES, hold=1.2, gap=0.6):
+def sweep_stream(path, notes, Ps, strikes=STRIKES, hold=1.2, gap=0.6, ramp=None):
     s = keys.Stream()
     t = 0.3
     sched = []
     for n in notes:
         for P in Ps:
             for v in strikes:
-                end = s.press(t, v, P, hold, note=n)
+                end = s.press(t, v, P, hold, note=n, ramp=ramp)
                 sched.append(dict(note=n, P=P, v=v, t_on=t, t_off=end - 0.02))
                 t = end + gap
     s.write(path, notes=False)
@@ -138,6 +139,29 @@ def choose(curve_, note, P, target, prior=None, offset=0.0, tol=0.5, must_speak=
     return float(grid[near[0]])
 
 
+def rise_time(x, on, off, sr=SR):
+    """the onset's rise (s): the 5 ms RMS envelope from 10 to 90 % of the way from its lowest point near
+    the onset (-50..+30 ms: silence, or a slur's dip) to the level the note reaches (the 90th percentile
+    over its first 250 ms, or less of a short note); None where the note never rises 6 dB"""
+    h = int(0.005 * sr)
+    a = max(int((on - 0.05) * sr), 0)
+    b = int(min(on + 0.25, max(off, on + 0.06)) * sr)
+    seg = x[a:b]
+    n = len(seg) // h
+    if n < 6:
+        return None
+    env = np.sqrt(np.mean(seg[:n * h].reshape(n, h) ** 2, 1))
+    i0 = int(np.argmin(env[:min(int(0.08 / 0.005), n)]))
+    base = env[i0]
+    top = float(np.percentile(env[i0:], 90))
+    if top < 2 * base or top <= 0:
+        return None
+    up = env[i0:]
+    k10 = int(np.argmax(up >= base + 0.1 * (top - base)))
+    k90 = int(np.argmax(up >= base + 0.9 * (top - base)))
+    return max(k90 - k10, 0) * 0.005
+
+
 def read_csv(path):
     rows = []
     with open(path) as f:
@@ -154,17 +178,22 @@ def notes_of(csv_path):
         return json.load(f)
 
 
-def restrike(csv_in, csv_out, strikes, rel=0.02):
-    """strikes: {note index (notes.json order): new strike}; writes csv_out and its .notes.json"""
+def restrike(csv_in, csv_out, strikes, rel=0.02, ramps=None):
+    """strikes: {note index (notes.json order): new strike}; ramps: {note index: rise time s} (the
+    pressure's rise set apart from the strike, keys.Stream.press(ramp=)); writes csv_out and its
+    .notes.json"""
+    ramps = ramps or {}
     head, rows = read_csv(csv_in)
     notes = notes_of(csv_in)
     off = rows[0][0] - min(n['t_on'] for n in notes)  # the CSV clock re the schedule's
     drop = set()
     new_rows = []
     out_notes = [dict(n) for n in notes]
-    for j, v in sorted(strikes.items()):
+    for j in sorted(set(strikes) | set(ramps)):
         n = notes[j]
-        if abs(v - n['v']) < 1e-9:
+        v = strikes.get(j, n['v'])
+        T = ramps.get(j)
+        if abs(v - n['v']) < 1e-9 and T is None:
             continue
         ton, tend, kid, P, tr = n['t_on'] + off, n['t_off'] + off, n['kid'], n['P'], n['rise']
         idx = [i for i, r in enumerate(rows) if r[2] == kid and ton - 1e-6 <= r[0] <= tend + rel + 2 * keys.DT + 1e-6]
@@ -183,17 +212,19 @@ def restrike(csv_in, csv_out, strikes, rel=0.02):
         H = lambda c: float(np.interp(min(max(c, h0), h1), t, p))  # noqa: E731
         Pr = P
         for _ in range(4):
-            tr_new = max(keys.K * math.pi * Pr / (2 * max(v, 0.01)), 0.004)
+            tr_new = max(keys.K * math.pi * Pr / (2 * max(v, 0.01)), 0.004) if T is None else max(T, 0.004)
             Pr = max(H(ton + tr_new), 1e-4)
-        tr_new = max(keys.K * math.pi * Pr / (2 * max(v, 0.01)), 0.004)
+        tr_new = max(keys.K * math.pi * Pr / (2 * max(v, 0.01)), 0.004) if T is None else max(T, 0.004)
         hold = max(tend - ton - tr_new, 0.05)
         shape = lambda u: H(ton + tr_new + u) / Pr  # noqa: E731
         s = keys.Stream()
-        s.press(ton, v, Pr, hold, rel=rel, kid=kid, shape=shape,
+        s.press(ton, v, Pr, hold, rel=rel, kid=kid, shape=shape, ramp=T,
                 bend=lambda u: float(np.interp(ton + u, t, xs)), tilt=lambda u: float(np.interp(ton + u, t, ys)))
         drop.update(idx)
         new_rows += [list(r) for r in s.rows]
         out_notes[j].update(v=v, P=Pr, rise=tr_new, t_off=n['t_on'] + tr_new + hold)
+        if T is not None:
+            out_notes[j]['ramp'] = True
     keep = [r for i, r in enumerate(rows) if i not in drop] + new_rows
     keep.sort(key=lambda r: r[0])
     with open(csv_out, 'w', newline='\n') as f:
@@ -230,9 +261,17 @@ def phrase_overshoot(x, notes, sr=SR):
     return [overshoot(x, n['t_on'] - t0, n['t_off'] - t0, sr) for n in notes]
 
 
-def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False):
+def phrase_rise(x, notes, sr=SR):
+    t0 = notes[0]['t_on']
+    return [rise_time(x, n['t_on'] - t0, n['t_off'] - t0, sr) for n in notes]
+
+
+def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False, rises=None):
     """-> (calibrated stream path, report dict). render(csv) -> the dry engine output of that stream.
-    every: calibrate the slurred notes' strikes too (a held breath that re-attacks as the recording does)"""
+    every: calibrate the slurred notes' strikes too (a held breath that re-attacks as the recording does).
+    rises: the recording's onset rise per note (s, None where unmeasured): each such note's pressure
+    rises over its own ramp, set apart from the strike, refined in the phrase until the render's rise
+    is the recording's; the strike then sizes only the attack's overshoot"""
     os.makedirs(workdir, exist_ok=True)
     notes = notes_of(item.stream)
     tg = targets(item)
@@ -243,8 +282,11 @@ def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False):
     sw_notes = sorted({pitches[0], pitches[len(pitches) // 2], pitches[-1]})
     Pv = [notes[j]['P'] for j in js]
     Ps = Ps or sorted({round(float(np.percentile(Pv, 25)), 2), round(float(np.percentile(Pv, 75)), 2)})
+    ramps = {}
+    if rises:
+        ramps = {j: float(np.clip(rises[j], RAMP_MIN, RAMP_MAX)) for j in js if rises[j] is not None}
     sw = os.path.join(workdir, 'sweep.csv')
-    sched = sweep_stream(sw, sw_notes, Ps)
+    sched = sweep_stream(sw, sw_notes, Ps, ramp=float(np.median(list(ramps.values()))) if ramps else None)
     cv = curve(render(sw), sched)
     log(f'sweep: notes {sw_notes}, P {Ps}, {len(sched)} presses')
     offs = {j: 0.0 for j in js}
@@ -254,8 +296,14 @@ def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False):
     for it_ in range(refine + 1):
         st = {j: choose(cv, notes[j]['note'], notes[j]['P'], tg[j], prior=notes[j]['v'], offset=offs[j], must_speak=not spoke[j]) for j in js}
         path = os.path.join(workdir, f'calibrated_{it_}.csv')
-        restrike(item.stream, path, st)
-        meas = phrase_overshoot(render(path), notes_of(path))
+        restrike(item.stream, path, st, ramps=dict(ramps))
+        x = render(path)
+        meas = phrase_overshoot(x, notes_of(path))
+        rz = phrase_rise(x, notes_of(path))
+        ramps_used = dict(ramps)
+        for j in ramps:  # the ramp, scaled by how far the render's rise is from the recording's
+            if rz[j] is not None and rz[j] > 0:
+                ramps[j] = float(np.clip(ramps[j] * np.clip((rises[j] / rz[j]) ** 0.8, 0.5, 2.0), RAMP_MIN, RAMP_MAX))
         for j in js:
             if meas[j] is None:
                 continue
@@ -263,23 +311,36 @@ def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False):
             spoke[j] = spoke[j] or (every and abs(notes[j]['v'] - SLUR) < 1e-9 and meas[j][1] >= SPEAKS_DB)
             offs[j] += meas[j][0] - pred
         res = [abs(meas[j][0] - tg[j]) for j in js if meas[j]]
-        hist.append(dict(strikes={j: round(v, 3) for j, v in st.items()}, measured=[m[0] if m else None for m in meas],
+        hist.append(dict(strikes={j: round(v, 3) for j, v in st.items()}, ramps={j: round(v, 4) for j, v in ramps_used.items()},
+                         measured=[m[0] if m else None for m in meas], rise=rz,
                          median_abs_error_db=round(float(np.median(res)), 2)))
         log(f'pass {it_}: median |overshoot - recording| {np.median(res):.1f} dB over {len(res)} notes')
     # the final stream: per note, the pass whose strike came nearest the recording (the notes are
     # separate presses, so the choices hardly interact); rendered once more to report what it gives
-    def err(k, j):
+    def err(k, j):  # the overshoot's error (dB) and the rise's (10 ms counted as 1 dB)
         m = hist[k]['measured'][j]
-        return abs(m - tg[j]) if m is not None else math.inf
-    st = {j: hist[min(range(len(hist)), key=lambda k: err(k, j))]['strikes'][j] for j in js}
+        e = abs(m - tg[j]) if m is not None else math.inf
+        if rises and rises[j] is not None and j in hist[k]['ramps']:
+            r = hist[k]['rise'][j]
+            e += abs(r - rises[j]) * 100 if r is not None else 3.0
+        return e
+    best = {j: min(range(len(hist)), key=lambda k: err(k, j)) for j in js}
+    st = {j: hist[best[j]]['strikes'][j] for j in js}
+    rp = {j: hist[best[j]]['ramps'][j] for j in js if j in hist[best[j]]['ramps']}
     path = os.path.join(workdir, 'calibrated.csv')
-    restrike(item.stream, path, st)
-    meas = phrase_overshoot(render(path), notes_of(path))
+    restrike(item.stream, path, st, ramps=rp)
+    x = render(path)
+    meas = phrase_overshoot(x, notes_of(path))
+    rz = phrase_rise(x, notes_of(path))
     res = [abs(meas[j][0] - tg[j]) for j in js if meas[j]]
-    final = dict(strikes=st, measured=[m[0] if m else None for m in meas], median_abs_error_db=round(float(np.median(res)), 2))
+    final = dict(strikes=st, ramps=rp, measured=[m[0] if m else None for m in meas], rise=rz,
+                 median_abs_error_db=round(float(np.median(res)), 2))
+    if rises:
+        rr = [abs(rz[j] - rises[j]) * 1000 for j in rp if rz[j] is not None]
+        final['median_abs_rise_error_ms'] = round(float(np.median(rr)), 1) if rr else None
     log(f'final: median |overshoot - recording| {np.median(res):.1f} dB over {len(res)} notes')
     return path, dict(phrase=item.id, sweep=dict(notes=sw_notes, P=Ps, curve={f'{n}@{p}': c for (n, p), c in cv.items()}),
-                      targets=tg, original_strikes=[n['v'] for n in notes], passes=hist, final=final)
+                      targets=tg, rise_targets=rises, original_strikes=[n['v'] for n in notes], passes=hist, final=final)
 
 
 def render_with(renderer, engine, preset, transpose, workdir):
