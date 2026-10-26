@@ -17,6 +17,7 @@
 #include <string_view>
 
 #include "awva/engine.h"
+#include "awva_sdk/host_config.h"
 
 namespace awva::sdk {
 
@@ -49,10 +50,11 @@ public:
 [[nodiscard]] std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int sample_rate, std::string* error);
 // legato: the keys in mono legato (awva/legato.h): one voice, a key pressed while one is held slurs to it
 [[nodiscard]] std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error, bool legato = false);
-[[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error, bool legato = false);
+// the MIDI players take MIDI at the host's control rate (host_config.h, timed_midi.h)
+[[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, const HostConfig& host, std::string* error, bool legato = false);
 // a UMP file: one packet a line, "<frame> <word> [<word> ...]" (decimal frame, hex words), '#'
 // starts a comment; frames in order. legato: the mapping in mono legato (midi_voices.h)
-[[nodiscard]] std::unique_ptr<Player> ump_player(const char* path, int voices, int sample_rate, bool legato, std::string* error);
+[[nodiscard]] std::unique_ptr<Player> ump_player(const char* path, const HostConfig& host, bool legato, std::string* error);
 
 // the file's absolute path, size and FNV-1a 64 checksum, "<path> (<n> bytes, fnv <hex>)"
 [[nodiscard]] std::string file_identity(const char* path);

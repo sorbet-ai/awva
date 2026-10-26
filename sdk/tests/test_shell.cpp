@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "doctest/doctest.h"
@@ -21,7 +22,7 @@ namespace {
 std::vector<float> render(const std::vector<int>& sizes, int frames) {
 	const sdk::EngineEntry* va = sdk::find_engine("va");
 	REQUIRE(va != nullptr);
-	sdk::Shell s(*va, 48000);
+	sdk::Shell s(*va, sdk::HostConfig{48000});
 	s.midi(0x90, 60, 100);
 	std::vector<float> l(static_cast<size_t>(frames)), r(static_cast<size_t>(frames));
 	bool off = false;
@@ -55,29 +56,32 @@ TEST_CASE("shell: a MIDI note sounds and ends, the call size makes no difference
 	CHECK(a == b);
 }
 
-TEST_CASE("shell: timed MIDI goes in at the first 2 ms step at or after its frame (timed_midi.h)") {
+TEST_CASE("shell: timed MIDI goes in at the first control step at or after its frame (timed_midi.h)") {
 	const sdk::EngineEntry* va = sdk::find_engine("va");
 	REQUIRE(va != nullptr);
-	// a note at frame 100 of a 1000-frame call is the note sent at frame 192, the next step
-	// (steps every 96 frames at 48 kHz), before the block that starts there
-	sdk::Shell a(*va, 48000), b(*va, 48000);
-	std::vector<float> la(2000), ra(2000), lb(2000), rb(2000);
-	a.midi(0x90, 60, 100, 100);
-	a.process(la.data(), ra.data(), 1000);
-	a.process(la.data() + 1000, ra.data() + 1000, 1000);
-	b.process(lb.data(), rb.data(), 192);
-	b.midi(0x90, 60, 100);
-	b.process(lb.data() + 192, rb.data() + 192, 1808);
-	CHECK(la == lb);
-	float peak = 0;
-	for (float x : la) peak = std::fmax(peak, std::fabs(x));
-	CHECK(peak > 1e-3f);
+	// a note at frame 100 of a 1000-frame call is the note sent at the next step, before the block
+	// that starts there: frame 128 at every block (the default), 192 at 500 Hz (every 96 frames)
+	for (const auto& [hz, step] : {std::pair{0, 128}, std::pair{500, 192}}) {
+		CAPTURE(hz);
+		sdk::Shell a(*va, sdk::HostConfig{48000, hz}), b(*va, sdk::HostConfig{48000, hz});
+		std::vector<float> la(2000), ra(2000), lb(2000), rb(2000);
+		a.midi(0x90, 60, 100, 100);
+		a.process(la.data(), ra.data(), 1000);
+		a.process(la.data() + 1000, ra.data() + 1000, 1000);
+		b.process(lb.data(), rb.data(), step);
+		b.midi(0x90, 60, 100);
+		b.process(lb.data() + step, rb.data() + step, 2000 - step);
+		CHECK(la == lb);
+		float peak = 0;
+		for (float x : la) peak = std::fmax(peak, std::fabs(x));
+		CHECK(peak > 1e-3f);
+	}
 }
 
 TEST_CASE("shell: every engine plays a MIDI note through the shell") {
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		CAPTURE(e->info->name);
-		sdk::Shell s(*e, 48000, 10, false);
+		sdk::Shell s(*e, sdk::HostConfig{48000, 0, 10}, false);
 		s.midi(0x90, 57, 110);
 		std::vector<float> l(9600), r(9600);
 		s.process(l.data(), r.data(), 9600);
@@ -97,7 +101,7 @@ TEST_CASE("shell: no pedal is no sustain: a note with no CC64 plays as with the 
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		CAPTURE(e->info->name);
 		const auto play = [e](bool pedal_up) {
-			sdk::Shell s(*e, 48000, 10, false);
+			sdk::Shell s(*e, sdk::HostConfig{48000, 0, 10}, false);
 			if (pedal_up) s.midi(0xb0, 64, 0);
 			s.midi(0x90, 57, 110);
 			s.midi(0x80, 57, 64, 24000);
@@ -125,7 +129,7 @@ TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 	std::fwrite(bytes.data(), 1, bytes.size(), f);
 	std::fclose(f);
 	std::string error;
-	const std::unique_ptr<sdk::Player> p = sdk::midi_player(path, 10, 48000, &error);
+	const std::unique_ptr<sdk::Player> p = sdk::midi_player(path, sdk::HostConfig{48000, 0, 10}, &error);
 	REQUIRE(p != nullptr);
 	CHECK(p->describe().find("awva_sdk_tests_players.mid") != std::string::npos);
 	CHECK(p->describe().find("fnv") != std::string::npos);
@@ -145,14 +149,14 @@ TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 	CHECK(peak > 0.01f);
 	CHECK(e.active_voices() == 0);
 	std::remove(path);
-	CHECK(sdk::midi_player("no/such/file.mid", 10, 48000, &error) == nullptr);
+	CHECK(sdk::midi_player("no/such/file.mid", sdk::HostConfig{48000, 0, 10}, &error) == nullptr);
 	CHECK(!error.empty());
 }
 
 TEST_CASE("shell: MIDI 2.0 in (UMP) plays as its MIDI 1.0 counterpart, and a note's id comes back when it has ended") {
 	const sdk::EngineEntry* va = sdk::find_engine("va");
 	REQUIRE(va != nullptr);
-	sdk::Shell a(*va, 48000), b(*va, 48000);
+	sdk::Shell a(*va, sdk::HostConfig{48000}), b(*va, sdk::HostConfig{48000});
 	std::vector<float> la(4800), ra(4800), lb(4800), rb(4800);
 	a.midi(0x90, 60, 127, 0, 7);
 	const uint32_t on[2] = {0x40903c00u, 0xffff0000u}; // velocity 1.0 = MIDI 1.0's 127

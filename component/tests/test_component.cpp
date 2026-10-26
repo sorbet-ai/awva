@@ -5,7 +5,8 @@
 // they load, their descriptor and manifest are the engine's, process_voices() renders bit for bit
 // what the engine renders (the scripted performances and the key recordings, through every
 // preset of accordion, trumpet, flute and clarinet), and process() with UMP renders bit for bit the SDK's MIDI
-// side (MidiVoices) driving the engine on the same 2 ms integer-frame step grid.
+// side (MidiVoices) driving the engine on the same integer-frame step grid (every block, and at
+// NSC_MODE_CONTROL_HZ 500).
 #include <bit>
 #include <cmath>
 #include <cstdio>
@@ -184,7 +185,8 @@ std::vector<Ev> ump_performance() {
 	return v;
 }
 
-std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
+// (hz: the control rate, NSC_MODE_CONTROL_HZ; 0: every block, the default)
+std::vector<float> render_ump(const char* id, bool legato, bool from_library, int hz = 0) {
 	const std::vector<Ev> perf = ump_performance();
 	const int blocks = 2 * SR / NSC_BLOCK;
 	std::vector<float> out(static_cast<size_t>(blocks) * NSC_BLOCK);
@@ -192,6 +194,7 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 		Loaded dll(id);
 		dll.c().init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
 		if (legato) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_LEGATO, 1) == 1);
+		if (hz) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_CONTROL_HZ, hz) == 1);
 		size_t k = 0;
 		for (int b = 0; b < blocks; b++) {
 			std::vector<nsc_event> ev;
@@ -203,17 +206,18 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 		}
 		return out;
 	}
-	// the reference: the SDK's MidiVoices and the engine linked in, the same step grid
+	// the reference: the SDK's MidiVoices and the engine linked in, the same step grid and factors
 	sdk::Engine e(*sdk::find_engine(id));
 	e.init(SR, NV);
 	auto mv = std::make_unique<sdk::MidiVoices>(NV);
 	mv->set_legato(legato);
+	mv->set_step(sdk::step_seconds(SR, hz));
 	size_t k = 0;
 	uint64_t steps = 0;
 	for (int b = 0; b < blocks; b++) {
 		const uint64_t start = static_cast<uint64_t>(b) * NSC_BLOCK;
-		for (; (steps * SR + 499) / 500 <= start; steps++) {
-			const uint64_t fs = (steps * SR + 499) / 500;
+		for (; sdk::step_frame(steps, SR, hz) <= start; steps++) {
+			const uint64_t fs = sdk::step_frame(steps, SR, hz);
 			for (; k < perf.size() && perf[k].frame <= fs; k++) (void)mv->ump(perf[k].w0, perf[k].w1);
 			mv->step();
 		}
@@ -256,16 +260,17 @@ TEST_CASE("flute from its library renders bit for bit as linked in (every preset
 	}
 }
 
-TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (polyphonic and mono legato)") {
+TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (polyphonic and mono legato, every block and 500 Hz)") {
 	for (const char* id : {"accordion", "trumpet", "va", "clarinet"}) {
-		for (bool legato : {false, true}) {
-			INFO(id << (legato ? " legato" : " poly"));
-			const std::vector<float> a = render_ump(id, legato, false), b = render_ump(id, legato, true);
-			CHECK(same(a, b));
-			double e2 = 0;
-			for (float x : b) e2 += static_cast<double>(x) * x;
-			CHECK(e2 > 0.0);
-		}
+		for (const int hz : {0, 500})
+			for (bool legato : {false, true}) {
+				INFO(id << (legato ? " legato" : " poly") << " at " << hz << " Hz");
+				const std::vector<float> a = render_ump(id, legato, false, hz), b = render_ump(id, legato, true, hz);
+				CHECK(same(a, b));
+				double e2 = 0;
+				for (float x : b) e2 += static_cast<double>(x) * x;
+				CHECK(e2 > 0.0);
+			}
 	}
 }
 
@@ -463,7 +468,8 @@ TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest 
 	Loaded dll("va");
 	const nsc_component& c = dll.c();
 	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
-	constexpr int Q = 1024, MORE = 500; // the queue's size, then more than it takes
+	REQUIRE(c.mode(dll.in.state, NSC_MODE_CONTROL_HZ, 500) == 1); // (2 ms steps: the queue fills before one)
+	constexpr int Q = 1024, MORE = 500;                           // the queue's size, then more than it takes
 	Ids back(Q + MORE);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
@@ -722,9 +728,9 @@ std::vector<sdk::MidiEvent> late_performance() {
 
 // awva_render --midi: the file through the SDK's MIDI player and the engine linked in (with the
 // library's FTZ guard: the renderer's own output differs from it only below -600 dBFS)
-std::vector<float> render_midi_file(const char* id, const std::string& path, int sr, int frames) {
+std::vector<float> render_midi_file(const char* id, const std::string& path, int sr, int frames, int hz) {
 	std::string err;
-	auto player = sdk::midi_player(path.c_str(), NV, sr, &err);
+	auto player = sdk::midi_player(path.c_str(), sdk::HostConfig{sr, hz, NV}, &err);
 	REQUIRE(player != nullptr);
 	sdk::Engine e(*sdk::find_engine(id));
 	e.init(sr, NV);
@@ -748,10 +754,11 @@ std::vector<float> render_midi_file(const char* id, const std::string& path, int
 // blocks rendered when their first frame is due, with the events seen so far; an event seen after
 // its block was rendered goes to the next one with its negative frame (late: true), or at that
 // block's frame 0 (late: false, what a host without negative frames could do)
-std::vector<float> render_host(const char* id, const std::vector<sdk::MidiEvent>& perf, int sr, int frames, int block, bool late) {
+std::vector<float> render_host(const char* id, const std::vector<sdk::MidiEvent>& perf, int sr, int frames, int block, bool late, int hz) {
 	Loaded dll(id);
 	const nsc_component& c = dll.c();
 	c.init(dll.in.state, dll.in.fast, dll.in.large, sr, NV);
+	if (hz) REQUIRE(c.mode(dll.in.state, NSC_MODE_CONTROL_HZ, hz) == 1);
 	struct Ev {
 		uint64_t frame;
 		uint32_t w0;
@@ -825,7 +832,8 @@ TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest 
 	Loaded dll("va");
 	const nsc_component& c = dll.c();
 	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
-	constexpr int Q = 1024, MORE = 500; // the queue's size, then more than it takes
+	REQUIRE(c.mode(dll.in.state, NSC_MODE_CONTROL_HZ, 500) == 1); // (2 ms steps: the queue fills before one)
+	constexpr int Q = 1024, MORE = 500;                           // the queue's size, then more than it takes
 	Ids back(Q + MORE);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
@@ -867,17 +875,19 @@ TEST_CASE("late events: a plugin host at any block size takes every event at awv
 		const sdk::MidiFile parsed = sdk::read_midi_file(path.c_str()); // (the file's times: on its tick grid)
 		REQUIRE(parsed.error.empty());
 		for (const char* id : {"accordion", "trumpet", "va"}) {
-			const std::vector<float> ref = render_midi_file(id, path, sr, frames);
-			double e2 = 0;
-			for (float x : ref) e2 += static_cast<double>(x) * x;
-			CHECK(e2 > 0.0);
-			for (const int block : {1, 33, 256, 0}) {
-				INFO(id << " at " << sr << " Hz, host blocks " << block);
-				CHECK(same(render_host(id, parsed.events, sr, frames, block, true), ref));
+			for (const int hz : {0, 500}) {
+				const std::vector<float> ref = render_midi_file(id, path, sr, frames, hz);
+				double e2 = 0;
+				for (float x : ref) e2 += static_cast<double>(x) * x;
+				CHECK(e2 > 0.0);
+				for (const int block : {1, 33, 256, 0}) {
+					INFO(id << " at " << sr << " Hz, control " << hz << " Hz, host blocks " << block);
+					CHECK(same(render_host(id, parsed.events, sr, frames, block, true, hz), ref));
+				}
+				// with a late event at the next block's frame 0 instead, at 500 Hz and 44.1 kHz (steps
+				// between block starts) some land a step late: what the negative frames are for
+				if (sr == 44100 && hz == 500) CHECK(!same(render_host(id, parsed.events, sr, frames, 33, false, hz), ref));
 			}
-			// with a late event at the next block's frame 0 instead, at 44.1 kHz (steps between block
-			// starts) some land a step late: what the negative frames are for
-			if (sr == 44100) CHECK(!same(render_host(id, parsed.events, sr, frames, 33, false), ref));
 		}
 		std::filesystem::remove(path);
 	}

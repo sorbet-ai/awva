@@ -21,18 +21,26 @@
 #ifndef AWVA_VOICE_ALLOCATOR_H_
 #define AWVA_VOICE_ALLOCATOR_H_
 
+#include <math.h>
 #include <stdint.h>
 
 namespace awva::voices {
 
-// the level estimate's decay per tick: x 0.998 - 0.0005 (in double)
-inline constexpr double LEVEL_DECAY = 0.998, LEVEL_STEP = 0.0005;
+// the level estimate's decay per tick of 2 ms: x 0.998 - 0.0005 (in double); set_step() scales it
+// to another step: x 0.998^(t / 2 ms) - 0.0005 (1 - that) / (1 - 0.998), the same at 2 ms bit for bit
+inline constexpr double LEVEL_DECAY = 0.998, LEVEL_STEP = 0.0005, LEVEL_SECONDS = 0.002;
 
 template <int Notes, int Voices> class VoiceAllocator {
 	static_assert(Notes <= 32767 && Voices <= 32767, "note and voice numbers are int16_t");
 
 public:
 	static constexpr int NOTES = Notes, VOICES = Voices;
+
+	// the step tick() is called at, in seconds (2 ms unless the host says another)
+	void set_step(double seconds) {
+		decay_ = pow(LEVEL_DECAY, seconds / LEVEL_SECONDS);
+		step_ = LEVEL_STEP * (1.0 - decay_) / (1.0 - LEVEL_DECAY);
+	}
 
 	// the voices in use, 1 .. Voices (all of them unless the host says fewer)
 	void set_voices(int n) { voices_ = n < 1 ? 1 : (n > Voices ? Voices : n); }
@@ -104,7 +112,7 @@ public:
 		for (int n = 0; n < voices_; n++) {
 			const int o = owner_[n];
 			if (o >= 0) {
-				level_[o] = level_[o] * LEVEL_DECAY - LEVEL_STEP;
+				level_[o] = level_[o] * decay_ - step_;
 				if (level_[o] < h.floor(o)) level_[o] = h.floor(o);
 			}
 		}
@@ -115,6 +123,7 @@ private:
 	int16_t owner_[Voices] = {};
 	float level_[Notes] = {};
 	int voices_ = Voices;
+	double decay_ = LEVEL_DECAY, step_ = LEVEL_STEP;
 
 public:
 	// (all -1: no note has a voice, no voice a note)

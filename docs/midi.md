@@ -25,7 +25,7 @@ The lower zone: member channels 2 .. 1 + members. An MCM (RPN 6 on channel 1) se
 
 | MPE | control |
 |---|---|
-| note on, its key | the note; its velocity becomes a strike (`pressure_rate`), which the decoder fades (x0.6 every 2 ms while above 0.01). Until pressure arrives, `pressure` is the velocity, so a keyboard without aftertouch still sounds |
+| note on, its key | the note; its velocity becomes a strike (`pressure_rate`), which the decoder fades (x0.6 every 2 ms while above 0.01, at any control rate). Until pressure arrives, `pressure` is the velocity, so a keyboard without aftertouch still sounds |
 | the member channel's pitch bend × the bend range (RPN 0) | added to `pitch` |
 | channel pressure (or poly pressure) | `pressure` (a held note's pressure never drops to 0) |
 | CC74 | `timbre` |

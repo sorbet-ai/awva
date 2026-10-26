@@ -24,6 +24,8 @@
 //   --legato          (--midi, --ump, --rec) mono legato: one voice, a note pressed while another is held
 //                     slurs to it (the MIDI mapping's mode; for --rec, the keys the same way)
 //   --nv N            voices (default 10)
+//   --control-hz H    (--midi, --ump) the control rate MIDI is taken at, Hz (default 0: every
+//                     engine block; an embedded host's scan, e.g. 500: awva_sdk/host_config.h)
 //   --rate HZ         sample rate (default: the performance's, 48000); the block is always 32
 //   --set NAME=V      a live parameter, written with its rule (clamped) after the preset; repeatable
 //   --transpose T     every note the engine gets moved by T semitones (an octave shift)
@@ -357,7 +359,7 @@ int main(int argc, char** argv) {
 	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr, *ump = nullptr, *compare = nullptr;
 	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr, *ctl_out = nullptr, *manifest = nullptr;
 	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0, target_lufs = -23.0, tp_ceiling = -1.0;
-	int nv = 10, rate = 0;
+	int nv = 10, rate = 0, control_hz = 0;
 	float transpose = 0.0f;
 	bool use_fx = false, check = false, list_params = false, ftz = false, legato = false, listen = false;
 	std::vector<Set> sets;
@@ -376,6 +378,7 @@ int main(int argc, char** argv) {
 		else if (s == "--ctl") ctl = next();
 		else if (s == "--ump") ump = next();
 		else if (s == "--legato") legato = true;
+		else if (s == "--control-hz") control_hz = std::atoi(next());
 		else if (s == "--compare") compare = next();
 		else if (s == "--listen") listen = true;
 		else if (s == "--lufs") target_lufs = std::atof(next());
@@ -431,6 +434,8 @@ int main(int argc, char** argv) {
 	// the input: exactly one
 	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --rec, --midi, --ctl or --ump");
 	if (legato && !midi && !ump && !rec) fail("--legato: mono legato for --midi, --ump or --rec");
+	if (control_hz != 0 && !midi && !ump) fail("--control-hz: the control rate of --midi or --ump");
+	if (control_hz < 0) fail("--control-hz: 0 (every engine block) or a rate in Hz");
 	const bool default_input = !perf && !rec && !midi && !ctl && !ump;
 	if (listen) use_fx = true; // a render for ears goes through the effects
 	if (default_input) perf = "default";
@@ -471,8 +476,8 @@ int main(int argc, char** argv) {
 		player = std::move(cp);
 	} else {
 		player = rec ? sdk::key_player(rec, nv, sr, &error, legato) :
-		    midi     ? sdk::midi_player(midi, nv, sr, &error, legato) :
-		    ump      ? sdk::ump_player(ump, nv, sr, legato, &error) :
+		    midi     ? sdk::midi_player(midi, sdk::HostConfig{sr, control_hz, nv}, &error, legato) :
+		    ump      ? sdk::ump_player(ump, sdk::HostConfig{sr, control_hz, nv}, legato, &error) :
 		               sdk::scripted_player(perf, nv, sr, &error);
 	}
 	if (!player) fail(error);
@@ -485,6 +490,7 @@ int main(int argc, char** argv) {
 	    preset_arg ? "" : "(its default) ", engine.preset(), pname ? " \"" : "", pname ? pname : "", pname ? "\"" : "", nv, sr,
 	    use_fx ? ", master effects" : "", ftz ? ", subnormals flushed" : "");
 	std::string input = player->describe() + (default_input ? " [the default input: no --perf, --rec or --midi]" : "");
+	if (midi || ump) input += control_hz ? ", control " + std::to_string(control_hz) + " Hz" : ", control every block";
 	std::string shaping;
 	if (!sets_desc.empty()) shaping += ", set " + sets_desc;
 	if (transpose != 0.0f) shaping += ", transposed " + json_number(transpose);
@@ -669,6 +675,7 @@ int main(int argc, char** argv) {
 		                                                    "perf"));
 		field("legato", legato ? "true" : "false");
 		field("sample_rate", std::to_string(sr));
+		field("control_hz", std::to_string(control_hz));
 		field("block", std::to_string(dsp::BLOCK));
 		field("voices", std::to_string(nv));
 		field("blocks", std::to_string(nblocks));

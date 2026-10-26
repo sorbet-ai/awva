@@ -15,9 +15,10 @@
  *
  * Time, in integer frames: process() renders one block of NSC_BLOCK frames. Its events are UMP
  * packets with their frame, counted from the block's start: 0 .. NSC_BLOCK - 1, or negative (down
- * to -NSC_BLOCK) for an event that arrived after its block was rendered. MIDI is taken in 2 ms
- * steps: step k is at frame ceil(k sr / 500), and an event is taken at the
- * first step at or after its frame; before each block, every step due by its start runs. So a late
+ * to -NSC_BLOCK) for an event that arrived after its block was rendered. MIDI is taken in steps
+ * of the control rate (NSC_MODE_CONTROL_HZ): by default every block (step k at frame k NSC_BLOCK),
+ * at h Hz step k at frame ceil(k sr / h); an event is taken at the first step at or after its
+ * frame; before each block, every step due by its start runs. So a late
  * event lands where it would have on time, at every rate, with no added latency (in the first
  * block, a negative frame is frame 0).
  *
@@ -174,7 +175,10 @@ typedef struct nsc_preset_report {
 } nsc_preset_report;
 
 enum nsc_mode {
-	NSC_MODE_LEGATO = 1, /* value 1: mono legato (one voice, slurs), 0: polyphonic (the default) */
+	NSC_MODE_LEGATO = 1,     /* value 1: mono legato (one voice, slurs), 0: polyphonic (the default) */
+	NSC_MODE_CONTROL_HZ = 2, /* value: the control rate MIDI is taken at, Hz (0, the default: every
+	                          * NSC_BLOCK frames; an embedded host's scan, e.g. 500), at most the
+	                          * sample rate; from the next step on */
 };
 
 typedef struct nsc_component {

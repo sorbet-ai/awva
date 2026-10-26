@@ -31,7 +31,8 @@
 //   MPE zone        Registered Controller 0/6, RPN 6 on channel 1: the member channels (lower zone)
 //
 // A note without a measured rate (any MIDI note but a sensor's) gets a strike: its Note On's
-// velocity as its pressure_rate, fading x0.6 every tick() (STEP_SECONDS) while above 0.01, then 0;
+// velocity as its pressure_rate, fading x0.6 every 2 ms (x0.6^(t / 2 ms) every tick() of a step t:
+// set_step) while above 0.01, then 0;
 // its Note Off's velocity as a negative rate. Until pressure comes its pressure is the velocity (a
 // keyboard without aftertouch still sounds), and while it is held its pressure stays at 1/127 or
 // more (pressure 0 is a release for the engines). A sensor's note (one that sent its rate) is
@@ -59,13 +60,15 @@
 #ifndef AWVA_UMP_H_
 #define AWVA_UMP_H_
 
+#include <math.h>
 #include <stdint.h>
 
 #include "controls.h"
 
 namespace awva::ump {
 
-inline constexpr double STEP_SECONDS = 0.002; // the strike's fade step: tick() is due this often
+// the strike's fade: x0.6 every 2 ms
+inline constexpr double STRIKE_FADE = 0.6, STRIKE_SECONDS = 0.002;
 
 // a Universal MIDI Packet's length in words, from its first word's message type (UMP 1.1)
 [[nodiscard]] constexpr int words(uint32_t w0) {
@@ -185,7 +188,7 @@ public:
 		for (int id = 0; id < Notes; id++) {
 			Slot& n = slot_[id];
 			if (n.on && n.strike && n.rate > 0.0f) {
-				n.rate = n.rate > 0.01f ? n.rate * 0.6f : 0.0f;
+				n.rate = n.rate > 0.01f ? n.rate * fade_ : 0.0f;
 				fading |= n.rate > 0.0f;
 				mark(id, CHANGED);
 			}
@@ -193,8 +196,10 @@ public:
 		fading_ = fading;
 		flush(h);
 	}
-	// a strike is fading: tick() is due every STEP_SECONDS
+	// a strike is fading: tick() is due every step
 	[[nodiscard]] bool fading() const { return fading_; }
+	// the step tick() is called at, in seconds (2 ms unless the host says another): the fade a step
+	void set_step(double seconds) { fade_ = (float)pow(STRIKE_FADE, seconds / STRIKE_SECONDS); }
 
 	// every note off at once, silently (the panic key)
 	template <class Host> void all_off(Host& h) {
@@ -515,6 +520,7 @@ private:
 	uint8_t queue_[Notes] = {};
 	int queued_ = 0;
 	bool fading_ = false;
+	float fade_ = (float)STRIKE_FADE; // the strike's fade a step
 	uint32_t age_ = 0;
 	int members_ = 15;
 	float bend_ = 0.0f;        // the instrument's bend (semitones)

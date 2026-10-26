@@ -4,10 +4,13 @@
 // voices) and the MIDI file reader (smf.h).
 #include <array>
 #include <cmath>
+#include <cstring>
+#include <memory>
 
 #include "doctest/doctest.h"
 #include "awva_sdk/midi_voices.h"
 #include "awva_sdk/smf.h"
+#include "awva_sdk/timed_midi.h"
 
 namespace sdk = awva::sdk;
 
@@ -20,7 +23,7 @@ int voice_of(const sdk::MidiVoices& m, float note) {
 	return -1;
 }
 
-// messages, then one 2 ms step
+// messages, then one control step
 void send(sdk::MidiVoices& m, std::initializer_list<std::array<uint8_t, 3>> msgs) {
 	for (const auto& x : msgs) REQUIRE(m.message(x[0], x[1], x[2]));
 	m.step();
@@ -148,6 +151,70 @@ TEST_CASE("midi in: MIDI 2.0 per-note timbre (Registered Per-Note Controller 74,
 // how much of the paint is gone. An embedded host resets an engine on a small audio-thread stack,
 // so reset() must not build its kilobytes of MIDI state as a temporary. (POSIX threads, and not
 // under the sanitizers, whose frames are of another size.)
+// --- the control rate (timed_midi.h, host_config.h) -------------------------------------------
+
+TEST_CASE("control rate: at 500 Hz the steps are the 2 ms grid frame for frame (44.1 and 48 kHz), and at 0 every block") {
+	for (const int sr : {44100, 48000}) {
+		CAPTURE(sr);
+		for (uint64_t k = 0; k < 200000; k++) {
+			REQUIRE(sdk::step_frame(k, sr, 500) == (k * static_cast<uint64_t>(sr) + 499u) / 500u); // (the 2 ms rule)
+			REQUIRE(sdk::step_frame(k, sr, 0) == k * awva::BLOCK);
+		}
+		CHECK(sdk::step_seconds(sr, 500) == 0.002); // (the factors' time constants: their own step)
+		CHECK(sdk::step_seconds(sr, 0) == static_cast<double>(awva::BLOCK) / sr);
+	}
+}
+
+TEST_CASE("control rate: at a 2 ms step the level decay and the strike's fade are the 2 ms literals, bit for bit") {
+	// a crowded, struck performance (more notes than voices: the allocator's levels decide) through
+	// MidiVoices as constructed (the literals) and set to a 2 ms step: the same controls every step
+	sdk::MidiVoices a(10), b(10);
+	b.set_step(sdk::step_seconds(48000, 500));
+	uint32_t rng = 99u;
+	for (int k = 0; k < 4000; k++) {
+		rng = rng * 1664525u + 1013904223u;
+		if (k % 7 == 0) {
+			const uint8_t note = static_cast<uint8_t>(40 + (rng >> 24) % 40), velo = static_cast<uint8_t>(1 + (rng >> 16) % 127);
+			const uint8_t m[3] = {static_cast<uint8_t>((rng >> 8) % 3 == 0 ? 0x80 : 0x90), note, velo};
+			REQUIRE(a.message(m, 3));
+			REQUIRE(b.message(m, 3));
+		}
+		a.step();
+		b.step();
+		REQUIRE(std::memcmp(a.voices(), b.voices(), sizeof(awva::NoteControls) * 10) == 0);
+	}
+}
+
+TEST_CASE("control rate: the strike fades by its time constant at any step (x0.6 per 2 ms)") {
+	// at every block of 48 kHz (32 frames: a third of 2 ms), three steps fade it as one 2 ms step
+	sdk::MidiVoices m(10);
+	m.set_step(sdk::step_seconds(48000, 0));
+	REQUIRE(m.message(0x90, 60, 100));
+	m.step();
+	const int v = voice_of(m, 60.0f);
+	REQUIRE(v >= 0);
+	const float strike = m.voices()[v].pressure_rate;
+	for (int k = 0; k < 3; k++) m.step();
+	CHECK(m.voices()[v].pressure_rate == doctest::Approx(0.6f * strike).epsilon(1e-6));
+}
+
+TEST_CASE("control rate: TimedMidi takes events at the first step at or after them, and another rate starts its grid where it is") {
+	sdk::TimedMidi t(sdk::HostConfig{48000, 500, 10});
+	const uint8_t on[3] = {0x90, 60, 100}, on2[3] = {0x90, 64, 100};
+	(void)t.midi1(100, on, 3); // 500 Hz: the step at frame 192 takes it
+	t.advance(160);
+	CHECK(voice_of(t.midi(), 60.0f) < 0);
+	t.advance(192);
+	CHECK(voice_of(t.midi(), 60.0f) >= 0);
+	t.set_control_hz(0); // every block from here: the grid starts at frame 192
+	CHECK(t.control_hz() == 0);
+	(void)t.midi1(200, on2, 3); // taken at 192 + 32 = 224
+	t.advance(223);
+	CHECK(voice_of(t.midi(), 64.0f) < 0);
+	t.advance(224);
+	CHECK(voice_of(t.midi(), 64.0f) >= 0);
+}
+
 #if defined(__has_feature)
 #if __has_feature(address_sanitizer)
 #define AWVA_TEST_ASAN 1
@@ -182,7 +249,7 @@ size_t stack_used(void* (*f)(void*), void* arg) {
 
 TEST_CASE("timed midi: reset() uses little stack (its MIDI state rebuilt in place)") {
 	static_assert(sizeof(sdk::MidiVoices) > 4096, "the state a temporary would put on the stack");
-	auto midi = std::make_unique<sdk::TimedMidi>(10, 48000);
+	auto midi = std::make_unique<sdk::TimedMidi>(sdk::HostConfig{48000, 0, 10});
 	const uint8_t on[3] = {0x90, 60, 100};
 	(void)midi->midi1(0, on, 3, 7);
 	midi->advance(96);

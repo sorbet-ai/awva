@@ -52,7 +52,7 @@ template <dsp::VoiceEngine E> struct Shim {
 	// lowest) to MAX_RATE (outside, an engine may go silent or loud: hosts refuse them)
 	static constexpr int32_t MIN_RATE = 11025, MAX_RATE = 192000;
 	struct State {
-		awva::sdk::TimedMidi midi; // the 2 ms steps in integer frames, the notes and their host ids
+		awva::sdk::TimedMidi midi; // the control steps in integer frames, the notes and their host ids
 		dsp::InstrumentControls g;
 		float output;   // the output level (the component's own parameter, after the engine's)
 		uint64_t frame; // frames rendered by process()
@@ -64,7 +64,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		int32_t num_heroes; // -1: none from a file
 		E engine;
 		State(int nv, int sr) :
-		    midi(nv, sr), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), heroes(), num_heroes(-1),
+		    midi(awva::sdk::HostConfig{sr, 0, nv}), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), heroes(), num_heroes(-1),
 		    engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
@@ -192,9 +192,17 @@ template <dsp::VoiceEngine E> struct Shim {
 		s.engine.reset();
 	}
 	static int32_t mode(void* state, int32_t which, int32_t value) {
-		if (which != NSC_MODE_LEGATO) return 0;
-		st(state).midi.midi().set_legato(value != 0);
-		return 1;
+		State& s = st(state);
+		if (which == NSC_MODE_LEGATO) {
+			s.midi.midi().set_legato(value != 0);
+			return 1;
+		}
+		if (which == NSC_MODE_CONTROL_HZ) {
+			if (value < 0 || value > s.sample_rate) return 0;
+			s.midi.set_control_hz(value);
+			return 1;
+		}
+		return 0;
 	}
 	static void process(void* state, const nsc_event* ev, int32_t n, float* const* out) {
 		const ScopedNoDenormals no_denormals; // (no_denormals.h: the host's FPU mode, restored on return)

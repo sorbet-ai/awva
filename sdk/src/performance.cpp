@@ -109,13 +109,13 @@ private:
 
 class Midi final : public Player {
 public:
-	Midi(std::string path, MidiFile f, int voices, int sample_rate, bool legato) :
-	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
+	Midi(std::string path, MidiFile f, const HostConfig& host, bool legato) :
+	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(host)), sr_(host.sample_rate), legato_(legato) {
 		in_->midi().set_legato(legato);
 	}
 	void block(int b, NoteControls* vc, dsp::InstrumentControls& g) override {
 		// in integer frames (timed_midi.h, the component's rule): an event at its frame (its time,
-		// rounded to the nearest frame), taken at the first 2 ms step at or after it; the steps due
+		// rounded to the nearest frame), taken at the first control step at or after it; the steps due
 		// by this block's start run first
 		const uint64_t start = static_cast<uint64_t>(b) * dsp::BLOCK;
 		for (; k_ < f_.events.size() && frame_of(f_.events[k_].t) <= start; k_++)
@@ -149,8 +149,8 @@ public:
 		uint64_t frame;
 		uint32_t w[4];
 	};
-	Ump(std::string path, std::vector<Packet> p, int voices, int sample_rate, bool legato) :
-	    path_(std::move(path)), p_(std::move(p)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
+	Ump(std::string path, std::vector<Packet> p, const HostConfig& host, bool legato) :
+	    path_(std::move(path)), p_(std::move(p)), in_(std::make_unique<TimedMidi>(host)), sr_(host.sample_rate), legato_(legato) {
 		in_->midi().set_legato(legato);
 	}
 	void block(int b, NoteControls* vc, dsp::InstrumentControls& g) override {
@@ -178,7 +178,7 @@ private:
 
 } // namespace
 
-std::unique_ptr<Player> ump_player(const char* path, int voices, int sample_rate, bool legato, std::string* error) {
+std::unique_ptr<Player> ump_player(const char* path, const HostConfig& host, bool legato, std::string* error) {
 	FILE* f = std::fopen(path, "r");
 	if (!f) {
 		*error = std::string("cannot read the UMP file ") + path;
@@ -206,7 +206,7 @@ std::unique_ptr<Player> ump_player(const char* path, int voices, int sample_rate
 		*error = std::string("no packets in ") + path;
 		return nullptr;
 	}
-	return std::make_unique<Ump>(path, std::move(p), voices, sample_rate, legato);
+	return std::make_unique<Ump>(path, std::move(p), host, legato);
 }
 
 std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int, std::string* error) {
@@ -238,7 +238,7 @@ std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_
 	return std::make_unique<Keys>(csv_path, std::move(ev), sample_rate, legato);
 }
 
-std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error, bool legato) {
+std::unique_ptr<Player> midi_player(const char* mid_path, const HostConfig& host, std::string* error, bool legato) {
 	MidiFile f = read_midi_file(mid_path);
 	if (!f.error.empty()) {
 		*error = f.error + " (" + mid_path + ")";
@@ -248,7 +248,7 @@ std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample
 		*error = std::string("no channel messages in ") + mid_path;
 		return nullptr;
 	}
-	return std::make_unique<Midi>(mid_path, std::move(f), voices, sample_rate, legato);
+	return std::make_unique<Midi>(mid_path, std::move(f), host, legato);
 }
 
 } // namespace awva::sdk
