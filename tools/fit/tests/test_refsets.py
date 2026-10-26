@@ -6,10 +6,12 @@ database for the good/bad back-test, and (with AWVA_RENDER) a phrase rendered an
 
   python -m unittest discover -s tools/fit/tests -v
 """
+import atexit
 import json
 import math
 import os
 import sqlite3
+import shutil
 import sys
 import tempfile
 import unittest
@@ -23,6 +25,7 @@ from awvafit import audio, keys, sources  # noqa: E402
 
 SR = 48000
 TMP = tempfile.mkdtemp(prefix='awvafit_refs_')
+atexit.register(shutil.rmtree, TMP, ignore_errors=True)  # never left in %TEMP%
 
 
 def legato(notes, sr=SR, dur=0.6, glide=0.04, dip_db=8.0, lead=0.3):

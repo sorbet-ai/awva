@@ -16,7 +16,9 @@ stream's pressure near 0.9 on a preset 1.2 dB louder in its register than the fa
 
   AWVA_RENDER=build/sdk/awva_render python -m unittest tools/fit/tests/test_strike_viola.py -v
 """
+import atexit
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -30,6 +32,7 @@ from awvafit import keys, strike  # noqa: E402
 
 SR = 48000
 TMP = tempfile.mkdtemp(prefix='awvafit_viola_')
+atexit.register(shutil.rmtree, TMP, ignore_errors=True)  # never left in %TEMP%
 NOTES = (55, 60, 62, 64, 67, 64, 62, 60)
 TARGET_DB = 1.0
 

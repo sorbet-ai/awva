@@ -4,9 +4,11 @@
 
   python -m unittest discover -s tools/fit/tests -v
 """
+import atexit
 import json
 import math
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -20,6 +22,7 @@ from awvafit import control, keys, strike  # noqa: E402
 
 SR = 48000
 TMP = tempfile.mkdtemp(prefix='awvafit_control_')
+atexit.register(shutil.rmtree, TMP, ignore_errors=True)  # never left in %TEMP%
 
 
 def tone(f0, dur, level=0.3, attack_db=0.0, sr=SR, noise=0.0, seed=0):
@@ -275,6 +278,14 @@ class GateRuns(unittest.TestCase):
         self.assertNotEqual(a['verdict'], 'identical')
         same = g.run('test', self.spec(0.6), self.spec(0.6), os.path.join(TMP, 'gws'), workers=4, log=lambda m: None)
         self.assertEqual(same['verdict'], 'identical')
+
+    def test_a_run_deletes_its_renders_unless_kept(self):
+        g = self.gate
+        for keep, left in ((False, []), (True, ['b0', 'b1'])):
+            w = os.path.join(TMP, f'gwk{int(keep)}')
+            g.run('test', self.spec(0.6), self.spec(0.3), w, workers=2, log=lambda m: None, keep=keep)
+            runs = os.listdir(os.path.join(w, 'test')) if os.path.isdir(os.path.join(w, 'test')) else []
+            self.assertEqual(sorted(x for r in runs for x in os.listdir(os.path.join(w, 'test', r))), left)
 
     def test_the_objective_is_the_gate_s_score(self):
         g = self.gate
