@@ -27,6 +27,8 @@
 //   --notes N1,N2,..  every new press takes the next note of the list, in turn
 //   --params          the live parameters after --preset and --set: "name group min max value", and exit
 //   --fx              through the master effects (default parameters): stereo
+//   --ftz             each block with subnormals flushed, as the engine component runs it
+//                     (component/include/nsc/no_denormals.h): a plugin's output, bit for bit
 //   --out FILE.f32    the render as float32 (mono, or L R interleaved)
 //   --wav FILE.wav    16 bit WAV, x0.25 and clipped (an embedded host at its usual level); its INFO chunk names the
 //                     engine, preset and input
@@ -49,11 +51,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "awva_sdk/engines.h"
 #include "awva_sdk/performance.h"
+#include "nsc/no_denormals.h"
 
 namespace sdk = awva::sdk;
 namespace dsp = awva;
@@ -238,7 +242,7 @@ int main(int argc, char** argv) {
 	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0;
 	int nv = 10, rate = 0;
 	float transpose = 0.0f;
-	bool use_fx = false, check = false, list_params = false;
+	bool use_fx = false, check = false, list_params = false, ftz = false;
 	std::vector<Set> sets;
 	std::vector<float> notes;
 	for (int a = 1; a < argc; a++) {
@@ -269,6 +273,7 @@ int main(int argc, char** argv) {
 		else if (s == "--notes") notes = parse_notes(next());
 		else if (s == "--params") list_params = true;
 		else if (s == "--fx") use_fx = true;
+		else if (s == "--ftz") ftz = true;
 		else if (s == "--out") out_path = next();
 		else if (s == "--wav") wav = next();
 		else if (s == "--ctl-out") ctl_out = next();
@@ -349,9 +354,9 @@ int main(int argc, char** argv) {
 
 	const char* pname = engine.preset() >= 0 ? engine.preset_name(engine.preset()) : nullptr;
 	char head[512];
-	std::snprintf(head, sizeof head, "engine %s (%s), preset %s%d%s%s%s, %d voices, %d Hz%s", entry->info->name, entry->header,
+	std::snprintf(head, sizeof head, "engine %s (%s), preset %s%d%s%s%s, %d voices, %d Hz%s%s", entry->info->name, entry->header,
 	    preset_arg ? "" : "(its default) ", engine.preset(), pname ? " \"" : "", pname ? pname : "", pname ? "\"" : "", nv, sr,
-	    use_fx ? ", master effects" : "");
+	    use_fx ? ", master effects" : "", ftz ? ", subnormals flushed" : "");
 	std::string input = player->describe() + (default_input ? " [the default input: no --perf, --rec or --midi]" : "");
 	std::string shaping;
 	if (!sets_desc.empty()) shaping += ", set " + sets_desc;
@@ -380,10 +385,16 @@ int main(int argc, char** argv) {
 		float buf[dsp::BLOCK];
 		float* const eo[1] = {buf};
 		const int nsettle = static_cast<int>(settle * sr / dsp::BLOCK);
-		for (int b = 0; b < nsettle; b++) engine.process(vc.data(), g, eo);
+		for (int b = 0; b < nsettle; b++) {
+			std::optional<nsc::ScopedNoDenormals> no_denormals; // (--ftz, as below)
+			if (ftz) no_denormals.emplace();
+			engine.process(vc.data(), g, eo);
+		}
 	}
 	double compute_s = 0;
 	for (int b = 0; b < nblocks; b++) {
+		std::optional<nsc::ScopedNoDenormals> no_denormals; // (--ftz: this block, as a component's process())
+		if (ftz) no_denormals.emplace();
 		player->block(b, vc.data(), g);
 		for (dsp::VoiceControls& c : vc) dsp::track_key(c);
 		const dsp::VoiceControls* to = vc.data();
@@ -484,6 +495,7 @@ int main(int argc, char** argv) {
 		for (size_t i = 0; i < notes.size(); i++) ns += (i ? ", " : "") + json_number(notes[i]);
 		field("notes", ns + "]");
 		field("fx", use_fx ? "true" : "false");
+		field("ftz", ftz ? "true" : "false");
 		field("channels", std::to_string(channels));
 		field("out", out_path ? json_string(sdk::file_identity(out_path)) : "null");
 		field("wav", wav ? json_string(sdk::file_identity(wav)) : "null");

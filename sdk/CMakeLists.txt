@@ -184,6 +184,7 @@ target_link_libraries(awva_sdk PUBLIC awva_sdk_options awva_effect_fx awva_sdk_p
 
 add_executable(awva_render tools/awva_render.cpp)
 target_link_libraries(awva_render PRIVATE awva_sdk awva_engines awva_performances)
+target_include_directories(awva_render PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../component/include") # (nsc/no_denormals.h: --ftz)
 
 # the engines' reference pages from their EngineInfo (docs/engines/<name>.md, the index docs/README.md);
 # the test docs.up_to_date fails when they are stale (run awva_docs on docs/ to update them)
@@ -250,7 +251,7 @@ std::span<const awva::sdk::ScriptedPerformance* const> awva::sdk::performances()
 }
 ")
   add_executable(render_custom tools/awva_render.cpp "${_gen}/custom.cpp" src/registry.cpp)
-  target_include_directories(render_custom PRIVATE "${AWVA_HARNESS_DIR}")
+  target_include_directories(render_custom PRIVATE "${AWVA_HARNESS_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../component/include")
   target_link_libraries(render_custom PRIVATE awva_sdk)
   target_compile_definitions(render_custom PRIVATE _USE_MATH_DEFINES)
   target_compile_options(render_custom PRIVATE ${_custom_flags})
@@ -303,6 +304,8 @@ add_test(NAME awva_render.log_names_engine_preset_performance
   COMMAND awva_render --engine va --preset pad --seconds 0.5)
 set_tests_properties(awva_render.log_names_engine_preset_performance PROPERTIES LABELS unit
   PASS_REGULAR_EXPRESSION "engine va \\(voice_va.h\\), preset [0-9]+ \"pad\".*input scripted performance \"default\" \\([^\n]*performance.h \\([0-9]+ bytes, fnv [0-9a-f]+\\)\\) \\[the default input")
+add_test(NAME awva_render.log_names_ftz COMMAND awva_render --engine accordion --ftz --seconds 0.5)
+set_tests_properties(awva_render.log_names_ftz PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "48000 Hz, subnormals flushed")
 if(EXISTS "${_rec}")
   add_test(NAME awva_render.log_names_recording COMMAND awva_render --engine ep --rec "${_rec}" --seconds 0.5)
   set_tests_properties(awva_render.log_names_recording PROPERTIES LABELS unit
