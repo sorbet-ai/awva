@@ -21,12 +21,16 @@ struct doublereed {
 	static constexpr const char* summary = "physical double reeds: reed, conical bore and tone holes, a living player (oboe, cor anglais, bassoon)";
 	// pres the breath, vpres the tongue, but_y the embouchure; acc_abs (flutter) and the pedal (release)
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_pedal;
-	// profile.sh 27352 (the worst preset); ten voices at ff with notes jumping every 0.25 s: 69.7k
 	static constexpr Budget budget = {::doublereed::MAX_VOICES, 29000, 2.0f}; // profile.sh: oboe 28440 (the worst preset)
 	// the hero parameters: the reed's opening and stiffness (the embouchure), the lattice's cutoff
 	// (the instrument's colour), the loudest breath, the player's wander (the tone's life), the
 	// tongue, the embouchure under tilt, the release
 	static constexpr Heroes heroes = {{"reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"}};
+	// the bassoon is checked on its own range (Bb1 to E5, as fitted: every note there speaks in its register);
+	// above it, past a bassoon's top, the notes are not its (at C6 a register below, 95 c flat)
+	static constexpr PresetTuning preset_tuning[] = {
+	    {"bassoon", {.low = 34.0f, .high = 76.0f, .why = "a bassoon's range, Bb1 to E5"}},
+	};
 };
 } // namespace traits
 

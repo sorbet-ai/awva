@@ -13,7 +13,7 @@ These tools fitted the double reed engine's (`dsp/include/awva/voice_doublereed.
 | `fit_dr.py` | CMA-ES of a preset (below) |
 | `diag.py`, `ramp.py`, `takediag.py`, `refdiag.py` | the jank diagnosis: notes at pressures and strikes, pressure ramps, the recorded key takes, the recordings' own life |
 | `robust.py`, `takes.py`, `probe.py`, `ctl.py` | every note speaking in its register; the takes' rise from the key; scripted notes |
-| `bake_dr.py` | fitted parameters into the presets |
+| `bake_dr.py` | fitted parameters into the preset files (`presets/doublereed/`), the cor anglais as the oboe's player on its geometry; then `cmake -P tools/presets_inc.cmake` |
 | `replay.cpp` | the renderer they use, `bin/<tag>/replay` (the build line is in its header) |
 
 `fit_dr.py` fits in the Track B way, not on the static spectrum alone. Its objective has these parts:
@@ -27,4 +27,4 @@ These tools fitted the double reed engine's (`dsp/include/awva/voice_doublereed.
 
 The steady breath noise (`hiss`) is fixed at 0.
 
-The recordings are not part of this repository. The University of Iowa Musical Instrument Samples (theremin.music.uiowa.edu/MIS) are "freely available ... and may be used for any projects, without restrictions". VSCO-2 Community Edition is CC0 1.0. The key takes are the harness's recordings (`tools/harness/rec/`), played through the virtual board and captured as engine controls.
+The recordings are not part of this repository. The University of Iowa Musical Instrument Samples (theremin.music.uiowa.edu/MIS) are "freely available ... and may be used for any projects, without restrictions". VSCO-2 Community Edition is CC0 1.0. The key takes are the harness's recordings (`tools/harness/rec/`), played through a host's key path and captured as engine controls.

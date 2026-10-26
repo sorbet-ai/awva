@@ -14,7 +14,7 @@ Header `dsp/include/awva/voice_doublereed.h`, traits `dsp/include/awva/engines/d
 |---|---|---|
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
 | pressure | `pres`, 0 released .. 1 a firm press (up to ~1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
-| strike | `vpres`, the pressure's velocity: > 0 while the key goes down, < 0 coming up | note-on velocity (a strike that fades), note-off velocity (the release) |
+| strike | `vpres`, the pressure's velocity: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
 | tilt y | `but_y`, forward/back tilt -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: CC74 (bipolar) |
 | shake | `acc_abs`, the accelerometer's magnitude in g (1 at rest) | the instrument's motion sensor (not from MIDI) |
 | pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
@@ -67,6 +67,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `f23b7114` | `wander` | player | 0 | 0.3 | 0.048645 | continuous |
 | `f1f80bc2` | `lip_wander` | player | 0 | 0.3 | 0.023202 | continuous |
 | `72049c93` | `wander_hz` | player | 0.3 | 30 | 7.37563 | continuous |
+| `f9f50cf7` | `ref_note` | bore | 24 | 96 | 69 | continuous |
 | `c6cd0dc1` | `apex` | bore | 0.5 | 80 | 16.6843 | continuous |
 | `99d79043` | `cavity` | bore | 0 | 4 | 0.021383 | continuous |
 | `63cb2800` | `bore_d` | bore | 1.5 | 15 | 2.00927 | continuous |
@@ -99,7 +100,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 29000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 2.85938 KB (2928 bytes) (on a 64-bit host) |
+| engine object | 2.86719 KB (2936 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 40 KB |
 

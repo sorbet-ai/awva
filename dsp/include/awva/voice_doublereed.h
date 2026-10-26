@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * doublereed: a physical model of the double reeds (oboe, cor anglais, bassoon), one model with a
- * preset per instrument. Build with `VOICE=doublereed`.
+ * preset per instrument. Traits: engines/doublereed.h.
  *
  * Every voice is a player blowing a reed on a conical bore; nothing sets the pitch but the reed and
  * the bore together:
@@ -50,7 +50,7 @@
  *   release    the breath stops, the bore rings out (pedal lengthens the release)
  *   tilt fwd/back  embouchure: forward bites (a smaller tip opening, more lip damping: thinner,
  *              brighter, a little sharp), back relaxes (darker, fuller, a little flat)
- *   tilt sideways  pitch bend (the firmware moves the note; the bore follows)
+ *   tilt sideways  pitch bend (the host moves the note; the bore follows)
  *   shake      flutter tongue
  *
  * The player (v2) is alive: the breath's and the lips' slow wander (wander, lip_wander, wander_hz:
@@ -63,7 +63,7 @@
  * Instrument Samples (pp/mf/ff chromatic scales; free for any project, without restrictions), the
  * Track B way: the sustain's harmonics, noise and level across notes and dynamics, the timbre's
  * response to the dynamic, the attack's spectra, the tone's rise from the key and its pitch excursion,
- * the tone's pitch and level wobble re the recordings', pitch and register; plus the recorded Striso
+ * the tone's pitch and level wobble re the recordings', pitch and register; plus the recorded
  * takes' rise from the key, every in-range note speaking at four pressures, and a dynamic that keeps
  * growing to the firmest press (tools/doublereed). The cor anglais is the oboe's player on its
  * geometry (not fitted: no permissively licensed recordings). The output gains put each preset's mf
@@ -84,6 +84,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 
 namespace doublereed {
@@ -106,7 +107,7 @@ static constexpr real PI = 3.14159265f;
 static constexpr real NOTE_LO = 31.5f;  // below: an octave up (the delay line's length)
 static constexpr real NOTE_HI = 100.0f; // above: an octave down
 
-// the bore delay lines, placed by the host (engine SDK): LargeMemory (AXI SRAM on the board)
+// the bore delay lines, placed by the host (engine SDK): LargeMemory (on an embedded target, its slower SRAM)
 struct LargeMemory {
 	alignas(32) float bore[MAX_VOICES][BLEN];
 };
@@ -143,6 +144,7 @@ struct Params {
 	real lip_wander; // std) and the lips' (the reed's tip opening's), band-limited at wander_hz: the
 	real wander_hz;  // sustained tone's small, living pitch and level fluctuations
 	// bore
+	real ref_note; // the reference note (MIDI) the parameters' keytracking is about ("at the reference note")
 	real apex;     // distance of the input from the cone's apex (cm)
 	real cavity;   // the reed's and the staple's air volume, re the missing cone's (S0 x0 / 3: Benade)
 	real bore_d;   // bore diameter at the input (mm)
@@ -174,155 +176,20 @@ struct Params {
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-// the presets: an instrument each, fitted to its recordings (the reference note of the registers)
-// The bore follows the note (its sounding length: the fingering's first open hole), every register
-// on the bore's first mode; the register's character comes from the parameters' keytracking about
-// the reference note
-struct PresetInfo {
-	const char* name;
-	real ref_note;
-};
+// The factory presets: presets/doublereed/NN-<name>.preset.json, compiled in (the end of this file);
+// their values fitted by tools/doublereed. An instrument each; the bore follows the note (its
+// sounding length: the fingering's first open hole), every register on the bore's first mode; the
+// register's character comes from the parameters' keytracking about the reference note (ref_note):
+//   0 oboe         fitted to the University of Iowa MIS oboe (pp/mf/ff chromatic scales); ref_note 69
+//   1 cor anglais  the oboe's player on the cor anglais's geometry, not fitted (no permissively
+//                  licensed recordings): the cone a fifth longer (apex x1.5) and wider (bore_d
+//                  x1.15), a larger reed (reed_hz x0.85, reed_open x1.15, reed_w x1.07), the bulb's
+//                  darker lattice (lattice_hz x0.75); ref_note 62
+//   2 bassoon      fitted to the University of Iowa MIS bassoon (pp/mf/ff chromatic scales); ref_note 46
+// The output gains put each preset's mf level at v1's.
 static constexpr int NUM_PRESETS = 3;
-static constexpr PresetInfo preset_info[NUM_PRESETS] = {
-    {"oboe", 69.0f},
-    {"cor anglais", 62.0f},
-    {"bassoon", 46.0f},
-};
-
-// fitted to the recordings of the oboe: University of Iowa MIS (pp/mf/ff chromatic scales)
-[[nodiscard]] static inline Params oboe_params() {
-	Params p;
-	p.gain = 1.722f;
-	p.pc_a = 0.721312f;
-	p.pc_b = 0.536147f;
-	p.lv_hz = 63.634f;
-	p.rel = 0.05f;
-	p.rel_ped = 0.4f;
-	p.p_soft = 1.33259f;
-	p.p_loud = 0.163817f;
-	p.p_reg = 0.333613f;
-	p.p_curve = 2.53337f;
-	p.reed_hz = 2731.34f;
-	p.reed_reg = 1.24277f;
-	p.reed_q = 0.452105f;
-	p.reed_open = 0.172683f;
-	p.open_reg = 0.947729f;
-	p.reed_w = 5.4026f;
-	p.p_close = 14.0655f;
-	p.contact = 1.3225f;
-	p.duct = 4.00981f;
-	p.emb_tilt = 0.25f;
-	p.emb_soft = 0.343511f;
-	p.bite = 15.0f;
-	p.jitter = 9.56209f;
-	p.wander = 0.048645f;
-	p.lip_wander = 0.023202f;
-	p.wander_hz = 7.37563f;
-	p.apex = 16.6843f;
-	p.cavity = 0.021383f;
-	p.bore_d = 2.00927f;
-	p.bore_t = 0.095786f;
-	p.bore_reg = 1.38611f;
-	p.lat_hz = 4891.7f;
-	p.lat_q = 0.422051f;
-	p.lat_reg = -0.498894f;
-	p.rad_hz = 62.3155f;
-	p.tone_hz = 4015.93f;
-	p.tone_q = 0.665699f;
-	p.breath = 0.054957f;
-	p.hiss = 0.0f;
-	p.t_noise = 0.000821f;
-	p.tongue = 1.21443f;
-	p.acc_amp = 1.45496f;
-	p.acc_t = 0.037843f;
-	p.tongue_t = 0.0008f;
-	p.tongue_shut = 0.49849f;
-	p.slur = 0.15f;
-	p.pitch_t = 0.013862f;
-	p.flutter = 0.6f;
-	p.flut_hz = 24.0f;
-	return p;
-}
-
-// fitted to the recordings of the cor anglais: Philharmonia sound samples (pp/mf/ff single notes)
-[[nodiscard]] static inline Params cor_anglais_params() {
-	Params p = oboe_params();
-	p.gain = 1.782f;
-	p.apex *= 1.5f;     // the cone a fifth longer
-	p.bore_d *= 1.15f;  // and wider
-	p.reed_hz *= 0.85f; // a larger reed (the reference note is a fifth lower already: 62 re 69)
-	p.reed_open *= 1.15f;
-	p.reed_w *= 1.07f;
-	p.lat_hz *= 0.75f; // the bulb: a darker lattice
-	return p;
-}
-
-// fitted to the recordings of the bassoon: University of Iowa MIS (pp/mf/ff chromatic scales)
-[[nodiscard]] static inline Params bassoon_params() {
-	Params p;
-	p.gain = 0.7615f;
-	p.pc_a = 0.733316f;
-	p.pc_b = 0.963538f;
-	p.lv_hz = 19.5051f;
-	p.rel = 0.05f;
-	p.rel_ped = 0.4f;
-	p.p_soft = 1.13206f;
-	p.p_loud = 0.588069f;
-	p.p_reg = 0.680978f;
-	p.p_curve = 0.314767f;
-	p.reed_hz = 7724.44f;
-	p.reed_reg = 1.25331f;
-	p.reed_q = 1.45746f;
-	p.reed_open = 0.916457f;
-	p.open_reg = 0.225888f;
-	p.reed_w = 19.9305f;
-	p.p_close = 10.9827f;
-	p.contact = 0.191955f;
-	p.duct = 4.56529f;
-	p.emb_tilt = 0.25f;
-	p.emb_soft = 0.22746f;
-	p.bite = 15.0f;
-	p.jitter = 0.187443f;
-	p.wander = 0.067816f;
-	p.lip_wander = 0.059031f;
-	p.wander_hz = 7.2781f;
-	p.apex = 61.895f;
-	p.cavity = 0.381518f;
-	p.bore_d = 7.57311f;
-	p.bore_t = 0.080318f;
-	p.bore_reg = 1.12538f;
-	p.lat_hz = 211.946f;
-	p.lat_q = 1.0555f;
-	p.lat_reg = -0.115978f;
-	p.rad_hz = 549.22f;
-	p.tone_hz = 1738.01f;
-	p.tone_q = 0.501766f;
-	p.breath = 0.047891f;
-	p.hiss = 0.0f;
-	p.t_noise = 0.668566f;
-	p.tongue = 1.64998f;
-	p.acc_amp = 0.071255f;
-	p.acc_t = 0.059369f;
-	p.tongue_t = 0.000806f;
-	p.tongue_shut = 1.15978f;
-	p.slur = 0.15f;
-	p.pitch_t = 0.005683f;
-	p.flutter = 0.6f;
-	p.flut_hz = 24.0f;
-	return p;
-}
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	return (i >= 0 && i < NUM_PRESETS) ? preset_info[i].name : preset_info[0].name;
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	switch (i) {
-	case 1: return cor_anglais_params();
-	case 2: return bassoon_params();
-	default: return oboe_params();
-	}
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef DOUBLEREED_PRESET
 static constexpr int DEFAULT_PRESET = DOUBLEREED_PRESET;
@@ -374,7 +241,6 @@ struct Engine {
 	Params p;           // as set (preset, live edits)
 	Params ps;          // smoothed copy used by the DSP
 	LargeMemory* large; // the host's (init): the bore delay lines
-	real ref_note;
 	real sr, dt, pi_sr, ctrl_dt, block_dt;
 	strisy::SvfCoef lv_c, ty_c;
 	real shake_pk, shake;
@@ -510,13 +376,17 @@ static inline void update_derived(Engine& e) {
 	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
 }
 
-static inline void set_preset(Engine& e, int i) {
-	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
-	e.ref_note = preset_info[i].ref_note;
-	e.p = preset_params(i);
+// after the parameters of preset index were set (set_preset, or a preset loaded by name: -1)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
 	e.ps = e.p;
 	update_derived(e);
+}
+
+static inline void set_preset(Engine& e, int i) {
+	if (i < 0 || i >= NUM_PRESETS) i = 0;
+	e.p = preset_params(i);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {
@@ -561,7 +431,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const Params& P = e.ps;
 	const strisy::VoiceControls cc = e.vc[vi];
 	const real pres = clampr(cc.pres, 0.0f, 1.5f);
-	// after a release the firmware leaves the last vpres in place: a positive leftover must not
+	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
 	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
@@ -632,7 +502,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real ftgt = note_freq(note + clampr(P.bite, -100.0f, 100.0f) * tilt * (1.0f / 100));
 	const real f0 = rmin(ftgt, 0.4f * sr);
 	const real P0 = sr / f0;
-	const real oct = (note - e.ref_note) * (1.0f / 12); // octaves re the reference note
+	const real oct = (note - P.ref_note) * (1.0f / 12); // octaves re the reference note
 	// reed: resonance, damping, opening, stiffness
 	const real bitef = clampr(P.emb_tilt, -1.0f, 1.0f) * tilt; // octaves of bite
 	const real rc = rmax(P.jitter, 0.0f) * (s.jn + 0.5f * s.dr);
@@ -1024,9 +894,10 @@ static constexpr ParamEntry param_table[] = {
     {{"wander", "player", 0.0f, 0.3f, C_}, &Params::wander},
     {{"lip_wander", "player", 0.0f, 0.3f, C_}, &Params::lip_wander},
     {{"wander_hz", "player", 0.3f, 30.0f, C_}, &Params::wander_hz},
-    {{"apex", "bore", 0.5f, 80.0f, C_}, &Params::apex},     // cm
-    {{"cavity", "bore", 0.0f, 4.0f, C_}, &Params::cavity},  // re the missing cone's volume
-    {{"bore_d", "bore", 1.5f, 15.0f, C_}, &Params::bore_d}, // mm
+    {{"ref_note", "bore", 24.0f, 96.0f, C_}, &Params::ref_note}, // MIDI
+    {{"apex", "bore", 0.5f, 80.0f, C_}, &Params::apex},          // cm
+    {{"cavity", "bore", 0.0f, 4.0f, C_}, &Params::cavity},       // re the missing cone's volume
+    {{"bore_d", "bore", 1.5f, 15.0f, C_}, &Params::bore_d},      // mm
     {{"bore_decay", "bore", 0.003f, 0.3f, C_}, &Params::bore_t},
     {{"bore_reg", "bore", -1.0f, 2.0f, C_}, &Params::bore_reg},
     {{"lattice_hz", "holes", 100.0f, 6000.0f, C_}, &Params::lat_hz},
@@ -1056,10 +927,33 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 namespace strisy {
 template <> struct EngineParams<doublereed::Engine> {
 	static constexpr int count = doublereed::NUM_LIVE_PARAMS;
-	[[nodiscard]] static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &doublereed::param_table[i].d : nullptr; }
+	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &doublereed::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(doublereed::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(doublereed::param_table[i].m)) : nullptr; }
 	static void changed(doublereed::Engine& e, int) { doublereed::update_derived(e); }
 };
 } // namespace strisy
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/doublereed/NN-<name>.preset.json, the files themselves
+// (presets/doublereed.inc, tools/presets_inc.cmake), each read at compile time; a file that isn't
+// every parameter in range doesn't compile (awva/preset.h factory).
+
+namespace doublereed {
+#include "presets/doublereed.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/doublereed/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace doublereed
 
 #endif // VOICE_DOUBLEREED_H_

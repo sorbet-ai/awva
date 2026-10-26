@@ -1,59 +1,64 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
-"""Fitted parameters into voice_doublereed.h's oboe_params() / bassoon_params() (by the live
-parameters' names), and the cor anglais as the oboe's player on its geometry.
-  python -I bake_dr.py <voice_doublereed.h> <oboe best.json> <bassoon best.json> <gain oboe> <gain cor> <gain bassoon>"""
+"""Fitted parameters into the double reed's preset files (the factory presets are files:
+presets/doublereed/NN-<name>.preset.json), by the live parameters' names, and the cor anglais as
+the oboe's player on its geometry.
+  python -I bake_dr.py <presets/doublereed> <oboe best.json> <bassoon best.json> <gain oboe> <gain cor> <gain bassoon>
+A fitted value is written at %.6g (the value the fit rendered); the cor anglais's scaled ones as the
+engine's float arithmetic gives them (float32, the shortest text that reads back the same). The
+other lines of the files are kept. Then: cmake -P tools/presets_inc.cmake (the files compiled in)."""
 import json
+import os
 import re
 import sys
 
-hp, oj, bj, go, gc, gb = sys.argv[1:7]
-s = open(hp, encoding='utf-8').read()
-def ff(v):
-    t = f"{float(v):.6g}"
-    return (t if ('.' in t or 'e' in t) else t + '.0') + 'f'
+import numpy as np
 
-
-table = dict(re.findall(r'\{\{"(\w+)", "\w+", [^}]*\}, &Params::(\w+)\}', s))
-
-
-def bake(fn, params, gain):
-    global s
-    m = re.search(r'(static inline Params ' + fn + r'\(\) \{\n)(.*?)(\n\treturn p;\n\})', s, re.S)
-    body = m.group(2)
-    vals = {table[k]: v for k, v in params.items()}
-    vals['gain'] = float(gain)
-    lines = []
-    seen = set()
-    for ln in body.split('\n'):
-        mm = re.match(r'\tp\.(\w+) = .*;$', ln)
-        if mm and mm.group(1) in vals:
-            lines.append(f"\tp.{mm.group(1)} = {ff(vals[mm.group(1)])};")
-            seen.add(mm.group(1))
-        else:
-            lines.append(ln)
-    for k, v in vals.items():
-        if k not in seen:
-            lines.append(f"\tp.{k} = {ff(v)};")
-    s = s[:m.start(2)] + '\n'.join(lines) + s[m.end(2):]
-
-
-bake('oboe_params', json.load(open(oj))['params'], go)
-bake('bassoon_params', json.load(open(bj))['params'], gb)
+d, oj, bj, go, gc, gb = sys.argv[1:7]
+OBOE, COR, BASSOON = (os.path.join(d, f) for f in ('00-oboe.preset.json', '01-cor-anglais.preset.json', '02-bassoon.preset.json'))
 # the cor anglais: the oboe's player on the cor anglais (in F, a fifth below; a longer, wider cone, a
 # larger reed, the bulb's darker lattice): not fitted, no permissively licensed recordings
-m = re.search(r'static inline Params cor_anglais_params\(\) \{\n.*?\n\treturn p;\n\}', s, re.S)
-new = """static inline Params cor_anglais_params() {
-	Params p = oboe_params();
-	p.gain = """ + ff(gc) + """;
-	p.apex *= 1.5f;       // the cone a fifth longer
-	p.bore_d *= 1.15f;    // and wider
-	p.reed_hz *= 0.85f;   // a larger reed (the reference note is a fifth lower already: 62 re 69)
-	p.reed_open *= 1.15f;
-	p.reed_w *= 1.07f;
-	p.lat_hz *= 0.75f;    // the bulb: a darker lattice
-	return p;
-}"""
-s = s[:m.start()] + new + s[m.end():]
-open(hp, 'w', encoding='utf-8', newline='\n').write(s)
+COR_SCALE = {'apex': 1.5, 'bore_d': 1.15, 'reed_hz': 0.85, 'reed_open': 1.15, 'reed_w': 1.07, 'lattice_hz': 0.75}
+
+
+def put(text, path, k, t):
+    text, n = re.subn(r'(\n    "' + re.escape(k) + r'": )[^,\n]+', lambda m: m.group(1) + t, text)
+    if n != 1:
+        sys.exit(f'{path}: no parameter {k}')
+    return text
+
+
+def num(v):
+    t = f'{float(v):.6g}'
+    return t
+
+
+def f32(v):
+    return np.format_float_positional(np.float32(v), unique=True, trim='-')
+
+
+def bake(path, params, gain):
+    text = open(path, encoding='utf-8').read()
+    params = dict(params, gain=float(gain))
+    for k, v in params.items():
+        text = put(text, path, k, num(v))
+    open(path, 'w', encoding='utf-8', newline='\n').write(text)
+    return text
+
+
+oboe = bake(OBOE, json.load(open(oj))['params'], go)
+bake(BASSOON, json.load(open(bj))['params'], gb)
+ov = {k: float(v) for k, v in re.findall(r'\n    "(\w+)": ([^,\n]+)', oboe)}
+cor = open(COR, encoding='utf-8').read()
+for k, v in ov.items():
+    if k == 'ref_note':
+        continue
+    if k == 'gain':
+        t = num(gc)
+    elif k in COR_SCALE:
+        t = f32(np.float32(v) * np.float32(COR_SCALE[k]))
+    else:
+        t = f32(v)
+    cor = put(cor, COR, k, t)
+open(COR, 'w', encoding='utf-8', newline='\n').write(cor)
 print('baked')
