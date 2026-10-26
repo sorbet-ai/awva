@@ -5,7 +5,7 @@
 // they load, their descriptor and manifest are the engine's, process_voices() renders bit for bit
 // what the engine renders (the scripted performances and the key recordings, through every
 // preset of accordion, trumpet, flute and clarinet), and process() with UMP renders bit for bit the SDK's MIDI
-// side (MidiVoices) driving the engine on the same integer-frame step grid (every block, and at
+// side (NoteMapper) driving the engine on the same integer-frame step grid (every block, and at
 // NSC_MODE_CONTROL_HZ 500).
 #include <bit>
 #include <cmath>
@@ -24,7 +24,7 @@
 #include "nsc/load.h"
 #include "nsc/no_denormals.h"
 #include "awva_sdk/engines.h"
-#include "awva_sdk/midi_voices.h"
+#include "awva_sdk/note_mapper.h"
 #include "awva_sdk/performance.h"
 #include "awva_sdk/smf.h"
 #include "awva_sdk/presets.h"
@@ -206,10 +206,10 @@ std::vector<float> render_ump(const char* id, bool mono, bool from_library, int 
 		}
 		return out;
 	}
-	// the reference: the SDK's MidiVoices and the engine linked in, the same step grid and factors
+	// the reference: the SDK's NoteMapper and the engine linked in, the same step grid and factors
 	sdk::Engine e(*sdk::find_engine(id));
 	e.init(SR, NV);
-	auto mv = std::make_unique<sdk::MidiVoices>(NV);
+	auto mv = std::make_unique<sdk::TimedMidi::Mapper>(NV);
 	mv->set_mono(mono);
 	mv->set_mono_style(awva::voices::MonoStyle::of(sdk::find_engine(id)->info->mono)); // (as the component: the engine's family)
 	mv->set_step(sdk::step_seconds(SR, hz));

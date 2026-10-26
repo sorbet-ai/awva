@@ -5,7 +5,7 @@
 //              perf_<name>.h: "<name>"), deterministic
 //   keys       a recorded stream of per-note sensor values (CSV), replayed per voice
 //              (tools/harness/harness_util.h: load_recording)
-//   midi       a Standard MIDI File through the MIDI/MPE mapping (midi_voices.h)
+//   midi       a Standard MIDI File through the MIDI/MPE mapping (note_mapper.h)
 //   ump        a text file of timed Universal MIDI Packets (MIDI 2.0, and MIDI 1.0 in UMP) the same way
 // Each says what it is and where it came from (describe()), for the renderer's log.
 #ifndef AWVA_SDK_PERFORMANCE_H_
@@ -54,7 +54,7 @@ public:
 // the MIDI players take MIDI at the host's control rate (host_config.h, timed_midi.h)
 [[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, const HostConfig& host, std::string* error, const awva::voices::MonoStyle* mono = nullptr);
 // a UMP file: one packet a line, "<frame> <word> [<word> ...]" (decimal frame, hex words), '#'
-// starts a comment; frames in order. mono: the mapping in mono (midi_voices.h), this style
+// starts a comment; frames in order. mono: the mapping in mono (note_mapper.h), this style
 [[nodiscard]] std::unique_ptr<Player> ump_player(const char* path, const HostConfig& host, const awva::voices::MonoStyle* mono, std::string* error);
 
 // the file's absolute path, size and FNV-1a 64 checksum, "<path> (<n> bytes, fnv <hex>)"

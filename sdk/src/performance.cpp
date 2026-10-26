@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "harness_util.h" // tools/harness: load_recording, the replay of a recorded stream
-#include "awva_sdk/midi_voices.h"
+#include "awva_sdk/note_mapper.h"
 #include "awva_sdk/smf.h"
 
 namespace awva::sdk {

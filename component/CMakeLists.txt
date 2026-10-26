@@ -59,7 +59,7 @@ function(awva_add_component target engine type)
 
 NSC_DEFINE_ENTRY(awva::engines::${engine})
 ")
-  add_library(${target} ${type} "${_g}/component.cpp" "${_g}/defaults_${engine}.h" "${AWVA_COMPONENT_SOURCE_DIR}/../sdk/src/midi_voices.cpp")
+  add_library(${target} ${type} "${_g}/component.cpp" "${_g}/defaults_${engine}.h")
   target_link_libraries(${target} PRIVATE nsc_options)
   target_include_directories(${target} PUBLIC "${AWVA_COMPONENT_SOURCE_DIR}/include" PRIVATE "${_g}")
   set_target_properties(${target} PROPERTIES CXX_VISIBILITY_PRESET hidden POSITION_INDEPENDENT_CODE ON)
@@ -79,7 +79,7 @@ foreach(v IN LISTS AWVA_ENGINES)
   list(APPEND AWVA_COMPONENTS nsc_${v})
 endforeach()
 # one component built with small MIDI tables, as a host with little RAM builds them (AWVA_MIDI_QUEUE,
-# AWVA_NOTE_IDS, AWVA_MIDI_STEP_QUEUE: timed_midi.h, midi_voices.h): its descriptor says so and the
+# AWVA_NOTE_IDS, AWVA_MIDI_STEP_QUEUE: timed_midi.h, note_mapper.h): its descriptor says so and the
 # conformance checks hold on it (conformance.sine_small.*)
 awva_add_component(nsc_sine_small sine SHARED)
 target_compile_definitions(nsc_sine_small PRIVATE AWVA_MIDI_QUEUE=256 AWVA_NOTE_IDS=16 AWVA_MIDI_STEP_QUEUE=256)
@@ -110,7 +110,7 @@ set(AWVA_PACKAGE_SLUG "" CACHE STRING "the file name's part after the id (defaul
 set(AWVA_PACKAGE_AWVA "" CACHE STRING "the awva commit packages say they are built on (default: this build's version)")
 # A package is one file for every host, an embedded host's flash slots and a host's virtual
 # device included, so its libraries are built with the MIDI tables those take (timed_midi.h,
-# midi_voices.h: a block's events, the hosts' note ids, a step's messages); the descriptor says them
+# note_mapper.h: a block's events, the hosts' note ids, a step's messages); the descriptor says them
 # (max_events, max_note_ids) to every host
 set(AWVA_PACKAGE_MIDI AWVA_MIDI_QUEUE=256 AWVA_NOTE_IDS=16 AWVA_MIDI_STEP_QUEUE=256 CACHE STRING
   "the MIDI table sizes a package's libraries are built with")

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // mpe_file: a standard MIDI file, MPE or plain, through an awva engine with the SDK's MIDI in
-// (awva_sdk/timed_midi.h over midi_voices.h: the decoder and the voice allocator,
+// (awva_sdk/timed_midi.h over note_mapper.h: the decoder and the voice allocator,
 // a step every engine block).
 //
 //   mpe_file IN.mid OUT.wav [ENGINE [PRESET]]   render (32-bit float WAV, mono); prints the hash

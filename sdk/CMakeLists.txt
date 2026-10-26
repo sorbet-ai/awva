@@ -188,7 +188,7 @@ target_compile_options(awva_performances PRIVATE -Wno-unused-function -Wno-unuse
 # sound presets (awva/preset.h): load and save by name; also in every engine's contract program
 add_library(awva_sdk_presets STATIC src/presets.cpp)
 target_link_libraries(awva_sdk_presets PUBLIC awva_sdk_options awva::dsp)
-add_library(awva_sdk STATIC src/midi_voices.cpp src/smf.cpp src/shell.cpp src/performance.cpp)
+add_library(awva_sdk STATIC src/smf.cpp src/shell.cpp src/performance.cpp)
 target_include_directories(awva_sdk PRIVATE "${AWVA_HARNESS_DIR}")
 target_link_libraries(awva_sdk PUBLIC awva_sdk_options awva_effect_fx awva_sdk_presets)
 

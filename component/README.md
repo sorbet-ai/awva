@@ -63,6 +63,6 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 `ctest -R component` checks:
 - every library loads, and its descriptor and manifest match the engine's;
 - accordion and trumpet from their libraries render bit for bit as linked in, through every preset, the scripted performances and the key takes;
-- `process()` with a MIDI 2.0 performance renders bit for bit what the SDK's `MidiVoices` driving the linked engine renders, polyphonic and mono, on accordion, trumpet and va.
+- `process()` with a MIDI 2.0 performance renders bit for bit what the SDK's `NoteMapper` driving the linked engine renders, polyphonic and mono, on accordion, trumpet and va.
 
 `awva_conformance <library>` checks the ABI on any component library, this repository's or another's (`conformance/`; [docs/conformance.md](../docs/conformance.md)). The tests run it on every engine's library as `conformance.<engine>.*`.

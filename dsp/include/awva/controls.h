@@ -18,7 +18,7 @@ static constexpr int BLOCK = 32;
 namespace awva {
 
 // One note's expression at block rate, in MIDI 2.0's terms: what a voice of an engine reads. The
-// MIDI mapping (sdk: MidiVoices) writes it from MIDI; a test may write it directly.
+// MIDI mapping (sdk: NoteMapper) writes it from MIDI; a test may write it directly.
 struct NoteControls {
 	float pitch;         // semitones, MIDI numbering (69 = A4), fractional: the note with its bends
 	float pressure;      // 0 (released) .. 1: MIDI 2.0's full-scale Poly Pressure; engines take up to 1.5

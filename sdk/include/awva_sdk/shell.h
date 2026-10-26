@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // The host shell: what a plugin (VST3, CLAP, AU) or a standalone app wraps. One engine and the
-// master effects, played by MIDI/MPE (midi_voices.h) or directly by voice
+// master effects, played by MIDI/MPE (note_mapper.h) or directly by voice
 // signals, rendering any number of frames per call (the engines run 32-sample blocks, rendered
 // when the previous one is used up). MIDI is taken in steps of the control rate (host_config.h;
 // every engine block by default): a message takes effect at the next step. Not real-time safe in its constructor and set_engine();

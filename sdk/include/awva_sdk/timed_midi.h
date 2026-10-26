@@ -7,7 +7,7 @@
 // frames, at 44.1 kHz 88 or 89, never drifting); at 0 (the default) every engine block, step k at
 // frame k BLOCK. Before a block that starts at frame f, every step at or before f runs, each with
 // the events whose frame is at or before the step's. The voices' level decay and the strike's
-// fade a step follow from their time constants (MidiVoices::set_step): at 500 Hz they are the
+// fade a step follow from their time constants (NoteMapper::set_step): at 500 Hz they are the
 // 2 ms factors themselves. An event is UMP (MIDI 2.0 channel voice, type 4;
 // MIDI 1.0 in UMP, type 2) or MIDI 1.0 bytes. Fixed size, no heap (it can live in a component's
 // state).
@@ -37,7 +37,7 @@
 #include <new>
 
 #include "awva_sdk/host_config.h"
-#include "awva_sdk/midi_voices.h"
+#include "awva_sdk/note_mapper.h"
 
 // The tables' sizes, a build's (a host with little RAM sets them smaller; the descriptor of a
 // component reports them: nsc_desc max_events, max_note_ids)
@@ -46,6 +46,12 @@
 #endif
 #ifndef AWVA_NOTE_IDS
 #define AWVA_NOTE_IDS 64 // notes with a host id tracked at once
+#endif
+#ifndef AWVA_MIDI_NOTES
+#define AWVA_MIDI_NOTES 16 // notes held at once (note_mapper.h: one more takes the oldest)
+#endif
+#ifndef AWVA_MIDI_VOICES
+#define AWVA_MIDI_VOICES 16 // voices the mapper gives notes to, at most
 #endif
 
 namespace awva::sdk {
@@ -63,10 +69,11 @@ namespace awva::sdk {
 
 class TimedMidi {
 public:
-	static constexpr int QUEUE = AWVA_MIDI_QUEUE;            // events waiting for their step
-	static constexpr int NOTES = AWVA_NOTE_IDS;              // notes with a host id, tracked until they end
-	static constexpr int MAX_EVENTS = AWVA_MIDI_QUEUE;       // events a block, for the guarantee above
-	static constexpr int ENDED = QUEUE + MAX_EVENTS + NOTES; // ids ended at once, until ended() hands them out
+	using Mapper = NoteMapper<AWVA_MIDI_NOTES, AWVA_MIDI_VOICES>; // (the build's sizes)
+	static constexpr int QUEUE = AWVA_MIDI_QUEUE;                 // events waiting for their step
+	static constexpr int NOTES = AWVA_NOTE_IDS;                   // notes with a host id, tracked until they end
+	static constexpr int MAX_EVENTS = AWVA_MIDI_QUEUE;            // events a block, for the guarantee above
+	static constexpr int ENDED = QUEUE + MAX_EVENTS + NOTES;      // ids ended at once, until ended() hands them out
 
 	explicit TimedMidi(const HostConfig& c) :
 	    midi_(c.voices), sr_(c.sample_rate), hz_(c.control_hz < 0 ? 0 : c.control_hz), voices_(c.voices) {
@@ -96,9 +103,9 @@ public:
 			if (queue_[i].note_id >= 0 && starts_note(queue_[i])) end_now(queue_[i].note_id);
 		const bool mono = midi_.mono();
 		const voices::MonoStyle style = midi_.mono_style();
-		// (in place: a MidiVoices is kilobytes, which a temporary would put on the caller's stack)
-		midi_.~MidiVoices();
-		new (&midi_) MidiVoices(voices_);
+		// (in place: a Mapper is kilobytes, which a temporary would put on the caller's stack)
+		midi_.~Mapper();
+		new (&midi_) Mapper(voices_);
 		midi_.set_step(step_seconds(sr_, hz_));
 		midi_.set_mono(mono);
 		midi_.set_mono_style(style);
@@ -157,8 +164,8 @@ public:
 		return n;
 	}
 
-	[[nodiscard]] MidiVoices& midi() { return midi_; }
-	[[nodiscard]] const MidiVoices& midi() const { return midi_; }
+	[[nodiscard]] Mapper& midi() { return midi_; }
+	[[nodiscard]] const Mapper& midi() const { return midi_; }
 
 private:
 	struct Event {
@@ -252,7 +259,7 @@ private:
 		}
 	}
 
-	MidiVoices midi_;
+	Mapper midi_;
 	int sr_, hz_, voices_;
 	Event queue_[QUEUE];
 	int queued_ = 0;
