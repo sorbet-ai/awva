@@ -296,14 +296,14 @@ endforeach()
 # program lists the suite's names)
 list(GET AWVA_ENGINES 0 _first)
 add_test(NAME contract.names_without_semicolons COMMAND awva_engine_${_first}_contract --list-test-cases)
-set_tests_properties(contract.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
+set_tests_properties(contract.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
 
 add_executable(awva_effect_fx_contract tests/main.cpp tests/contract_effect.cpp)
 target_include_directories(awva_effect_fx_contract PRIVATE "${AWVA_DOCTEST_DIR}")
 target_link_libraries(awva_effect_fx_contract PRIVATE awva_effect_fx)
 doctest_discover_tests(awva_effect_fx_contract TEST_PREFIX "contract.fx." PROPERTIES LABELS "contract;unit")
 add_test(NAME contract.fx.names_without_semicolons COMMAND awva_effect_fx_contract --list-test-cases) # (a ';' splits a name in ctest)
-set_tests_properties(contract.fx.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
+set_tests_properties(contract.fx.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
 
 add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp
   tests/test_presets.cpp)
@@ -311,7 +311,7 @@ target_include_directories(awva_sdk_tests PRIVATE "${AWVA_DOCTEST_DIR}")
 target_link_libraries(awva_sdk_tests PRIVATE awva_sdk awva_engines awva_performances)
 doctest_discover_tests(awva_sdk_tests TEST_PREFIX "sdk." PROPERTIES LABELS unit)
 add_test(NAME sdk.names_without_semicolons COMMAND awva_sdk_tests --list-test-cases) # (a ';' splits a name in ctest)
-set_tests_properties(sdk.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
+set_tests_properties(sdk.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
 
 # the factory presets compiled in are the files: dsp/include/awva/presets/*.inc up to date
 add_test(NAME presets_inc COMMAND "${CMAKE_COMMAND}" -DCHECK=ON -P "${CMAKE_CURRENT_SOURCE_DIR}/../tools/presets_inc.cmake")
