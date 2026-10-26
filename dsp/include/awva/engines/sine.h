@@ -15,6 +15,8 @@ struct sine {
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "sine";
 	static constexpr const char* title = "Sine";
+	static constexpr const char* short_name = "sine"; // at most 6 characters (narrow displays)
+	static constexpr uint32_t led = 0x202030; // its colour, 0xrrggbb (required, not 0)
 	static constexpr const char* summary = "the minimal example engine: one sine per voice, level from pressure";
 	static constexpr uint32_t inputs = in_pressure;
 	static constexpr Budget budget = {::sine::MAX_VOICES, 1600, 1.0f};

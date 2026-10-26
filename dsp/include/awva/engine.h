@@ -153,6 +153,8 @@ struct EngineInfo {
 	const PresetHeroes* preset_heroes; // presets with their own (num_preset_heroes of them)
 	int num_preset_heroes;
 	const char* title = nullptr; // a title for people ("Electric Piano"); nullptr: name
+	const char* short_name;       // a name of 1 to 6 characters for narrow displays ("tpt")
+	uint32_t led;                 // its colour, 0xrrggbb, never 0 (a host's LED or UI shows the engine in it)
 };
 
 // the hero parameters of a preset, by its name (the engine's own if it has none, or for nullptr)

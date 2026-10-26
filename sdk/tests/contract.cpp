@@ -239,6 +239,11 @@ TEST_CASE("info: the declaration is complete") {
 	CHECK(std::strlen(in.summary) > 10);
 	CHECK(entry().header != nullptr);
 	CHECK((in.channels == 1 || in.channels == 2));
+	REQUIRE(in.short_name != nullptr);
+	CHECK(std::strlen(in.short_name) >= 1);
+	CHECK(std::strlen(in.short_name) <= 6);
+	CHECK(in.led != 0); // every engine has a colour
+	CHECK(in.led <= 0xffffffu);
 	CHECK(in.budget.max_voices >= 1);
 	CHECK(in.budget.instr_per_block > 0);
 	CHECK(in.budget.instr_per_block < 314000); // a block's cycles on the board (480 MHz, 48828 Hz)

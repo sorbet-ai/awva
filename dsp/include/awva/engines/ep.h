@@ -16,6 +16,8 @@ struct ep {
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "ep";
 	static constexpr const char* title = "Electric Piano";
+	static constexpr const char* short_name = "ep"; // at most 6 characters (narrow displays)
+	static constexpr uint32_t led = 0x280040; // its colour, 0xrrggbb (required, not 0)
 	static constexpr const char* summary = "electric pianos: modal tines and reeds, pickups, damper (14 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_pedal;
 	static constexpr Budget budget = {::ep::MAX_VOICES, 12500, 3.0f};

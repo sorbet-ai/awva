@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 	}
 	const nsc_desc& d = *lib.c->desc;
 	std::string j = "{\n";
-	j += "  \"id\": " + esc(d.id) + ",\n  \"uid\": " + esc(d.uid) + ",\n  \"name\": " + esc(d.name) + ",\n  \"summary\": " + esc(d.summary) + ",\n";
+	j += "  \"id\": " + esc(d.id) + ",\n  \"uid\": " + esc(d.uid) + ",\n  \"name\": " + esc(d.name) + ",\n  \"short_name\": " + esc(d.short_name) + ",\n  \"summary\": " + esc(d.summary) + ",\n";
 	j += "  \"abi\": " + std::to_string(d.abi) + ",\n  \"version\": " + esc(d.version) + ",\n";
 	char h[16];
 	std::snprintf(h, sizeof h, "%08x", d.schema_hash);

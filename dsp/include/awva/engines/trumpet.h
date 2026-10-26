@@ -19,6 +19,8 @@ struct trumpet {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "trumpet";
 	static constexpr const char* title = "Trumpet";
+	static constexpr const char* short_name = "tpt"; // at most 6 characters (narrow displays)
+	static constexpr uint32_t led = 0x003030; // its colour, 0xrrggbb (required, not 0)
 	static constexpr const char* summary = "physical trumpet: lips, mouthpiece and bore, played like the brass trumpet (1 preset)";
 	// pres the breath, vpres the attack, but_y the lips (lip_tilt); acc_abs and the pedal
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake | in_pedal;

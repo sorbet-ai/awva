@@ -18,6 +18,8 @@ struct wind {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "wind";
 	static constexpr const char* title = "Wind";
+	static constexpr const char* short_name = "wind"; // at most 6 characters (narrow displays)
+	static constexpr uint32_t led = 0x004000; // its colour, 0xrrggbb (required, not 0)
 	static constexpr const char* summary = "woodwinds: reed and jet driven bores, cylindrical and conical (9 presets)";
 	// pres, vpres, but_y (the embouchure), acc_abs (the saxes' growl); the pedal is not read
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_shake;

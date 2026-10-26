@@ -1,7 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Sorbet AI
  * SPDX-License-Identifier: Apache-2.0
  *
- * The engine component (ABI 2): one sound engine as a C ABI, for a plugin, the virtual board or
+ * The engine component (ABI 3): one sound engine as a C ABI, for a plugin, the virtual board or
  * any host that loads it from a DLL / dylib (and later the board, from a module). UMP in, audio
  * out, parameters by stable id and name, factory presets, and what the host needs to know first:
  * a title, a colour, the heroes, the sample rates, the budget, the memory and the stack.
@@ -60,7 +60,7 @@
 extern "C" {
 #endif
 
-#define NSC_ABI 2
+#define NSC_ABI 3
 #define NSC_MAGIC 0x3143534eu /* "NSC1" */
 #define NSC_BLOCK 32          /* frames per process() */
 #define NSC_MAX_EVENTS 1024   /* events per process() for ended()'s guarantee */
@@ -121,12 +121,13 @@ typedef struct nsc_desc {
 	const char* id;       /* "accordion": the engine's short name (the board's voice list) */
 	const char* uid;      /* "com.sorbet-ai.awva.accordion": the plugin / package id */
 	const char* name;     /* a title for people ("Electric Piano"; the id when the engine has none) */
+	const char* short_name; /* 1 to 6 characters for narrow displays ("tpt", "ep") */
 	const char* summary;  /* one line */
 	const char* version;  /* the engines repository commit it was built from */
 	uint32_t schema_hash; /* FNV-1a over the parameters' ids, ranges and kinds: a change breaks stored values */
 	uint32_t inputs;      /* the Input bits of engine.h (pressure, velocity, x, y, pedal, motion) */
 	int32_t channels;     /* 1 or 2 */
-	uint32_t led;         /* its colour, 0xrrggbb (a voice key's on the board); 0: none, the host's default */
+	uint32_t led;         /* its colour, 0xrrggbb (a voice key's on the board); never 0 */
 	int32_t max_voices;
 	uint32_t instr_per_block; /* the budget: QEMU instructions per block, worst preset, 10 voices */
 	float tail_seconds;

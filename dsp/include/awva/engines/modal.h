@@ -16,6 +16,8 @@ struct modal {
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "modal";
 	static constexpr const char* title = "Modal";
+	static constexpr const char* short_name = "modal"; // at most 6 characters (narrow displays)
+	static constexpr uint32_t led = 0x001840; // its colour, 0xrrggbb (required, not 0)
 	static constexpr const char* summary = "tuned percussion: banks of damped resonators, struck or rubbed (6 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_rotation | in_pedal;
 	static constexpr Budget budget = {::modal::MAX_VOICES, 18000, 5.0f};
