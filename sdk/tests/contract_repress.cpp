@@ -6,9 +6,10 @@
 //   re-press   every preset, on the middle of its tuning range, soft (a press to 0.25 over 80 ms)
 //              and firm (to 0.6 over 12 ms). The note is held 0.5 s, released, and pressed again 60
 //              or 150 ms later on the same voice, which is still sounding. The re-pressed note must
-//              come within 6 dB of the fresh note's sustain (its mean level from 100 to 300 ms after
-//              the press) at most 50 ms later than the fresh note does. A tail still that loud
-//              counts as having arrived; a slow beat or chorus doesn't matter, only the arrival.
+//              come within 12 dB of the fresh note's sustain (its mean level from 100 to 300 ms
+//              after the press) at most 50 ms later than the fresh note does. A tail still that loud
+//              counts as having arrived; a chorus or a slow beat between detuned reeds (whose phase
+//              the tail keeps) doesn't matter, only the arrival.
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -23,7 +24,7 @@ namespace {
 constexpr double HOLD = 0.5;     // s, the first press
 constexpr double LOOK = 0.3;     // s, the onset compared
 constexpr double SUS_FROM = 0.1; // s, the fresh note's sustain from here to LOOK
-constexpr float DROP_DB = 6.0f;
+constexpr float DROP_DB = 12.0f; // (a slow beat between detuned reeds can null 8 dB)
 constexpr float LATE_MS = 50.0f;
 constexpr int WIN = SR / 200; // 5 ms
 
