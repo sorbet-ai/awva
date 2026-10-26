@@ -282,6 +282,11 @@ struct Engine {
 [[nodiscard]] static inline real clampr(real x, real lo, real hi) { return rmin(rmax(x, lo), hi); }
 
 // tan(x) for 0 <= x < ~1.4 ([7/6] Pade)
+// the highest cutoff a tanp/svf_pade filter takes at a rate: 0.4 of it (pi 0.4 = 1.26 rad, where the
+// approximation holds; beyond about 1.4 rad it turns and the filter is unstable). Above 40 kHz it is
+// above every cutoff's own limit, so those rates compute as they did
+[[nodiscard]] static inline real f_top(const Engine& e, real limit) { return rmin(limit, 0.4f * e.sr); }
+
 [[nodiscard]] static inline real tanp(real x) {
 	const real x2 = x * x;
 	return x * (135135.0f + x2 * (-17325.0f + x2 * (378.0f - x2))) / (135135.0f + x2 * (-62370.0f + x2 * (3150.0f - 28.0f * x2)));
@@ -470,11 +475,11 @@ static inline void block_coefs(Engine& e) {
 	k.gd = gd;
 	k.Gd = gd / (1.0f + gd);
 	// radiation filters
-	const real fr = clampr(P.rad_hz, 10.0f, 4000.0f);
+	const real fr = clampr(P.rad_hz, 10.0f, f_top(e, 4000.0f));
 	const real grr = tanp(e.pi_sr * fr);
 	k.fr = fr;
 	k.Gr = grr / (1.0f + grr);
-	k.tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 200.0f, 16000.0f), clampr(P.tone_q, 0.5f, 4.0f));
+	k.tcf = strisy::svf_pade(e.pi_sr * clampr(P.tone_hz, 200.0f, f_top(e, 16000.0f)), clampr(P.tone_q, 0.5f, 4.0f));
 	k.br = rmax(P.breath, 0.0f);
 	k.fac_acc = 1.0f - e.ctrl_dt / rmax(P.acc_t, 0.005f);
 	k.fac_tn = 1.0f - e.ctrl_dt / 0.006f;
@@ -570,7 +575,7 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	const real Cc = e.k.Cc, Mb = e.k.Mb, iRp = e.k.iRp, alpha = e.k.alpha, beta = e.k.beta;
 	const real a1 = e.k.a1, one_m = e.k.one_m; // backbore (trapezoidal): ub' = a1 pc' + b1, see the audio loop
 	// bore: bell reflection lowpass, DC high-pass, round-trip loss
-	const real fb = clampr(P.bell_hz * exp2s(0.3f * P.lip_tilt * tilt), 50.0f, 8000.0f);
+	const real fb = clampr(P.bell_hz * exp2s(0.3f * P.lip_tilt * tilt), 50.0f, f_top(e, 8000.0f));
 	const real gb = tanp(e.pi_sr * fb);
 	const real Gb = gb / (1.0f + gb);
 	const real gd = e.k.gd, Gd = e.k.Gd; // the open end (DC_HZ)
