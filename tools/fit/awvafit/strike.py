@@ -343,12 +343,12 @@ def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False, 
                       targets=tg, rise_targets=rises, original_strikes=[n['v'] for n in notes], passes=hist, final=final)
 
 
-def render_with(renderer, engine, preset, transpose, workdir):
+def render_with(renderer, engine, preset, transpose, workdir, legato=False):
     """a render(csv) for calibrate() through awva_render --rec (the key path). The output goes beside the
     stream, so renders of different streams (phrases, builds) running at once never share a file;
     workdir is not used for it (kept for the callers)"""
     def render(csv_path):
         out = csv_path[:-4] + '.render.f32'
-        r = renderer.render(engine, preset, rec=csv_path, out=out, transpose=transpose)
+        r = renderer.render(engine, preset, rec=csv_path, out=out, transpose=transpose, legato=legato)
         return r.x.astype(np.float64)
     return render

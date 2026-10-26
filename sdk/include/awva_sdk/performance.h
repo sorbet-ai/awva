@@ -47,7 +47,8 @@ public:
 
 // nullptr and a reason in *error if it can't play (unknown name, unreadable file, no events)
 [[nodiscard]] std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int sample_rate, std::string* error);
-[[nodiscard]] std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error);
+// legato: the keys in mono legato (awva/legato.h): one voice, a key pressed while one is held slurs to it
+[[nodiscard]] std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error, bool legato = false);
 [[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error, bool legato = false);
 // a UMP file: one packet a line, "<frame> <word> [<word> ...]" (decimal frame, hex words), '#'
 // starts a comment; frames in order. legato: the mapping in mono legato (midi_voices.h)

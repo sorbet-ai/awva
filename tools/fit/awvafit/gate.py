@@ -5,11 +5,19 @@ anyone listens? Nothing goes to a listener unless it passes.
 
   python -m awvafit gate --inst I --candidate X --baseline Y [--out gate.json] [--workers N]
 
+Voicing: the recordings are one instrument playing one line, so by default the builds play the keys in
+mono legato (awva_render --rec --legato: one voice, a key pressed while one is held slurs to it, as a
+wind player's fingers on one breath). A voice per key would keep the old note's release sounding over a
+slur's onset and swamp the onset measures. A build that can't play mono legato runs --voicing poly (its
+baseline too); then the onsets are measured only where no old voice overlaps them (the first note, and
+notes pressed 100 ms or more after the last key let go).
+
 X and Y say how to render a key stream:
   <engine>:<preset>       awva_render --rec (AWVA_RENDER), the SDK's engines
   cmd:<command>           any other player; the command gets {csv} (the key stream), {out} (where to
                           write the dry output: mono float32, 48 kHz, time 0 = the stream's first row),
-                          {octave} and {transpose}; a label may lead it: cmd[label]:<command>
+                          {octave} and {transpose}, and {legato} (1: play the keys in mono legato); a label
+                          may lead it: cmd[label]:<command>
 
 The phrases: the instrument's held-out set (gate_set.json: a third of its performances in ChoraleBricks
 and URMP, whole, the lowest-pitched among them; no fit may use any phrase of them: held_out_tracks()),
@@ -215,8 +223,9 @@ def items_for(inst):
 
 # --- renderers -------------------------------------------------------------------------------------
 
-def renderer(spec, workdir):
-    """(label, factory(item) -> render(csv) -> mono float64)"""
+def renderer(spec, workdir, voicing='mono'):
+    """(label, factory(item) -> render(csv) -> mono float64). voicing 'mono': the keys in mono legato (one
+    voice, a key pressed while one is held slurs to it); 'poly': a voice per key"""
     if spec.startswith('cmd'):
         label, cmd = spec[3:].split(':', 1) if not spec.startswith('cmd[') else spec[4:].split(']:', 1)
         label = label or 'cmd'
@@ -224,11 +233,16 @@ def renderer(spec, workdir):
             raise env.EnvError(f'{label}: the command must take {{csv}}, {{out}}, and {{octave}} or {{transpose}} '
                                '(the stream is pressed at the note minus the transpose: without it the build plays in the wrong octave)')
 
+        if voicing == 'mono' and '{legato}' not in cmd:
+            raise env.EnvError(f'{label}: a mono gate run needs the command to take {{legato}} (1: mono legato) and play it so; '
+                               'a build that cannot play mono legato runs with --voicing poly, its baseline too')
+
         def factory(item):
             def render(csv):
                 out = csv[:-4] + '.dry.f32'
                 o = int(round(item.transpose / 12))
-                r = subprocess.run(cmd.format(csv=csv, out=out, octave=o, transpose=item.transpose), shell=True, capture_output=True, text=True)
+                r = subprocess.run(cmd.format(csv=csv, out=out, octave=o, transpose=item.transpose, legato=int(voicing == 'mono')),
+                                   shell=True, capture_output=True, text=True)
                 if r.returncode or not os.path.exists(out):
                     raise RuntimeError(f'{label}: {r.stderr.strip() or r.stdout.strip()}')
                 return np.fromfile(out, np.float32).astype(np.float64)
@@ -239,8 +253,27 @@ def renderer(spec, workdir):
     rd = Renderer()
 
     def factory(item):
-        return strike.render_with(rd, eng, int(pre) if pre.isdigit() else pre, item.transpose, workdir)
+        return strike.render_with(rd, eng, int(pre) if pre.isdigit() else pre, item.transpose, workdir, legato=voicing == 'mono')
     return spec, factory
+
+
+ONSET = ('rise', 'overshoot', 'onset_noise')
+CLEAN_GAP = 0.1  # s: in a poly run, an onset is measured only this long after the last key's release
+
+
+def clean_onsets(notes):
+    """in a poly run, the notes whose onset isn't overlapped by the last note's voice: the first, and those
+    pressed CLEAN_GAP or more after the last key let go (a voice per key keeps the old note's release
+    sounding over a slur's onset, which the recording, played on one instrument, never has)"""
+    return [j == 0 or notes[j][0] - notes[j - 1][1] >= CLEAN_GAP for j in range(len(notes))]
+
+
+def mask_onsets(F, clean):
+    for f, ok in zip(F['notes'], clean):
+        if not ok:
+            for m in ONSET:
+                f[m] = None
+    return F
 
 
 # --- the measures ----------------------------------------------------------------------------------
@@ -461,14 +494,14 @@ def _render_notes(item, stream):
     return [(n['t_on'] - t0, n['t_off'] - t0, m) for n, (_, _, m) in zip(sn, rn)]
 
 
-def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
+def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, voicing='mono'):
     from .phraseset import reference
     items = items_for(inst)
     if not items:
         raise env.EnvError(f'no held-out phrases on disk for {inst} (gate_set.json; AWVA_REFS)')
-    builds = [renderer(candidate, workdir), renderer(baseline, workdir)]
+    builds = [renderer(candidate, workdir, voicing), renderer(baseline, workdir, voicing)]
     # one folder per candidate-baseline pair: another gate run (another lane, other builds) never shares it
-    run_dir = os.path.join(workdir, inst, hashlib.sha1(f'{candidate} | {baseline}'.encode()).hexdigest()[:12])
+    run_dir = os.path.join(workdir, inst, hashlib.sha1(f'{candidate} | {baseline} | {voicing}'.encode()).hexdigest()[:12])
     lock = threading.Lock()
 
     def one(bi, item):
@@ -489,7 +522,8 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
         x = render(path)
         with lock:
             log(f'  {inst} {label} {item.id}: rendered')
-        return features(x, _render_notes(item, path))
+        xn = _render_notes(item, path)
+        return features(x, xn), xn
 
     jobs = [(bi, it) for it in items for bi in (0, 1)]
     with ThreadPoolExecutor(max_workers=workers) as ex:
@@ -500,7 +534,10 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
         rn = control.rec_notes(it)
         R = features(rec, rn)
         fl = floors(rec, rn)
-        C, B = feats[2 * k], feats[2 * k + 1]
+        (C, xn), (B, _) = feats[2 * k], feats[2 * k + 1]
+        if voicing == 'poly':
+            clean = clean_onsets(xn)
+            R, C, B = (mask_onsets(F, clean) for F in (R, C, B))
         per_item.append(dict(id=it.id, floor=fl, cand=distance(R, C), base=distance(R, B), between=distance(C, B)))
     ranges = None
     if inst in range_check.RANGES:
@@ -511,7 +548,9 @@ def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
         with ThreadPoolExecutor(max_workers=2) as ex:
             ranges = list(ex.map(rng, (0, 1)))
         log(f"  {inst} range: candidate {len(ranges[0]['failures'])} failing notes, baseline {len(ranges[1]['failures'])}")
-    return verdict(inst, candidate, baseline, per_item, ranges)
+    res = verdict(inst, candidate, baseline, per_item, ranges)
+    res['voicing'] = voicing
+    return res
 
 
 def _med(v):
@@ -592,10 +631,13 @@ def main(argv=None):
     p.add_argument('--baseline', required=True)
     p.add_argument('--out')
     p.add_argument('--workers', type=int, default=4)
+    p.add_argument('--voicing', choices=('mono', 'poly'), default='mono',
+                   help='mono (default): the keys in mono legato, as the recordings are played; poly: a voice per key, for a build '
+                        'that cannot play mono legato (its baseline too), onsets measured only where no old voice overlaps them')
     p.add_argument('--reuse', action='store_true', help='reuse the calibrated streams of an earlier run with the same build labels (only for the same builds: a rebuilt engine under the same label needs them calibrated again)')
     a = p.parse_args(argv)
     work = env.workdir('gate')
-    res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=a.reuse)
+    res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=a.reuse, voicing=a.voicing)
     print(table(res))
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)

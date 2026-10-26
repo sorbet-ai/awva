@@ -57,13 +57,32 @@ private:
 
 class Keys final : public Player {
 public:
-	Keys(std::string path, std::vector<harness::RecEvent> ev, int sample_rate) :
-	    path_(std::move(path)), ev_(std::move(ev)), sr_(sample_rate) {}
+	Keys(std::string path, std::vector<harness::RecEvent> ev, int sample_rate, bool legato) :
+	    path_(std::move(path)), ev_(std::move(ev)), sr_(sample_rate), legato_on_(legato) {}
 	void block(int b, NoteControls* vc, dsp::InstrumentControls&) override {
 		// the last event of each voice up to this block (the controls hold between messages)
 		const double t = static_cast<double>(b) * dsp::BLOCK / sr_;
 		for (; k_ < ev_.size() && ev_[k_].t <= t; k_++) {
 			const harness::RecEvent& x = ev_[k_];
+			if (legato_on_) {
+				// mono legato (legato.h): the keys are notes on one voice; a key pressed while one is
+				// held slurs to it, as a wind player's fingers do on one breath
+				legato_.note(x.voice, {x.note, x.pres, x.vpres, x.but_x, x.but_y, x.pres > 0.0f});
+				NoteControls& c = vc[0];
+				if (legato_.empty()) { // the last key let go: the voice's release
+					c.pressure = x.pres;
+					c.pressure_rate = x.vpres;
+					c.gate = 0;
+				} else {
+					const awva::ump::NoteSignals s = legato_.signals();
+					c.pitch = s.note;
+					c.pressure = s.pres;
+					c.pressure_rate = s.vpres;
+					c.timbre = s.but_y;
+					c.gate = 1;
+				}
+				continue;
+			}
 			NoteControls& c = vc[x.voice];
 			c.pitch = x.note;
 			c.pressure = x.pres;
@@ -76,13 +95,15 @@ public:
 	[[nodiscard]] std::string describe() const override {
 		char tail[96];
 		std::snprintf(tail, sizeof tail, ": %zu key events, %.1f s", ev_.size(), ev_.back().t);
-		return "key recording " + file_identity(path_.c_str()) + tail;
+		return "key recording " + file_identity(path_.c_str()) + tail + (legato_on_ ? ", mono legato" : "");
 	}
 
 private:
 	std::string path_;
 	std::vector<harness::RecEvent> ev_;
 	int sr_;
+	bool legato_on_;
+	awva::voices::Legato<16> legato_;
 	size_t k_ = 0;
 };
 
@@ -203,7 +224,7 @@ std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int, 
 	return std::make_unique<Scripted>(*p, voices);
 }
 
-std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error) {
+std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error, bool legato) {
 	if (FILE* f = std::fopen(csv_path, "rb")) std::fclose(f);
 	else {
 		*error = std::string("cannot read the key recording ") + csv_path;
@@ -214,7 +235,7 @@ std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_
 		*error = std::string("no key events in ") + csv_path;
 		return nullptr;
 	}
-	return std::make_unique<Keys>(csv_path, std::move(ev), sample_rate);
+	return std::make_unique<Keys>(csv_path, std::move(ev), sample_rate, legato);
 }
 
 std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error, bool legato) {

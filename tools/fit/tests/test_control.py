@@ -235,7 +235,7 @@ class GateRuns(unittest.TestCase):
             return p, {}
         control.calibrated = calibrated
         player = os.path.join(HERE, 'fake_player.py')
-        self.spec = lambda b: f'cmd[b{b}]:"{sys.executable}" "{player}" "{{csv}}" "{{out}}" {{transpose}} {b}'
+        self.spec = lambda b: f'cmd[b{b}]:"{sys.executable}" "{player}" "{{csv}}" "{{out}}" {{transpose}} {b} {{legato}}'
 
     def tearDown(self):
         self.gate.items_for, self.phraseset.reference, control.calibrated = self.saved
@@ -259,7 +259,7 @@ class GateRuns(unittest.TestCase):
         seen = []
 
         class R:
-            def render(self, engine, preset, rec, out, transpose):
+            def render(self, engine, preset, rec, out, transpose, legato=False):
                 seen.append(out)
                 return types.SimpleNamespace(x=np.zeros(4, np.float32))
         import types
@@ -301,6 +301,47 @@ class Range(unittest.TestCase):
         res = RC.check(render_for, 'trombone', os.path.join(TMP, 'rng'))
         failing = {f['midi'] for f in res['failures']}
         self.assertEqual(failing, {45, 47})
+
+
+class Voicing(unittest.TestCase):
+    def test_poly_runs_measure_only_clean_onsets(self):
+        from awvafit import gate
+        notes = [(0.3, 0.8, 60), (0.78, 1.2, 62), (1.4, 1.9, 64), (1.95, 2.4, 65)]  # a slur, a gap, a short gap
+        self.assertEqual(gate.clean_onsets(notes), [True, False, True, False])
+        F = dict(notes=[dict(rise=10.0, overshoot=1.0, onset_noise=0.1, level=0.0) for _ in notes])
+        gate.mask_onsets(F, gate.clean_onsets(notes))
+        self.assertIsNone(F['notes'][1]['rise'])
+        self.assertEqual(F['notes'][2]['rise'], 10.0)
+        self.assertEqual(F['notes'][1]['level'], 0.0)  # only the onset measures
+
+    def test_a_mono_run_needs_a_command_that_plays_legato(self):
+        from awvafit import env, gate
+        with self.assertRaises(env.EnvError):
+            gate.renderer('cmd[x]:player {csv} {out} {octave}', TMP, 'mono')
+        gate.renderer('cmd[x]:player {csv} {out} {octave}', TMP, 'poly')
+
+    @unittest.skipUnless(os.environ.get('AWVA_RENDER'), 'needs AWVA_RENDER')
+    def test_legato_keys_play_one_voice(self):
+        """two keys overlapping 0.4 s: a voice per key sounds both pitches in the overlap, mono legato
+        only the newest"""
+        from awvafit.render import Renderer
+        s = keys.Stream()
+        s.press(0.3, 0.3, 0.5, 1.0, note=60)
+        s.press(0.8, 0.3, 0.5, 1.0, note=67)
+        p = os.path.join(TMP, 'overlap.csv')
+        s.write(p)
+        lv = {}
+        for legato in (False, True):
+            x = Renderer().render('sine', None, rec=p, out=os.path.join(TMP, f'ov{int(legato)}.f32'), legato=legato).x.astype(np.float64)
+            seg = x[int(0.75 * SR):int(1.15 * SR)]  # the second key's rise done, the first key still held
+            S = np.abs(np.fft.rfft(seg * np.hanning(len(seg)))) ** 2
+            f = np.fft.rfftfreq(len(seg), 1 / SR)
+
+            def band(hz):
+                return S[(f > hz * 0.97) & (f < hz * 1.03)].sum() + 1e-20
+            lv[legato] = 10 * math.log10(band(261.63) / band(392.0))  # the old note re the new
+        self.assertGreater(lv[False], -10)  # poly: the old note still sounds
+        self.assertLess(lv[True], lv[False] - 20)  # legato: it is gone
 
 
 class Bursts(unittest.TestCase):
