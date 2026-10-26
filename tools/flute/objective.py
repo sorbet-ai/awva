@@ -21,7 +21,7 @@ Features (feat.py) per note; components (each over notes, then weighted, scales 
 import numpy as np
 
 DYN_P = dict(pp=0.25, mf=0.55, ff=1.0)
-STRIKE = 0.8  # the board's strikes: vpres peaks 0.5-1.0, the key rising in ~30-40 ms (the recorded takes)
+STRIKE = 0.8  # the recorded strikes: vpres peaks 0.5-1.0, the key rising in ~30-40 ms (the recorded takes)
 HOLD = 1.0
 SCALE = dict(trise=0.5, dyn=4.0, harm=4.0, lvl=3.0, noise=5.0, atk=6.0, rise=0.7, pitch=10.0, bad=0.05)
 WEIGHT = dict(trise=0.0, dyn=2.0, harm=3.0, lvl=1.5, noise=1.0, atk=1.0, rise=0.5, pitch=0.5, bad=3.0)

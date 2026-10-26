@@ -24,6 +24,7 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 | [bowed](engines/bowed.md) | bowed strings: friction-driven waveguide strings, modal body, section (9 presets) | 9 | 38 |
 | [brass](engines/brass.md) | brass: a lip source and a physical bore, bell, mutes (9 presets) | 9 | 43 |
 | [ep](engines/ep.md) | electric pianos: modal tines and reeds, pickups, damper (14 presets) | 14 | 25 |
+| [flute](engines/flute.md) | physical flutes: an air jet on the edge of an open-open bore (flute, alto flute, piccolo) | 3 | 59 |
 | [modal](engines/modal.md) | tuned percussion: banks of damped resonators, struck or rubbed (6 presets) | 6 | 21 |
 | [reed](engines/reed.md) | single reed: clarinet to saxophone, one model, tilt morphs the bore | 0 | 0 |
 | [sine](engines/sine.md) | the minimal example engine: one sine per voice, level from pressure | 0 | 0 |

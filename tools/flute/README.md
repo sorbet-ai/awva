@@ -21,11 +21,11 @@ engine's physics, against recordings of real flutes, note by note. Python 3 with
 | `fit_picc.py` | CMA-ES of the piccolo's player on its recordings (one dynamic: no level or dynamics targets), the takes' rise and the in-range robustness (`robust.py`) |
 | `sweep2.py`, `obtest.py` | every note at several pressures, by the spectrum (register, pitch, harmonic share); where overblowing engages and releases on a pressure ramp |
 | `probe.py`, `sweep.py` | a few notes' features; every note at four pressures, flagging those that don't speak |
-| `bake.py` | fitted parameters into `voice_flute.h`'s presets |
+| `bake.py` | fitted parameters into a preset file (`presets/flute/`), then `cmake -P tools/presets_inc.cmake` |
 | `replay.cpp` | the renderer they use, `bin/<tag>/replay` (build line in its header) |
 
 The recordings are not part of this repository (`fetch_samples.py` gets them): the University of
 Iowa Musical Instrument Samples (theremin.music.uiowa.edu/MIS), flute (non-vibrato) and alto flute,
 are "freely available ... and may be used for any projects, without restrictions"; the piccolo is
 the VS Chamber Orchestra 2: Community Edition's (github.com/sgossner/VSCO-2-CE), CC0 1.0. The key takes are the harness's recordings
-(`tools/harness/rec/`) played through the virtual board and captured as engine controls.
+(`tools/harness/rec/`) played as an embedded host plays them and captured as engine controls.

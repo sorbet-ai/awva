@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
-"""The tone's rise on the recorded Striso takes (engine-level controls captured from the key recordings through the virtual board): per note
+"""The tone's rise on the recorded takes (engine-level controls captured from the key recordings, as an embedded host plays them): per note
 from silence (>= 100 ms) held >= 250 ms, from the key's onset until harmonics 1-3 are within 3 dB of
 their level 150-400 ms in."""
 import os, subprocess, numpy as np

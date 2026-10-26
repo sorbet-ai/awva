@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // Renders the flute engine on engine-level control files (per 32-sample block 10 voices x (note,
-// pres, vpres, x, y) + 8 globals, float32) as the board's synth thread drives it: a zeroed Engine,
+// pres, vpres, x, y) + 8 globals, float32) as an embedded host's synth thread drives it: a zeroed Engine,
 // init, set_preset, then per block the controls and process. --set name=value overrides live
 // parameters (EngineParams) from the first block on, without their glide. The fitting tools' renderer.
 //

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
 """CMA-ES of the attack parameters only (the sustain's stay as baked): the recordings' objective
-with the tone's rise weighted, plus the recorded Striso takes' rise (hard strikes <= 50 ms, soft
+with the tone's rise weighted, plus the recorded takes' rise (hard strikes <= 50 ms, soft
 <= 120 ms, from the key).
   python -I fit_atk.py <bintag> <inst> <run> [--gens N] [--pop N] [--sigma s] [--workers N]"""
 import json, math, os, sys, time

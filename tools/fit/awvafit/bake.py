@@ -12,6 +12,9 @@ where the lanes used it), so the baked preset renders the fit's sound.
   bake_assignments(header, func, params)                  the assignments in one preset function:
         those present are replaced, the others appended before `return p;`
   write_switch(header, func_sig, cases, names, default)   a whole preset switch, every parameter
+  bake_preset_file(path, params)                          an engine whose factory presets are files
+        (presets/<engine>/NN-<name>.preset.json): each named parameter's value in that file replaced
+        (then cmake -P tools/presets_inc.cmake compiles the files in)
 """
 import re
 
@@ -96,3 +99,15 @@ def write_switch(header, func_sig, cases, names, default=None, style='g6'):
     b1 = s.index('\t}\n\treturn p;\n}', b0)
     s = s[:b0] + '\n'.join(body) + '\n' + s[b1:]
     open(header, 'w', encoding='utf-8', newline='\n').write(s)
+
+
+def bake_preset_file(path, params, style='g6'):
+    """the values of params {live name: value} into a preset file's "params", as the fit rendered them
+    (%.6g or repr), every other line kept; a name the file doesn't have is an error"""
+    text = open(path, encoding='utf-8').read()
+    for k, v in params.items():
+        t = repr(float(v)) if style == 'repr' else f'{float(v):.6g}'
+        text, n = re.subn(r'(\n    "' + re.escape(k) + r'": )[^,\n]+', lambda m: m.group(1) + t, text)
+        if n != 1:
+            raise KeyError(f'{path}: no parameter {k}')
+    open(path, 'w', encoding='utf-8', newline='\n').write(text)

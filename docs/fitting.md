@@ -31,7 +31,7 @@ fetch -> segment -> features -> objective -> fit -> bake -> listen
    - a checkpoint every generation (a run resumes), `best.json`, a log;
    - the hold-out set is scored at the end;
    - `robust.check` (every in-range note at three pressures must speak) and `constraints` (limits a listener sets) add penalties or act as gates.
-6. **Bake** the result into the engine's preset tables (`bake`): by live parameter name, through the header's parameter table, at the value the fit rendered.
+6. **Bake** the result into the engine's presets (`bake`): by live parameter name, at the value the fit rendered: into its preset tables through the header's parameter table, or, for an engine whose presets are files, into its preset file (`bake_preset_file`; then `cmake -P tools/presets_inc.cmake`).
 7. **Listen:** `pack` writes a listening pack, and a listener judges by ear.
    - Every engine version plays the same phrases;
    - the references come first (another engine's preset and recordings), the recordings loudness-matched (BS.1770) to the renders;

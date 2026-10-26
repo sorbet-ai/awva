@@ -45,7 +45,7 @@ class Ctl:
         c[live, 5 * voice + 1] = np.maximum(p[live], 0)
         c[live, 5 * voice + 2] = vp[live]
         c[live, 5 * voice + 4] = tilt
-        # the firmware keeps the last note and vpres after the release
+        # a host may keep the last note and vpres after the release
         after = t >= t_end + rel
         c[after, 5 * voice] = note
         self.notes.append(dict(voice=voice, t_on=float(t0), t_off=float(t0 + t_end), note=float(note), P=float(P), v=float(v)))

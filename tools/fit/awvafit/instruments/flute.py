@@ -335,24 +335,12 @@ def fit(inst, run, gens=200, pop=20, sigma=0.2, workers=5, every=2, start=None, 
                seed=seed, workers=workers, only=only, fmt=objective(inst).fmt).run(gens)
 
 
-def bake(header, flute_json, alto_json, gain_flute, gain_alto):
-    """the fitted values into voice_flute.h: flute_params() every fitted field; alto_params() the
-    flute's, its geometry (bore_mm, low_note) and its own fit"""
-    from ..bake import literal, param_fields
-    s = open(header, encoding='utf-8').read()
-    table = param_fields(s)
-    fp = json.load(open(flute_json))['params']
-    fp['gain'] = float(gain_flute)
-    ap = json.load(open(alto_json))['params']
-    ap['gain'] = float(gain_alto)
-    m = re.search(r'(static inline Params flute_params\(\) \{\n\tParams p;\n)(.*?)(\n\treturn p;\n\})', s, re.S)
-    fields = {table[k]: v for k, v in fp.items()}
-    new = []
-    for ln in m.group(2).split('\n'):
-        mm = re.match(r'\tp\.(\w+) = .*;$', ln)
-        new.append(f"\tp.{mm.group(1)} = {literal(fields[mm.group(1)], 'g6')};" if mm and mm.group(1) in fields else ln)
-    s = s[:m.start(2)] + '\n'.join(new) + s[m.end(2):]
-    m = re.search(r'(static inline Params alto_params\(\) \{\n\tParams p = flute_params\(\);\n)(.*?)(\n\treturn p;\n\})', s, re.S)
-    keep = [ln for ln in m.group(2).split('\n') if re.match(r'\tp\.(bore_mm|low_note) = ', ln)]
-    s = s[:m.start(2)] + '\n'.join(keep + [f"\tp.{table[k]} = {literal(v, 'g6')};" for k, v in ap.items()]) + s[m.end(2):]
-    open(header, 'w', encoding='utf-8', newline='\n').write(s)
+def bake(preset_file, best_json, gain=None):
+    """the fitted values into one of the flute's preset files (presets/flute/NN-<name>.preset.json:
+    00 flute, 01 alto flute, 02 piccolo), every fitted parameter at %.6g, the gain if given; then
+    cmake -P tools/presets_inc.cmake"""
+    from ..bake import bake_preset_file
+    params = json.load(open(best_json))['params']
+    if gain is not None:
+        params['gain'] = float(gain)
+    bake_preset_file(preset_file, params)

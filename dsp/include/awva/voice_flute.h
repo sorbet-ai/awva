@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * flute: a physical model of the flute family (concert flute, alto flute, piccolo as presets), in the
- * style of the physical trumpet: nothing sets the pitch but the jet and the bore together. On the
- * Striso board: `VOICE=flute`.
+ * style of the physical trumpet: nothing sets the pitch but the jet and the bore together. Traits:
+ * engines/flute.h.
  *
  * Every voice is a player blowing across the embouchure hole of an open-open pipe:
  *
@@ -53,7 +53,7 @@
  *   release    the breath stops, the pipe rings out (pedal lengthens the release)
  *   tilt fwd/back  the jet angle and the cover of the embouchure hole: forward rolls in (darker,
  *              a little flatter, the edge offset moves), back rolls out
- *   tilt sideways  pitch bend (the firmware moves the note; the pipe follows)
+ *   tilt sideways  pitch bend (the host moves the note; the pipe follows)
  *   shake      breath vibrato
  *   ob_amt     (0 by default) overblowing: above ob_thr of the breath the player stops shortening the
  *              lip-to-edge distance as the jet speeds up, its travel time falls and the next mode of
@@ -72,9 +72,10 @@
  * Fitted (CMA-ES) to the University of Iowa MIS recordings (flute and alto flute, non-vibrato,
  * pp/mf/ff, every note): per note the steady harmonics, the level across notes and dynamics, the
  * noise between the harmonics, the attack and its rise, the timbre's change with the dynamic, in
- * tune and in its register. The piccolo is the flute's player on the piccolo's geometry (no fit).
+ * tune and in its register. The piccolo (v4): the flute's player on the piccolo's geometry, its jet,
+ * bore losses, radiation, noise and attack fitted to the VSCO-2 Community Edition piccolo (CC0).
  * The attack (v2) refitted alone, the sustain's parameters fixed: the tone's rise (harmonics 1-3
- * within 3 dB of their sustain) from the key on the recorded Striso takes (hard strikes <= 50 ms,
+ * within 3 dB of their sustain) from the key on the recorded takes (hard strikes <= 50 ms,
  * soft <= 120 ms) and against the recordings' attacks.
  *
  * Cost (QEMU Cortex-M7 instruction counts, 10 voices): profile.sh's default performance 34.7k
@@ -92,6 +93,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "preset.h"
 #include "svf.h"
 #ifdef FLUTE_TEST_HOOK
 #include <stdio.h>
@@ -207,166 +209,19 @@ struct Params {
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
-[[nodiscard]] static inline Params flute_params() {
-	Params p;
-	p.gain = 12.9f;
-	p.pc_a = 0.35f;
-	p.pc_b = 0.65f;
-	p.lv_hz = 36.5997f;
-	p.rel = 0.04f;
-	p.rel_ped = 0.4f;
-	p.p_soft = 233.295f;
-	p.p_loud = 1920.16f;
-	p.p_reg = 0.773037f;
-	p.p_curve = 1.21055f;
-	p.theta = 0.473292f;
-	p.theta_reg = 0.009298f;
-	p.w_track = 0.998653f;
-	p.jet_h = 0.554691f;
-	p.h_loud = -0.227037f;
-	p.jet_w = 17.953f;
-	p.g_soft = 1.05304f;
-	p.amp_loud = 0.05793f;
-	p.y0 = 0.207421f;
-	p.y_tilt = 0.3f;
-	p.jet_st = 0.496387f;
-	p.vortex = 1.14688f;
-	p.bore_mm = 9.5f;
-	p.bore_t = 0.023309f;
-	p.bore_reg = 0.848711f;
-	p.cut_hz = 5730.56f;
-	p.wall = 7.21246f;
-	p.disp = -0.024968f;
-	p.cover = -30.0f;
-	p.cover_hz = -0.3f;
-	p.low_note = 60.0f;
-	p.overblow = 1.0f;
-	p.range_lo = 59.0f;
-	p.range_hi = 98.0f;
-	p.g_out = 3.0f;
-	p.out_db = -11.0f;
-	p.ob_amt = 0.0f;
-	p.ob_thr = 0.7f;
-	p.mouth = 1.0f;
-	p.end = 0.013091f;
-	p.dipole = 1.4672f;
-	p.tone_hz = 1951.39f;
-	p.tone_q = 0.500948f;
-	p.turb = 0.296501f;
-	p.turb_hz = 206.416f;
-	p.hiss = 0.005222f;
-	p.hiss_st = 0.172695f;
-	p.t_noise = 1.22976f;
-	p.tongue = 0.516874f;
-	p.acc_amp = 0.050248f;
-	p.acc_t = 0.079499f;
-	p.tongue_t = 0.003666f;
-	p.att_gain = 32.1447f;
-	p.att_t = 0.032721f;
-	p.att_soft = 0.622556f;
-	p.slur = 0.1f;
-	p.pitch_t = 0.03f;
-	p.vib = 0.5f;
-	p.vib_hz = 5.2f;
-	return p;
-}
-
-// the alto flute in G: a fourth lower, a wider bore (13 mm); its player fitted to the alto's recordings
-[[nodiscard]] static inline Params alto_params() {
-	Params p = flute_params();
-	p.bore_mm = 13.0f;
-	p.low_note = 55.0f;
-	p.range_lo = 55.0f;
-	p.range_hi = 93.0f;
-	p.out_db = -5.0f;
-	p.p_soft = 463.326f;
-	p.p_loud = 2162.83f;
-	p.p_reg = 0.968871f;
-	p.p_curve = 0.778162f;
-	p.lv_hz = 16.6521f;
-	p.theta = 0.439228f;
-	p.theta_reg = 0.09849f;
-	p.w_track = 0.996825f;
-	p.jet_h = 0.479683f;
-	p.h_loud = 1.12036f;
-	p.jet_w = 12.9167f;
-	p.g_soft = 1.16145f;
-	p.amp_loud = 1.79622f;
-	p.y0 = 0.154009f;
-	p.jet_st = 0.192363f;
-	p.vortex = 1.13624f;
-	p.bore_t = 0.087268f;
-	p.bore_reg = 0.458199f;
-	p.cut_hz = 5822.68f;
-	p.wall = 27.4109f;
-	p.disp = -0.309613f;
-	p.end = 0.078011f;
-	p.dipole = 1.50147f;
-	p.tone_hz = 1416.04f;
-	p.tone_q = 0.602132f;
-	p.turb = 0.308476f;
-	p.turb_hz = 354.191f;
-	p.hiss = 0.011338f;
-	p.hiss_st = 0.315655f;
-	p.t_noise = 1.3072f;
-	p.tongue = 1.98266f;
-	p.acc_amp = 0.154898f;
-	p.acc_t = 0.047729f;
-	p.tongue_t = 0.029789f;
-	p.gain = 16.2f;
-	p.att_gain = 8.77195f;
-	p.att_t = 0.089581f;
-	p.att_soft = 0.996986f;
-	return p;
-}
-
-// the piccolo: the flute's player on the piccolo's geometry (an octave higher, a bore of 5.4 mm
-// instead of 9.5), its jet, bore losses, radiation, noise and attack fitted to the VSCO-2 Community
-// Edition piccolo (CC0: five sustained notes G5-G7 at one dynamic; the takes' rise from the key)
-[[nodiscard]] static inline Params piccolo_params() {
-	Params p = flute_params();
-	p.bore_mm = 5.4f;
-	p.low_note = 74.0f;
-	p.range_lo = 74.0f;
-	p.range_hi = 103.0f; // (its top notes, to C8, outside: they speak at the lightest touch so)
-	p.p_soft = 239.455f;
-	p.p_loud = 1231.42f;
-	p.p_reg = 0.885767f;
-	p.theta = 0.412137f;
-	p.jet_h = 0.374902f;
-	p.jet_w = 14.3544f;
-	p.g_soft = 1.37998f;
-	p.y0 = -0.311863f;
-	p.jet_st = 0.816831f;
-	p.bore_t = 0.029264f;
-	p.bore_reg = 0.226017f;
-	p.cut_hz = 8186.31f;
-	p.wall = 12.7542f;
-	p.dipole = 3.41335f;
-	p.tone_hz = 1139.45f;
-	p.turb = 0.5972f;
-	p.hiss = 0.013086f;
-	p.hiss_st = 0.110436f;
-	p.tongue = 0.347686f;
-	p.tongue_t = 0.008014f;
-	p.att_gain = 36.9154f;
-	p.att_t = 0.063462f;
-	p.out_db = -1.0f; // (its fitted top meets the notes above it)
-	return p;
-}
-
+// The factory presets: presets/flute/NN-<name>.preset.json, compiled in (the end of this file);
+// their values fitted by tools/flute and tools/fit (awvafit flute):
+//   0 flute       the concert flute, fitted to the University of Iowa MIS flute recordings
+//   1 alto flute  in G: a fourth lower, a wider bore (13 mm); its player fitted to the alto's
+//                 recordings
+//   2 piccolo     the flute's player on the piccolo's geometry (an octave higher, a bore of 5.4 mm
+//                 instead of 9.5), its jet, bore losses, radiation, noise and attack fitted to the
+//                 VSCO-2 Community Edition piccolo (CC0: five sustained notes G5-G7 at one dynamic;
+//                 the takes' rise from the key); its top notes, to C8, outside its range (they speak
+//                 at the lightest touch so), its output level so that its fitted top meets them
 static constexpr int NUM_PRESETS = 3;
-
-[[nodiscard]] static inline const char* preset_name(int i) {
-	static const char* const names[NUM_PRESETS] = {"flute", "alto flute", "piccolo"};
-	return (i >= 0 && i < NUM_PRESETS) ? names[i] : names[0];
-}
-
-[[nodiscard]] static inline Params preset_params(int i) {
-	if (i == 1) return alto_params();
-	if (i == 2) return piccolo_params();
-	return flute_params();
-}
+[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static inline Params preset_params(int i);
 
 #ifdef FLUTE_PRESET
 static constexpr int DEFAULT_PRESET = FLUTE_PRESET;
@@ -555,17 +410,22 @@ static inline void update_derived(Engine& e) {
 	e.lv_c = strisy::svf_from_g(strisy::tan0(e.pi_sr * CTRL * rmin(e.p.lv_hz, 400.0f)), 0.5f);
 }
 
+// after the parameters of preset index were set (set_preset, or a preset loaded by name)
+static inline void params_loaded(Engine& e, int index) {
+	e.preset = index;
+	e.ps = e.p;
+	update_derived(e);
+}
+
 static inline void set_preset(Engine& e, int i) {
 	if (i < 0 || i >= NUM_PRESETS) i = 0;
-	e.preset = i;
 	e.p = preset_params(i);
 #ifdef FLUTE_RANGE_ALL
 	// (proof builds: every note inside the range, the v2 engine's behaviour everywhere)
 	e.p.range_lo = 0.0f;
 	e.p.range_hi = 132.0f;
 #endif
-	e.ps = e.p;
-	update_derived(e);
+	params_loaded(e, i);
 }
 
 static inline void init(Engine& e, int sample_rate, int nvoices) {
@@ -615,7 +475,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const Params& P = e.ps;
 	const strisy::VoiceControls cc = e.vc[vi];
 	const real pres = clampr(cc.pres, 0.0f, 1.5f);
-	// after a release the firmware leaves the last vpres in place: a positive leftover must not
+	// after a release a host may leave the last vpres in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
 	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
@@ -1135,10 +995,33 @@ static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");
 namespace strisy {
 template <> struct EngineParams<flute::Engine> {
 	static constexpr int count = flute::NUM_LIVE_PARAMS;
-	[[nodiscard]] static const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &flute::param_table[i].d : nullptr; }
+	[[nodiscard]] static constexpr const ParamDesc* desc(int i) { return (i >= 0 && i < count) ? &flute::param_table[i].d : nullptr; }
 	[[nodiscard]] static float* ptr(flute::Engine& e, int i) { return (i >= 0 && i < count) ? &(e.p.*(flute::param_table[i].m)) : nullptr; }
 	static void changed(flute::Engine& e, int) { flute::update_derived(e); }
 };
 } // namespace strisy
+
+// ---------------------------------------------------------------------------------------------
+// The factory presets: presets/flute/NN-<name>.preset.json, the files themselves (presets/flute.inc,
+// tools/presets_inc.cmake), each read at compile time; a file that isn't every parameter in range
+// doesn't compile (awva/preset.h factory).
+
+namespace flute {
+#include "presets/flute.inc"
+static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/flute/: a file per preset");
+
+[[nodiscard]] static inline const awva::preset::Factory<NPARAMS>& factory_preset(int i) {
+	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
+}
+
+[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+
+[[nodiscard]] static inline Params preset_params(int i) {
+	const awva::preset::Factory<NPARAMS>& f = factory_preset(i);
+	Params p;
+	for (int k = 0; k < NPARAMS; k++) p.*(param_table[k].m) = f.values[k];
+	return p;
+}
+} // namespace flute
 
 #endif // VOICE_FLUTE_H_
