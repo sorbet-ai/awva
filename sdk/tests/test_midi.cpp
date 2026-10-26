@@ -3,8 +3,8 @@
 // MIDI in on the PC (note_mapper.h: the mapping of awva/ump.h, with this host's
 // voices) and the MIDI file reader (smf.h).
 #include <array>
+#include <bit>
 #include <cmath>
-#include <cstring>
 #include <memory>
 
 #include "doctest/doctest.h"
@@ -13,6 +13,15 @@
 #include "awva_sdk/timed_midi.h"
 
 namespace sdk = awva::sdk;
+
+namespace {
+// two voices' controls, field by field and bit for bit (not memcmp: the struct has padding)
+[[nodiscard]] bool same_controls(const awva::NoteControls& a, const awva::NoteControls& b) {
+	const auto bits = [](float x) { return std::bit_cast<uint32_t>(x); };
+	return bits(a.pitch) == bits(b.pitch) && bits(a.pressure) == bits(b.pressure) && bits(a.pressure_rate) == bits(b.pressure_rate) &&
+	    bits(a.timbre) == bits(b.timbre) && bits(a.velocity) == bits(b.velocity) && bits(a.release) == bits(b.release) && a.gate == b.gate;
+}
+} // namespace
 using Mapper = sdk::TimedMidi::Mapper; // (the build's sizes)
 
 namespace {
@@ -218,7 +227,7 @@ TEST_CASE("control rate: at a 2 ms step the level decay and the strike's fade ar
 		}
 		a.step();
 		b.step();
-		REQUIRE(std::memcmp(a.voices(), b.voices(), sizeof(awva::NoteControls) * 10) == 0);
+		for (int v = 0; v < 10; v++) REQUIRE(same_controls(a.voices()[v], b.voices()[v]));
 	}
 }
 
@@ -273,10 +282,7 @@ TEST_CASE("control rate: TimedMidi takes events at the first step at or after th
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__SANITIZE_ADDRESS__) && !defined(AWVA_TEST_ASAN)
 #include <pthread.h>
 
-#include <memory>
 #include <vector>
-
-#include "awva_sdk/timed_midi.h"
 
 namespace {
 // the bytes of a stack of its own that a thread running f(arg) used (its start included: the C

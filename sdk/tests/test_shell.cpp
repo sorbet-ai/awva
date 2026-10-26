@@ -61,7 +61,8 @@ TEST_CASE("shell: timed MIDI goes in at the first control step at or after its f
 	REQUIRE(va != nullptr);
 	// a note at frame 100 of a 1000-frame call is the note sent at the next step, before the block
 	// that starts there: frame 128 at every block (the default), 192 at 500 Hz (every 96 frames)
-	for (const auto& [hz, step] : {std::pair{0, 128}, std::pair{500, 192}}) {
+	for (const auto& hs : {std::pair{0, 128}, std::pair{500, 192}}) {
+		const int hz = hs.first, step = hs.second; // (not a structured binding: CAPTURE captures it in a lambda)
 		CAPTURE(hz);
 		sdk::Shell a(*va, sdk::HostConfig{48000, hz}), b(*va, sdk::HostConfig{48000, hz});
 		std::vector<float> la(2000), ra(2000), lb(2000), rb(2000);
