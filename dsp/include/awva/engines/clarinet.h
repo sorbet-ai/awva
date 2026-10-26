@@ -19,6 +19,8 @@ struct clarinet {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "clarinet";
 	static constexpr const char* title = "Clarinet";
+	static constexpr const char* short_name = "clar";
+	static constexpr uint32_t led = 0x003010; // the clarinet voice key's colour in the firmware
 	static constexpr const char* summary = "physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets)";
 	// pressure the breath, pressure_rate the tongue, timbre the embouchure; sustain lengthens the release
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_sustain;
