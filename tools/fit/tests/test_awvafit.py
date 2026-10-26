@@ -227,7 +227,7 @@ class KeysControls(unittest.TestCase):
         ev = controls.note_events(vc)
         self.assertEqual([(e['v'], round(e['note'])) for e in ev], [(0, 60), (1, 64)])
         self.assertAlmostEqual(ev[0]['P'], 0.5, places=5)
-        self.assertEqual(g.shape[1], 8)
+        self.assertEqual(g.shape[1], 5)  # (sustain, accel_g, spin x 3)
 
 
 class Registry(unittest.TestCase):
