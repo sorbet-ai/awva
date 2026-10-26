@@ -6,6 +6,7 @@
 //   keys       a recorded stream of per-note sensor values (CSV), replayed per voice
 //              (tools/harness/harness_util.h: load_recording)
 //   midi       a Standard MIDI File through the MIDI/MPE mapping (midi_voices.h)
+//   ump        a text file of timed Universal MIDI Packets (MIDI 2.0, and MIDI 1.0 in UMP) the same way
 // Each says what it is and where it came from (describe()), for the renderer's log.
 #ifndef AWVA_SDK_PERFORMANCE_H_
 #define AWVA_SDK_PERFORMANCE_H_
@@ -48,7 +49,10 @@ public:
 // nullptr and a reason in *error if it can't play (unknown name, unreadable file, no events)
 [[nodiscard]] std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int sample_rate, std::string* error);
 [[nodiscard]] std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error);
-[[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error);
+[[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error, bool legato = false);
+// a UMP file: one packet a line, "<frame> <word> [<word> ...]" (decimal frame, hex words), '#'
+// starts a comment; frames in order. legato: the mapping in mono legato (midi_voices.h)
+[[nodiscard]] std::unique_ptr<Player> ump_player(const char* path, int voices, int sample_rate, bool legato, std::string* error);
 
 // the file's absolute path, size and FNV-1a 64 checksum, "<path> (<n> bytes, fnv <hex>)"
 [[nodiscard]] std::string file_identity(const char* path);

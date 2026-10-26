@@ -13,6 +13,7 @@
 //     --rec FILE.csv    a recorded key stream (CSV t,src,id,pres,velo,x,y), through the key path
 //     --midi FILE.mid   a Standard MIDI File, MIDI 1.0 or MPE, through the MIDI/MPE mapping
 //                       (awva/midi_in.h: up-converted to MIDI 2.0)
+//     --ump FILE.ump    timed UMP packets, a text file (awva_sdk/performance.h: ump_player), the same way
 //     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (note, pres, vpres, x, y),
 //                       then the 8 globals (what --ctl-out writes, or an embedded host's capture)
 //   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s, a MIDI
@@ -20,6 +21,7 @@
 //   --tail S          seconds after the input's own length (default 0)
 //   --settle S        seconds of silence rendered before the input and not written (default 0):
 //                     the parameter glide of --set has arrived when the input starts
+//   --legato          (--midi, --ump) the MIDI mapping in mono legato
 //   --nv N            voices (default 10)
 //   --rate HZ         sample rate (default: the performance's, 48000); the block is always 32
 //   --set NAME=V      a live parameter, written with its rule (clamped) after the preset; repeatable
@@ -39,6 +41,8 @@
 //                     with --silent-after T any sample above 1e-4 after T s or voices still active
 //   --expect HASH     fail unless the render's hash (FNV-1a 64 of the float bits) is HASH
 //   --golden-name N   with AWVA_GOLDEN_OUT=<dir>: write the hash to <dir>/N.hash instead
+//   --compare FILE.f32  how far the render is from another (an --out of an earlier build): the
+//                     samples that differ and the largest difference, absolute and in dB re 1.0
 //   --list            the engines, their presets and the performances, and exit
 // stdout: "hash <hex>". Exit 2: bad arguments or an input that can't be read; exit 1: --check or
 // --expect failed.
@@ -237,12 +241,12 @@ struct Set {
 } // namespace
 
 int main(int argc, char** argv) {
-	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr;
+	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr, *ump = nullptr, *compare = nullptr;
 	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr, *ctl_out = nullptr, *manifest = nullptr;
 	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0;
 	int nv = 10, rate = 0;
 	float transpose = 0.0f;
-	bool use_fx = false, check = false, list_params = false, ftz = false;
+	bool use_fx = false, check = false, list_params = false, ftz = false, legato = false;
 	std::vector<Set> sets;
 	std::vector<float> notes;
 	for (int a = 1; a < argc; a++) {
@@ -257,6 +261,9 @@ int main(int argc, char** argv) {
 		else if (s == "--rec") rec = next();
 		else if (s == "--midi") midi = next();
 		else if (s == "--ctl") ctl = next();
+		else if (s == "--ump") ump = next();
+		else if (s == "--legato") legato = true;
+		else if (s == "--compare") compare = next();
 		else if (s == "--seconds") seconds = std::atof(next());
 		else if (s == "--tail") tail = std::atof(next());
 		else if (s == "--settle") settle = std::atof(next());
@@ -306,8 +313,9 @@ int main(int argc, char** argv) {
 	if (tail < 0 || settle < 0) fail("--tail and --settle are seconds, 0 or more");
 
 	// the input: exactly one
-	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) > 1) fail("one input only: --perf, --rec, --midi or --ctl");
-	const bool default_input = !perf && !rec && !midi && !ctl;
+	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --rec, --midi, --ctl or --ump");
+	if (legato && !midi && !ump) fail("--legato: the MIDI mapping's mode (--midi or --ump)");
+	const bool default_input = !perf && !rec && !midi && !ctl && !ump;
 	if (default_input) perf = "default";
 	int sr = rate;
 	if (!sr) {
@@ -345,8 +353,10 @@ int main(int argc, char** argv) {
 		if (cp) ctl_blocks = cp->blocks();
 		player = std::move(cp);
 	} else {
-		player = rec ? sdk::key_player(rec, nv, sr, &error) : midi ? sdk::midi_player(midi, nv, sr, &error) :
-		                                                             sdk::scripted_player(perf, nv, sr, &error);
+		player = rec ? sdk::key_player(rec, nv, sr, &error) :
+		    midi     ? sdk::midi_player(midi, nv, sr, &error, legato) :
+		    ump      ? sdk::ump_player(ump, nv, sr, legato, &error) :
+		               sdk::scripted_player(perf, nv, sr, &error);
 	}
 	if (!player) fail(error);
 	const bool own_length = seconds < 0;
@@ -457,6 +467,28 @@ int main(int argc, char** argv) {
 		if (!write_f32(ctl_out, ctl_rec)) fail(std::string("cannot write ") + ctl_out);
 		std::fprintf(stderr, "awva_render: wrote %s\n", sdk::file_identity(ctl_out).c_str());
 	}
+	if (compare) {
+		FILE* f = std::fopen(compare, "rb");
+		if (!f) fail(std::string("cannot read ") + compare);
+		std::vector<float> ref;
+		float buf[4096];
+		size_t got;
+		while ((got = std::fread(buf, sizeof(float), 4096, f)) > 0) ref.insert(ref.end(), buf, buf + got);
+		std::fclose(f);
+		size_t differ = 0, first = 0;
+		double maxd = 0, refpeak = 0;
+		for (size_t i = 0; i < out.size() && i < ref.size(); i++) {
+			refpeak = std::fmax(refpeak, std::fabs(static_cast<double>(ref[i])));
+			if (std::memcmp(&out[i], &ref[i], sizeof(float)) == 0) continue;
+			if (!differ++) first = i;
+			maxd = std::fmax(maxd, std::fabs(static_cast<double>(out[i]) - ref[i]));
+		}
+		std::printf("compare %s: %zu of %zu samples differ%s", compare, differ, out.size(), ref.size() != out.size() ? " (the lengths differ)" : "");
+		if (differ)
+			std::printf(", the first at %.4f s, max |d| %.3g (%.1f dB re 1.0; the reference's peak %.3g)", static_cast<double>(first / channels) / sr, maxd,
+			    20.0 * std::log10(maxd), refpeak);
+		std::printf("\n");
+	}
 	const uint64_t h = hash_samples(out);
 	char hs[32];
 	std::snprintf(hs, sizeof hs, "%016llx", static_cast<unsigned long long>(h));
@@ -482,7 +514,9 @@ int main(int argc, char** argv) {
 		field("input", json_string(input));
 		field("input_kind", json_string(ctl ? "ctl" : rec ? "rec" :
 		                            midi                  ? "midi" :
+		                            ump                   ? "ump" :
 		                                                    "perf"));
+		field("legato", legato ? "true" : "false");
 		field("sample_rate", std::to_string(sr));
 		field("block", std::to_string(dsp::BLOCK));
 		field("voices", std::to_string(nv));

@@ -5,6 +5,7 @@
 #include "awva_sdk/timed_midi.h"
 
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <vector>
 
@@ -87,8 +88,10 @@ private:
 
 class Midi final : public Player {
 public:
-	Midi(std::string path, MidiFile f, int voices, int sample_rate) :
-	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate) {}
+	Midi(std::string path, MidiFile f, int voices, int sample_rate, bool legato) :
+	    path_(std::move(path)), f_(std::move(f)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
+		in_->midi().set_legato(legato);
+	}
 	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
 		// in integer frames (timed_midi.h, the component's rule): an event at its frame (its time,
 		// rounded to the nearest frame), taken at the first 2 ms step at or after it; the steps due
@@ -110,7 +113,8 @@ public:
 	[[nodiscard]] double seconds() const override { return f_.seconds + 2.0; }
 	[[nodiscard]] std::string describe() const override {
 		char tail[128];
-		std::snprintf(tail, sizeof tail, ": format %d, %d tracks, %zu channel messages, %.1f s", f_.format, f_.tracks, f_.events.size(), f_.seconds);
+		std::snprintf(tail, sizeof tail, ": format %d, %d tracks, %zu channel messages, %.1f s%s", f_.format, f_.tracks, f_.events.size(), f_.seconds,
+		    legato_ ? ", mono legato" : "");
 		return "MIDI file " + file_identity(path_.c_str()) + tail;
 	}
 
@@ -120,10 +124,83 @@ private:
 	[[nodiscard]] uint64_t frame_of(double t) const { return t <= 0 ? 0u : static_cast<uint64_t>(std::llround(t * sr_)); }
 	std::unique_ptr<TimedMidi> in_;
 	int sr_;
+	bool legato_;
+	size_t k_ = 0;
+};
+
+// timed UMP packets from a text file, through the component's rule (timed_midi.h), as Midi above
+class Ump final : public Player {
+public:
+	struct Packet {
+		uint64_t frame;
+		uint32_t w[4];
+	};
+	Ump(std::string path, std::vector<Packet> p, int voices, int sample_rate, bool legato) :
+	    path_(std::move(path)), p_(std::move(p)), in_(std::make_unique<TimedMidi>(voices, sample_rate)), sr_(sample_rate), legato_(legato) {
+		in_->midi().set_legato(legato);
+	}
+	void block(int b, dsp::VoiceControls* vc, dsp::GlobalControls& g) override {
+		const uint64_t start = static_cast<uint64_t>(b) * dsp::BLOCK;
+		for (; k_ < p_.size() && p_[k_].frame <= start; k_++) (void)in_->ump(p_[k_].frame, p_[k_].w);
+		in_->advance(start);
+		for (int v = 0; v < in_->midi().num_voices(); v++) {
+			const dsp::VoiceControls& m = in_->midi().voices()[v];
+			vc[v].note = m.note;
+			vc[v].pres = m.pres;
+			vc[v].vpres = m.vpres;
+			vc[v].but_x = m.but_x;
+			vc[v].but_y = m.but_y;
+		}
+		g = in_->midi().globals();
+	}
+	[[nodiscard]] double seconds() const override { return static_cast<double>(p_.back().frame) / sr_ + 2.0; }
+	[[nodiscard]] std::string describe() const override {
+		char tail[96];
+		std::snprintf(tail, sizeof tail, ": %zu packets, %.1f s%s", p_.size(), static_cast<double>(p_.back().frame) / sr_, legato_ ? ", mono legato" : "");
+		return "UMP file " + file_identity(path_.c_str()) + tail;
+	}
+
+private:
+	std::string path_;
+	std::vector<Packet> p_;
+	std::unique_ptr<TimedMidi> in_;
+	int sr_;
+	bool legato_;
 	size_t k_ = 0;
 };
 
 } // namespace
+
+std::unique_ptr<Player> ump_player(const char* path, int voices, int sample_rate, bool legato, std::string* error) {
+	FILE* f = std::fopen(path, "r");
+	if (!f) {
+		*error = std::string("cannot read the UMP file ") + path;
+		return nullptr;
+	}
+	std::vector<Ump::Packet> p;
+	char line[512];
+	int n = 0;
+	while (std::fgets(line, sizeof line, f)) {
+		n++;
+		if (char* c = std::strchr(line, '#')) *c = 0;
+		unsigned long long frame = 0;
+		unsigned w[4] = {};
+		const int got = std::sscanf(line, "%llu %x %x %x %x", &frame, &w[0], &w[1], &w[2], &w[3]);
+		if (got <= 0) continue; // (an empty line, a comment)
+		if (got < 2 || (!p.empty() && frame < p.back().frame)) {
+			std::fclose(f);
+			*error = std::string(path) + ":" + std::to_string(n) + ": not \"<frame> <word> ...\" in frame order";
+			return nullptr;
+		}
+		p.push_back({frame, {w[0], w[1], w[2], w[3]}});
+	}
+	std::fclose(f);
+	if (p.empty()) {
+		*error = std::string("no packets in ") + path;
+		return nullptr;
+	}
+	return std::make_unique<Ump>(path, std::move(p), voices, sample_rate, legato);
+}
 
 std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int, std::string* error) {
 	const ScriptedPerformance* p = find_performance(name);
@@ -154,7 +231,7 @@ std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_
 	return std::make_unique<Keys>(csv_path, std::move(ev), sample_rate);
 }
 
-std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error) {
+std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample_rate, std::string* error, bool legato) {
 	MidiFile f = read_midi_file(mid_path);
 	if (!f.error.empty()) {
 		*error = f.error + " (" + mid_path + ")";
@@ -164,7 +241,7 @@ std::unique_ptr<Player> midi_player(const char* mid_path, int voices, int sample
 		*error = std::string("no channel messages in ") + mid_path;
 		return nullptr;
 	}
-	return std::make_unique<Midi>(mid_path, std::move(f), voices, sample_rate);
+	return std::make_unique<Midi>(mid_path, std::move(f), voices, sample_rate, legato);
 }
 
 } // namespace awva::sdk
