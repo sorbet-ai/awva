@@ -28,7 +28,7 @@ jobs:
       - name: build
         run: cmake --build build/sdk
       - name: test
-        run: ctest --test-dir build/sdk --output-on-failure -j 4 -LE example
+        run: ctest --test-dir build/sdk --output-on-failure -j 4 -LE "example|soak" # (the soak: ctest -L soak)
       - name: examples
         run: ctest --test-dir build/sdk --output-on-failure -L example -V # (-V: the hashes in the log, to compare across OSes)
       - name: generated files as committed

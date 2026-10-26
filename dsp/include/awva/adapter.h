@@ -15,6 +15,8 @@
 //       static constexpr Budget budget = {max_voices, instructions per block, tail seconds};
 //       static constexpr Heroes heroes = {{"cutoff", ...}};                        // optional, up to 8
 //       static constexpr PresetHeroes preset_heroes[] = {{"pad", {{...}}}, ...};  // optional
+//       static constexpr Conformance conformance = {...};          // optional: the checks' tolerances
+//       static constexpr PresetTuning preset_tuning[] = {{"flute", {...}}};  // optional (engine.h)
 //   };
 //
 // The engine's struct Engine has `strisy::GlobalControls g; strisy::VoiceControls vc[MAX_VOICES];
@@ -86,6 +88,17 @@ template <class T> constexpr const PresetHeroes* preset_heroes() {
 template <class T> constexpr int num_preset_heroes() {
 	if constexpr (requires { T::preset_heroes; }) return static_cast<int>(std::extent_v<decltype(T::preset_heroes)>);
 	else return 0;
+}
+
+// the optional conformance declarations of a traits struct (engine.h: Conformance, PresetTuning)
+template <class T> constexpr Conformance conformance() {
+	Conformance c{};
+	if constexpr (requires { T::conformance; }) c = T::conformance;
+	if constexpr (requires { T::preset_tuning; }) {
+		c.preset_tuning = T::preset_tuning;
+		c.num_preset_tuning = static_cast<int>(std::extent_v<decltype(T::preset_tuning)>);
+	}
+	return c;
 }
 
 template <class T> constexpr int num_presets() {
@@ -188,7 +201,7 @@ template <class T> struct Adapter {
 	    std::is_empty_v<typename T::FastMemory> ? 0 : sizeof(typename T::FastMemory),
 	    std::is_empty_v<typename T::LargeMemory> ? 0 : sizeof(typename T::LargeMemory), detail::num_presets<T>(),
 	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>(), detail::preset_heroes<T>(), detail::num_preset_heroes<T>(),
-	    detail::title<T>()};
+	    detail::title<T>(), detail::conformance<T>()};
 };
 
 

@@ -14,7 +14,8 @@
 #   awva_render              the renderer (sdk/tools/awva_render.cpp)
 #   render_custom              the renderer with one engine and performance compiled with extra
 #                              flags (AWVA_RENDER_*)
-#   tests: contract.<name>.*   the contract suite on each engine (tests/contract*.cpp, docs/conformance.md)
+#   tests: contract.<name>.*   the contract suite on each engine (tests/contract*.cpp, docs/conformance.md;
+#                              contract.<name>.soak: the label soak, not run by default)
 #          sdk.*               the shared helpers, the MIDI mapping and files, the shell
 #          awva_render.*     the renderer's log names its engine, preset and input; bad inputs fail
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -264,16 +265,20 @@ endif()
 include("${AWVA_DOCTEST_DIR}/cmake/doctest.cmake")
 
 # the contract suite on every engine (docs/conformance.md): one test program per engine, linked to
-# that engine's library, with its known failures (tests/known_failures.cmake: AWVA_KNOWN_<engine>)
+# that engine's library and compiled with its type (the memory checks), its known failures
+# (tests/known_failures.cmake: AWVA_KNOWN_<engine>); the soak runs only with the label soak
 include("${CMAKE_CURRENT_SOURCE_DIR}/tests/known_failures.cmake")
 foreach(v IN LISTS AWVA_ENGINES)
-  add_executable(awva_engine_${v}_contract tests/main.cpp tests/contract.cpp)
+  add_executable(awva_engine_${v}_contract tests/main.cpp tests/contract.cpp tests/contract_blocks.cpp tests/contract_denormals.cpp
+    tests/contract_memory.cpp tests/contract_soak.cpp tests/contract_tuning.cpp)
   list(JOIN AWVA_KNOWN_${v} "," _known)
   target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v} "AWVA_KNOWN_FAILURES=\"${_known}\""
-    "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
+    "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"" "AWVA_ENGINE_TRAITS=\"${AWVA_ENGINE_${v}_TRAITS}\"" AWVA_ENGINE_TYPE=awva::engines::${v})
   target_include_directories(awva_engine_${v}_contract PRIVATE "${AWVA_DOCTEST_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../component/include")
-  target_link_libraries(awva_engine_${v}_contract PRIVATE awva_engine_${v} awva_sdk_options awva_sdk_presets)
+  target_link_libraries(awva_engine_${v}_contract PRIVATE awva_engine_${v} awva_sdk awva_sdk_presets)
   doctest_discover_tests(awva_engine_${v}_contract TEST_PREFIX "contract.${v}." PROPERTIES LABELS "contract;unit")
+  add_test(NAME contract.${v}.soak COMMAND awva_engine_${v}_contract --no-skip "--test-case=soak*")
+  set_tests_properties(contract.${v}.soak PROPERTIES LABELS soak)
 endforeach()
 
 add_executable(awva_effect_fx_contract tests/main.cpp tests/contract_effect.cpp)

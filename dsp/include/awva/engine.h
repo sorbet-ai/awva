@@ -138,6 +138,35 @@ struct PresetHeroes {
 	Heroes heroes;
 };
 
+// What the conformance checks allow an engine (docs/conformance.md), each with a default, so an
+// engine that says nothing gets the whole suite at its defaults. Its traits may set
+//   static constexpr Conformance conformance = {.tuning = {.cents = 8.0f}};
+// and the tuning of single presets, by name:
+//   static constexpr PresetTuning preset_tuning[] = {{"flute", {.low = 60.0f, .high = 96.0f}}};
+struct Tuning {
+	float cents = 10.0f;             // the sustained pitch against its note's (12-TET, A4 = 440 Hz), or an octave of it
+	float low = 48.0f, high = 84.0f; // the notes it is checked on (MIDI numbers, inclusive)
+};
+struct PresetTuning {
+	const char* preset; // the preset's name (preset_name)
+	Tuning tuning;
+};
+struct Conformance {
+	Tuning tuning = {};
+	const PresetTuning* preset_tuning = nullptr;
+	int num_preset_tuning = 0;
+};
+
+// the tuning a preset is checked to (its own, else the engine's; nullptr: the engine's)
+[[nodiscard]] constexpr const Tuning& tuning_of(const Conformance& c, const char* preset) {
+	for (int i = 0; preset && i < c.num_preset_tuning; i++) {
+		const char *a = c.preset_tuning[i].preset, *b = preset;
+		while (*a && *a == *b) a++, b++;
+		if (*a == *b) return c.preset_tuning[i].tuning;
+	}
+	return c.tuning;
+}
+
 struct EngineInfo {
 	const char* name;    // the engine's short name, e.g. "va"
 	const char* summary; // one line for people
@@ -152,7 +181,8 @@ struct EngineInfo {
 	Heroes heroes;                     // the engine's hero parameters
 	const PresetHeroes* preset_heroes; // presets with their own (num_preset_heroes of them)
 	int num_preset_heroes;
-	const char* title = nullptr; // a title for people ("Electric Piano"); nullptr: name
+	const char* title = nullptr;  // a title for people ("Electric Piano"); nullptr: name
+	Conformance conformance = {}; // what the conformance checks allow it (the defaults unless its traits say)
 };
 
 // the hero parameters of a preset, by its name (the engine's own if it has none, or for nullptr)

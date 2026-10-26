@@ -10,8 +10,9 @@ Every engine gets the same checks, at two levels, without a line of its own:
 Run both with the rest of the tests:
 
 ```
-cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-dir build/sdk -LE example
+cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-dir build/sdk -LE "example|soak"
 ctest --test-dir build/sdk -R "^contract\.va\."        # one engine's contract
+ctest --test-dir build/sdk -L soak                     # the long soak (AWVA_SOAK_SECONDS, default 60)
 ```
 
 ## How a new engine opts in
@@ -20,7 +21,22 @@ Add its traits header, `dsp/include/awva/engines/<name>.h`, and configure again.
 
 - **its budget:** `tail_seconds` (how soon it is silent and idle after the last release) and `max_voices`;
 - **its inputs:** an input it declares must change its sound in some preset, and an input it doesn't declare must make no difference;
-- **its regions** and their sizes.
+- **its conformance settings** (`EngineInfo::conformance`, `engine.h`), each with a default.
+
+| setting | default | what it allows |
+|---|---|---|
+| `tuning.cents` | 10 | the sustained pitch against its note's |
+| `tuning.low`, `tuning.high` | 48, 84 | the notes the tuning is checked on |
+| `preset_tuning[]` | none | another tuning for named presets (a flute that starts at 60) |
+
+An engine sets them in its traits, only where it differs:
+
+```cpp
+static constexpr Conformance conformance = {.tuning = {.cents = 8.0f}};
+static constexpr PresetTuning preset_tuning[] = {{"flute", {.low = 60.0f, .high = 96.0f}}};
+```
+
+An engine whose `init()` writes every byte of its regions declares `init_writes_memory` (`engine.h`), and the memory check then proves it.
 
 ## Known failures
 
@@ -32,8 +48,9 @@ A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`
 
 ## Exact, or within a tolerance
 
-- **Bit for bit** wherever the contract promises the same samples: determinism, independent instances, reset against a fresh instance, the host's block size, late events, the output level at 1, an undeclared input. A regression shows as one changed bit.
-- **Within a tolerance** where a level is what matters: silence is below -120 dBFS.
+- **Bit for bit** wherever the contract promises the same samples: determinism, independent instances, reset against a fresh instance, the host's call or block size, late events, the output level at 1, `init_writes_memory`, an undeclared input. A regression shows as one changed bit.
+- **Within a tolerance** where two paths legitimately differ by inaudible amounts, or where a level is what matters. Flushing subnormals against IEEE arithmetic must give the same 24-bit PCM (the FTZ guard check). Silence means below -120 dBFS.
+- **In cents** for pitch, against the engine's declared tolerance.
 
 ## The engine contract (`contract.<engine>.*`)
 
@@ -52,6 +69,13 @@ A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`
 | voice stealing | note jumps on held voices, instant re-strikes, every voice at once: bounded, then silent within the tail |
 | inputs | an undeclared input makes no difference, bit for bit; a declared one changes the sound in some preset |
 | cpu | the worst case (every voice at full pressure) runs well under real time on the PC |
+| presets (files) | each factory preset is its file (`presets/<engine>/`), loaded by name, bit for bit; saved, written, read and loaded again, the same values and sound |
+| FTZ guard | with the host's denormal guard (`nsc/no_denormals.h`): finite, silent after the release, the same in 24-bit PCM as without it |
+| blocks | through the SDK's Shell (a plugin's host side), MIDI 2.0 and MPE events played in calls of 1, 7, 32, 256 and random frames give the same samples, bit for bit |
+| denormals | under the host's FTZ guard (`nsc::ScopedNoDenormals`): after the tail, no subnormal sample and nothing above -120 dBFS. Without the guard, the subnormal tail and its cost are reported (`denormals.raw`), not failed, since the guard is the agreed design |
+| memory | the engine object and its regions placed in guarded buffers: init, playing, presets, parameters, reset and init at 11025 and 192000 Hz write nothing outside them. With `init_writes_memory`, init over regions of any bytes leaves the same bytes as over zeros and plays the same samples |
+| tuning | in every preset, a held note's sustained pitch is its note's (12-TET, A4 = 440 Hz) or an octave of it, within `tuning.cents`, on the notes from `tuning.low` to `tuning.high` |
+| soak | (label `soak`) every preset: random playing with parameter writes, every voice held, the decay. Finite and bounded throughout, then silent and idle; the peaks, subnormals and cost of each phase are reported |
 
 ## The component ABI (`awva_conformance`)
 

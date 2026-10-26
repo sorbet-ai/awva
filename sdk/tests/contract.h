@@ -245,6 +245,65 @@ inline std::vector<float> fuzz_render(sdk::Engine& e, uint32_t seed, int n, Stat
 	return a.size() == b.size() && std::memcmp(a.data(), b.data(), a.size() * sizeof(float)) == 0;
 }
 
+// --- measurements -------------------------------------------------------------------------------
+
+[[nodiscard]] inline bool subnormal(float x) { return x != 0.0f && std::fabs(x) < 1.17549435e-38f; }
+
+constexpr float INAUDIBLE = 1e-6f; // -120 dBFS (full scale 1)
+
+// The deviation in cents of x's period from a note's frequency f, or from an octave of it
+// (f 2^j, j = -2..2: an organ register sounds an octave or two away): over each octave's lags
+// within 60 cents of its period, the best normalized autocorrelation, refined by a parabola; the
+// highest octave whose correlation is within 0.9 of the best wins (a lower octave's period is a
+// multiple of the true one and correlates as well). corr: that correlation (below 0.5: no pitch).
+[[nodiscard]] inline double cents_from(const std::vector<float>& x, int rate, double f, double* corr) {
+	const int n0 = static_cast<int>(x.size());
+	const auto ac = [&](int lag) {
+		double s = 0.0, ea = 0.0, eb = 0.0;
+		for (int i = 0; i + lag < n0; i++) {
+			const double a = x[static_cast<size_t>(i)], b = x[static_cast<size_t>(i + lag)];
+			s += a * b;
+			ea += a * a;
+			eb += b * b;
+		}
+		return ea > 0.0 && eb > 0.0 ? s / std::sqrt(ea * eb) : 0.0;
+	};
+	double best = 0.0, c[5] = {}, cents[5] = {};
+	for (int j = -2; j <= 2; j++) {
+		const double period = rate / (f * std::pow(2.0, j));
+		const int lo = std::max(2, static_cast<int>(std::floor(period * std::pow(2.0, -60.0 / 1200)))), hi = static_cast<int>(std::ceil(period * std::pow(2.0, 60.0 / 1200)));
+		if (hi + 1 >= n0 / 2) continue;
+		int at = lo;
+		double v = -2.0;
+		for (int lag = lo; lag <= hi; lag++) {
+			const double r = ac(lag);
+			if (r > v) v = r, at = lag;
+		}
+		const double a = ac(at - 1), b = ac(at + 1), d = a - 2 * v + b, off = d != 0.0 ? 0.5 * (a - b) / d : 0.0;
+		c[j + 2] = v;
+		cents[j + 2] = 1200.0 * std::log2(period / (at + off));
+		best = std::max(best, v);
+	}
+	for (int j = 2; j >= -2; j--)
+		if (c[j + 2] > 0.0 && c[j + 2] >= 0.9 * best) {
+			*corr = c[j + 2];
+			return cents[j + 2];
+		}
+	*corr = 0.0;
+	return 0.0;
+}
+
+// a held note: pressed to pres (the keys' glide), held for seconds; the samples of its second half
+[[nodiscard]] inline std::vector<float> held_note(sdk::Engine& e, float note, float pres, double seconds, int rate = SR) {
+	Keys k(e.voices(), rate);
+	k.press(0, note, pres);
+	std::vector<float> out;
+	const int n = blocks(seconds, rate);
+	play(e, k, n, &out);
+	out.erase(out.begin(), out.begin() + static_cast<std::ptrdiff_t>(n / 2) * dsp::BLOCK);
+	return out;
+}
+
 } // namespace contract
 
 #endif // AWVA_SDK_TESTS_CONTRACT_H_
