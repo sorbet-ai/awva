@@ -230,7 +230,7 @@ Measured on main and on bowed fit v1:
 | bowed on main, violin | 0.1 c | none |
 | clarinet on main, B-flat / bass | 0.03 / 0.32 c (bass: 0.8 dB of level, its `wander`) | none |
 | flute on main | 0.12 c | none |
-| brass on main, trumpet / trombone / horn / tuba | 1.3–1.4 c (their `jitter`, set by earlier fits) | none (under 1.5 c) |
+| brass engine on main, trumpet / trombone / horn / tuba | 1.3–1.4 c (its `jitter`, the engine's own "lip life" since 84fa4ab, not a fit) | none (under 1.5 c) |
 
 ## The listening gate: nothing reaches a listener unless the measures say it is better
 
