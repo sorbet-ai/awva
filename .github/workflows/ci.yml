@@ -7,7 +7,16 @@
 # under AddressSanitizer and UndefinedBehaviorSanitizer (Linux, the soak too), and check the format
 # (clang-format 15).
 name: ci
-on: [push, pull_request]
+# once per commit: a push to main, and a pull request's commits (a branch's push isn't run again
+# as its pull request: the two doubled every PR's runs in the queue). A newer commit cancels its
+# branch's run still going.
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   test:
     strategy:
