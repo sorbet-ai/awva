@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo/awva.svg" alt="awva" width="480"></p>
+
 # awva
 
 Expressive per-note sound engines, playable by MIDI 2.0, MPE or key signals; an SDK for the PC; and the engine component, a C ABI to load each engine from its own library (`component/`).
