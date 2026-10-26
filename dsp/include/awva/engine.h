@@ -168,6 +168,11 @@ struct RateTolerance {
 struct Conformance {
 	Tuning tuning = {};
 	float rate_cents = 3.0f; // the sustained pitch at every rate from min_rate to max_rate against 48 kHz
+	// the peak with extreme but legal parameter writes (the fuzz, the presets going round, the
+	// soak): only blow-ups fail. An engine louder there declares its measured peak with a small
+	// margin and why; a peak above it still fails
+	float fuzz_peak = 64.0f;
+	const char* fuzz_peak_why = nullptr;
 	const PresetTuning* preset_tuning = nullptr;
 	int num_preset_tuning = 0;
 	const RateTolerance* rate_tolerances = nullptr;

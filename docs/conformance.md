@@ -32,6 +32,7 @@ Add its traits header, `dsp/include/awva/engines/<name>.h`, and configure again.
 | `tuning.partial`, `tuning.why` | 0, none | an inharmonic preset (a bell, a glass) has no period to compare: its partial at this ratio of the note is measured instead, as a spectral peak; `why` says why the preset is checked so |
 | `rate_cents` | 3 | the sustained pitch at every rate from `min_rate` to 192000 Hz against 48 kHz |
 | `rate_tolerances[]` | none | a looser bound at named rates, each a known fault with its reason (and `may_not_sound`) |
+| `fuzz_peak`, `fuzz_peak_why` | 64, none | the peak with extreme but legal parameter writes (the fuzz, the presets going round, the soak): only blow-ups fail. An engine louder there declares its measured peak with a small margin, and why |
 
 An engine sets them in its traits, only where it differs:
 

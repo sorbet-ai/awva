@@ -191,6 +191,11 @@ TEST_CASE("independence: two instances share nothing") {
 }
 
 TEST_CASE("fuzz: random playing and parameter writes stay finite and bounded") {
+	const dsp::Conformance& c = info().conformance;
+	if (c.fuzz_peak != dsp::Conformance{}.fuzz_peak) { // a declared bound: measured, with its reason
+		CHECK_MESSAGE(c.fuzz_peak_why != nullptr, name() << " declares fuzz_peak " << c.fuzz_peak << " without a why");
+		MESSAGE(name() << ": fuzz_peak " << c.fuzz_peak << " (" << std::string(c.fuzz_peak_why ? c.fuzz_peak_why : "no reason given") << ")");
+	}
 	for (int p : presets()) {
 		CAPTURE(std::string(info().name));
 		CAPTURE(p);
@@ -198,7 +203,7 @@ TEST_CASE("fuzz: random playing and parameter writes stay finite and bounded") {
 		Stats s;
 		fuzz_render(e, 1u + static_cast<uint32_t>(p + 1), blocks(4.0), &s);
 		CHECK(s.nonfinite == 0);
-		CHECK(s.peak <= PEAK_FUZZ);
+		CHECK(s.peak <= peak_fuzz());
 	}
 }
 
@@ -482,7 +487,7 @@ TEST_CASE("presets: names and numbering, switching while notes sound") {
 	});
 	CAPTURE(std::string(info().name));
 	CHECK(s.nonfinite == 0);
-	CHECK(s.peak <= PEAK_FUZZ);
+	CHECK(s.peak <= peak_fuzz());
 }
 
 TEST_CASE("voice stealing: note jumps, instant re-strikes, every voice at once") {

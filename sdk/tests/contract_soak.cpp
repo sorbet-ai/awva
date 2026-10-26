@@ -91,7 +91,7 @@ TEST_CASE("soak: chaos, every voice held, the decay: finite, bounded, then silen
 			MESSAGE(name() << " preset " << preset_label(p) << " " << std::string(x.name) << ": " << x.blocks << " blocks, peak " << x.peak << ", subnormal samples " << x.subnormals
 			               << ", " << x.ns / std::max(1L, x.blocks) << " ns a block");
 			CHECK(x.nonfinite == 0);
-			CHECK(x.peak <= PEAK_FUZZ);
+			CHECK(x.peak <= peak_fuzz());
 		}
 		const double silent_after = static_cast<double>(last_loud + 1) * dsp::BLOCK / SR;
 		CAPTURE(silent_after);

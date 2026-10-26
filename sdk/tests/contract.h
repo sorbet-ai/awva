@@ -31,11 +31,12 @@ using dsp::VoiceControls;
 constexpr int SR = 48000;
 constexpr float SILENT = 1e-4f;       // the render checks' silence
 constexpr float PEAK_PLAYING = 32.0f; // every voice at full pressure (a host at x0.25 volume clips at 4)
-constexpr float PEAK_FUZZ = 64.0f;    // extreme but legal parameters may be loud: only blow-ups fail
 
 [[nodiscard]] inline const sdk::EngineEntry& entry() { return AWVA_ENGINE_ENTRY(); }
 [[nodiscard]] inline const dsp::EngineInfo& info() { return *entry().info; }
 [[nodiscard]] inline std::string name() { return info().name; }
+// extreme but legal parameters may be loud: only blow-ups fail (64, or the engine's declared bound)
+[[nodiscard]] inline float peak_fuzz() { return info().conformance.fuzz_peak; }
 [[nodiscard]] inline int nvoices() { return std::min(10, info().budget.max_voices); }
 [[nodiscard]] inline int blocks(double s, int rate = SR) { return static_cast<int>(s * rate / dsp::BLOCK); }
 
