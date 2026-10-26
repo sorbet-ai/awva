@@ -401,7 +401,7 @@ TEST_CASE("ended: a note's host id comes back once it has ended (its tail, or th
 	c.process(dll.in.state, NSC_BLOCK, &off, 1, o);
 	CHECK(c.ended(dll.in.state, ids, 8) == 0); // (released: its tail)
 	int got = 0;
-	for (int b = 0; b < 48000 * 12 / NSC_BLOCK && got == 0; b++) {
+	for (int b = 0; b < 48000 * 17 / NSC_BLOCK && got == 0; b++) { // (va: a 15 s tail)
 		c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 		got = c.ended(dll.in.state, ids, 8);
 	}

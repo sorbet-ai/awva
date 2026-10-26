@@ -23,7 +23,9 @@ struct va {
 	static constexpr const char* summary = "virtual analog: saw/pulse/sub oscillators, sync, ladder-style filter, envelopes (8 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_spin | in_sustain;
 	static constexpr int max_voices = ::va::MAX_VOICES;
-	static constexpr float tail_seconds = 10.0f;
+	// measured: "keys" on its lowest note (24) at full pressure (1.5) rings above 1e-4 for 10.7 s
+	// after the release, and above 1e-4 / 16 (sixteen such voices at once) for 14.8 s
+	static constexpr float tail_seconds = 15.0f;
 	static constexpr Cost cost = {75.0f};
 	// the hero parameters (the contract suite checks the names)
 	static constexpr Heroes heroes = {{"cut_base", "res", "cut_env", "drive", "saw2_detune", "sub", "release", "vibrato"}};
