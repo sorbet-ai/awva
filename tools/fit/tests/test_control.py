@@ -281,11 +281,42 @@ class GateRuns(unittest.TestCase):
 
     def test_a_run_deletes_its_renders_unless_kept(self):
         g = self.gate
-        for keep, left in ((False, []), (True, ['b0', 'b1'])):
+        for keep, left in ((False, []), (True, ['b0', 'b1', 'phrases.json'])):
             w = os.path.join(TMP, f'gwk{int(keep)}')
             g.run('test', self.spec(0.6), self.spec(0.3), w, workers=2, log=lambda m: None, keep=keep)
             runs = os.listdir(os.path.join(w, 'test')) if os.path.isdir(os.path.join(w, 'test')) else []
             self.assertEqual(sorted(x for r in runs for x in os.listdir(os.path.join(w, 'test', r))), left)
+
+    def test_a_run_s_paths_stay_short_whatever_the_phrase_ids(self):
+        """the per-phrase folders are short hashes (phrases.json maps them back): the deepest file below a
+        run's folder stays within gate.PATH_TAIL for the longest held-out id in gate_set.json, and longer"""
+        import dataclasses
+        g = self.gate
+        with open(g.GATE_SET, encoding='utf-8') as f:
+            longest = max((p['id'] for v in json.load(f)['instruments'].values() for p in v['phrases']), key=len)
+        ids = [longest] + [longest + f'__{k}' * 30 for k in range(1, len(self.items))]  # past it too
+        self.items = [(dataclasses.replace(it, id=i), rec) for (it, rec), i in zip(self.items, ids)]
+        by = {it.id: rec for it, rec in self.items}
+        self.phraseset.reference = lambda it, sr_out=48000: (by[it.id], SR)
+        w = os.path.join(TMP, 'gwl')
+        g.run('test', self.spec(0.6), self.spec(0.3), w, workers=2, log=lambda m: None, keep=True)
+        (run,) = os.listdir(os.path.join(w, 'test'))
+        rd = os.path.join(w, 'test', run)
+        files = [os.path.relpath(os.path.join(a, n), rd) for a, _, ns in os.walk(rd) for n in ns]
+        self.assertTrue(any(f.endswith('.dry.f32') for f in files))
+        # awva_render writes a manifest (<render>.json) beside each render: the tail leaves room for it
+        self.assertLessEqual(max(len(f) for f in files) + len('.json'), g.PATH_TAIL)
+        self.assertFalse([f for f in files if longest in f])
+        with open(os.path.join(rd, 'phrases.json'), encoding='utf-8') as f:
+            self.assertEqual(sorted(json.load(f).values()), sorted(ids))
+
+    @unittest.skipUnless(os.name == 'nt', "Windows' 260-character limit")
+    def test_a_run_under_too_long_a_folder_is_refused_before_it_renders(self):
+        from awvafit import env
+        w = os.path.join(TMP, 'x' * (250 - len(TMP)))
+        with self.assertRaises(env.EnvError):
+            self.gate.run('test', self.spec(0.6), self.spec(0.3), w, workers=1, log=lambda m: None)
+        self.assertFalse(os.path.exists(w))
 
     def test_the_objective_is_the_gate_s_score(self):
         g = self.gate
