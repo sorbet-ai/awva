@@ -27,7 +27,8 @@ Add its traits header, `dsp/include/awva/engines/<name>.h`, and configure again.
 |---|---|---|
 | `tuning.cents` | 10 | the sustained pitch against its note's |
 | `tuning.low`, `tuning.high` | 48, 84 | the notes the tuning is checked on |
-| `preset_tuning[]` | none | another tuning for named presets (a flute that starts at 60) |
+| `preset_tuning[]` | none | another tuning for named presets (another range, tolerance or partial) |
+| `tuning.partial`, `tuning.why` | 0, none | an inharmonic preset (a bell, a glass) has no period to compare: its partial at this ratio of the note is measured instead, as a spectral peak; `why` says why the preset is checked so |
 | `rate_cents` | 3 | the sustained pitch at every rate from 11025 to 192000 Hz against 48 kHz |
 | `rate_tolerances[]` | none | a looser bound at named rates, each a known fault with its reason (and `may_not_sound`) |
 
@@ -35,7 +36,7 @@ An engine sets them in its traits, only where it differs:
 
 ```cpp
 static constexpr Conformance conformance = {.tuning = {.cents = 8.0f}};
-static constexpr PresetTuning preset_tuning[] = {{"flute", {.low = 60.0f, .high = 96.0f}}};
+static constexpr PresetTuning preset_tuning[] = {{"bell", {.cents = 2.0f, .partial = 1.0f, .why = "inharmonic: the prime is the note"}}};
 ```
 
 An engine whose `init()` writes every byte of its regions declares `init_writes_memory` (`engine.h`), and the memory check then proves it.
@@ -76,7 +77,7 @@ A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`
 | blocks | through the SDK's Shell (a plugin's host side), MIDI 2.0 and MPE events played in calls of 1, 7, 32, 256 and random frames give the same samples, bit for bit |
 | denormals | under the host's FTZ guard (`nsc::ScopedNoDenormals`): after the tail, no subnormal sample and nothing above -120 dBFS. Without the guard, the subnormal tail and its cost are reported (`denormals.raw`), not failed, since the guard is the agreed design |
 | memory | the engine object and its regions placed in guarded buffers: init, playing, presets, parameters, reset and init at 11025 and 192000 Hz write nothing outside them. With `init_writes_memory`, init over regions of any bytes leaves the same bytes as over zeros and plays the same samples |
-| tuning | in every preset, a held note's sustained pitch is its note's (12-TET, A4 = 440 Hz) or an octave of it, within `tuning.cents`, on the notes from `tuning.low` to `tuning.high` |
+| tuning | in every preset, a held note's sustained pitch is its note's (12-TET, A4 = 440 Hz) or an octave of it, within `tuning.cents`, on the notes from `tuning.low` to `tuning.high`; for a preset with `tuning.partial`, that partial's frequency |
 | rates | at 11025, 22050, 44100, 48000, 48828, 88200, 96000 and 192000 Hz, every preset: finite, bounded, sounds, silent within the tail, and note 69 within `rate_cents` of its pitch at 48 kHz (or the rate's tolerance) |
 | soak | (label `soak`) every preset: random playing with parameter writes, every voice held, the decay. Finite and bounded throughout, then silent and idle; the peaks, subnormals and cost of each phase are reported |
 

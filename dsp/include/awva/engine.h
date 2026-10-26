@@ -142,12 +142,16 @@ struct PresetHeroes {
 // engine that says nothing gets the whole suite at its defaults. Its traits may set
 //   static constexpr Conformance conformance = {.tuning = {.cents = 8.0f}};
 // the tuning of single presets, by name:
-//   static constexpr PresetTuning preset_tuning[] = {{"flute", {.low = 60.0f, .high = 96.0f}}};
+//   static constexpr PresetTuning preset_tuning[] = {{"bell", {.cents = 2.0f, .partial = 1.0f, .why = "inharmonic: the prime is the note"}}};
 // and looser pitch bounds at single sample rates (known faults, with their reasons):
 //   static constexpr RateTolerance rate_tolerances[] = {{192000, 21.5f, false, "..."}};
 struct Tuning {
 	float cents = 10.0f;             // the sustained pitch against its note's (12-TET, A4 = 440 Hz), or an octave of it
 	float low = 48.0f, high = 84.0f; // the notes it is checked on (MIDI numbers, inclusive)
+	// 0: a harmonic tone, its period is the note's. Else an inharmonic one (a bell, a glass): no
+	// period to measure, so the partial at this ratio of the note's frequency is, as a spectral peak
+	float partial = 0.0f;
+	const char* why = nullptr; // why a preset is checked otherwise than by the defaults
 };
 struct PresetTuning {
 	const char* preset; // the preset's name (preset_name)

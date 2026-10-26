@@ -293,6 +293,37 @@ constexpr float INAUDIBLE = 1e-6f; // -120 dBFS (full scale 1)
 	return 0.0;
 }
 
+// The deviation in cents of the spectral peak nearest f (within 60 cents) from f: an inharmonic
+// tone's partial, where there is no period to measure. A Hann-windowed DFT scanned in 0.5-cent
+// steps, the peak refined by a parabola on the log magnitude. found: a peak inside the range (not
+// at its edge) standing at least 20 dB above the range's quietest point.
+[[nodiscard]] inline double partial_cents(const std::vector<float>& x, int rate, double f, bool* found) {
+	const size_t n = x.size();
+	const auto magnitude = [&](double hz) {
+		const double w = 2.0 * M_PI * hz / rate;
+		double re = 0.0, im = 0.0;
+		for (size_t i = 0; i < n; i++) {
+			const double hann = 0.5 - 0.5 * std::cos(2.0 * M_PI * static_cast<double>(i) / static_cast<double>(n - 1));
+			const double v = hann * x[i];
+			re += v * std::cos(w * static_cast<double>(i));
+			im -= v * std::sin(w * static_cast<double>(i));
+		}
+		return std::log(std::sqrt(re * re + im * im) + 1e-30);
+	};
+	constexpr int STEPS = 240; // -60 .. +60 cents in 0.5-cent steps
+	std::vector<double> m(STEPS + 1);
+	int at = 0;
+	for (int k = 0; k <= STEPS; k++) {
+		m[static_cast<size_t>(k)] = magnitude(f * std::pow(2.0, (k - STEPS / 2) * 0.5 / 1200.0));
+		if (m[static_cast<size_t>(k)] > m[static_cast<size_t>(at)]) at = k;
+	}
+	const double low = *std::min_element(m.begin(), m.end());
+	*found = at > 0 && at < STEPS && m[static_cast<size_t>(at)] - low > std::log(10.0);
+	if (!*found) return 0.0;
+	const double a = m[static_cast<size_t>(at - 1)], b = m[static_cast<size_t>(at)], c = m[static_cast<size_t>(at + 1)], d = a - 2 * b + c;
+	return ((at - STEPS / 2) + (d != 0.0 ? 0.5 * (a - c) / d : 0.0)) * 0.5;
+}
+
 // a held note: pressed to pres (the keys' glide), held for seconds; the samples of its second half
 [[nodiscard]] inline std::vector<float> held_note(sdk::Engine& e, float note, float pres, double seconds, int rate = SR) {
 	Keys k(e.voices(), rate);
