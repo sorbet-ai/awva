@@ -69,7 +69,11 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `235d9fc7` | `breath` | air | 0 | 1 | 0.024494 | continuous |
 | `f23b7114` | `wander` | air | 0 | 0.2 | 0.04533 | continuous |
 | `09ceaf46` | `t_noise` | air | 0 | 1 | 5.5e-05 | continuous |
+| `a5cd3dfb` | `t_len` | air | 0.001 | 0.05 | 0.006 | continuous |
+| `00c632f3` | `t_gate` | air | 0 | 1 | 0 | continuous |
+| `ecaee291` | `breath_pre` | air | 0 | 4 | 1 | continuous |
 | `25a7329d` | `tongue` | attack | 0 | 2 | 1.62323 | continuous |
+| `9a6d88a0` | `tongue_noise` | attack | 0 | 2 | 1.62323 | continuous |
 | `6f1a0e5f` | `acc_level` | attack | 0 | 1 | 0.227953 | continuous |
 | `6f9d5d57` | `acc_decay` | attack | 0.01 | 0.3 | 0.054279 | continuous |
 | `fd47c156` | `tongue_t` | attack | 0.001 | 0.05 | 0.029923 | continuous |
@@ -87,7 +91,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 35000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 2.71094 KB (2776 bytes) (on a 64-bit host) |
+| engine object | 2.91406 KB (2984 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 100 KB |
 

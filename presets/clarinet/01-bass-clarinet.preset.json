@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "clarinet", "params_hash": "d40d506b"},
+  "engine": {"id": "clarinet", "params_hash": "e2610daf"},
   "title": "bass clarinet",
   "heroes": ["zeta", "reed_hz", "g_loud", "p_soft", "lat_hz", "tongue", "emb", "release"],
   "params": {
@@ -34,7 +34,11 @@
     "breath": 0.005434,
     "wander": 0.067694,
     "t_noise": 0.009852,
+    "t_len": 0.006,
+    "t_gate": 0,
+    "breath_pre": 1,
     "tongue": 0.673183,
+    "tongue_noise": 0.673183,
     "acc_level": 0.347508,
     "acc_decay": 0.036785,
     "tongue_t": 0.005348,

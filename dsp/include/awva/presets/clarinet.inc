@@ -7,7 +7,7 @@
 // presets/clarinet/00-clarinet.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "clarinet", "params_hash": "d40d506b"},
+  "engine": {"id": "clarinet", "params_hash": "e2610daf"},
   "title": "clarinet",
   "heroes": ["zeta", "reed_hz", "g_loud", "p_soft", "lat_hz", "tongue", "emb", "release"],
   "params": {
@@ -41,7 +41,11 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "breath": 0.024494,
     "wander": 0.04533,
     "t_noise": 5.5e-05,
+    "t_len": 0.006,
+    "t_gate": 0,
+    "breath_pre": 1,
     "tongue": 1.62323,
+    "tongue_noise": 1.62323,
     "acc_level": 0.227953,
     "acc_decay": 0.054279,
     "tongue_t": 0.029923,
@@ -57,7 +61,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/clarinet/01-bass-clarinet.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "clarinet", "params_hash": "d40d506b"},
+  "engine": {"id": "clarinet", "params_hash": "e2610daf"},
   "title": "bass clarinet",
   "heroes": ["zeta", "reed_hz", "g_loud", "p_soft", "lat_hz", "tongue", "emb", "release"],
   "params": {
@@ -91,7 +95,11 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "breath": 0.005434,
     "wander": 0.067694,
     "t_noise": 0.009852,
+    "t_len": 0.006,
+    "t_gate": 0,
+    "breath_pre": 1,
     "tongue": 0.673183,
+    "tongue_noise": 0.673183,
     "acc_level": 0.347508,
     "acc_decay": 0.036785,
     "tongue_t": 0.005348,
