@@ -490,9 +490,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const Params& P = e.ps;
 	const awva::NoteControls cc = e.vc[vi];
 	const real pres = clampr(cc.pressure, 0.0f, 1.5f);
-	// after a release a host may leave the last pressure_rate in place: a positive leftover must not
-	// strike or hold a released voice; negative values still set the release speed
-	const real vpres = clampr(cc.pressure_rate, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
+	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
+	const real vpres = clampr(cc.pressure_rate, -1.0f, 1.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vnlev = rmin(rmax(P.tongue_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
