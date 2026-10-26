@@ -110,7 +110,6 @@ struct Params {
 	real pos;       // bow-bridge distance / string length at flat tilt and medium pressure
 	real pos_tilt;  // octaves of position per unit tilt (forward = bridge)
 	real pos_press; // octaves towards the fingerboard from full to light pressure
-	real tilt_dead; // tilt dead zone: the forward tilt of a fast press doesn't move the bow
 	// string
 	real damp;             // string decay time (s) at note 40 (halves every 2 octaves)
 	real bright;           // corner sharpness (string loss filters): > 1 brighter
@@ -366,9 +365,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	const Params& p = e.ps;
 	const bool pizz = p.pizz >= 0.5f;
 	const real pres = clampf(c.pressure, 0.0f, 2.0f); // (also maps NaN to 0)
-	// pressure velocity only counts while the note is held: after a release a host may leave the
-	// last value in place (a stale positive value must not keep accents, noise or plucks alive)
-	const real vp = pres > 0.0f ? clampf(c.pressure_rate, -1.5f, 1.5f) : rmin(clampf(c.pressure_rate, -1.5f, 1.5f), 0.0f);
+	const real vp = clampf(c.pressure_rate, -1.5f, 1.5f);
 	if (!s.active) {
 		// (a silent voice starting a bowed note needs a seed; the seeds share a per-block budget,
 		// so a big low chord spreads its seeds over a few blocks instead of one long block)
@@ -415,13 +412,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	}
 	const real lift_now = rmax(-vp - 0.04f, 0.0f);
 	s.lift = pres > 0.0f ? rmax(s.lift * 0.95f, lift_now) : rmax(s.lift, lift_now);
-	// (a dead zone: pressing fast tilts the key forward by itself, up to ~0.5 in recordings of
-	// staccato playing; without it fast passages drift towards the bridge: brighter, scratchier)
-	{
-		const real yin = clampf(c.timbre, -1.0f, 1.0f), dz = clampf(p.tilt_dead, 0.0f, 0.8f);
-		const real ya = rmax(fabsf(yin) - dz, 0.0f) / (1.0f - dz);
-		s.by += 0.15f * ((yin < 0.0f ? -ya : ya) - s.by);
-	}
+	s.by += 0.15f * (clampf(c.timbre, -1.0f, 1.0f) - s.by);
 	if (jump) s.note_body = note0;
 	s.note_body += 0.005f * (note0 - s.note_body); // slow: vibrato doesn't move the body
 
@@ -971,7 +962,6 @@ static constexpr ParamEntry param_table[] = {
     {{"pos", "position", 0.05f, 0.2f, strisy::ParamKind::continuous}, &Params::pos},            // bow position (fraction of string)
     {{"pos_tilt", "position", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::pos_tilt},   // tilt range (octaves)
     {{"pos_press", "position", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::pos_press}, // light bow drifts to the fingerboard
-    {{"tilt_dead", "position", 0.0f, 0.8f, strisy::ParamKind::continuous}, &Params::tilt_dead}, // tilt dead zone
     {{"damp", "string", 0.5f, 10.0f, strisy::ParamKind::continuous}, &Params::damp},            // ring time (s) at note 40
     {{"bright", "string", 0.3f, 3.0f, strisy::ParamKind::continuous}, &Params::bright},         // corner sharpness
     {{"tone_lo", "string", 0.0f, 3.0f, strisy::ParamKind::continuous}, &Params::tone_lo},       // treble at light pressure

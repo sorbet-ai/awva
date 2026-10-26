@@ -138,7 +138,8 @@ struct RecEvent {
 		const Row& r = rows[j];
 		double velo = r.velo;
 		if (std::fabs(velo) >= 8191) velo = (velo > 0 ? 1 : -1) * std::max(std::fabs(velo), std::fabs(k * slope[j]));
-		const double p = r.pres / 8191.0, vp = velo / 8191.0, bx = r.x / 8191.0;
+		// (a released key's rate is never positive: a sensor's leftover strike doesn't reach the engine)
+		const double p = r.pres / 8191.0, vp = p > 0 ? velo / 8191.0 : std::min(velo / 8191.0, 0.0), bx = r.x / 8191.0;
 		const double by = std::max(-1.0, std::min(1.0, r.y / 8191.0));
 		const double note = 62 + 12 * c0[r.id] + 7 * ((r.id % 17) - 8) + 0.5 * bx * bx * bx;
 		if (p > 0 && !state.count(r.id)) {

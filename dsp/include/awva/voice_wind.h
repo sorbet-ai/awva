@@ -45,7 +45,7 @@
  *   pres   breath. Below the speaking pressure only a soft breath; then the tone blooms and gets
  *          louder and brighter. The saxes growl when pushed very hard (pressure > ~1.05) or shaken.
  *   vpres  tonguing: a fast strike gives a crisp tongued attack (pressure kick + "t" noise); a
- *          slow press a breathy swell. Ignored while the key is not pressed (stale vpres).
+ *          slow press a breathy swell.
  *   but_y  embouchure, subtle: forward a little brighter / edgier, backward darker and breathier
  *          (subtone on the saxes, covered tone on the flute).
  *   note   pitch, vibrato and bends. Automatic vibrato is available as a parameter (off).
@@ -553,8 +553,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (!(pres == pres)) pres = 0.0f;
 	real vp = clampr(c.pressure_rate - 0.02f, 0.0f, 1.0f);
 	if (!(vp == vp)) vp = 0.0f;
-	// velocity only while held (a host may leave a stale vpres on released voices)
-	const real vplev = pres > 0.0f ? vp / (0.3f + vp) : 0.0f;
+	const real vplev = vp / (0.3f + vp);
 	bool wake = false;
 	if (!s.active) {
 		if (pres <= 0.0f) {

@@ -21,7 +21,7 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 | engine | what it is | presets | parameters |
 |---|---|---|---|
 | [accordion](engines/accordion.md) | free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets) | 9 | 42 |
-| [bowed](engines/bowed.md) | bowed strings: friction-driven waveguide strings, modal body, section (9 presets) | 9 | 38 |
+| [bowed](engines/bowed.md) | bowed strings: friction-driven waveguide strings, modal body, section (9 presets) | 9 | 37 |
 | [brass](engines/brass.md) | brass: a lip source and a physical bore, bell, mutes (9 presets) | 9 | 43 |
 | [ep](engines/ep.md) | electric pianos: modal tines and reeds, pickups, damper (14 presets) | 14 | 25 |
 | [flute](engines/flute.md) | physical flutes: an air jet on the edge of an open-open bore (flute, alto flute, piccolo) | 3 | 62 |

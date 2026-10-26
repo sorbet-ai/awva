@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "78f3d8e7"},
+  "engine": {"id": "bowed", "params_hash": "ad066064"},
   "title": "bass",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -13,7 +13,6 @@
     "pos": 0.11,
     "pos_tilt": 1,
     "pos_press": 0.5,
-    "tilt_dead": 0.35,
     "damp": 6,
     "bright": 0.65,
     "tone_lo": 0.25,

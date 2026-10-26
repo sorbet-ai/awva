@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "78f3d8e7"},
+  "engine": {"id": "bowed", "params_hash": "ad066064"},
   "title": "flautando",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -13,7 +13,6 @@
     "pos": 0.15,
     "pos_tilt": 0.25,
     "pos_press": 0.2,
-    "tilt_dead": 0.35,
     "damp": 4,
     "bright": 0.7,
     "tone_lo": 0.2,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // What plays an engine: a Player gives the controls of every block. Three kinds:
 //   scripted   a performance compiled in from tools/harness (performance.h: "default",
-//              perf_stale.h: "stale", perf_<name>.h: "<name>"), deterministic
+//              perf_<name>.h: "<name>"), deterministic
 //   keys       a recorded stream of per-note sensor values (CSV), replayed per voice
 //              (tools/harness/harness_util.h: load_recording)
 //   midi       a Standard MIDI File through the MIDI/MPE mapping (midi_voices.h)
@@ -22,7 +22,7 @@ namespace awva::sdk {
 
 // a scripted performance, compiled in (sdk/CMakeLists.txt: one per header)
 struct ScriptedPerformance {
-	const char* name;   // "default", "stale", "bowed", ...
+	const char* name;   // "default", "bowed", ...
 	const char* header; // the file it was compiled from
 	int sample_rate;    // the rate it is written for (its SAMPLERATE)
 	int max_voices;     // its NVOICES_MAX

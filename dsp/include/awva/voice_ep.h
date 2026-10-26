@@ -436,8 +436,7 @@ static inline void process_voice(Engine& e, int v) {
 
 	const real pres = clampr(c.pressure, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
-	// after a release a host may leave the last vpres in place: ignore positive values then
-	const real vp = clampr(c.pressure_rate, -1.0f, held ? 1.5f : 0.0f);
+	const real vp = clampr(c.pressure_rate, -1.0f, 1.5f);
 	const real note = clampr(c.pitch, 0.0f, 135.0f);
 	const bool jump = fabsf(note - s.note_prev) >= 1.0f; // reassigned to a new key
 	s.note_prev = note;

@@ -22,7 +22,8 @@ namespace awva {
 struct NoteControls {
 	float pitch;         // semitones, MIDI numbering (69 = A4), fractional: the note with its bends
 	float pressure;      // 0 (released) .. 1: MIDI 2.0's full-scale Poly Pressure; engines take up to 1.5
-	float pressure_rate; // how fast the pressure moves, about -1 .. 1: > 0 pressing (the strike), < 0 lifting
+	float pressure_rate; // how fast the pressure moves, about -1 .. 1: > 0 pressing (the strike), < 0 lifting;
+	                     // never above 0 while pressure is 0 (the host's: a released note doesn't strike)
 	float timbre;        // -1 .. 1: MIDI 2.0's Registered Per-Note Controller 74 (brightness), MPE's CC74
 	float velocity;      // the Note On's velocity, 0 .. 1 (kept until the next)
 	float release;       // the Note Off's velocity, 0 .. 1 (kept until the next)

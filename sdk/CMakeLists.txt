@@ -131,7 +131,7 @@ static void perf_block(int b, int nv, awva::NoteControls* vc, awva::InstrumentCo
 	for (int i = 0; i < nv; i++) {
 		vc[i].pitch = v[i].note;
 		vc[i].pressure = v[i].pres;
-		vc[i].pressure_rate = v[i].vpres;
+		vc[i].pressure_rate = v[i].pres > 0.0f ? v[i].vpres : (v[i].vpres < 0.0f ? v[i].vpres : 0.0f); // (released: never positive)
 		vc[i].timbre = v[i].but_y;
 		vc[i].gate = v[i].pres > 0.0f;
 	}
@@ -243,7 +243,7 @@ static void perf_block(int b, int nv, awva::NoteControls* vc, awva::InstrumentCo
 	for (int i = 0; i < nv; i++) {
 		vc[i].pitch = v[i].note;
 		vc[i].pressure = v[i].pres;
-		vc[i].pressure_rate = v[i].vpres;
+		vc[i].pressure_rate = v[i].pres > 0.0f ? v[i].vpres : (v[i].vpres < 0.0f ? v[i].vpres : 0.0f); // (released: never positive)
 		vc[i].timbre = v[i].but_y;
 		vc[i].gate = v[i].pres > 0.0f;
 	}
@@ -448,8 +448,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         set(parg --preset ${p})
       endif()
       _golden(golden.${tag}.default --engine ${v} ${parg} --perf default)
-      # (a released voice's last pressure velocity left positive: silent and idle 12 s after it)
-      _golden(golden.${tag}.stale --engine ${v} ${parg} --perf stale --silent-after 12)
       foreach(take IN LISTS _takes)
         get_filename_component(tn "${take}" NAME_WE)
         string(REGEX REPLACE "^play_" "" tn "${tn}")

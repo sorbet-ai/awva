@@ -141,7 +141,7 @@ TEST_CASE("accordion and trumpet from their libraries render bit for bit as link
 		REQUIRE(e != nullptr);
 		const int presets = e->info->num_presets > 0 ? e->info->num_presets : 1;
 		for (int p = 0; p < presets; p++) {
-			for (const char* perf : {"default", "stale", id}) {
+			for (const char* perf : {"default", id}) {
 				std::string err;
 				auto pa = sdk::scripted_player(perf, NV, SR, &err);
 				if (!pa) continue; // (no performance of that name)
@@ -232,7 +232,7 @@ TEST_CASE("flute from its library renders bit for bit as linked in (every preset
 	const sdk::EngineEntry* e = sdk::find_engine(id);
 	REQUIRE(e != nullptr);
 	for (int p = 0; p < e->info->num_presets; p++) {
-		for (const char* perf : {"default", "stale"}) {
+		for (const char* perf : {"default"}) {
 			std::string err;
 			auto pa = sdk::scripted_player(perf, NV, SR, &err);
 			REQUIRE(pa != nullptr);

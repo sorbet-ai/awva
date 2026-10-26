@@ -395,9 +395,8 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 	real* __restrict__ out = e.out;
 	const real pres = clampr(c.pressure, 0.0f, 1.5f);
 	const bool held = pres > 0.0f;
-	// strikes only while a note is held: after release a host may leave the last vpres in place
 	const Params& Q = e.prm;
-	const real starget = held ? clampr((c.pressure_rate - Q.thresh) * e.inv_span, 0.0f, 1.0f) : 0.0f;
+	const real starget = clampr((c.pressure_rate - Q.thresh) * e.inv_span, 0.0f, 1.0f);
 
 	if (!s.active) {
 		if (!held && starget <= STRIKE_REARM) {

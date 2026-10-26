@@ -57,7 +57,6 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `54336489` | `pos` | position | 0.05 | 0.2 | 0.11 | continuous |
 | `ea92abc9` | `pos_tilt` | position | 0 | 1.5 | 1 | continuous |
 | `a2bf5ae1` | `pos_press` | position | 0 | 1 | 0.5 | continuous |
-| `87024fcd` | `tilt_dead` | position | 0 | 0.8 | 0.35 | continuous |
 | `ddafc043` | `damp` | string | 0.5 | 10 | 4 | continuous |
 | `25094f85` | `bright` | string | 0.3 | 3 | 1 | continuous |
 | `40d3c7b7` | `tone_lo` | string | 0 | 3 | 0.3 | continuous |
@@ -95,7 +94,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 100 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| hot (the engine object) | 2.74219 KB (2808 bytes) (on a 64-bit host) |
+| hot (the engine object) | 2.73438 KB (2800 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | 100 KB |
 | bulk (BulkMemory) | 8 KB |
 

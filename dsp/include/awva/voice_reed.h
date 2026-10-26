@@ -38,7 +38,6 @@
  *          pushed hard (> ~1.05) a growl (hummed roughness) sets in. The register stays on the
  *          fundamental over the whole pressure/tilt range (tested on notes 36..91).
  *   vpres  tonguing: a fast strike gives a pressure kick and a short tongue/breath noise burst
- *          (only while the key is pressed; a stale vpres on a released voice is ignored)
  *   but_y  backward = clarinet (cylindrical, hollow, odd harmonics, tighter embouchure),
  *          forward = saxophone (conical, all harmonics, buzzier, more open embouchure).
  *          High notes (above ~E5) are pulled towards the middle of the morph.
@@ -306,9 +305,7 @@ static inline void process_voice(Engine& e, int v) {
 	if (!(pres == pres)) pres = 0.0f;
 	real vp = clampr(c.pressure_rate - 0.02f, 0.0f, 1.0f);
 	if (!(vp == vp)) vp = 0.0f;
-	// velocity only counts while the note is held: a host may leave the last vpres on a
-	// released voice, which must neither wake it nor keep it (and its tongue noise) alive
-	const real vplev = pres > 0.0f ? vp / (0.3f + vp) : 0.0f;
+	const real vplev = vp / (0.3f + vp);
 
 	bool wake = false;
 	if (!s.active) {

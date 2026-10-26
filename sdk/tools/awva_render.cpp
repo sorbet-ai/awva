@@ -267,7 +267,7 @@ public:
 		for (int v = 0; v < nv_ && v < CTL_VOICES; v++) {
 			vc[v].pitch = c[4 * v];
 			vc[v].pressure = c[4 * v + 1];
-			vc[v].pressure_rate = c[4 * v + 2];
+			vc[v].pressure_rate = c[4 * v + 1] > 0.0f || c[4 * v + 2] < 0.0f ? c[4 * v + 2] : 0.0f; // (released: never positive)
 			vc[v].timbre = c[4 * v + 3];
 			vc[v].gate = vc[v].pressure > 0.0f;
 		}
