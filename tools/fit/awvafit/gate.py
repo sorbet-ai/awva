@@ -66,6 +66,7 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import subprocess
 import threading
 import types
@@ -504,13 +505,23 @@ def _render_notes(item, stream):
     return [(n['t_on'] - t0, n['t_off'] - t0, m) for n, (_, _, m) in zip(sn, rn)]
 
 
-def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, voicing='mono'):
+def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False, voicing='mono', keep=False):
+    """the gate's verdict of candidate over baseline; its renders and streams (run_dir) are deleted when it
+    finishes, pass or fail, unless keep (or reuse, which needs them for the next run)"""
     items = items_for(inst)
     if not items:
         raise env.EnvError(f'no held-out phrases on disk for {inst} (gate_set.json; AWVA_REFS)')
     builds = [renderer(candidate, workdir, voicing), renderer(baseline, workdir, voicing)]
     # one folder per candidate-baseline pair: another gate run (another lane, other builds) never shares it
     run_dir = os.path.join(workdir, inst, hashlib.sha1(f'{candidate} | {baseline} | {voicing}'.encode()).hexdigest()[:12])
+    try:
+        return _run(inst, candidate, baseline, items, builds, run_dir, workers, log, reuse, voicing)
+    finally:
+        if not (keep or reuse):
+            shutil.rmtree(run_dir, ignore_errors=True)
+
+
+def _run(inst, candidate, baseline, items, builds, run_dir, workers, log, reuse, voicing):
     lock = threading.Lock()
 
     def one(bi, item):
@@ -758,7 +769,9 @@ def main(argv=None):
     fit.add_argument('--fit-set', help='the fit set the candidate was fitted on (a manifest: awvafit.gate_set.read_fit_set); '
                                        'refused if it uses any held-out recording')
     fit.add_argument('--no-fit', action='store_true', help='the candidate fitted no recordings (said, not assumed)')
-    p.add_argument('--reuse', action='store_true', help='reuse the calibrated streams of an earlier run with the same build labels (only for the same builds: a rebuilt engine under the same label needs them calibrated again)')
+    p.add_argument('--keep-renders', action='store_true',
+                   help="keep the run's renders and calibrated streams (deleted when the gate finishes, by default)")
+    p.add_argument('--reuse', action='store_true', help='reuse the calibrated streams of an earlier run with the same build labels (kept, as --keep-renders; only for the same builds: a rebuilt engine under the same label needs them calibrated again)')
     a = p.parse_args(argv)
     fit = dict(declared='no fit (--no-fit)')
     if a.fit_set:
@@ -770,7 +783,7 @@ def main(argv=None):
                                + ' (build the fit set with awvafit.gate_set.fit_tracks_allowed)')
         fit = dict(declared=os.path.abspath(a.fit_set), tracks=[f'{s_} {t}' for s_, t in tracks])
     work = env.workdir('gate')
-    res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=a.reuse, voicing=a.voicing)
+    res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=a.reuse, voicing=a.voicing, keep=a.keep_renders)
     res['fit_set'] = fit
     print(table(res))
     if a.out:

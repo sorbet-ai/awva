@@ -7,9 +7,11 @@ With AWVA_RENDER (awva_render) set, the renderer's tests run too: inputs, overri
 the note list, the controls round trip, the manifest, a frame-wise comparison, a small CMA-ES fit
 that finds an engine parameter again, a listening pack.
 """
+import atexit
 import json
 import math
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -28,6 +30,7 @@ from awvafit.terms import framewise  # noqa: E402
 
 SR = 48000
 TMP = tempfile.mkdtemp(prefix='awvafit_test_')
+atexit.register(shutil.rmtree, TMP, ignore_errors=True)  # never left in %TEMP%
 
 
 def quad(params, wid):

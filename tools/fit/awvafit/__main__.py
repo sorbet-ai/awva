@@ -269,16 +269,16 @@ def cmd_calibrate(a):
     if it is None:
         env.die(f'no item {a.id} in the phrase set {a.pset}')
     eng, pre = a.engine or it.engine, a.preset or it.preset
-    work = tempfile.mkdtemp(prefix='awvafit_cal_')
-    render = strike.render_with(Renderer(), eng, pre, it.transpose, work)
-    if a.cmd == 'strike':
-        path, rep = strike.calibrate(it, render, work, refine=a.refine)
-    else:
-        path, rep = control.calibrated(it, render, work, overlap=a.overlap, refine=a.refine)
-    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
-    shutil.copyfile(path, a.out)
-    shutil.copyfile(path[:-4] + '.notes.json', a.out[:-4] + '.notes.json')
-    control.write_report(a.out[:-4] + '.report.json', rep)
+    with tempfile.TemporaryDirectory(prefix='awvafit_cal_', ignore_cleanup_errors=True) as work:
+        render = strike.render_with(Renderer(), eng, pre, it.transpose, work)
+        if a.cmd == 'strike':
+            path, rep = strike.calibrate(it, render, work, refine=a.refine)
+        else:
+            path, rep = control.calibrated(it, render, work, overlap=a.overlap, refine=a.refine)
+        os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
+        shutil.copyfile(path, a.out)
+        shutil.copyfile(path[:-4] + '.notes.json', a.out[:-4] + '.notes.json')
+        control.write_report(a.out[:-4] + '.report.json', rep)
     print(a.out)
 
 
