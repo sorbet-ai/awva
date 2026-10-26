@@ -12,7 +12,7 @@ CF="${CLANG_FORMAT:-$(command -v clang-format-15 || command -v clang-format)}"
 "$CF" --version | grep -q "version 15\." || { echo "format.sh: $CF is not clang-format 15" >&2; exit 2; }
 FILES=$(ls dsp/include/awva/fx.h dsp/include/awva/voice_*.h dsp/include/awva/controls.h dsp/include/awva/dspmath.h \
   dsp/include/awva/params.h dsp/include/awva/svf.h dsp/include/awva/engine.h dsp/include/awva/adapter.h \
-  dsp/include/awva/engine_set.h dsp/include/awva/midi_in.h dsp/include/awva/ump.h dsp/include/awva/legato.h dsp/include/awva/preset.h \
+  dsp/include/awva/engine_set.h dsp/include/awva/ump.h dsp/include/awva/legato.h dsp/include/awva/preset.h \
   dsp/include/awva/engines/*.h dsp/include/awva/effects/*.h \
   sdk/include/awva_sdk/*.h sdk/src/*.h sdk/src/*.cpp sdk/tools/*.cpp sdk/tests/*.h sdk/tests/*.cpp tools/harness/harness_util.h \
   $(ls component/include/nsc/*.h component/tools/*.cpp component/tests/*.cpp component/conformance/*.cpp examples/*/*.c examples/*/*.cpp 2>/dev/null))

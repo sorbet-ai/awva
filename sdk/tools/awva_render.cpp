@@ -12,7 +12,7 @@
 //     --perf NAME       a scripted performance compiled in (--list shows them)
 //     --rec FILE.csv    a recorded key stream (CSV t,src,id,pres,velo,x,y), through the key path
 //     --midi FILE.mid   a Standard MIDI File, MIDI 1.0 or MPE, through the MIDI/MPE mapping
-//                       (awva/midi_in.h: up-converted to MIDI 2.0)
+//                       (awva/ump.h, as MIDI 1.0 in UMP)
 //     --ump FILE.ump    timed UMP packets, a text file (awva_sdk/performance.h: ump_player), the same way
 //     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (pitch, pressure, pressure_rate, timbre),
 //                       then the instrument's 5 (sustain, accel_g, spin x 3) (what --ctl-out writes, or an embedded host's capture)

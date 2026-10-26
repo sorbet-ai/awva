@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Playing with MIDI 2.0 and MPE
 
-Every way of playing an engine ends in one place: a decoder of MIDI 2.0 Universal MIDI Packets (`dsp/include/awva/ump.h`), which writes each note's controls. MIDI 1.0 and MPE are up-converted into those packets first (`dsp/include/awva/midi_in.h`, `NoteInput`), and so is standard MIDI 2.0. The engines see only the controls below, never MIDI itself.
+Every way of playing an engine ends in one place: the decoder of Universal MIDI Packets (`dsp/include/awva/ump.h`), which writes each note's controls. It reads standard MIDI 2.0 channel voice messages (UMP type 4) and MIDI 1.0 ones in UMP (type 2, MPE included), each at its own resolution; MIDI 1.0 bytes are taken as type 2. There is no other way in and no private scale. The engines see only the controls below, never MIDI itself.
 
 ## The controls
 
@@ -56,22 +56,19 @@ The same mapping, at MIDI 2.0's resolution:
 - **Registered Per-Note Controller 3** (Pitch 7.25) sets a note's own absolute pitch.
 - **Registered Per-Note Controller 74** sets a note's own `timbre`; the channel's CC74 then leaves that note alone.
 - **Registered Controllers** 0 and 6 are the bend range and the MCM; CC64 is `sustain`.
+- **Assignable Controllers 0x10 and 0x14 .. 0x16** are the motion: `motion.accel_g` (unsigned 32 x 4 g) and `motion.spin[0..2]` (bipolar).
 
 Where MPE can carry a value, the engines get the same float from MPE and from MIDI 2.0. Where it can't (finer velocities, pressures and bends, a note's own pitch), they follow the finer value.
 
-## Not from MIDI
+## From a controller with its own sensors
 
-- **The motion sensor and the gyroscope:** global inputs that a host with such sensors writes. The profile has numbers reserved for them (Assignable Controllers 0x10 .. 0x16), but MIDI in doesn't take them yet.
-
-## awva's UMP profile
-
-A host with its own sensors (an embedded instrument) can send its notes directly as packets of awva's profile: standard MIDI 2.0 channel voice messages (type 4, group 0, channel 0) in the engine scale, in which a 13-bit sensor code (code / 8191) arrives exactly. The note number is the host's note id, not a pitch.
+A controller that measures what the engines read sends standard MIDI 2.0 with three more controllers, and its codes arrive exactly (a 14-bit code / 8191 survives the 32-bit scales, verified for every code):
 
 | control | message |
 |---|---|
-| note on / off | Note On / Note Off with an attribute (type 0x02) whose bit 0 says "a strike" |
-| `note` | Assignable Per-Note Controller 1, signed 9.23 semitones |
-| `pres` | Poly Pressure, `pres` × 8191 × 2^17 |
-| `vpres`, `but_x`, `but_y` | Assignable Per-Note Controllers 2, 3, 4, × 8191 × 2^16, signed |
-| a value the scale can't hold | Assignable Per-Note Controllers 0x11 .. 0x15: the float32's bits |
-| the sound ends, the note is dropped | Per-Note Management, flags D and S |
+| the channel's sensor range | Assignable Controller 1, unsigned 4.28 (1.0 = 0x10000000, 1 .. 16): the full scale of the channel's pressures and sensor controllers, as MPE declares a bend range (a sensor with headroom above MIDI's full pressure sends 4: pressures up to 4.0) |
+| `pressure_rate` | Assignable Per-Note Controller 1, bipolar x the sensor range: the note's rate as measured |
+| `timbre` | Assignable Per-Note Controller 2, bipolar x the sensor range (or Registered Per-Note Controller 74, bipolar) |
+| `pitch` | Registered Per-Note Controller 3 (Pitch 7.25: every float pitch from 0.25 to 128 exactly) |
+
+A note that has sent its rate is a sensor's: it gets no strike, no pressure floor, and its Note Off ends its gate only (its controls stay what it sent). The note number is the note's identity (with the channel), not its pitch.

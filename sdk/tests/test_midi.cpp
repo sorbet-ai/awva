@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// MIDI in on the PC (midi_voices.h: the mapping of awva/midi_in.h, with this host's
+// MIDI in on the PC (midi_voices.h: the mapping of awva/ump.h, with this host's
 // voices) and the MIDI file reader (smf.h).
 #include <array>
 #include <cmath>
@@ -28,7 +28,7 @@ void send(sdk::MidiVoices& m, std::initializer_list<std::array<uint8_t, 3>> msgs
 
 } // namespace
 
-TEST_CASE("midi in: a note on and off, as midi_in.h maps them") {
+TEST_CASE("midi in: a note on and off, as the decoder (ump.h) maps them") {
 	sdk::MidiVoices m(10);
 	send(m, {{0x90, 60, 100}}); // master channel: not an MPE member
 	const int v = voice_of(m, 60.0f);
@@ -121,12 +121,12 @@ TEST_CASE("midi files: written and read back, tempo map applied") {
 	CHECK(!sdk::parse_midi(std::vector<uint8_t>{'R', 'I', 'F', 'F'}).error.empty());
 }
 
-TEST_CASE("midi in: MIDI 2.0 per-note y (Assignable Per-Note Controller 4, or Registered 74) on one channel, which CC74 then leaves alone") {
+TEST_CASE("midi in: MIDI 2.0 per-note timbre (Registered Per-Note Controller 74, or a sensor's Assignable 2) on one channel, which CC74 then leaves alone") {
 	sdk::MidiVoices m(4);
-	const auto ump = [&m](uint32_t w0, uint32_t w1) { REQUIRE(m.ump2(w0, w1)); };
+	const auto ump = [&m](uint32_t w0, uint32_t w1) { REQUIRE(m.ump(w0, w1)); };
 	ump(0x40903c00u, 0xc0000000u); // note 60, channel 1
 	ump(0x40904000u, 0xc0000000u); // note 64, channel 1
-	ump(0x40103c04u, 0xc0000000u); // APNC 4 (y) of note 60: +0.5
+	ump(0x40103c02u, 0xc0000000u); // APNC 2 (a sensor's timbre) of note 60: +0.5
 	ump(0x4000404au, 0x40000000u); // RPNC 74 (0x4a, brightness) of note 64: -0.5
 	m.step();
 	float y60 = 9, y64 = 9;

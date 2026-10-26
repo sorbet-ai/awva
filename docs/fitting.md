@@ -61,7 +61,7 @@ fetch -> segment -> features -> objective -> fit -> bake -> listen
 `awva_render` renders any engine and preset from:
 - a key stream (`--rec`, through the key path);
 - engine controls (`--ctl`);
-- a Standard MIDI File, MIDI 1.0 or MPE (`--midi`, up-converted to MIDI 2.0);
+- a Standard MIDI File, MIDI 1.0 or MPE (`--midi`, as MIDI 1.0 in UMP);
 - a scripted performance (`--perf`).
 
 What the fits add:

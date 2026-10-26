@@ -457,7 +457,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     if(v IN_LIST AWVA_PERFORMANCES) # its own performance, tools/harness/perf_<v>.h
       _golden(golden.${v}.perf --engine ${v} --perf ${v})
     endif()
-    foreach(ph IN ITEMS mpe midi2)
+    foreach(ph IN ITEMS mpe midi2 sensor)
       _golden(golden.${v}.${ph} --engine ${v} --ump "${_golden_dir}/${ph}.ump")
       _golden(golden.${v}.${ph}.legato --engine ${v} --ump "${_golden_dir}/${ph}.ump" --legato)
     endforeach()

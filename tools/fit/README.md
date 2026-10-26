@@ -59,7 +59,7 @@ python -m awvafit clarinet refs | score <p> [fit|hold] | fit <p> <run>
 `awva_render` on its own: `--engine E --preset P` with one input:
 - `--rec keys.csv`
 - `--ctl controls.ctl`
-- `--midi file.mid` (MIDI 1.0 or MPE, up-converted to MIDI 2.0)
+- `--midi file.mid` (MIDI 1.0 or MPE, as MIDI 1.0 in UMP)
 - `--perf name`
 
 Its options:

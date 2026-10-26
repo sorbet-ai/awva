@@ -50,6 +50,8 @@ golden.accordion.p8.take_2026-10-22_legato 42679dec07d52751
 golden.accordion.p8.take_2026-10-22_moderate 639dbe7021fee4b9
 golden.accordion.p8.take_2026-10-22_staccato e6d07c66752f43f9
 golden.accordion.perf c4dcbd8e7ce5d1fb
+golden.accordion.sensor ababa89a6648b27f
+golden.accordion.sensor.legato 6b205a0ef3988d2f
 golden.bowed.midi2 0f0a363154abe760
 golden.bowed.midi2.legato 28e8b21306cfaa32
 golden.bowed.mpe 964c5ee0ef643c5c
@@ -100,6 +102,8 @@ golden.bowed.p8.take_2026-10-22_legato 4215ddfbbda9a3c8
 golden.bowed.p8.take_2026-10-22_moderate d703f0c80b47e9f6
 golden.bowed.p8.take_2026-10-22_staccato 94fdd64ff8cb18c7
 golden.bowed.perf d6ee77c18e5649a9
+golden.bowed.sensor dd4592ce6784e472
+golden.bowed.sensor.legato 296b25ba606b7095
 golden.brass.midi2 bb383b9adddc0292
 golden.brass.midi2.legato 65dd8395a7c94896
 golden.brass.mpe c4cbda9cbbd27d95
@@ -149,6 +153,8 @@ golden.brass.p8.take_2026-10-22_a 748d9c5116c60373
 golden.brass.p8.take_2026-10-22_legato 9b8ffb071280fdfe
 golden.brass.p8.take_2026-10-22_moderate 623b07eeccf67921
 golden.brass.p8.take_2026-10-22_staccato 4c9dafd620811fc2
+golden.brass.sensor a2eb584567cf6325
+golden.brass.sensor.legato fe9ee6d6c43cc499
 golden.clarinet.midi2 429e333ee4934661
 golden.clarinet.midi2.legato d8fe3e70a3156480
 golden.clarinet.mpe f62a839e5ed592c3
@@ -163,6 +169,8 @@ golden.clarinet.p1.take_2026-10-22_a 2f580cbc16b11c14
 golden.clarinet.p1.take_2026-10-22_legato 5967399e023894ca
 golden.clarinet.p1.take_2026-10-22_moderate 136a5d16ec598e6e
 golden.clarinet.p1.take_2026-10-22_staccato b0884b7feb587cc0
+golden.clarinet.sensor 8d64876f2d3804ce
+golden.clarinet.sensor.legato bbd6770e52ccd8f8
 golden.ep.midi2 76c945ef27ed0472
 golden.ep.midi2.legato baa8509391d33cf4
 golden.ep.mpe fab1ed9ce932fc73
@@ -238,6 +246,8 @@ golden.ep.p9.take_2026-10-22_legato 08f4d610bc8afd3d
 golden.ep.p9.take_2026-10-22_moderate 2904d1cfb2de4274
 golden.ep.p9.take_2026-10-22_staccato 2f6afb2c95e4948b
 golden.ep.perf f55eca0b6d8fcb8d
+golden.ep.sensor 391d103980b56292
+golden.ep.sensor.legato 8cdf801481b29e06
 golden.flute.midi2 e7ec38521e529b93
 golden.flute.midi2.legato 7c42518e6ea3fc23
 golden.flute.mpe befa8ac8bc82de8f
@@ -257,6 +267,8 @@ golden.flute.p2.take_2026-10-22_a 2b4c14fe5f359b57
 golden.flute.p2.take_2026-10-22_legato ffe5432804cffbbe
 golden.flute.p2.take_2026-10-22_moderate 14d3b0255c28a666
 golden.flute.p2.take_2026-10-22_staccato 2349df38352117bb
+golden.flute.sensor af6120ab1a3d0542
+golden.flute.sensor.legato f468bc7a05a186ae
 golden.modal.midi2 125e37872b6060b1
 golden.modal.midi2.legato ed3d846843e7e594
 golden.modal.mpe 679166dcc9b44777
@@ -292,12 +304,16 @@ golden.modal.p5.take_2026-10-22_legato d0fd7e2c8bfdf018
 golden.modal.p5.take_2026-10-22_moderate abfc4196dd543323
 golden.modal.p5.take_2026-10-22_staccato 3cd6570bb5d22072
 golden.modal.perf c03490496eb507b6
+golden.modal.sensor 302d0c73a5e12d50
+golden.modal.sensor.legato 1becbdb78ea83e86
 golden.reed.default c1429e792011927f
 golden.reed.midi2 b576545eb2ba64a9
 golden.reed.midi2.legato 66005257c9f159bb
 golden.reed.mpe ca524b32bbfc86a7
 golden.reed.mpe.legato a09c1e9a64a2526f
 golden.reed.perf 0672661aa2735707
+golden.reed.sensor 2393ee95040017d2
+golden.reed.sensor.legato d978098766ac02c9
 golden.reed.take_2026-10-22_a f3fb8cdf925f13cc
 golden.reed.take_2026-10-22_legato c5802d0a9a056117
 golden.reed.take_2026-10-22_moderate 8ebd6af602a199ae
@@ -307,6 +323,8 @@ golden.sine.midi2 456c0843572e2952
 golden.sine.midi2.legato 4825abd8774294e3
 golden.sine.mpe 45e0d8d75243c890
 golden.sine.mpe.legato 037b43894ff76a50
+golden.sine.sensor d0f31c74d0017175
+golden.sine.sensor.legato 3ce5b1809a0c1b29
 golden.sine.take_2026-10-22_a 00a94d80ed8a5ee4
 golden.sine.take_2026-10-22_legato 688678641ffd3482
 golden.sine.take_2026-10-22_moderate 209ad3c3c4132cbf
@@ -321,6 +339,8 @@ golden.trumpet.p0.take_2026-10-22_legato bd7d74380af48bb8
 golden.trumpet.p0.take_2026-10-22_moderate b0118250f805d93b
 golden.trumpet.p0.take_2026-10-22_staccato 356abb38b22b21d0
 golden.trumpet.perf 936e2383536997d5
+golden.trumpet.sensor 31ccbacca66374cd
+golden.trumpet.sensor.legato b43af8312849d093
 golden.va.midi2 adf62c62f9f64e2c
 golden.va.midi2.legato c237aa902a705111
 golden.va.mpe 6f134813208b7d42
@@ -367,6 +387,8 @@ golden.va.p7.take_2026-10-22_legato b5ce0ee872f7c233
 golden.va.p7.take_2026-10-22_moderate 11d3de0838acca6b
 golden.va.p7.take_2026-10-22_staccato 563277f8cf244dab
 golden.va.perf 1627877508383f47
+golden.va.sensor 2780c4902fda64d7
+golden.va.sensor.legato 0ee157aff7db4246
 golden.wind.midi2 ea7678045766b56c
 golden.wind.midi2.legato a172d1675796b1e1
 golden.wind.mpe 4451c516aecd3aad
@@ -416,3 +438,5 @@ golden.wind.p8.take_2026-10-22_a d169ae5801a30e78
 golden.wind.p8.take_2026-10-22_legato 21bd82c371f9603d
 golden.wind.p8.take_2026-10-22_moderate 6725be2ebaa384f6
 golden.wind.p8.take_2026-10-22_staccato 8e9700be28916767
+golden.wind.sensor a6086d0aa10a473c
+golden.wind.sensor.legato a0ca4786ff9343fc

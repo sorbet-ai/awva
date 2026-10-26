@@ -213,7 +213,7 @@ std::vector<float> render_ump(const char* id, bool legato, bool from_library) {
 		const uint64_t start = static_cast<uint64_t>(b) * NSC_BLOCK;
 		for (; (steps * SR + 499) / 500 <= start; steps++) {
 			const uint64_t fs = (steps * SR + 499) / 500;
-			for (; k < perf.size() && perf[k].frame <= fs; k++) (void)mv->ump2(perf[k].w0, perf[k].w1);
+			for (; k < perf.size() && perf[k].frame <= fs; k++) (void)mv->ump(perf[k].w0, perf[k].w1);
 			mv->step();
 		}
 		float* o[1] = {&out[start]};

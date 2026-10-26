@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// awva's UMP profile (awva/ump.h) on its own: every value a 13-bit sensor and MIDI 1.0 give
-// arrives exactly (in the scale, or as an exact value), the decoder's callbacks and their order,
-// the touch factors, the strike fade.
+// The UMP decoder (awva/ump.h) on its own: MIDI 2.0's scales carry a sensor's codes and every float
+// pitch exactly; the host's calls and their order; the strike's fade; a sensor's notes as measured;
+// the sensor range; per-note timbre; the instrument's messages.
+#include <bit>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -13,157 +15,185 @@
 namespace {
 
 namespace ump = awva::ump;
+using awva::NoteControls;
 
-bool same(float a, float b) { return ump::float_bits(a) == ump::float_bits(b); } // bit for bit
-
-// the index byte of a packet (an assignable controller's number)
-int index_of(const ump::Packet& p) { return static_cast<int>(p.w0 & 0xff); }
+bool same(float a, float b) { return std::bit_cast<uint32_t>(a) == std::bit_cast<uint32_t>(b); } // bit for bit
 
 // a host that logs the decoder's calls
 struct Host {
-	ump::Touch t{1.0f, 1.0f, 1.0f};
 	std::vector<std::string> log;
-	ump::NoteSignals last{};
-	[[nodiscard]] ump::Touch touch(int /*id*/) const { return t; }
-	void note_started(int id, const ump::NoteSignals& /*n*/) { log.push_back("start " + std::to_string(id)); }
-	void note_changed(int id, const ump::NoteSignals& n) {
+	NoteControls last{};
+	float sustain = -1, accel = -1, spin[3] = {-1, -1, -1}, range = 48;
+	void note_started(int id, const NoteControls&) { log.push_back("start " + std::to_string(id)); }
+	void note_changed(int id, const NoteControls& n) {
 		log.push_back("change " + std::to_string(id));
 		last = n;
 	}
 	void note_silenced(int id) { log.push_back("silence " + std::to_string(id)); }
 	void note_dropped(int id) { log.push_back("drop " + std::to_string(id)); }
+	[[nodiscard]] bool echoed(int) const { return false; }
+	[[nodiscard]] float bend_range() const { return range; }
+	[[nodiscard]] bool zone_master(int channel) const { return channel == 0; }
+	void set_bend_range(float r) { range = r; }
+	void zone_configured(int, int) {}
+	void set_sustain(float s) { sustain = s; }
+	[[nodiscard]] bool bends_out_on(int) const { return false; }
+	void bend_moved(float) {}
+	void set_accel(float g) { accel = g; }
+	void set_spin(int axis, float s) { spin[axis] = s; }
 };
+
+template <int N> void send(ump::Decoder<N>& d, Host& h, ump::Packet p) {
+	d.packet(h, p);
+	d.flush(h);
+}
 
 } // namespace
 
-TEST_CASE("ump: every sensor code is exact in the engine scale") {
-	// a sensor's floats: code / 8191, int16 codes
-	int escaped_pres = 0;
+TEST_CASE("ump: a sensor's 14-bit codes are exact in MIDI 2.0's 32-bit scales, with a sensor range of 4") {
+	// code / 8191 over the int16 range, a pressure (0 .. 4) and a bipolar controller (-4 .. 4)
 	for (int code = -32768; code <= 32767; code++) {
 		const float x = static_cast<float>(code) / 0x1fff;
-		const ump::Packet s = ump::signed_packet(5, ump::ctl_x, x);
-		REQUIRE(index_of(s) == ump::ctl_x); // in the scale, not an exact value
-		REQUIRE(same(ump::signed_of(s.w1), x));
-		const ump::Packet p = ump::pres_packet(5, x);
-		if (code >= 0) {
-			REQUIRE(((p.w0 >> 20) & 0xf) == ump::poly_pressure);
-			REQUIRE(same(ump::pres_of(p.w1), x));
-		} else {
-			escaped_pres++; // (a negative pressure, which no sensor gives: an exact value)
-		}
+		if (x > 4.0f || x < -4.0f) continue; // (the ends: beyond the range, clamped)
+		REQUIRE(same(ump::bipolar32(ump::to_bipolar32(x, 4.0), 4.0), x));
+		if (code >= 0) REQUIRE(same(ump::unsigned32(ump::to_unsigned32(x, 4.0), 4.0), x));
 	}
-	CHECK(escaped_pres == 32768);
+	// and with no range (1): every code within -1 .. 1
+	for (int code = -8191; code <= 8191; code++) {
+		const float x = static_cast<float>(code) / 0x1fff;
+		REQUIRE(same(ump::bipolar32(ump::to_bipolar32(x)), x));
+		if (code >= 0) REQUIRE(same(ump::unsigned32(ump::to_unsigned32(x)), x));
+	}
+	CHECK(ump::fixed428(ump::to_fixed428(4.0)) == 4.0);
+	CHECK(ump::fixed428(ump::to_fixed428(1.5)) == 1.5);
 }
 
-TEST_CASE("ump: MIDI 1.0's values and MPE's pitches are exact in the engine scale") {
-	for (int v = 0; v < 128; v++) {
-		const float x = static_cast<float>(v) * (1.0f / 127.0f);
-		CHECK(ump::pres_of(ump::pres_value(x)) == x);
-		CHECK(ump::signed_of(ump::signed_value(x)) == x);
-		CHECK(ump::signed_of(ump::signed_value(-x)) == -x);
-	}
-	// a member channel's notes bent by 48 semitones: -48 .. 175 (beyond MIDI's 0 .. 127)
-	for (int key = 0; key < 128; key += 7)
-		for (int b = 0; b < 16384; b += 37) {
-			const float bend = static_cast<float>(b - 0x2000) * (1.0f / 8192) * 48.0f;
-			const float note = static_cast<float>(key) + bend;
-			CHECK(ump::pitch_of(ump::pitch_value(note)) == note);
+TEST_CASE("ump: every float pitch from 0.25 to 128 is exact in Pitch 7.25") {
+	for (float p = 0.25f; p < 128.0f; p = std::nextafter(p, 200.0f)) {
+		const uint32_t u = ump::to_pitch725(p);
+		if (!same(ump::pitch725(u), p)) {
+			FAIL("not exact: " << p);
+			break;
 		}
-}
-
-TEST_CASE("ump: a value the scale can't hold goes as an exact value (its float bits)") {
-	const float avg = 0.0015899f; // a weighted average (portamento): more bits than the scale
-	const ump::Packet p = ump::signed_packet(3, ump::ctl_y, avg);
-	CHECK(index_of(p) == ump::exact_y);
-	CHECK(p.w1 == ump::float_bits(avg));
-	ump::Decoder<8> d;
-	Host h;
-	d.packet(ump::note_on_packet(3, 0.5f, false));
-	d.packet(p);
-	d.flush(h);
-	CHECK(same(h.last.but_y, avg));
-	CHECK(index_of(ump::pitch_packet(3, 60.0000001f)) == ump::ctl_pitch); // (the float is 60)
-	CHECK(index_of(ump::pitch_packet(3, 0.1f)) == ump::exact_pitch);      // 0.1 needs 2^-27
+		if (p > 1.0f) p += 0.0009f; // (above 1 a sample of the floats; below it every one)
+	}
 }
 
 TEST_CASE("ump: a packet's length from its message type") {
-	CHECK(ump::words(0x20903c40u) == 1);
-	CHECK(ump::words(0x40903c00u) == 2);
-	CHECK(ump::words(0x30000000u) == 2);
-	CHECK(ump::words(0x50000000u) == 4);
-	CHECK(ump::words(0xd0000000u) == 4);
-	CHECK(ump::words(0xb0000000u) == 3);
+	CHECK(ump::words(0x20000000u) == 1);
+	CHECK(ump::words(0x40000000u) == 2);
+	CHECK(ump::words(0xf0000000u) == 4);
 }
 
-TEST_CASE("ump: the decoder calls its host once per changed note, in the order they changed") {
-	ump::Decoder<8> d;
+TEST_CASE("ump: the host hears of each changed note once a flush, in the order they first changed") {
+	ump::Decoder<16> d;
 	Host h;
-	d.packet(ump::pres_packet(2, 0.25f));
-	d.packet(ump::note_on_packet(2, 0.5f, false));
-	d.packet(ump::pitch_packet(4, 62.0f));
-	d.packet(ump::note_on_packet(4, 0.5f, false));
-	d.packet(ump::signed_packet(2, ump::ctl_x, 0.5f));
+	d.packet(h, ump::message(ump::op_note_on, 1, 60, 0, 0x80000000u));
+	d.packet(h, ump::message(ump::op_note_on, 2, 64, 0, 0x80000000u));
+	d.packet(h, ump::message(ump::op_channel_pressure, 1, 0, 0, 0x40000000u));
 	d.flush(h);
-	CHECK(h.log == std::vector<std::string>{"start 2", "change 2", "start 4", "change 4"});
+	CHECK(h.log == std::vector<std::string>{"start 0", "change 0", "start 1", "change 1"});
 	h.log.clear();
-	d.flush(h);
-	CHECK(h.log.empty());
-
-	// the id taken by a newer note: its sound ends, the new one starts
-	d.packet(ump::management_packet(2, ump::PNM_SILENCE));
-	d.packet(ump::note_on_packet(2, 1.0f, false));
-	d.packet(ump::management_packet(4, ump::PNM_DROP));
-	d.flush(h);
-	CHECK(h.log == std::vector<std::string>{"silence 2", "start 2", "change 2", "drop 4"});
-	CHECK_FALSE(d.on(4));
+	send(d, h, ump::message(ump::op_note_off, 1, 60, 0, 0));
+	CHECK(h.log == std::vector<std::string>{"change 0"});
+	CHECK(h.last.gate == 0);
+	CHECK(h.last.pressure == 0.0f);
 	h.log.clear();
-
-	d.packet(ump::note_off_packet(2));
-	d.flush(h);
-	CHECK(h.log == std::vector<std::string>{"change 2"});
-	CHECK_FALSE(h.last.on);
-
-	// not the profile's: other message types, ids past the decoder's
-	d.packet(0x20903c40u, 0);
-	d.packet(ump::note_on_packet(9, 1.0f, false));
-	h.log.clear();
-	d.flush(h);
-	CHECK(h.log.empty());
+	d.all_off(h);
+	CHECK(h.log == std::vector<std::string>{"drop 1"});
 }
 
-TEST_CASE("ump: the touch factors, in the decoder's float expressions") {
-	ump::Decoder<8> d;
+TEST_CASE("ump: with every slot held, a new note takes the oldest, whose sound ends") {
+	ump::Decoder<4> d;
 	Host h;
-	h.t = {1.3f, 0.7f, 2.0f};
-	const float pres = 4000.0f / 0x1fff, vpres = 3000.0f / 0x1fff, x = -0.25f, y = 6000.0f / 0x1fff;
-	d.packet(ump::pres_packet(1, pres));
-	d.packet(ump::signed_packet(1, ump::ctl_vpres, vpres));
-	d.packet(ump::signed_packet(1, ump::ctl_x, x));
-	d.packet(ump::signed_packet(1, ump::ctl_y, y));
-	d.packet(ump::note_on_packet(1, vpres, false));
-	d.flush(h);
-	CHECK(same(h.last.pres, pres * 1.3f));
-	CHECK(same(h.last.vpres, vpres * 0.7f));
-	CHECK(same(h.last.but_x, x));
-	CHECK(h.last.but_y == 1.0f); // y x 2 clamped
-	CHECK_FALSE(d.fading());     // (not a strike)
+	for (int k = 0; k < 4; k++) send(d, h, ump::message(ump::op_note_on, 1, 60 + k, 0, 0x80000000u));
+	h.log.clear();
+	send(d, h, ump::message(ump::op_note_on, 1, 70, 0, 0x80000000u));
+	CHECK(h.log == std::vector<std::string>{"silence 0", "start 0", "change 0"});
+	CHECK(d.key(0) == 70);
 }
 
-TEST_CASE("ump: a strike's vpres fades x0.6 per tick while above 0.01, then 0") {
-	ump::Decoder<8> d;
+TEST_CASE("ump: a MIDI note's strike: its velocity as the pressure rate, x0.6 a tick while above 0.01, then 0") {
+	ump::Decoder<16> d;
 	Host h;
-	d.packet(ump::signed_packet(0, ump::ctl_vpres, 1.0f));
-	d.packet(ump::note_on_packet(0, 1.0f, true));
-	d.flush(h);
+	send(d, h, ump::message(ump::op_note_on, 1, 60, 0, 0xffff0000u));
+	CHECK(h.last.pressure_rate == 1.0f);
+	CHECK(h.last.pressure == 1.0f); // (no pressure yet: the velocity)
+	CHECK(h.last.velocity == 1.0f);
 	CHECK(d.fading());
-	float v = 1.0f;
+	float r = 1.0f;
 	int ticks = 0;
-	while (d.fading()) {
+	while (d.fading() && ticks < 100) {
 		d.tick(h);
-		v = v > 0.01f ? v * 0.6f : 0.0f;
-		REQUIRE(same(h.last.vpres, v));
-		REQUIRE(++ticks < 100);
+		r = r > 0.01f ? r * 0.6f : 0.0f;
+		REQUIRE(same(h.last.pressure_rate, r));
+		ticks++;
 	}
-	CHECK(v == 0.0f);
-	CHECK(ticks == 11);
+	CHECK(h.last.pressure_rate == 0.0f);
+	CHECK(ticks == 11); // (0.6^9 = 0.010 is above 0.01: ten fades, then 0)
+	send(d, h, ump::message(ump::op_note_off, 1, 60, 0, 0x80000000u));
+	CHECK(same(h.last.pressure_rate, -ump::velocity16(0x80000000u))); // the release
+	CHECK(same(h.last.release, ump::velocity16(0x80000000u)));
+}
+
+TEST_CASE("ump: a MIDI note's pressure stays at 1/127 or more while held; a sensor's note as it comes") {
+	ump::Decoder<16> d;
+	Host h;
+	send(d, h, ump::message(ump::op_note_on, 1, 60, 0, 0x80000000u));
+	send(d, h, ump::message(ump::op_poly_pressure, 1, 60, 0, 0));
+	CHECK(h.last.pressure == 1.0f / 127.0f);
+	// a sensor: its own rate (Assignable Per-Note Controller 1) makes the note measured
+	send(d, h, ump::message(ump::op_note_on, 1, 62, 0, 0x80000000u));
+	send(d, h, ump::message(ump::op_assignable_pnc, 1, 62, ump::apnc_pressure_rate, ump::to_bipolar32(0.25f)));
+	CHECK(same(h.last.pressure_rate, 0.25f));
+	send(d, h, ump::message(ump::op_poly_pressure, 1, 62, 0, 0));
+	CHECK(h.last.pressure == 0.0f); // (no floor)
+	send(d, h, ump::message(ump::op_assignable_pnc, 1, 62, ump::apnc_pressure_rate, ump::to_bipolar32(-0.5f)));
+	send(d, h, ump::message(ump::op_note_off, 1, 62, 0, 0xffff0000u));
+	CHECK(h.last.gate == 0);
+	CHECK(same(h.last.pressure_rate, -0.5f)); // (its rate as measured, not the Note Off's velocity)
+}
+
+TEST_CASE("ump: a channel's sensor range scales its pressures and its sensor controllers") {
+	ump::Decoder<16> d;
+	Host h;
+	send(d, h, ump::message(ump::op_assignable_controller, 3, 0, ump::ac_sensor_range, ump::to_fixed428(4.0)));
+	CHECK(d.sensor_range(3) == 4.0);
+	send(d, h, ump::message(ump::op_note_on, 3, 50, 0, 0x80000000u));
+	const float x = 12000.0f / 0x1fff; // (a hard press: above MIDI's full scale)
+	send(d, h, ump::message(ump::op_poly_pressure, 3, 50, 0, ump::to_unsigned32(x, 4.0)));
+	CHECK(same(h.last.pressure, x));
+	send(d, h, ump::message(ump::op_assignable_pnc, 3, 50, ump::apnc_timbre, ump::to_bipolar32(-1.5f, 4.0)));
+	CHECK(same(h.last.timbre, -1.5f));
+	CHECK(d.sensor_range(4) == 1.0); // (another channel: MIDI's)
+}
+
+TEST_CASE("ump: a note's own timbre (Registered Per-Note Controller 74) is kept when the channel's CC74 moves") {
+	ump::Decoder<16> d;
+	Host h;
+	send(d, h, ump::message(ump::op_note_on, 1, 60, 0, 0x80000000u));
+	send(d, h, ump::message(ump::op_note_on, 1, 64, 0, 0x80000000u));
+	send(d, h, ump::message(ump::op_registered_pnc, 1, 64, ump::RPNC_BRIGHTNESS, 0x40000000u));
+	CHECK(h.last.timbre == -0.5f);
+	h.log.clear();
+	send(d, h, ump::message(ump::op_control_change, 1, 74, 0, 0xc0000000u)); // CC74 of the channel
+	CHECK(h.log == std::vector<std::string>{"change 0"});                    // (only the other note)
+}
+
+TEST_CASE("ump: the instrument's messages: sustain, motion, the bend range") {
+	ump::Decoder<16> d;
+	Host h;
+	send(d, h, ump::message(ump::op_control_change, 0, 64, 0, 0xffffffffu));
+	CHECK(h.sustain == 1.0f);
+	const uint32_t m1[1] = {0x20b04000u}; // MIDI 1.0 CC64 = 0
+	d.packet(h, m1);
+	CHECK(h.sustain == 0.0f);
+	send(d, h, ump::message(ump::op_assignable_controller, 0, 0, ump::ac_accel, 0x40000000u));
+	CHECK(h.accel == doctest::Approx(1.0f).epsilon(1e-6)); // (u32 x 4 g: a quarter is 1 g)
+	send(d, h, ump::message(ump::op_assignable_controller, 0, 0, ump::ac_spin + 2, 0xc0000000u));
+	CHECK(h.spin[2] == doctest::Approx(0.5f).epsilon(1e-6));
+	send(d, h, ump::message(ump::op_registered_controller, 1, 0, 0, 12u << 25));
+	CHECK(h.range == 12.0f);
+	send(d, h, ump::message(ump::op_registered_controller, 0, 0, 0, 2u << 25)); // (the zone master's: not the notes')
+	CHECK(h.range == 12.0f);
 }

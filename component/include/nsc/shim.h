@@ -3,7 +3,7 @@
 //
 // nsc::component<E>(): any awva::VoiceEngine as an nsc_component (nsc.h), unchanged. The
 // state region holds the engine object and the component's MIDI side (awva_sdk/midi_voices.h:
-// the up-converter for MIDI 1.0 in UMP, the decoder, the voice allocator, mono legato) and its
+// the decoder of MIDI 2.0 and MIDI 1.0 in UMP, the voice allocator, mono legato) and its
 // event queue; the fast and large regions are the engine's. process_voices() is the engine's own
 // process() on the host's controls, so a host that gives an engine's controls gets the same
 // samples as the engine compiled in, bit for bit.

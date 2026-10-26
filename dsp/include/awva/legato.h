@@ -15,7 +15,7 @@
 #ifndef AWVA_LEGATO_H_
 #define AWVA_LEGATO_H_
 
-#include "ump.h"
+#include "controls.h"
 
 namespace awva::voices {
 
@@ -23,13 +23,13 @@ template <int Max> class Legato {
 	static_assert(Max >= 2, "a stack");
 
 public:
-	using Signals = awva::ump::NoteSignals;
+	using Signals = awva::NoteControls;
 
-	// note id's signals (any note, in any order): held (on, pressure above 0) it is pushed or
+	// note id's controls (any note, in any order): held (its gate, pressure above 0) it is pushed or
 	// updated, else it leaves the stack. Past Max held notes the oldest is forgotten.
 	void note(int id, const Signals& s) {
 		const int at = find(id);
-		const bool held = s.on && s.pres > 0.0f;
+		const bool held = s.gate && s.pressure > 0.0f;
 		if (!held) {
 			if (at >= 0) remove(at);
 			return;
@@ -52,15 +52,15 @@ public:
 	// the newest held note: the one the voice plays (-1: none)
 	[[nodiscard]] int top() const { return n_ > 0 ? id_[n_ - 1] : -1; }
 
-	// the voice's signals: the newest note's pitch and tilt, the strongest note's pressure and
-	// pressure velocity (not empty())
+	// the voice's controls: the newest note's pitch and timbre, the strongest note's pressure and
+	// its rate (not empty())
 	[[nodiscard]] Signals signals() const {
 		Signals s = sig_[n_ - 1];
 		int loud = n_ - 1;
 		for (int k = 0; k < n_; k++)
-			if (sig_[k].pres > sig_[loud].pres) loud = k;
-		s.pres = sig_[loud].pres;
-		s.vpres = sig_[loud].vpres;
+			if (sig_[k].pressure > sig_[loud].pressure) loud = k;
+		s.pressure = sig_[loud].pressure;
+		s.pressure_rate = sig_[loud].pressure_rate;
 		return s;
 	}
 

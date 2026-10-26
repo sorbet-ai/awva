@@ -30,7 +30,7 @@ They share everything below except the way in: a plugin uses `process()` and an 
 
 **A plugin: `process(state, events, n, out)`**, one block of `NSC_BLOCK` (32) frames per call. Split the host's buffer into 32-frame blocks.
 - An event is a UMP packet with its frame, counted from the block's start. An event that arrives after its block was rendered gets a negative frame, down to -32; it lands where it would have on time. The component takes MIDI in 2 ms steps on an integer-frame grid, so place events by frame and nothing more.
-- Send MIDI 2.0 (UMP type 4) in its standard meaning, or MIDI 1.0 in UMP (type 2, MPE included). One channel can carry every note: per-note y as Assignable Per-Note Controller 4, per-note pitch as Pitch 7.25.
+- Send MIDI 2.0 (UMP type 4) in its standard meaning, or MIDI 1.0 in UMP (type 2, MPE included). One channel can carry every note: per-note timbre as Registered Per-Note Controller 74, per-note pitch as Pitch 7.25 (docs/midi.md has the table, a sensor's controllers included).
 - Give a Note On the host's note id (`nsc_event.note_id`, else -1). After each `process()`, drain `ended()` (call it again while it returns `max`) and send each id's note-end (CLAP_EVENT_NOTE_END).
 - Mono legato: `mode(state, NSC_MODE_LEGATO, 1)`.
 

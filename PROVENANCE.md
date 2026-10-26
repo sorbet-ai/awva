@@ -9,7 +9,7 @@ This records where each file of this repository comes from. The repository was s
 | files | what |
 |---|---|
 | `dsp/include/awva/engine.h`, `adapter.h`, `engine_set.h`, `params.h` | the engine contract and its helpers |
-| `dsp/include/awva/ump.h`, `midi_in.h`, `voice_allocator.h`, `legato.h` | the UMP profile and decoder, the MIDI 1.0/MPE up-converter, the voice allocator, mono legato |
+| `dsp/include/awva/ump.h`, `voice_allocator.h`, `legato.h` | the UMP decoder (MIDI 2.0, MIDI 1.0 and MPE), the voice allocator, mono legato |
 | `dsp/include/awva/voice_{va,modal,bowed,reed,sine,wind,ep,brass,trumpet,accordion,clarinet}.h`, `voice_wind_tune.h`, `trumpet_{bore,cal,seed}.h` | the engines |
 | `dsp/include/awva/engines/*.h`, `effects/fx.h` | the engines' and the effects' contract traits |
 | `dsp/include/awva/preset.h`, `presets/<engine>/*.preset.json`, `dsp/include/awva/presets/*.inc` (generated from them), `tools/presets_inc.cmake` | the preset format and the factory presets as files. JSON has no comments, so the preset files carry no SPDX line: they are Apache-2.0, copyright Sorbet AI, like the rest. |
@@ -24,7 +24,7 @@ This records where each file of this repository comes from. The repository was s
 | `tools/clarinet/` | the clarinet's fit tools: note features, the objective, the CMA-ES fit, its renderers and probes. The presets were fitted to the University of Iowa Musical Instrument Samples (Lawrence Fritts; "freely available ... used for any projects, without restrictions"), the B-flat and bass clarinet pp/mf/ff scales; the recordings are not in this repository |
 
 The following records rules and behaviour that the originating firmware also implements: whether these are re-statements of MIDI/MPE practice or derivations is a question for a legal check.
-- `midi_in.h` and `voice_allocator.h` hold the MIDI-in mapping and the voice-stealing rule. They were extracted from that firmware, where they had been rewritten in this project.
+- `ump.h` and `voice_allocator.h` hold the MIDI-in mapping and the voice-stealing rule. They were extracted from that firmware, where they had been rewritten in this project.
 - `controls.h` describes the controls that firmware writes.
 
 ## Rewritten for the split
