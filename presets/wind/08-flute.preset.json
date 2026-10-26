@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "flute",
   "heroes": ["jet", "jet_off", "breath", "turb", "bright", "attack", "vib", "body"],
   "params": {
@@ -36,10 +36,11 @@
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 8
   }
 }

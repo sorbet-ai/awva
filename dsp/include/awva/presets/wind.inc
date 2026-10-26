@@ -7,7 +7,7 @@
 // presets/wind/00-clarinet.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "clarinet",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -43,10 +43,11 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 0
   }
 }
@@ -55,7 +56,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/wind/01-bass-clarinet.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "bass clarinet",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -91,10 +92,11 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 1
   }
 }
@@ -103,7 +105,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/wind/02-soprano-sax.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "soprano sax",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -139,10 +141,11 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0.45,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 2
   }
 }
@@ -151,7 +154,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
 // presets/wind/03-alto-sax.preset.json
 inline constexpr char factory_json_3[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "alto sax",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -187,10 +190,11 @@ inline constexpr char factory_json_3[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0.45,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 3
   }
 }
@@ -199,7 +203,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
 // presets/wind/04-tenor-sax.preset.json
 inline constexpr char factory_json_4[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "tenor sax",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -235,10 +239,11 @@ inline constexpr char factory_json_4[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0.45,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 4
   }
 }
@@ -247,7 +252,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
 // presets/wind/05-baritone-sax.preset.json
 inline constexpr char factory_json_5[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "baritone sax",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -283,10 +288,11 @@ inline constexpr char factory_json_5[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0.45,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 5
   }
 }
@@ -295,7 +301,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
 // presets/wind/06-oboe.preset.json
 inline constexpr char factory_json_6[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "oboe",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -331,10 +337,11 @@ inline constexpr char factory_json_6[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.3,
     "growl": 0,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 6
   }
 }
@@ -343,7 +350,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
 // presets/wind/07-bassoon.preset.json
 inline constexpr char factory_json_7[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "bassoon",
   "heroes": ["reed_open", "attack", "bright", "breath", "growl", "vib", "body", "tongue"],
   "params": {
@@ -379,10 +386,11 @@ inline constexpr char factory_json_7[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.3,
     "growl": 0,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 7
   }
 }
@@ -391,7 +399,7 @@ inline constexpr char factory_json_7[] = R"awva-preset({
 // presets/wind/08-flute.preset.json
 inline constexpr char factory_json_8[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "wind", "params_hash": "aa8b1728"},
+  "engine": {"id": "wind", "params_hash": "5981b262"},
   "title": "flute",
   "heroes": ["jet", "jet_off", "breath", "turb", "bright", "attack", "vib", "body"],
   "params": {
@@ -427,10 +435,11 @@ inline constexpr char factory_json_8[] = R"awva-preset({
     "tilt_bright": 0.5,
     "tilt_breath": 0.5,
     "growl": 0,
-    "growl_from": 1.05,
+    "growl_from": 0.7,
     "vib": 0,
     "vib_hz": 5,
     "vib_breath": 0,
+    "life": 0,
     "instrument": 8
   }
 }

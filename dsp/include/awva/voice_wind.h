@@ -44,6 +44,9 @@
  * How to play:
  *   pres   breath. Below the speaking pressure only a soft breath; then the tone blooms and gets
  *          louder and brighter. The saxes growl when pushed very hard (pressure > ~1.05) or shaken.
+ *   life   (a dial) micro-randomness, never a vibrato: every note a little different (start pitch
+ *          offset that settles, embouchure brightness, attack, tongue and breath noise), and a tiny
+ *          broadband pitch, level, brightness and breath-noise flicker, each voice its own
  *   vpres  tonguing: a fast strike gives a crisp tongued attack (pressure kick + "t" noise); a
  *          slow press a breathy swell.
  *   but_y  embouchure, subtle: forward a little brighter / edgier, backward darker and breathier
@@ -198,6 +201,7 @@ struct Params {
 	real vib;         // automatic vibrato, semitones
 	real vib_hz;
 	real vib_breath; // automatic breath (amplitude) vibrato
+	real life;       // micro-randomness (0 = none)
 	real instrument; // which instrument (instruments[]): its bore kind, lowest note and tuning
 };
 static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
@@ -251,7 +255,11 @@ struct VoiceState {
 	real ty;               // smoothed tilt
 	real tongue;           // articulation envelope
 	real growl;            // smoothed growl amount
-	real gph;              // growl phase (turns)
+	real gph;              // growl: throat phase (turns)
+	real gsph;             // growl: subharmonic phase (turns, f0 / 2)
+	real gn, gd, gb;       // growl: rate and depth wander (slow noise), burst envelope
+	real gcd, gcr, gpz;    // growl: this throat cycle's depth and rate, the subharmonic's depth
+	uint32_t grng;         // growl noise
 	real gm;               // breath multiplier (growl, breath vibrato) at the end of the last block
 	real gam;              // breath drive at the end of the last block
 	real og;               // output gain at the end of the last block
@@ -262,6 +270,11 @@ struct VoiceState {
 	real x1, x2, pm1, gm1; // reed
 	real tn;               // turbulence noise lowpass
 	real yp;               // previous output sample (breath brightness)
+	// life: per note (start pitch offset, decaying; embouchure brightness; attack speed, tongue kick
+	// and breath noise factors) and flicker noises (pitch fast / slow, level, brightness, breath noise)
+	real lpo, lbo, lkp, ltg, lnn;
+	real lnf, lns, llv, lbr, lnz;
+	uint32_t lrng;
 };
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
@@ -307,6 +320,10 @@ static inline void reset_voice(Engine& e, int v, bool clear) {
 	s.rng = 0x9E3779B9u * (uint32_t)(v + 1);
 	s.note_prev = note;
 	s.gm = 1.0f;
+	s.gcd = s.gcr = s.gpz = 1.0f;
+	s.grng = 0x27D4EB2Fu * (uint32_t)(v + 5) + 777u;
+	s.lkp = s.ltg = s.lnn = 1.0f;
+	s.lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
 	s.d1 = 100.0f;
 	s.d2 = 10.0f;
 	if (clear) {
@@ -578,8 +595,46 @@ static inline void process_voice(Engine& e, int v) {
 
 	const real sr = e.sr;
 	const int kind = e.kind;
+	// life (micro-randomness, never a vibrato): every note draws its own small offsets; the flicker
+	// noises are one-pole filtered uniform noise of unit spread (~10 ms and ~300 ms pitch, ~120 ms
+	// level, ~80 ms brightness, ~50 ms breath noise). Off (life 0): the voice as without it.
+	const real life = clampr(q.life, 0.0f, 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_cents = 0.0f, l_br = 0.0f, l_lv = 1.0f, l_nz = 1.0f, l_kp = 1.0f, l_tg = 1.0f;
+	if (life_on) {
+		uint32_t r = s.lrng;
+		auto nz = [&r]() {
+			r = r * 1664525u + 1013904223u;
+			return (real)(int32_t)r * (1.0f / 2147483648.0f);
+		};
+		if (jump || wake) {
+			s.lpo = 3.0f * nz();  // cents
+			s.lbo = 0.15f * nz(); // embouchure brightness
+			s.lkp = 1.0f + 0.3f * nz();
+			s.ltg = 1.0f + 0.25f * nz();
+			s.lnn = 1.0f + 0.3f * nz();
+		}
+		const real dt = BLOCK * e.inv_sr;
+		s.lpo *= 1.0f - dt * 10.0f; // settles in ~0.1 s
+		const auto flick = [&](real& x, real tau) {
+			const real a = rmin(dt / tau, 1.0f);
+			x = clampr(x + a * (1.732f * fsqrt(2.0f / a) * nz() - x), -3.0f, 3.0f);
+		};
+		flick(s.lnf, 0.01f);
+		flick(s.lns, 0.3f);
+		flick(s.llv, 0.12f);
+		flick(s.lbr, 0.08f);
+		flick(s.lnz, 0.05f);
+		s.lrng = r;
+		l_cents = life * (s.lpo + 1.6f * s.lnf + 1.2f * s.lns);
+		l_br = life * (s.lbo + 0.06f * s.lbr);
+		l_lv = 1.0f + 0.05f * life * s.llv;
+		l_nz = rmax(1.0f + life * (s.lnn - 1.0f + 0.35f * s.lnz), 0.0f);
+		l_kp = 1.0f + life * (s.lkp - 1.0f);
+		l_tg = 1.0f + life * (s.ltg - 1.0f);
+	}
 	// breath smoothing (attack), tilt, tongue, growl
-	s.ps += e.kp * (pres - s.ps);
+	s.ps += (life_on ? rmin(e.kp * l_kp, 1.0f) : e.kp) * (pres - s.ps);
 	if (s.ps < 1e-6f) s.ps = 0.0f;
 	const real ps = s.ps;
 	s.ty += 0.03f * (clampr(c.timbre, -1.0f, 1.0f) - s.ty);
@@ -590,12 +645,12 @@ static inline void process_voice(Engine& e, int v) {
 	const real gr_t = clampr((ps - q.growl_from) * 3.0f, 0.0f, 1.0f) + e.shake;
 	s.growl += 0.05f * (rmin(gr_t, 1.2f) - s.growl);
 	if (s.growl < 1e-6f) s.growl = 0.0f;
-	const real ebr = q.tilt_bright * ty;              // embouchure brightness -1..1
-	const real sub = q.tilt_breath * rmax(-ty, 0.0f); // subtone / covered amount 0..1
+	const real ebr = life_on ? q.tilt_bright * ty + l_br : q.tilt_bright * ty; // embouchure brightness -1..1
+	const real sub = q.tilt_breath * rmax(-ty, 0.0f);                          // subtone / covered amount 0..1
 
 	// pitch (with the automatic vibrato) and the fundamental
 	const real vibs = q.vib * sin_turns(e.vph + 0.13f * (real)v);
-	const real nt = note + vibs;
+	const real nt = life_on ? note + vibs + 0.01f * l_cents : note + vibs;
 	const real P = (sr * (1.0f / 440.0f)) * pow2((69.0f - nt) * (1.0f / 12.0f));
 	const real f0 = 440.0f * pow2((nt - 69.0f) * (1.0f / 12.0f));
 	const real isr = e.inv_sr;
@@ -682,19 +737,48 @@ static inline void process_voice(Engine& e, int v) {
 	s.d2 = D2;
 
 	// breath drive with tongue kick; growl and breath vibrato as a multiplier
-	const real gam_t = rmin(drive_of(q, ps, kind, e.inv_p0, e.inv_1mp0) * (1.0f + q.tongue * tg) * (1.0f - 0.08f * sub), kind == KIND_JET ? 1.4f : 0.94f);
+	const real gam_t = rmin(drive_of(q, ps, kind, e.inv_p0, e.inv_1mp0) * (1.0f + (life_on ? q.tongue * l_tg : q.tongue) * tg) * (1.0f - 0.08f * sub), kind == KIND_JET ? 1.4f : 0.94f);
 	b.gam = s.gam;
 	b.dgam = (gam_t - s.gam) * (1.0f / BLOCK);
 	s.gam = gam_t;
-	s.gph += clampr(0.5f * f0 + 3.0f, 25.0f, 140.0f) * (BLOCK * isr);
-	s.gph -= (real)(int)s.gph;
-	const real gm_t = 1.0f + q.growl * s.growl * sin_turns(s.gph) + q.vib_breath * sin_turns(e.vph + 0.13f * (real)v + 0.25f);
+	// growl: an irregular throat flutter (~15 Hz; rate and depth wander over ~0.15-0.25 s, every
+	// cycle its own depth and length, now and then a burst) dips the drive, and a drive modulation
+	// at half the pitch (up to 200 Hz) pulls alternate periods apart (a subharmonic), its depth
+	// random per throat cycle
+	real gmod = 0.0f;
+	if (s.growl > 0.0f) {
+		const real bdt = BLOCK * isr;
+		uint32_t gr = s.grng;
+		auto nz = [&gr]() {
+			gr = gr * 1664525u + 1013904223u;
+			return (real)(int32_t)gr * (1.0f / 2147483648.0f);
+		};
+		s.gn = clampr(s.gn + 0.0027f * (14.0f * nz() - s.gn), -1.0f, 1.0f);
+		s.gd = clampr(s.gd + 0.0045f * (11.0f * nz() - s.gd), -1.0f, 1.0f);
+		s.gb *= 1.0f - 6.5f * bdt;
+		s.gph += 15.0f * (1.0f + 0.3f * s.gn) * s.gcr * bdt;
+		if (s.gph >= 1.0f) {
+			s.gph -= (real)(int)s.gph;
+			s.gcd = 0.75f + 0.25f * nz();
+			s.gcr = 1.0f + 0.3f * nz();
+			s.gpz = 0.75f + 0.25f * nz();
+			if (nz() > 0.88f) s.gb = 1.0f;
+		}
+		s.gsph += clampr(0.5f * f0, 25.0f, 200.0f) * bdt;
+		s.gsph -= (real)(int)s.gsph;
+		s.grng = gr;
+		const real gdc = rmin(clampr(1.0f + 0.4f * s.gd, 0.3f, 1.4f) * s.gcd * (1.0f + 0.5f * s.gb), 1.4f);
+		const real w = 0.5f + 0.5f * sin_turns(s.gph);
+		gmod = -1.1f * gdc * w * w + 0.7f * gdc * s.gpz * sin_turns(s.gsph);
+	}
+	const real gm_t = 1.0f + q.growl * s.growl * gmod + q.vib_breath * sin_turns(e.vph + 0.13f * (real)v + 0.25f);
 	b.gm = s.gm;
 	b.dgm = (gm_t - s.gm) * (1.0f / BLOCK);
 	s.gm = gm_t;
 	// output gain: physics, optionally scaled with breath
 	const real psc = clampr(ps, 0.0f, 1.3f);
-	const real og_t = q.level * ((1.0f - q.dyn_gain) + q.dyn_gain * psc);
+	real og_t = q.level * ((1.0f - q.dyn_gain) + q.dyn_gain * psc);
+	if (life_on) og_t *= l_lv;
 	b.og = s.og;
 	b.dog = (og_t - s.og) * (1.0f / BLOCK);
 	s.og = og_t;
@@ -705,6 +789,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real nr = clampr(ps * e.inv_p0, 0.0f, 1.0f);
 	const real speaking = clampr((ps - clampr(q.speak, 0.02f, 0.6f)) * 4.0f, 0.0f, 1.0f);
 	b.bo = 0.02f * (q.breath * nr * nr * (1.0f - 0.6f * speaking) * (1.0f + 2.0f * sub) * (0.5f + 0.5f * psc) + q.tongue_noise * tg * nr);
+	if (life_on) b.bo *= l_nz;
 	b.body = q.body;
 	b.kb = clampr(q.br_breath, 0.0f, 8.0f) * psc * psc;
 	b.joff = clampr(q.jet_off, 0.0f, 0.9f);
@@ -783,6 +868,7 @@ static constexpr ParamEntry param_table[] = {
     {{"vib", "mod", 0.0f, 0.6f, strisy::ParamKind::continuous}, &Params::vib}, // automatic vibrato, semitones
     {{"vib_hz", "mod", 2.0f, 8.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
     {{"vib_breath", "mod", 0.0f, 0.3f, strisy::ParamKind::continuous}, &Params::vib_breath},
+    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life},         // micro-randomness
     {{"instrument", "bore", 0.0f, 8.0f, strisy::ParamKind::steps}, &Params::instrument}, // instruments[]: kind, lowest note, tuning
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
