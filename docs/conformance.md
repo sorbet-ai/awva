@@ -48,7 +48,7 @@ An engine whose `init()` writes every byte of its regions declares `init_writes_
 A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`, with its numbers and its owner. Both levels report it as a warning instead of failing, so the suite stays green while the owner fixes it. The warning also says when the check passes again; the entry then goes.
 
 - **The tag** names a check (`silence`) or a check on one preset (`tuning:flute`).
-- **The scope** is one engine: `set(AWVA_KNOWN_<engine> <tag>...)`. `AWVA_KNOWN_COMPONENT` applies to every component, for the shim.
+- **The scope** is one engine: `set(AWVA_KNOWN_<engine> <tag>...)`. `AWVA_KNOWN_COMPONENT` applies to every component, for the shim. `AWVA_KNOWN16_<engine>` adds to an engine's list at 16 voices (`contract16.<engine>.*`).
 - **The current list** is in the file itself. Keep it short.
 
 ## Exact, or within a tolerance
@@ -58,6 +58,8 @@ A check that an engine fails today is listed in `sdk/tests/known_failures.cmake`
 - **In cents** for pitch, against the engine's declared tolerance.
 
 ## The engine contract (`contract.<engine>.*`)
+
+Each engine's voices are a build parameter (`AWVA_VOICES_<ENGINE>`: its arrays sized by it; the default is its own, 10 or 16). The suite runs at 10 voices, and again on the engine built and played with 16 (`contract16.<engine>.*`).
 
 | check | what it guarantees |
 |---|---|

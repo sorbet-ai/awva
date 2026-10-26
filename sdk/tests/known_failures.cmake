@@ -16,3 +16,10 @@
 #                  next suspect
 #   roll           1 click in 24 rolls (the fast octave down)
 set(AWVA_KNOWN_trumpet slur roll)
+
+# The same with the engine built and played at 16 voices (contract16.<engine>.*), on top of the above:
+#   set(AWVA_KNOWN16_<engine> <tag> ...)
+# va: its owner
+#   silence:keys   the FTZ guard's random 16-voice performance: 31318 samples (0.65 s) above 1e-4 after
+#                  the declared tail (10 s + 0.2 s) on the keys preset; at 10 voices it is silent
+set(AWVA_KNOWN16_va "silence:keys")

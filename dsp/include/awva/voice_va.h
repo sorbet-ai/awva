@@ -46,7 +46,11 @@ namespace va {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 16;
+// the voices (arrays sized by it): 16 unless the build says another (AWVA_VOICES_VA)
+#ifndef AWVA_VOICES_VA
+#define AWVA_VOICES_VA 16
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_VA;
 static constexpr int CTRL = 8; // control rate divider (6.1 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
 static constexpr int NCV = 4; // interpolated control values: G, N, drive, gain

@@ -81,7 +81,11 @@ using awva::rmax;
 using awva::rmin;
 
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_CLARINET)
+#ifndef AWVA_VOICES_CLARINET
+#define AWVA_VOICES_CLARINET 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_CLARINET;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 // the reed speaks: the mouthpiece pressure's oscillation (peak, re gamma) from SPK_LO (not yet) to
 // SPK_HI (fully; a steady pp is about 0.35, ff 0.8)

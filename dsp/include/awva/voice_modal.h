@@ -44,7 +44,11 @@ namespace modal {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_MODAL)
+#ifndef AWVA_VOICES_MODAL
+#define AWVA_VOICES_MODAL 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_MODAL;
 static constexpr int NMODES = 12;
 static constexpr int NSLOT = NMODES + 4; // + 4 dummy (always zero) slots to pad the mode list
 

@@ -21,7 +21,11 @@ namespace sine {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 16;
+// the voices (arrays sized by it): 16 unless the build says another (AWVA_VOICES_SINE)
+#ifndef AWVA_VOICES_SINE
+#define AWVA_VOICES_SINE 16
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_SINE;
 
 struct VoiceState {
 	real c, s; // rotating phasor: output is s

@@ -109,7 +109,11 @@ using awva::rmax;
 using awva::rmin;
 
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_FLUTE)
+#ifndef AWVA_VOICES_FLUTE
+#define AWVA_VOICES_FLUTE 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_FLUTE;
 static constexpr int CTRL = 8; // control rate divider (6 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
 static_assert(BLOCK % CTRL == 0, "CTRL must divide BLOCK");

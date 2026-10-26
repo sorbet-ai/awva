@@ -61,7 +61,11 @@ namespace ep {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_EP)
+#ifndef AWVA_VOICES_EP
+#define AWVA_VOICES_EP 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_EP;
 static constexpr int NM = 4; // modes per voice
 
 using awva::rmax;

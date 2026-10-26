@@ -63,7 +63,11 @@ namespace reed {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_REED)
+#ifndef AWVA_VOICES_REED
+#define AWVA_VOICES_REED 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_REED;
 
 // delay lines: main tube up to (1 - BETA_SAX) * period, short tube up to period / 2.
 // The lowest note (MIDI 20, 26 Hz) has a period of 1881 samples.

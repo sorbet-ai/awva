@@ -755,7 +755,7 @@ TEST_CASE("the host's FTZ guard: finite, silent after the release, the same in 2
 		}
 		if (changed > 0) MESSAGE(std::string(info().name) << " preset " << p << ": " << changed << " samples changed, the largest by " << max_diff);
 		CHECK(nonfinite == 0);
-		CHECK(loud_after == 0); // silent once the declared tail has passed
-		CHECK(pcm == 0);        // 24-bit PCM: byte for byte
+		CONFORM("silence", p, loud_after == 0); // silent once the declared tail has passed
+		CHECK(pcm == 0);                        // 24-bit PCM: byte for byte
 	}
 }

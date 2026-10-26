@@ -73,7 +73,11 @@ namespace wind {
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
 static constexpr float GLIDE_S = 0.010f; // a slur's fingering change (note_glide.h)
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_WIND)
+#ifndef AWVA_VOICES_WIND
+#define AWVA_VOICES_WIND 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_WIND;
 
 // delay lines (AXI SRAM): main bore up to a period (cone, flute) or half a period (cylinder) of
 // the lowest note (MIDI 20: 1881 samples), short line for the cone apex / the flute's jet

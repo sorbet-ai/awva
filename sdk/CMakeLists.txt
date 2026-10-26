@@ -291,6 +291,24 @@ foreach(v IN LISTS AWVA_ENGINES)
   doctest_discover_tests(awva_engine_${v}_contract TEST_PREFIX "contract.${v}." PROPERTIES LABELS "contract;unit")
   add_test(NAME contract.${v}.soak COMMAND awva_engine_${v}_contract --no-skip "--test-case=soak*")
   set_tests_properties(contract.${v}.soak PROPERTIES LABELS soak)
+  # the engine built with 16 voices (AWVA_VOICES_<ENGINE>: its arrays sized by the build) and the
+  # suite run on all of them: contract16.<name>.*
+  string(TOUPPER "${v}" _V)
+  list(JOIN AWVA_KNOWN16_${v} "," _known16)
+  if(_known16)
+    set(_known16 "${_known},${_known16}")
+  else()
+    set(_known16 "${_known}")
+  endif()
+  add_executable(awva_engine_${v}_contract16 tests/main.cpp tests/contract.cpp tests/contract_blocks.cpp tests/contract_denormals.cpp
+    tests/contract_memory.cpp tests/contract_rates.cpp tests/contract_repress.cpp tests/contract_slur.cpp tests/contract_soak.cpp tests/contract_tuning.cpp
+    "${_gen}/engine_${v}.cpp")
+  target_compile_definitions(awva_engine_${v}_contract16 PRIVATE AWVA_VOICES_${_V}=16 AWVA_CONTRACT_VOICES=16 AWVA_ENGINE_ENTRY=awva_engine_${v}
+    "AWVA_KNOWN_FAILURES=\"${_known16}\"" "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"" "AWVA_ENGINE_TRAITS=\"${AWVA_ENGINE_${v}_TRAITS}\""
+    AWVA_ENGINE_TYPE=awva::engines::${v})
+  target_include_directories(awva_engine_${v}_contract16 PRIVATE "${AWVA_DOCTEST_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/../component/include")
+  target_link_libraries(awva_engine_${v}_contract16 PRIVATE awva_sdk awva_sdk_presets)
+  doctest_discover_tests(awva_engine_${v}_contract16 TEST_PREFIX "contract16.${v}." PROPERTIES LABELS "contract;unit")
 endforeach()
 # a ';' in a check's name splits it in ctest, which then runs no check and passes (one engine's
 # program lists the suite's names)

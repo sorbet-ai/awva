@@ -87,7 +87,11 @@ namespace brass {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_BRASS)
+#ifndef AWVA_VOICES_BRASS
+#define AWVA_VOICES_BRASS 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_BRASS;
 static constexpr int CTRL = 8; // control rate divider (6.1 kHz)
 static constexpr int NCTRL = BLOCK / CTRL;
 static constexpr int NCV = 10; // interpolated control values (see process_voice)

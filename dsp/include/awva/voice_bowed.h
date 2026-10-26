@@ -65,7 +65,11 @@ namespace bowed {
 
 using real = float;
 static constexpr int BLOCK = awva::BLOCK;
-static constexpr int MAX_VOICES = 10;
+// the voices (arrays sized by it): 10 unless the build says another (AWVA_VOICES_BOWED)
+#ifndef AWVA_VOICES_BOWED
+#define AWVA_VOICES_BOWED 10
+#endif
+static constexpr int MAX_VOICES = AWVA_VOICES_BOWED;
 static constexpr int NECK_LEN = 2048;  // >= longest string loop (note 18: 2060 samples, clamped)
 static constexpr int BRIDGE_LEN = 512; // >= max bow distance from the bridge (beta <= 0.22: 450)
 static constexpr uint32_t NECK_MASK = NECK_LEN - 1, BRIDGE_MASK = BRIDGE_LEN - 1;
