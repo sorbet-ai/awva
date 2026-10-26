@@ -20,8 +20,8 @@ struct clarinet {
 	static constexpr const char* name = "clarinet";
 	static constexpr const char* title = "Clarinet";
 	static constexpr const char* summary = "physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets)";
-	// pres the breath, vpres the tongue, but_y the embouchure; the pedal lengthens the release
-	static constexpr uint32_t inputs = in_pressure | in_velocity | in_tilt_y | in_pedal;
+	// pressure the breath, pressure_rate the tongue, timbre the embouchure; sustain lengthens the release
+	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_sustain;
 	static constexpr Budget budget = {::clarinet::MAX_VOICES, 35000, 2.0f}; // profile.sh 34284; silent ~0.25 s after the release
 	// below about 40 kHz the bass clarinet's reed (3.9 kHz) squeals: its coupling to the flow, one
 	// sample late, lags too far at the reed's frequency (22050 Hz: the notes go up 15-45 semitones)
