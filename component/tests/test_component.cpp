@@ -8,6 +8,7 @@
 // side (MidiVoices) driving the engine on the same 2 ms integer-frame step grid.
 #include <bit>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -20,6 +21,7 @@
 #include "awva_sdk/engines.h"
 #include "awva_sdk/midi_voices.h"
 #include "awva_sdk/performance.h"
+#include "awva_sdk/smf.h"
 
 namespace {
 
@@ -568,5 +570,200 @@ TEST_CASE("every engine at 11025 Hz (min_rate): finite, within its memory region
 		CHECK(finite);
 		CHECK(guards);
 		nsc_unload(&lib);
+	}
+}
+
+namespace {
+
+// a MIDI 1.0 performance with its events off the step grid and off block starts: MPE notes on
+// member channels 2..5 with bends, channel pressure and CC74, a master-channel note with poly
+// pressure, the pedal (seconds)
+std::vector<sdk::MidiEvent> late_performance() {
+	std::vector<sdk::MidiEvent> ev;
+	auto add = [&](double t, int a, int b, int c, int len = 3) {
+		ev.push_back({t, {static_cast<uint8_t>(a), static_cast<uint8_t>(b), static_cast<uint8_t>(c)}, static_cast<uint8_t>(len)});
+	};
+	const int keys[4] = {53, 57, 60, 64};
+	for (int n = 0; n < 4; n++) {
+		const int ch = 1 + n;
+		const double on = 0.1 + 0.37 * n + 0.00013 * n, off = on + 1.2;
+		add(on, 0xb0 | ch, 74, 64);
+		add(on, 0x90 | ch, keys[n], 70 + 12 * n);
+		for (int k = 1; k < 48; k++) {
+			const double t = on + 0.0247 * k;
+			if (t >= off) break;
+			add(t, 0xd0 | ch, static_cast<int>(40 + 60 * std::sin(0.11 * k + n)) & 0x7f, 0, 2);
+			const int bend = 8192 + static_cast<int>(600 * std::sin(0.2 * k));
+			add(t + 0.0041, 0xe0 | ch, bend & 0x7f, (bend >> 7) & 0x7f);
+			if (k % 3 == 0) add(t + 0.0093, 0xb0 | ch, 74, (64 + 4 * k) & 0x7f);
+		}
+		add(off, 0x80 | ch, keys[n], 40);
+	}
+	add(1.9, 0xb0, 64, 127);
+	add(2.0, 0x90, 48, 90);
+	for (int k = 0; k < 30; k++) add(2.05 + 0.0301 * k, 0xa0, 48, (20 + 2 * k) & 0x7f);
+	add(2.9, 0x80, 48, 0);
+	add(3.1, 0xb0, 64, 0);
+	std::stable_sort(ev.begin(), ev.end(), [](const sdk::MidiEvent& a, const sdk::MidiEvent& b) { return a.t < b.t; });
+	return ev;
+}
+
+// awva_render --midi: the file through the SDK's MIDI player and the engine linked in
+std::vector<float> render_midi_file(const char* id, const std::string& path, int sr, int frames) {
+	std::string err;
+	auto player = sdk::midi_player(path.c_str(), NV, sr, &err);
+	REQUIRE(player != nullptr);
+	sdk::Engine e(*sdk::find_engine(id));
+	e.init(sr, NV);
+	std::vector<dsp::VoiceControls> vc(NV, dsp::voice_at_rest);
+	dsp::GlobalControls g = dsp::globals_at_rest;
+	std::vector<float> out(static_cast<size_t>(frames));
+	for (int b = 0; b * NSC_BLOCK < frames; b++) {
+		player->block(b, vc.data(), g);
+		for (dsp::VoiceControls& c : vc) dsp::track_key(c);
+		float buf[NSC_BLOCK];
+		float* o[1] = {buf};
+		e.process(vc.data(), g, o);
+		for (int i = 0; i < NSC_BLOCK && b * NSC_BLOCK + i < frames; i++) out[static_cast<size_t>(b * NSC_BLOCK + i)] = buf[i];
+	}
+	return out;
+}
+
+// a plugin-like host: host blocks of `block` frames (0: random 1..1024), the component's 32-frame
+// blocks rendered when their first frame is due, with the events seen so far; an event seen after
+// its block was rendered goes to the next one with its negative frame (late: true), or at that
+// block's frame 0 (late: false, what a host without negative frames could do)
+std::vector<float> render_host(const char* id, const std::vector<sdk::MidiEvent>& perf, int sr, int frames, int block, bool late) {
+	Loaded dll(id);
+	const nsc_component& c = dll.c();
+	c.init(dll.in.state, dll.in.fast, dll.in.large, sr, NV);
+	struct Ev {
+		uint64_t frame;
+		uint32_t w0;
+	};
+	std::vector<Ev> seen; // events seen, not yet given
+	std::vector<float> out(static_cast<size_t>(frames));
+	float buf[NSC_BLOCK] = {};
+	int pos = NSC_BLOCK;
+	uint64_t blocks = 0;
+	size_t k = 0;
+	uint32_t rng = 12345;
+	for (uint64_t at = 0; at < static_cast<uint64_t>(frames);) {
+		rng = rng * 1664525u + 1013904223u;
+		const uint64_t n = std::min<uint64_t>(block > 0 ? static_cast<uint64_t>(block) : 1 + (rng >> 8) % 1024, frames - at);
+		for (; k < perf.size(); k++) { // (the events of this host block: at their frame, as awva_render places them)
+			const uint64_t f = perf[k].t <= 0 ? 0u : static_cast<uint64_t>(std::llround(perf[k].t * sr));
+			if (f >= at + n) break;
+			const uint8_t* m = perf[k].bytes;
+			seen.push_back({f, 0x20000000u | static_cast<uint32_t>(m[0]) << 16 | static_cast<uint32_t>(m[1]) << 8 | (perf[k].len > 2 ? m[2] : 0u)});
+		}
+		for (uint64_t i = at; i < at + n; i++) {
+			if (pos == NSC_BLOCK) {
+				const uint64_t b0 = blocks * NSC_BLOCK;
+				std::vector<nsc_event> ev;
+				size_t taken = 0;
+				for (; taken < seen.size() && seen[taken].frame < b0 + NSC_BLOCK; taken++) {
+					const int64_t f = static_cast<int64_t>(seen[taken].frame) - static_cast<int64_t>(b0);
+					ev.push_back({static_cast<int32_t>(late || f >= 0 ? f : 0), -1, {seen[taken].w0, 0, 0, 0}});
+				}
+				seen.erase(seen.begin(), seen.begin() + static_cast<std::ptrdiff_t>(taken));
+				float* o[1] = {buf};
+				c.process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+				blocks++;
+				pos = 0;
+			}
+			out[i] = buf[pos++];
+		}
+		at += n;
+	}
+	return out;
+}
+
+} // namespace
+
+TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked at once: every id back exactly once") {
+	Loaded dll("va"); // (its tail is long: the released notes stay tracked, the table overflows)
+	const nsc_component& c = dll.c();
+	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	constexpr int N = 200, EVERY = 6, HOLD = 600; // a note every 6 blocks, held 600: 100 at once
+	static_assert(N > NSC_MAX_NOTE_IDS && HOLD / EVERY > NSC_MAX_NOTE_IDS);
+	Ids back(N);
+	float buf[NSC_BLOCK];
+	float* o[1] = {buf};
+	int early = 0;
+	const int last = (N - 1) * EVERY + HOLD;
+	for (int b = 0; b <= last + 15 * SR / NSC_BLOCK; b++) {
+		std::vector<nsc_event> ev;
+		if (b % EVERY == 0 && b / EVERY < N) ev.push_back(ump_note(static_cast<uint32_t>(b % NSC_BLOCK), true, b / EVERY, b / EVERY));
+		if (b >= HOLD && (b - HOLD) % EVERY == 0 && (b - HOLD) / EVERY < N) ev.push_back(ump_note(3, false, (b - HOLD) / EVERY, -1));
+		c.process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+		const int got = back.drain(c, dll.in.state);
+		if (b < HOLD) early += got;
+		if (b > last && c.active_voices(dll.in.state) == 0 && back.each_once()) break;
+	}
+	CHECK(early > 0); // (the overflow: the oldest ended before any release)
+	CHECK(back.each_once());
+	CHECK(back.drain(c, dll.in.state) == 0);
+}
+
+TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest once each") {
+	Loaded dll("va");
+	const nsc_component& c = dll.c();
+	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	constexpr int Q = 1024, MORE = 500; // the queue's size, then more than it takes
+	Ids back(Q + MORE);
+	float buf[NSC_BLOCK];
+	float* o[1] = {buf};
+	std::vector<nsc_event> ev;
+	for (int i = 0; i < Q; i++) ev.push_back(ump_note(31, true, i, i)); // block 0, frame 31: waits for the step at 96
+	c.process(dll.in.state, ev.data(), Q, o);
+	CHECK(back.drain(c, dll.in.state) == 0);
+	ev.clear();
+	for (int i = Q; i < Q + MORE; i++) ev.push_back(ump_note(31, true, i, i)); // block 1: the queue is full
+	c.process(dll.in.state, ev.data(), MORE, o);
+	CHECK(back.drain(c, dll.in.state) == MORE); // (they will never sound)
+	for (int b = 2; b < 8; b++) {
+		c.process(dll.in.state, nullptr, 0, o); // the step at 96 takes the 1024: all but 64 end at once
+		back.drain(c, dll.in.state);
+	}
+	ev.clear();
+	for (int i = 0; i < Q; i++) ev.push_back(ump_note(0, false, i, -1));
+	c.process(dll.in.state, ev.data(), Q, o);
+	for (int b = 0; b < 15 * SR / NSC_BLOCK && !back.each_once(); b++) {
+		back.drain(c, dll.in.state);
+		c.process(dll.in.state, nullptr, 0, o);
+	}
+	back.drain(c, dll.in.state);
+	CHECK(back.each_once());
+}
+
+TEST_CASE("late events: a plugin host at any block size takes every event at awva_render's step, bit for bit (44.1 and 48 kHz)") {
+	const std::vector<sdk::MidiEvent> perf = late_performance();
+	const std::vector<uint8_t> file = sdk::make_midi(perf);
+	for (const int sr : {44100, 48000}) {
+		const std::string path = (std::filesystem::temp_directory_path() / ("awva_late_events_" + std::to_string(sr) + ".mid")).string();
+		{
+			FILE* f = std::fopen(path.c_str(), "wb");
+			REQUIRE(f != nullptr);
+			REQUIRE(std::fwrite(file.data(), 1, file.size(), f) == file.size());
+			std::fclose(f);
+		}
+		const int frames = sr * 4;
+		const sdk::MidiFile parsed = sdk::read_midi_file(path.c_str()); // (the file's times: on its tick grid)
+		REQUIRE(parsed.error.empty());
+		for (const char* id : {"accordion", "trumpet", "va"}) {
+			const std::vector<float> ref = render_midi_file(id, path, sr, frames);
+			double e2 = 0;
+			for (float x : ref) e2 += static_cast<double>(x) * x;
+			CHECK(e2 > 0.0);
+			for (const int block : {1, 33, 256, 0}) {
+				INFO(id << " at " << sr << " Hz, host blocks " << block);
+				CHECK(same(render_host(id, parsed.events, sr, frames, block, true), ref));
+			}
+			// with a late event at the next block's frame 0 instead, at 44.1 kHz (steps between block
+			// starts) some land a step late: what the negative frames are for
+			if (sr == 44100) CHECK(!same(render_host(id, parsed.events, sr, frames, 33, false), ref));
+		}
+		std::filesystem::remove(path);
 	}
 }
