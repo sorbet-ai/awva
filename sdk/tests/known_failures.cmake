@@ -14,8 +14,5 @@
 # wind: its owner
 #   tuning:flute   below its range: -48 c at note 48, -72 c at 43, +26 c at 55, -23 c at 60; in tune
 #                  from 67 (a declared range, preset_tuning, may be the answer)
-# trumpet: fixed in its own PR (the re-press: a press on a voice in its tail as a new press)
-#   repress  soft, again after 150 ms, arrives 230 ms late (235 against 5 ms), -12 dB
 set(AWVA_KNOWN_ep tuning:pianet)
-set(AWVA_KNOWN_trumpet repress)
 set(AWVA_KNOWN_wind tuning:flute)

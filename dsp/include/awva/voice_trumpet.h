@@ -192,7 +192,7 @@ struct VoiceState {
 	real x, v, pc, ub, uM, uprev, pinprev;
 	real um;   // the jet's mean flow (turbulence rides on the flow pulses)
 	real tlev; // the strike the tongue has held the lips for
-	int age;   // blocks since the note started from silence
+	int age;   // blocks since the key was pressed
 	// bore
 	real lps, hps; // bell reflection lowpass, DC high-pass states
 	real ltd;      // the transmitted wave's slow part (the bell reflects the mean flow)
@@ -224,6 +224,7 @@ struct VoiceState {
 	// the player's ear: the lips' period from their zero crossings, the bore trimmed onto the note
 	real xlp, xhp, xprev, tlast, pprev, trim, xamp;
 	int active;
+	int was_held; // the key was held in the last block (a press on a voice still sounding its release)
 };
 
 struct Engine {
@@ -368,6 +369,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.xlp = s.xhp = s.xprev = 0.0f;
 	s.tlast = -1e4f;
 	s.pprev = 0.0f;
+	s.was_held = 0;
 	s.trim = s.xamp = 0.0f;
 	if (v >= 0 && v < MAX_VOICES)
 		for (int h = 0; h < 2; h++)
@@ -512,6 +514,10 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 		s.active = 1;
 		start = true;
 	}
+	// a press: a start, or the key pressed again on a voice still sounding its release (the same
+	// note played again): its articulation as a start's, over the tail (the state kept)
+	const bool press = start || (held && !s.was_held);
+	s.was_held = held;
 
 	// ---- block rate: the player and the horn for this note -------------------------------------
 	const bool jump = start || fabsf(note - s.note_prev) >= 1.0f;
@@ -527,9 +533,13 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 		s.amp = 0.0f;
 		s.pm_prev = 0.0f;
 	}
+	if (press && !start) {
+		// pressed again in the tail: the tongue against the lips again, as from silence (the bore rings on)
+		s.x = s.v = 0.0f;
+	}
 	// a strike opens the tongue: fast for a hard one
-	if (vplev > 0.05f && (start || vplev > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vplev), 0.001f), 1.0f);
-	if (start && vplev <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
+	if (vplev > 0.05f && (press || vplev > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vplev), 0.001f), 1.0f);
+	if (press && vplev <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
 
 	const real by = clampr(cc.timbre, -1.0f, 1.0f);
 	if (start) {
@@ -741,9 +751,9 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	// ---- audio rate: lips, mouthpiece, bore, steepening, bell ------------------------------------
 	float* __restrict__ B1 = bore_line(e, vi, 0);
 	float* __restrict__ B2 = bore_line(e, vi, 1);
-	// a tongued start: while the strike rises (the first ~16 ms of a note from silence) the tongue
+	// a tongued start: while the strike rises (the first ~16 ms of a press) the tongue
 	// holds the lips closed, more for a harder strike; at its peak it lets them go
-	if (start) {
+	if (press) {
 		s.age = 0;
 		s.tlev = 0.0f;
 	} else if (s.age < 1000) {
