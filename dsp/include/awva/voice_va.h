@@ -579,7 +579,8 @@ static inline void process(Engine& e, real* __restrict__ output) {
 		real* __restrict__ ps = reinterpret_cast<real*>(&e.ps);
 		for (int i = 0; i < NPARAMS; i++) {
 			const real d = pt[i] - ps[i];
-			ps[i] = fabsf(d) < 1e-5f ? pt[i] : ps[i] + 0.05f * d;
+			// (the snap is relative: a large value's last steps would be below its float resolution)
+			ps[i] = fabsf(d) <= 1e-5f * rmax(fabsf(pt[i]), 1.0f) ? pt[i] : ps[i] + 0.05f * d;
 		}
 	}
 	process_global(e);
