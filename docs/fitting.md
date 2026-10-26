@@ -189,14 +189,17 @@ A phrase set's default stream infers the control once, for every engine. Three o
    The oscillation threshold is the lowest pressure from which periodicity stays at 0.9 or more. The floor is 1.25 × the threshold.
 2. **Anchor.** The pressure whose brightness matches the recording's median note, at least the floor. It is refined once in the phrase itself, because an isolated note is not as bright as the same note in a line.
 3. **Pressure.** Every 10 ms of a note maps the recording's level (relative to the phrase's median note) to the pressure at which the engine's own level curve reaches the anchor's level plus that difference. It is clipped to between the floor and 1. Per-note dynamics and the motion within a note follow the recording through the engine's curve. Within a note, the pressure follows the recording's level under four limits:
-   - the level is smoothed over 70 ms;
+   - the level is smoothed over 30 ms (a player's 5–7 Hz tremolo passes; a 10 ms window's ripple doesn't);
    - it goes at most 12 dB under the note's own level;
    - the pressure moves at most 1.5 per second, which keeps the scanner's velocity at 0.05 or less;
    - the floor is also held where the engine's level comes within 30 dB of its loudest.
 
    The key path plays a velocity that rises inside a held key as a second strike: following the raw 10 ms level made both clarinets click.
-4. **Legato.** At a connected change of pitch (the next onset less than 0.12 s after the note's end), the next key goes down at its onset on another key, and the last one lets go 30 ms later (`--overlap`). The breath is held. Repeated pitches and real gaps re-tongue, released 20 ms early. From 50 ms before a slurred note's end, the old key's pressure follows the recording's dip down as fast as it falls: a falling pressure is a negative velocity, never a strike.
-5. **Strike.** A strike sweep on isolated notes gives a curve of attack overshoot against strike. The overshoot is the attack's peak, −10 to +100 ms around the onset, over the sustain's 99th-percentile peak.
+4. **Pitch.** Each note's key bends by the recording's own pitch, every 10 ms (YIN), relative to the note, less the phrase's tuning (the median of its notes' annotated cents). This carries the player's intonation, vibrato, scoops and wander. The key path plays note + 0.5 x³ semitones, so the bend reaches ±50 c (`BEND_C`), and the rare wider scoop is clipped. Frames with no clear pitch are filled from their neighbours.
+
+   Without it, the streams carried pressure, strike and legato but no pitch, and fits learnt the recorded player's pitch motion into engine parameters: bowed fit v1 got 15–20 c of automatic vibrato, double reed v2 a 7 Hz wander and jitter. Live, the Striso player supplies that motion, so it doubled. With the pitch in the stream, an engine's own vibrato, wander and jitter have nothing left to fit and should fit to zero. `awvafit.modulation` checks that they do.
+5. **Legato.** At a connected change of pitch (the next onset less than 0.12 s after the note's end), the next key goes down at its onset on another key, and the last one lets go 30 ms later (`--overlap`). The breath is held. Repeated pitches and real gaps re-tongue, released 20 ms early. From 50 ms before a slurred note's end, the old key's pressure follows the recording's dip down as fast as it falls: a falling pressure is a negative velocity, never a strike.
+6. **Strike.** A strike sweep on isolated notes gives a curve of attack overshoot against strike. The overshoot is the attack's peak, −10 to +100 ms around the onset, over the sustain's 99th-percentile peak.
    - Each note's pressure rises over its own ramp, set apart from the strike (`keys.Stream.press(ramp=)`: the velocity over the rise is scaled to peak at the strike). The ramp starts at the recording's onset rise (10 → 90 % of the 5 ms envelope) and is refined in the phrase until the render's rise matches it. A recording that speaks by a quick ramp with no strong attack gets a soft strike on a quick ramp, not a hard strike.
    - Each note gets the strike whose overshoot matches the recording's own for that note (the manifest's `notes[].attack_db`, the same measure).
    - Refinement passes in the phrase follow, and each note keeps its best pass.
@@ -211,6 +214,23 @@ Measured, on the audition builds' dry output:
   - The brightness rises from 2.15 to 2.6, against the recording's 2.96.
   - Both builds speak periodically at every pressure swept, so their threshold is below 0.04, and the default stream left them dark rather than near threshold.
 - **Across nine instruments:** brass dynamics and attacks come within about 1 dB of the recordings, where the default streams were 8–20 dB too hard. The oboe's slur gaps of 55–68 dB come down to 9–10 dB, against the recording's 18.
+
+## No performer modulation
+
+An engine played steadily, at one pressure and with no bend, should hold its pitch and level: vibrato, waver, wander and jitter are the player's. `awvafit.modulation` renders held notes (two pressures, 2.5 s each) and measures, from 0.5 s in, the pitch's and the level's motion (standard deviation, detrended) and the pitch motion's strongest rate.
+
+- `python -m awvafit modulation <engine> <preset> <fit.json> [--base base.json] [--notes …] [--transpose -24]` sets each parameter the fit moved alone on the baseline (the preset as built, by default). A parameter that adds more than 1 c of pitch motion or 0.3 dB of level motion is suspect, and the command exits 1.
+- `modulation.penalty(modulation.steady(...))` is a fit's penalty for steady motion past 1.5 c or 0.5 dB, 0 within them.
+
+Measured on main and on bowed fit v1:
+
+| build | steady pitch motion | the suspect |
+|---|---|---|
+| bowed fit v1, violin / viola / cello / bass | 9.8 / 13.1 / 13.0 / 2.8 c | `vibrato` (+9.4 / +12.7 / +12.9 / +2.4 c); `rosin` adds 0.2–0.8 c |
+| bowed on main, violin | 0.1 c | none |
+| clarinet on main, B-flat / bass | 0.03 / 0.32 c (bass: 0.8 dB of level, its `wander`) | none |
+| flute on main | 0.12 c | none |
+| brass on main, trumpet / trombone / horn / tuba | 1.3–1.4 c (their `jitter`, set by earlier fits) | none (under 1.5 c) |
 
 ## The listening gate: nothing reaches a listener unless the measures say it is better
 

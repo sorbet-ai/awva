@@ -28,6 +28,10 @@ ms later (a near-silent gap); most tongued notes strike at 0.7-1.0. Here the str
      last one lets go `overlap` s later; repeated pitches and gaps re-tongue (released 20 ms before).
      From 50 ms before the note's end the old key's pressure follows the recording's dip down, as fast
      as it falls (a falling pressure is a negative velocity: no strike), with no 12 dB limit
+  pitch: each note's key bends by the recording's own pitch (YIN, 10 ms) re the note, less the phrase's
+     tuning (the median of its notes' cents): its intonation, vibrato, scoops and wander, within the
+     key's +-BEND_C; the input carries the performer's pitch motion, so an engine's own (vibrato,
+     wander, jitter) has nothing to fit and should fit to zero
   strikes: every note's strike from strike.calibrate (the recording's own attack overshoot), the slurred
      ones too: a tongued legato re-attacks on the held breath as far as the recording does; a slur whose
      recording shows no attack keeps a soft press (the choice nearest SLUR_STRIKE within 0.5 dB)
@@ -58,7 +62,9 @@ FLOOR_DB = 30.0   # the floor is also where the engine's level is within this of
 HOLD_DIP = 12.0   # dB a held note's pressure may follow the recording's level under the note's own
 SLEW = 1.5        # /s: the fastest a held note's pressure moves (the scanner's velocity <= K * SLEW = 0.05)
 DIP_LEAD = 0.05   # s before a slurred note's end from which its key follows the recording's dip down
-ENV_SMOOTH = 0.07  # s: the recording's 10 ms level, smoothed over this before the pressure follows it
+ENV_SMOOTH = 0.03  # s: the recording's 10 ms level, smoothed over this before the pressure follows it
+BEND_C = 50.0      # cents: the key's bend at x = 1 (the key path: note + 0.5 x^3 semitones)
+BEND_AP = 0.3      # a frame's YIN aperiodicity above this has no pitch (held from its neighbours)
 
 
 def env_db(x, sr=SR, hop=0.01):
@@ -214,6 +220,37 @@ def rec_notes(item):
     return out
 
 
+def bend_track(rec, a, b, midi, tune_c, sr=SR, hop=0.01):
+    """the recording's pitch over a note (onset a, offset b, s; its key's note `midi`) re the note less the
+    phrase's tuning tune_c: (times re a, cents), every `hop`, clipped to the key's +-BEND_C; frames with no
+    clear pitch (aperiodic, or off by more than 1.5 semitones) are filled from their neighbours"""
+    from .range_check import yin
+    f = 440.0 * 2 ** ((midi - 69) / 12)
+    frame = 0.04
+    i0, i1 = max(int(a * sr), 0), min(int(b * sr), len(rec))
+    seg = rec[i0:i1]
+    tq = np.arange(0.0, max(b - a, hop) + hop, hop)
+    if len(seg) < int((frame + 0.03) * sr):
+        return tq, np.zeros(len(tq))
+    yf = yin(seg, f * 2 ** (-2 / 12), f * 2 ** (2 / 12), sr, frame, hop)
+    if not len(yf):
+        return tq, np.zeros(len(tq))
+    c = 1200 * np.log2(np.maximum(yf[:, 0], 1e-9) / f) - tune_c
+    ok = np.isfinite(yf[:, 0]) & (yf[:, 1] < BEND_AP) & (np.abs(c + tune_c) < 150)
+    tc = np.arange(len(c)) * hop + frame / 2
+    if ok.sum() < 2:
+        return tq, np.zeros(len(tq))
+    c = np.interp(tc, tc[ok], c[ok])
+    if len(c) >= 3:  # a lone frame's octave or partial slip
+        c = np.median(np.stack([np.r_[c[0], c[:-1]], c, np.r_[c[1:], c[-1]]]), axis=0)
+    return tq, np.clip(np.interp(tq, tc, c), -BEND_C, BEND_C)
+
+
+def bend_x(cents):
+    """the key's x (-1..1) for a bend in cents: note + 0.5 x^3 semitones"""
+    return float(np.cbrt(np.clip(cents / BEND_C, -1.0, 1.0)))
+
+
 def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
     """the calibrated stream for one engine (its sweep curves cv); rec: the recording (48 kHz mono)"""
     o = _octave(item)
@@ -229,6 +266,7 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
     te = np.arange(len(e))
     mids = [int(round(m)) for _, _, m in notes]
     lay = [m - 12 * o for m in mids]
+    tune_c = float(np.median([100 * (m - mi) for (_, _, m), mi in zip(notes, mids)]))  # the player's tuning
     c_med = _curve_for(cv, lay[jm])
     bright = float(np.nanmedian([m['brightness'] for m in meas]))
     P_anchor = anchor(c_med, bright - bright_offset)
@@ -267,11 +305,14 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
             down = math.inf if tk >= dip_from else SLEW * keys.DT  # falling: a negative velocity, never a strike
             y[k] = y[k - 1] + float(np.clip(target(tk) - y[k - 1], -down, SLEW * keys.DT))
         avoid = (last_kid,) if conn_in and last_kid is not None else ()
-        s.press(a - t_first + 0.3, v, P0, hold, note=lay[j], avoid=avoid, shape=lambda u, ug=ug, y=y, P0=P0: float(np.interp(u, ug, y)) / P0)
+        tb, cb = bend_track(rec, a, end, mids[j], tune_c)
+        s.press(a - t_first + 0.3, v, P0, hold, note=lay[j], avoid=avoid, shape=lambda u, ug=ug, y=y, P0=P0: float(np.interp(u, ug, y)) / P0,
+                bend=lambda u, tb=tb, cb=cb: bend_x(float(np.interp(u, tb, cb))))
         last_kid = s.notes[-1]['kid']
-        info.append(dict(P0=round(P0, 3), floor=round(c['floor'], 3), slur_in=conn_in))
+        info.append(dict(P0=round(P0, 3), floor=round(c['floor'], 3), slur_in=conn_in,
+                         bend_c=[round(float(np.percentile(cb, 5)), 1), round(float(np.percentile(cb, 95)), 1)]))
     s.write(path)
-    return dict(bright_offset=round(bright_offset, 2), anchor_P=round(P_anchor, 3), anchor_level_db=round(L_anchor, 1), recording_brightness=round(bright, 2), notes=info)
+    return dict(bright_offset=round(bright_offset, 2), tuning_c=round(tune_c, 1), anchor_P=round(P_anchor, 3), anchor_level_db=round(L_anchor, 1), recording_brightness=round(bright, 2), notes=info)
 
 
 class SweepCache:

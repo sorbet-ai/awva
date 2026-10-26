@@ -579,3 +579,45 @@ class Sweep(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ExpressiveStreams(unittest.TestCase):
+    """the calibrated stream carries the recording's pitch as the key's bend; an engine's own steady motion
+    (awvafit.modulation) is measured on held notes"""
+
+    @staticmethod
+    def tone(cents, sr=SR):
+        ph = 2 * np.pi * np.cumsum(440 * 2 ** (cents / 1200)) / sr
+        t = np.arange(len(cents)) / sr
+        return sum(0.5 ** k * np.sin((k + 1) * ph) for k in range(6)) * np.minimum(1, t / 0.02)
+
+    def test_the_bend_follows_the_recording_s_pitch(self):
+        t = np.arange(int(2.0 * SR)) / SR
+        cents = 12 + 20 * np.sin(2 * np.pi * 5.5 * t)  # 12 c sharp (the player's tuning), a +-20 c vibrato
+        tb, cb = control.bend_track(self.tone(cents), 0.0, 2.0, 69, tune_c=12.0)
+        m = (tb > 0.1) & (tb < 1.9)
+        truth = np.interp(tb, t, cents) - 12
+        self.assertLess(float(np.sqrt(np.mean((cb[m] - truth[m]) ** 2))), 3.0)
+        self.assertGreater(float(np.ptp(cb[m])), 30.0)
+        _, wide = control.bend_track(self.tone(np.full(len(t), 90.0)), 0.0, 2.0, 69, tune_c=0.0)
+        self.assertAlmostEqual(float(np.max(wide)), control.BEND_C)  # past the key's reach: clipped
+
+    def test_the_key_s_x_is_the_bend_through_the_key_path(self):
+        for c in (-50.0, -13.0, 0.0, 7.5, 31.0):
+            x = control.bend_x(c)
+            self.assertAlmostEqual(100 * 0.5 * x ** 3, c, places=6)  # note + 0.5 x^3 semitones (harness_util.h)
+
+    def test_motion_sees_a_vibrato_and_not_a_steady_tone(self):
+        from awvafit import modulation
+        t = np.arange(int(3.0 * SR)) / SR
+        ev = dict(b_on=0, b_off=int(3.0 * SR / 32), note=69)
+        still = modulation.motion(0.3 * self.tone(np.zeros(len(t))), ev)
+        vib = modulation.motion(0.3 * self.tone(14 * np.sin(2 * np.pi * 5.5 * t)), ev)
+        self.assertLess(still['pitch_c'], 0.5)
+        self.assertLess(still['level_db'], 0.2)
+        self.assertGreater(vib['pitch_c'], 8.0)  # 14 c peak: 9.9 c sd
+        self.assertAlmostEqual(vib['rate_hz'], 5.5, delta=0.6)
+        trem = modulation.motion(0.3 * self.tone(np.zeros(len(t))) * 10 ** (np.sin(2 * np.pi * 6 * t) / 20), ev)
+        self.assertAlmostEqual(trem['level_db'], 1 / np.sqrt(2), delta=0.1)  # +-1 dB at 6 Hz
+        self.assertGreater(modulation.penalty(dict(pitch_c=vib['pitch_c'], level_db=0.0)), 0.0)
+        self.assertEqual(modulation.penalty(dict(pitch_c=still['pitch_c'], level_db=still['level_db'])), 0.0)

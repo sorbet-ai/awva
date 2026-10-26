@@ -287,6 +287,12 @@ def main(argv=None):
     inst = {'brassfamily': cmd_brassfamily, 'sax': cmd_sax, 'flute': cmd_flute, 'clarinet': cmd_clarinet}
     if argv and argv[0] in inst:
         return inst[argv[0]](None, argv[1:])
+    if argv and argv[0] == 'modulation':  # no performer modulation (awvafit.modulation)
+        from .modulation import main as mod_main
+        try:
+            sys.exit(mod_main(argv[1:]))
+        except env.EnvError as ex:
+            env.die(str(ex))
     if argv and argv[0] == 'gate':  # the listening gate (awvafit.gate): its own arguments
         from .gate import main as gate_main
         try:
