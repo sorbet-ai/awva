@@ -13,6 +13,8 @@ They work with the Striso board as a supported host: its firmware takes this rep
 | `tools/harness/` | the scripted performances, `harness_util.h`, key recordings (`rec/`) |
 | `third_party/doctest` | the test framework |
 
+**The component (ABI 2).** `component/include/nsc/nsc.h` is a C ABI that loads one engine from its own shared library. It takes UMP in, at integer frames, with late events exact. Parameters have stable ids and declared defaults, and an `output` level follows the engine's own. Notes carry host ids, handed back by `ended()`. The descriptor gives a title, a colour, the heroes, the presets and the sample rates (11025 .. 192000). `awva_add_component()` builds an engine as a component library inside another project. See `component/README.md`, and `docs/writing_a_host.md` for a host: a plugin or the board.
+
 Build and test on their own:
 
 ```
