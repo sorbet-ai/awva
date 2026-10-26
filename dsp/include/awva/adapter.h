@@ -17,6 +17,7 @@
 //       static constexpr PresetHeroes preset_heroes[] = {{"pad", {{...}}}, ...};  // optional
 //       static constexpr Conformance conformance = {...};          // optional: the checks' tolerances
 //       static constexpr PresetTuning preset_tuning[] = {{"flute", {...}}};  // optional (engine.h)
+//       static constexpr RateTolerance rate_tolerances[] = {{192000, ...}};  // optional (engine.h)
 //   };
 //
 // The engine's struct Engine has `strisy::GlobalControls g; strisy::VoiceControls vc[MAX_VOICES];
@@ -97,6 +98,10 @@ template <class T> constexpr Conformance conformance() {
 	if constexpr (requires { T::preset_tuning; }) {
 		c.preset_tuning = T::preset_tuning;
 		c.num_preset_tuning = static_cast<int>(std::extent_v<decltype(T::preset_tuning)>);
+	}
+	if constexpr (requires { T::rate_tolerances; }) {
+		c.rate_tolerances = T::rate_tolerances;
+		c.num_rate_tolerances = static_cast<int>(std::extent_v<decltype(T::rate_tolerances)>);
 	}
 	return c;
 }

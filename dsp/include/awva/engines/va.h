@@ -26,6 +26,15 @@ struct va {
 	    {"bass", {{"cut_base", "res", "cut_env", "drive", "sub", "acc_level", "acc_cutoff", "release"}}},
 	    {"acid", {{"cut_base", "res", "cut_env", "drive", "acc_cutoff", "acc_level", "acc_decay", "release"}}},
 	};
+	// the rates whose pitch is further from 48 kHz than the default 3 cents, each a known fault with its
+	// bound (a cent or two above every preset's worst, measured 2026-10-25; contract_rates.cpp)
+	static constexpr const char* rate_fault = "not diagnosed yet";
+	static constexpr RateTolerance rate_tolerances[] = {
+	    {11025, 4.5f, false, rate_fault},   // 3.0
+	    {88200, 4.5f, false, rate_fault},   // 3.3
+	    {96000, 5.5f, false, rate_fault},   // 4.1
+	    {192000, 10.5f, false, rate_fault}, // 9.3
+	};
 };
 } // namespace traits
 

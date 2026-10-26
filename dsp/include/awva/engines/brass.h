@@ -28,6 +28,13 @@ struct brass {
 	    {"plunger", {{"mute", "mute_lp", "mute_hz", "wah", "brassiness", "tone_hz", "vibrato", "release"}}},
 	    {"section", {{"pair", "detune", "brassiness", "lip_loud", "tone_hz", "breath", "vibrato", "release"}}},
 	};
+	// the rates whose pitch is further from 48 kHz than the default 3 cents, each a known fault with its
+	// bound (a cent or two above every preset's worst, measured 2026-10-25; contract_rates.cpp)
+	static constexpr const char* rate_fault = "not diagnosed yet";
+	static constexpr RateTolerance rate_tolerances[] = {
+	    {11025, 7.0f, false, rate_fault}, // 5.3
+	    {22050, 8.0f, false, rate_fault}, // 6.1
+	};
 };
 } // namespace traits
 

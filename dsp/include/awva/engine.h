@@ -141,8 +141,10 @@ struct PresetHeroes {
 // What the conformance checks allow an engine (docs/conformance.md), each with a default, so an
 // engine that says nothing gets the whole suite at its defaults. Its traits may set
 //   static constexpr Conformance conformance = {.tuning = {.cents = 8.0f}};
-// and the tuning of single presets, by name:
+// the tuning of single presets, by name:
 //   static constexpr PresetTuning preset_tuning[] = {{"flute", {.low = 60.0f, .high = 96.0f}}};
+// and looser pitch bounds at single sample rates (known faults, with their reasons):
+//   static constexpr RateTolerance rate_tolerances[] = {{192000, 21.5f, false, "..."}};
 struct Tuning {
 	float cents = 10.0f;             // the sustained pitch against its note's (12-TET, A4 = 440 Hz), or an octave of it
 	float low = 48.0f, high = 84.0f; // the notes it is checked on (MIDI numbers, inclusive)
@@ -151,11 +153,29 @@ struct PresetTuning {
 	const char* preset; // the preset's name (preset_name)
 	Tuning tuning;
 };
+// a sample rate at which an engine's pitch holds a looser bound than rate_cents: a known fault,
+// measured, with its reason (fixing it removes the entry; a result worse than it still fails)
+struct RateTolerance {
+	int rate;
+	float cents;        // the pitch within this many cents of 48 kHz there
+	bool may_not_sound; // it may be silent or not periodic at this rate (no pitch to compare)
+	const char* why;
+};
 struct Conformance {
 	Tuning tuning = {};
+	float rate_cents = 3.0f; // the sustained pitch at every rate from min_rate to max_rate against 48 kHz
 	const PresetTuning* preset_tuning = nullptr;
 	int num_preset_tuning = 0;
+	const RateTolerance* rate_tolerances = nullptr;
+	int num_rate_tolerances = 0;
 };
+
+// the pitch bound at a rate (its tolerance, else rate_cents) and the tolerance if there is one
+[[nodiscard]] constexpr const RateTolerance* rate_tolerance(const Conformance& c, int rate) {
+	for (int i = 0; i < c.num_rate_tolerances; i++)
+		if (c.rate_tolerances[i].rate == rate) return &c.rate_tolerances[i];
+	return nullptr;
+}
 
 // the tuning a preset is checked to (its own, else the engine's; nullptr: the engine's)
 [[nodiscard]] constexpr const Tuning& tuning_of(const Conformance& c, const char* preset) {
