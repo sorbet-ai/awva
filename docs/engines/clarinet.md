@@ -13,10 +13,10 @@ Header `dsp/include/awva/voice_clarinet.h`, traits `dsp/include/awva/engines/cla
 | input | control | from MIDI |
 |---|---|---|
 | note | `note`, the pitch in semitones (69 = A4), bends included | the note number, plus the channel's pitch bend (MPE) or the note's own pitch (MIDI 2.0) |
-| pressure | `pres`, 0 released .. 1 a firm press (up to ~1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
-| strike | `vpres`, the pressure's velocity: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
-| tilt y | `but_y`, forward/back tilt -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: CC74 (bipolar) |
-| pedal | `pedal`, 0 .. 1 (3/16 at rest) | CC64 |
+| pressure | `pressure`, 0 released .. 1 MIDI 2.0's full scale (engines take up to 1.5) | MPE: channel pressure of the note's channel; MIDI 1.0: poly or channel pressure; MIDI 2.0: Poly Pressure (full scale = 1) |
+| pressure rate | `pressure_rate`, how fast the pressure moves: > 0 while the note is struck, < 0 while it is released | note-on velocity (a strike that fades), note-off velocity (the release) |
+| timbre | `timbre`, -1 .. 1 | MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: Registered Per-Note Controller 74, CC74 (bipolar) |
+| sustain | `sustain`, 0 .. 1 (3/16 at rest) | CC64 |
 
 An input not listed makes no difference to the sound; each listed one changes it in at least one preset (the contract suite checks both). What each does in this engine: "Playing" below. MIDI in detail: [Playing with MIDI 2.0 and MPE](../midi.md).
 
@@ -42,10 +42,10 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `1b5426fe` | `gain` | level | 0.1 | 100 | 10.2 | continuous |
 | `75245e0b` | `pres_lin` | level | 0 | 1 | 0.585375 | continuous |
 | `1b755ad8` | `pres_sq` | level | 0 | 1.5 | 0.416054 | continuous |
-| `14a92b36` | `pres_hz` | level | 2 | 200 | 20.569 | continuous |
-| `1036ae7e` | `release` | level | 0.005 | 1 | 0.04 | continuous |
+| `14a92b36` | `pres_hz` | level | 2 | 200 | 14.0604 | continuous |
+| `1036ae7e` | `release` | level | 0.005 | 1 | 0.137643 | continuous |
 | `c7d91eff` | `rel_pedal` | level | 0 | 3 | 0.4 | continuous |
-| `f4ada648` | `p_soft` | breath | 0.8 | 2 | 0.95028 | continuous |
+| `f4ada648` | `p_soft` | breath | 0.8 | 2 | 1.09407 | continuous |
 | `e754ff5f` | `g_loud` | breath | 0.3 | 1.4 | 0.770122 | continuous |
 | `e68ca377` | `g_reg` | breath | -0.5 | 0.5 | -0.100848 | continuous |
 | `b3a3844b` | `p_curve` | breath | 0.3 | 3 | 1.04757 | continuous |
@@ -66,21 +66,21 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `81d60b50` | `alt_rel` | bore | 19 | 40 | 26.5117 | continuous |
 | `53c95844` | `tone_hz` | radiation | 1000 | 20000 | 3077.53 | continuous |
 | `0cca7651` | `tone_q` | radiation | 0.5 | 2 | 0.7 | continuous |
-| `235d9fc7` | `breath` | air | 0 | 1 | 0.024494 | continuous |
-| `e23d0dfc` | `breath_mod` | air | 0 | 1 | 1 | continuous |
-| `c5316b30` | `breath_hp` | air | 0 | 4000 | 0 | continuous |
-| `f23b7114` | `wander` | air | 0 | 0.2 | 0.04533 | continuous |
-| `09ceaf46` | `t_noise` | air | 0 | 1 | 5.5e-05 | continuous |
-| `a5cd3dfb` | `t_len` | air | 0.001 | 0.05 | 0.006 | continuous |
-| `00c632f3` | `t_gate` | air | 0 | 1 | 0 | continuous |
-| `ecaee291` | `breath_pre` | air | 0 | 4 | 1 | continuous |
-| `25a7329d` | `tongue` | attack | 0 | 2 | 1.62323 | continuous |
-| `9a6d88a0` | `tongue_noise` | attack | 0 | 2 | 1.62323 | continuous |
-| `6f1a0e5f` | `acc_level` | attack | 0 | 1 | 0.227953 | continuous |
-| `6f9d5d57` | `acc_decay` | attack | 0.01 | 0.3 | 0.054279 | continuous |
-| `fd47c156` | `tongue_t` | attack | 0.001 | 0.05 | 0.029923 | continuous |
-| `eb47a500` | `tongue_f` | attack | 0 | 4 | 1.7749 | continuous |
-| `72d5f1ed` | `slur` | attack | 0 | 1 | 0.1 | continuous |
+| `235d9fc7` | `breath` | air | 0 | 1 | 0.0588474 | continuous |
+| `e23d0dfc` | `breath_mod` | air | 0 | 1 | 0.00233541 | continuous |
+| `c5316b30` | `breath_hp` | air | 0 | 4000 | 860.735 | continuous |
+| `f23b7114` | `wander` | air | 0 | 0.2 | 0.00386448 | continuous |
+| `09ceaf46` | `t_noise` | air | 0 | 1 | 0.00055064 | continuous |
+| `a5cd3dfb` | `t_len` | air | 0.001 | 0.05 | 0.00561325 | continuous |
+| `00c632f3` | `t_gate` | air | 0 | 1 | 0.00988701 | continuous |
+| `ecaee291` | `breath_pre` | air | 0 | 4 | 0.2262 | continuous |
+| `25a7329d` | `tongue` | attack | 0 | 2 | 1.91798 | continuous |
+| `9a6d88a0` | `tongue_noise` | attack | 0 | 2 | 1.14578 | continuous |
+| `6f1a0e5f` | `acc_level` | attack | 0 | 1 | 0.566124 | continuous |
+| `6f9d5d57` | `acc_decay` | attack | 0.01 | 0.3 | 0.0167341 | continuous |
+| `fd47c156` | `tongue_t` | attack | 0.001 | 0.05 | 0.0496621 | continuous |
+| `eb47a500` | `tongue_f` | attack | 0 | 4 | 0.998742 | continuous |
+| `72d5f1ed` | `slur` | attack | 0 | 1 | 0.00100402 | continuous |
 | `68410493` | `tune` | attack | -100 | 100 | 0 | continuous |
 | `af32797a` | `pitch_t` | attack | 0.003 | 0.3 | 0.01 | continuous |
 | `9a67fb30` | `instrument` | bore | 0 | 1 | 0 | steps |
@@ -93,7 +93,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 35000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 3.00781 KB (3080 bytes) (on a 64-bit host) |
+| engine object | 3.07812 KB (3152 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 100 KB |
 
