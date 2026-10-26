@@ -6,6 +6,8 @@
 #
 #   cmake -P tools/presets_inc.cmake             write the .inc files
 #   cmake -DCHECK=ON -P tools/presets_inc.cmake  fail if one isn't what the files give (ctest presets_inc)
+# The .inc files are written with LF on every OS (as .gitattributes keeps them).
+cmake_minimum_required(VERSION 3.25) # (a script: the policies of the version it is written for)
 get_filename_component(_root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 file(GLOB _engines LIST_DIRECTORIES true "${_root}/presets/*")
 list(SORT _engines)
@@ -45,7 +47,10 @@ foreach(dir IN LISTS _engines)
       list(APPEND _stale "${engine}")
     endif()
   else()
-    file(WRITE "${target}" "${out}")
+    # LF on every OS (file(WRITE) writes CRLF on Windows); @ONLY: the presets' text is inserted
+    # as it is, never scanned for variables; CONFIGURE ends the file with a newline itself
+    string(REGEX REPLACE "\n$" "" body "${out}")
+    file(CONFIGURE OUTPUT "${target}" CONTENT "@body@" @ONLY NEWLINE_STYLE LF)
   endif()
 endforeach()
 if(_stale)
