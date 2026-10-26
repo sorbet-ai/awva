@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /**
  * doublereed: a physical model of the double reeds (oboe, cor anglais, bassoon), one model with a
- * preset per instrument, each fitted to recordings of the real instrument (University of Iowa MIS,
- * Philharmonia). Build with `VOICE=doublereed`.
+ * preset per instrument. Build with `VOICE=doublereed`.
  *
  * Every voice is a player blowing a reed on a conical bore; nothing sets the pitch but the reed and
  * the bore together:
@@ -54,17 +53,26 @@
  *   tilt sideways  pitch bend (the firmware moves the note; the bore follows)
  *   shake      flutter tongue
  *
- * The presets were fitted (CMA-ES) to recordings, per note and dynamic (pp, mf, ff as key pressures
- * 0.22, 0.5, 0.95): the sustain's harmonics and spectral envelope, its level (the dynamics and the
- * registers), brightness and noise, the attack's rise and overshoot, and the pitch (sustained and in
- * the attack). Oboe and bassoon: University of Iowa Musical Instrument Samples (free to use without
- * restrictions); cor anglais: the Philharmonia's sound samples (free to use, not to be sold or made
- * available as they are). The output gains put each preset's mf at the trumpet's mf level.
+ * The player (v2) is alive: the breath's and the lips' slow wander (wander, lip_wander, wander_hz:
+ * band-limited noise on the mouth pressure and on the reed's tip opening) gives the sustained tone
+ * the small pitch and level fluctuations of a player; v1's tone was 10-30 times steadier than the
+ * recordings'. No steady breath noise is added (hiss 0): what is left is the turbulence riding on the
+ * flow's pulses and the tongue's "t".
  *
- * Cost (QEMU Cortex-M7 instruction counts per block, 10 voices): 27.3k on the default performance
- * (tools/target_render/profile.sh; the trumpet 43.9k), 69.7k with all ten voices at ff and their
- * notes jumping every 0.25 s (the trumpet 111k on the same). Per voice-sample: two square roots, two
- * divisions, ~110 instructions; per block the loop delay's Newton step on the small-signal loop gain.
+ * The oboe's and the bassoon's presets were fitted (CMA-ES) to the University of Iowa Musical
+ * Instrument Samples (pp/mf/ff chromatic scales; free for any project, without restrictions), the
+ * Track B way: the sustain's harmonics, noise and level across notes and dynamics, the timbre's
+ * response to the dynamic, the attack's spectra, the tone's rise from the key and its pitch excursion,
+ * the tone's pitch and level wobble re the recordings', pitch and register; plus the recorded Striso
+ * takes' rise from the key, every in-range note speaking at four pressures, and a dynamic that keeps
+ * growing to the firmest press (tools/doublereed). The cor anglais is the oboe's player on its
+ * geometry (not fitted: no permissively licensed recordings). The output gains put each preset's mf
+ * level at v1's.
+ *
+ * Cost (QEMU Cortex-M7 instruction counts per block, 10 voices, the default performance;
+ * tools/target_render/profile.sh): oboe 28.4k, cor anglais 28.2k, bassoon 27.8k. Per voice-sample:
+ * two square roots, two divisions, ~110 instructions; per block the loop delay's Newton step on the
+ * small-signal loop gain.
  * Memory: the bore delay lines, 4 KB per voice (40 KB LargeMemory). Engine ~3 KB.
  */
 #ifndef VOICE_DOUBLEREED_H_
@@ -95,7 +103,7 @@ static constexpr real DMAX = (real)(BLEN - 4);
 static constexpr real RHO = 1.2f;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
-static constexpr real NOTE_LO = 31.5f; // below: an octave up (the delay line's length)
+static constexpr real NOTE_LO = 31.5f;  // below: an octave up (the delay line's length)
 static constexpr real NOTE_HI = 100.0f; // above: an octave down
 
 // the bore delay lines, placed by the host (engine SDK): LargeMemory (AXI SRAM on the board)
@@ -117,25 +125,28 @@ struct Params {
 	real p_reg;        // octaves of that ratio per octave of pitch
 	real p_curve;      // breath -> mouth pressure exponent
 	// reed
-	real reed_hz;   // the blades' resonance (Hz, at the reference note)
-	real reed_reg;  // octaves per octave of pitch (the embouchure follows the register)
-	real reed_q;    // its Q (the lips' damping)
-	real reed_open; // tip opening at rest (mm, at the reference note)
-	real open_reg;  // octaves smaller per octave up
-	real reed_w;    // tip width (mm)
-	real p_close;   // closing pressure (kPa): the blades' stiffness x the opening
-	real contact;   // contact stiffness when the blades beat, re their stiffness
-	real duct;      // the duct's limit on the jet: the opening (mm) where the head loss halves the flow's growth
-	real emb_tilt;  // forward tilt bites: octaves of opening per unit tilt (and damping)
-	real emb_soft;  // the embouchure follows the breath: the lips pinch the tip to this part of its opening at
-	                // the lightest breath and relax to the full opening at full breath (soft playing)
-	real bite;      // and the pitch it pulls (cents per unit tilt)
-	real jitter;    // embouchure jitter (cents of the reed's resonance)
+	real reed_hz;    // the blades' resonance (Hz, at the reference note)
+	real reed_reg;   // octaves per octave of pitch (the embouchure follows the register)
+	real reed_q;     // its Q (the lips' damping)
+	real reed_open;  // tip opening at rest (mm, at the reference note)
+	real open_reg;   // octaves smaller per octave up
+	real reed_w;     // tip width (mm)
+	real p_close;    // closing pressure (kPa): the blades' stiffness x the opening
+	real contact;    // contact stiffness when the blades beat, re their stiffness
+	real duct;       // the duct's limit on the jet: the opening (mm) where the head loss halves the flow's growth
+	real emb_tilt;   // forward tilt bites: octaves of opening per unit tilt (and damping)
+	real emb_soft;   // the embouchure follows the breath: the lips pinch the tip to this part of its opening at
+	                 // the lightest breath and relax to the full opening at full breath (soft playing)
+	real bite;       // and the pitch it pulls (cents per unit tilt)
+	real jitter;     // embouchure jitter (cents of the reed's resonance)
+	real wander;     // the player is no machine: the breath's slow wander (the mouth pressure's relative
+	real lip_wander; // std) and the lips' (the reed's tip opening's), band-limited at wander_hz: the
+	real wander_hz;  // sustained tone's small, living pitch and level fluctuations
 	// bore
-	real apex;    // distance of the input from the cone's apex (cm)
-	real cavity;  // the reed's and the staple's air volume, re the missing cone's (S0 x0 / 3: Benade)
-	real bore_d;  // bore diameter at the input (mm)
-	real bore_t;  // resonance decay time (s) at the reference note
+	real apex;     // distance of the input from the cone's apex (cm)
+	real cavity;   // the reed's and the staple's air volume, re the missing cone's (S0 x0 / 3: Benade)
+	real bore_d;   // bore diameter at the input (mm)
+	real bore_t;   // resonance decay time (s) at the reference note
 	real bore_reg; // octaves shorter per octave up
 	// tone holes
 	real lat_hz;  // open-hole lattice cutoff (Hz)
@@ -150,13 +161,13 @@ struct Params {
 	real hiss;    // steady jet turbulence (re the mean flow)
 	real t_noise; // tongue "t"
 	// attack
-	real tongue;     // strike sensitivity
-	real acc_amp;    // the pressure built up behind the tongue: overshoot
-	real acc_t;      // its decay (s)
-	real tongue_t;   // tongue release time of a soft "d" (s); a hard strike is ~16x faster
+	real tongue;      // strike sensitivity
+	real acc_amp;     // the pressure built up behind the tongue: overshoot
+	real acc_t;       // its decay (s)
+	real tongue_t;    // tongue release time of a soft "d" (s); a hard strike is ~16x faster
 	real tongue_shut; // a tongued start: the tongue held the reed this far closed (at a full strike)
-	real slur;       // articulation on a legato note change
-	real pitch_t;    // the player's ear: pitch correction time constant (s)
+	real slur;        // articulation on a legato note change
+	real pitch_t;     // the player's ear: pitch correction time constant (s)
 	// modulation
 	real flutter, flut_hz; // shake -> flutter tongue
 };
@@ -181,50 +192,53 @@ static constexpr PresetInfo preset_info[NUM_PRESETS] = {
 // fitted to the recordings of the oboe: University of Iowa MIS (pp/mf/ff chromatic scales)
 [[nodiscard]] static inline Params oboe_params() {
 	Params p;
-	p.gain = 1.4f;
-	p.pc_a = 0.711059f;
-	p.pc_b = 1.07081f;
-	p.lv_hz = 16.0f;
+	p.gain = 1.722f;
+	p.pc_a = 0.721312f;
+	p.pc_b = 0.536147f;
+	p.lv_hz = 63.634f;
 	p.rel = 0.05f;
 	p.rel_ped = 0.4f;
-	p.p_soft = 1.2094f;
-	p.p_loud = 0.23307f;
-	p.p_reg = 0.520018f;
-	p.p_curve = 2.09851f;
-	p.reed_hz = 3950.27f;
-	p.reed_reg = 1.29693f;
-	p.reed_q = 0.501451f;
-	p.reed_open = 0.241758f;
-	p.open_reg = 0.532024f;
-	p.reed_w = 7.0f;
-	p.p_close = 9.69195f;
-	p.contact = 2.96297f;
-	p.duct = 1.13894f;
+	p.p_soft = 1.33259f;
+	p.p_loud = 0.163817f;
+	p.p_reg = 0.333613f;
+	p.p_curve = 2.53337f;
+	p.reed_hz = 2731.34f;
+	p.reed_reg = 1.24277f;
+	p.reed_q = 0.452105f;
+	p.reed_open = 0.172683f;
+	p.open_reg = 0.947729f;
+	p.reed_w = 5.4026f;
+	p.p_close = 14.0655f;
+	p.contact = 1.3225f;
+	p.duct = 4.00981f;
 	p.emb_tilt = 0.25f;
-	p.emb_soft = 0.128905f;
+	p.emb_soft = 0.343511f;
 	p.bite = 15.0f;
-	p.jitter = 2.0f;
-	p.apex = 13.1585f;
-	p.cavity = 0.202607f;
-	p.bore_d = 2.69423f;
-	p.bore_t = 0.067759f;
-	p.bore_reg = 1.10795f;
-	p.lat_hz = 3827.65f;
-	p.lat_q = 0.479074f;
-	p.lat_reg = -0.726502f;
-	p.rad_hz = 46.3316f;
-	p.tone_hz = 4630.23f;
-	p.tone_q = 0.674511f;
-	p.breath = 2.4e-05f;
-	p.hiss = 0.077548f;
-	p.t_noise = 0.004084f;
-	p.tongue = 1.60429f;
-	p.acc_amp = 1.17592f;
-	p.acc_t = 0.159987f;
-	p.tongue_t = 0.002227f;
-	p.tongue_shut = 0.199452f;
+	p.jitter = 9.56209f;
+	p.wander = 0.048645f;
+	p.lip_wander = 0.023202f;
+	p.wander_hz = 7.37563f;
+	p.apex = 16.6843f;
+	p.cavity = 0.021383f;
+	p.bore_d = 2.00927f;
+	p.bore_t = 0.095786f;
+	p.bore_reg = 1.38611f;
+	p.lat_hz = 4891.7f;
+	p.lat_q = 0.422051f;
+	p.lat_reg = -0.498894f;
+	p.rad_hz = 62.3155f;
+	p.tone_hz = 4015.93f;
+	p.tone_q = 0.665699f;
+	p.breath = 0.054957f;
+	p.hiss = 0.0f;
+	p.t_noise = 0.000821f;
+	p.tongue = 1.21443f;
+	p.acc_amp = 1.45496f;
+	p.acc_t = 0.037843f;
+	p.tongue_t = 0.0008f;
+	p.tongue_shut = 0.49849f;
 	p.slur = 0.15f;
-	p.pitch_t = 0.006445f;
+	p.pitch_t = 0.013862f;
 	p.flutter = 0.6f;
 	p.flut_hz = 24.0f;
 	return p;
@@ -232,103 +246,67 @@ static constexpr PresetInfo preset_info[NUM_PRESETS] = {
 
 // fitted to the recordings of the cor anglais: Philharmonia sound samples (pp/mf/ff single notes)
 [[nodiscard]] static inline Params cor_anglais_params() {
-	Params p;
-	p.gain = 4.205f;
-	p.pc_a = 0.298092f;
-	p.pc_b = 1.23802f;
-	p.lv_hz = 16.0f;
-	p.rel = 0.05f;
-	p.rel_ped = 0.4f;
-	p.p_soft = 1.00576f;
-	p.p_loud = 0.351237f;
-	p.p_reg = 0.788132f;
-	p.p_curve = 0.80376f;
-	p.reed_hz = 1498.07f;
-	p.reed_reg = 1.23288f;
-	p.reed_q = 1.67423f;
-	p.reed_open = 0.101592f;
-	p.open_reg = 0.341526f;
-	p.reed_w = 7.5f;
-	p.p_close = 2.12262f;
-	p.contact = 1.6141f;
-	p.duct = 3.89473f;
-	p.emb_tilt = 0.25f;
-	p.emb_soft = 0.563843f;
-	p.bite = 15.0f;
-	p.jitter = 2.0f;
-	p.apex = 22.9505f;
-	p.cavity = 0.210813f;
-	p.bore_d = 2.96382f;
-	p.bore_t = 0.108369f;
-	p.bore_reg = 0.232572f;
-	p.lat_hz = 848.127f;
-	p.lat_q = 0.746668f;
-	p.lat_reg = 0.007475f;
-	p.rad_hz = 495.089f;
-	p.tone_hz = 15836.0f;
-	p.tone_q = 0.502235f;
-	p.breath = 0.013034f;
-	p.hiss = 0.06905f;
-	p.t_noise = 0.206372f;
-	p.tongue = 1.49131f;
-	p.acc_amp = 0.516671f;
-	p.acc_t = 0.029072f;
-	p.tongue_t = 0.000864f;
-	p.tongue_shut = 0.491521f;
-	p.slur = 0.15f;
-	p.pitch_t = 0.00532f;
-	p.flutter = 0.6f;
-	p.flut_hz = 24.0f;
+	Params p = oboe_params();
+	p.gain = 1.782f;
+	p.apex *= 1.5f;     // the cone a fifth longer
+	p.bore_d *= 1.15f;  // and wider
+	p.reed_hz *= 0.85f; // a larger reed (the reference note is a fifth lower already: 62 re 69)
+	p.reed_open *= 1.15f;
+	p.reed_w *= 1.07f;
+	p.lat_hz *= 0.75f; // the bulb: a darker lattice
 	return p;
 }
 
 // fitted to the recordings of the bassoon: University of Iowa MIS (pp/mf/ff chromatic scales)
 [[nodiscard]] static inline Params bassoon_params() {
 	Params p;
-	p.gain = 0.2142f;
-	p.pc_a = 0.878686f;
-	p.pc_b = 1.49911f;
-	p.lv_hz = 16.0f;
+	p.gain = 0.7615f;
+	p.pc_a = 0.733316f;
+	p.pc_b = 0.963538f;
+	p.lv_hz = 19.5051f;
 	p.rel = 0.05f;
 	p.rel_ped = 0.4f;
-	p.p_soft = 1.06131f;
-	p.p_loud = 0.608852f;
-	p.p_reg = 0.70588f;
-	p.p_curve = 0.411031f;
-	p.reed_hz = 1471.09f;
-	p.reed_reg = 1.25366f;
-	p.reed_q = 0.585835f;
-	p.reed_open = 0.367204f;
-	p.open_reg = 0.384682f;
-	p.reed_w = 13.0f;
-	p.p_close = 18.4267f;
-	p.contact = 0.319219f;
-	p.duct = 3.97097f;
+	p.p_soft = 1.13206f;
+	p.p_loud = 0.588069f;
+	p.p_reg = 0.680978f;
+	p.p_curve = 0.314767f;
+	p.reed_hz = 7724.44f;
+	p.reed_reg = 1.25331f;
+	p.reed_q = 1.45746f;
+	p.reed_open = 0.916457f;
+	p.open_reg = 0.225888f;
+	p.reed_w = 19.9305f;
+	p.p_close = 10.9827f;
+	p.contact = 0.191955f;
+	p.duct = 4.56529f;
 	p.emb_tilt = 0.25f;
-	p.emb_soft = 0.18319f;
+	p.emb_soft = 0.22746f;
 	p.bite = 15.0f;
-	p.jitter = 2.0f;
-	p.apex = 39.15f;
-	p.cavity = 0.37681f;
-	p.bore_d = 2.50181f;
-	p.bore_t = 0.09412f;
-	p.bore_reg = 0.66683f;
-	p.lat_hz = 428.32f;
-	p.lat_q = 1.20461f;
-	p.lat_reg = 0.272145f;
-	p.rad_hz = 346.474f;
-	p.tone_hz = 1792.64f;
-	p.tone_q = 0.500039f;
-	p.breath = 0.121642f;
-	p.hiss = 0.092489f;
-	p.t_noise = 0.634575f;
-	p.tongue = 0.961843f;
-	p.acc_amp = 0.122945f;
-	p.acc_t = 0.016303f;
-	p.tongue_t = 0.002504f;
-	p.tongue_shut = 0.998538f;
+	p.jitter = 0.187443f;
+	p.wander = 0.067816f;
+	p.lip_wander = 0.059031f;
+	p.wander_hz = 7.2781f;
+	p.apex = 61.895f;
+	p.cavity = 0.381518f;
+	p.bore_d = 7.57311f;
+	p.bore_t = 0.080318f;
+	p.bore_reg = 1.12538f;
+	p.lat_hz = 211.946f;
+	p.lat_q = 1.0555f;
+	p.lat_reg = -0.115978f;
+	p.rad_hz = 549.22f;
+	p.tone_hz = 1738.01f;
+	p.tone_q = 0.501766f;
+	p.breath = 0.047891f;
+	p.hiss = 0.0f;
+	p.t_noise = 0.668566f;
+	p.tongue = 1.64998f;
+	p.acc_amp = 0.071255f;
+	p.acc_t = 0.059369f;
+	p.tongue_t = 0.000806f;
+	p.tongue_shut = 1.15978f;
 	p.slur = 0.15f;
-	p.pitch_t = 0.004136f;
+	p.pitch_t = 0.005683f;
 	p.flutter = 0.6f;
 	p.flut_hz = 24.0f;
 	return p;
@@ -366,18 +344,19 @@ struct VoiceState {
 	// radiation
 	real rs, t1, t2;
 	// player
-	real lv1, lv2;  // breath smoother
-	real amp;       // breath level after the release logic
-	real gate;      // tongue / breath gate
-	real gate_rate; // its opening rate (per control step)
-	real acc, tn;   // accent and tongue noise envelopes
-	real accf;      // the accent's pressure
-	real ty1, ty2;  // tilt smoother
-	real pm_prev;   // mouth pressure at the end of the last block
-	real jn, dr;    // embouchure jitter, slow wander
-	real flut_ph;   //
-	real note_prev; //
-	real vneg;      // release speed latch
+	real lv1, lv2;           // breath smoother
+	real amp;                // breath level after the release logic
+	real gate;               // tongue / breath gate
+	real gate_rate;          // its opening rate (per control step)
+	real acc, tn;            // accent and tongue noise envelopes
+	real accf;               // the accent's pressure
+	real ty1, ty2;           // tilt smoother
+	real pm_prev;            // mouth pressure at the end of the last block
+	real jn, dr;             // embouchure jitter, slow wander
+	real wb1, wb2, wl1, wl2; // the breath's and the lips' wander (2-pole low-passed noise)
+	real flut_ph;            //
+	real note_prev;          //
+	real vneg;               // release speed latch
 	uint32_t rng, nrng;
 	real level; // smoothed peak (activity)
 	// the player's ear: the reed's period from its zero crossings, the bore trimmed onto the note
@@ -392,8 +371,8 @@ struct Engine {
 	strisy::VoiceControls vc[MAX_VOICES];
 	int nvoices;
 	int preset;
-	Params p;  // as set (preset, live edits)
-	Params ps; // smoothed copy used by the DSP
+	Params p;           // as set (preset, live edits)
+	Params ps;          // smoothed copy used by the DSP
 	LargeMemory* large; // the host's (init): the bore delay lines
 	real ref_note;
 	real sr, dt, pi_sr, ctrl_dt, block_dt;
@@ -514,6 +493,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.ty1 = s.ty2 = 0.0f;
 	s.pm_prev = 0.0f;
 	s.jn = s.dr = 0.0f;
+	s.wb1 = s.wb2 = s.wl1 = s.wl2 = 0.0f;
 	s.vneg = 0.0f;
 	s.level = 0.0f;
 	s.ylp = s.yhp = s.yprev = 0.0f;
@@ -635,6 +615,18 @@ static inline void process_voice(Engine& e, int vi) {
 	s.jn = clampr(s.jn, -4.0f, 4.0f);
 	s.dr += 0.003f * (45.0f * block_noise(s.rng) - s.dr);
 	s.dr = clampr(s.dr, -4.0f, 4.0f);
+	// the player's wander: white noise through two one-poles at wander_hz, scaled to unit std
+	real wbr = 0.0f, wlp = 0.0f;
+	if (P.wander > 0.0f || P.lip_wander > 0.0f) {
+		const real aw = clampr(2.0f * PI * clampr(P.wander_hz, 0.3f, 30.0f) * e.block_dt, 1e-4f, 0.5f);
+		const real nsc = fsqrt(12.0f / aw); // ~ unit std after two poles (uniform noise, var 1/3 x aw / 4)
+		s.wb1 += aw * (block_noise(s.rng) - s.wb1);
+		s.wb2 += aw * (s.wb1 - s.wb2);
+		s.wl1 += aw * (block_noise(s.rng) - s.wl1);
+		s.wl2 += aw * (s.wl1 - s.wl2);
+		wbr = clampr(clampr(P.wander, 0.0f, 0.3f) * nsc * s.wb2, -0.5f, 0.5f);
+		wlp = clampr(clampr(P.lip_wander, 0.0f, 0.3f) * nsc * s.wl2, -0.5f, 0.5f);
+	}
 
 	const real sr = e.sr, dt = e.dt;
 	const real ftgt = note_freq(note + clampr(P.bite, -100.0f, 100.0f) * tilt * (1.0f / 100));
@@ -651,13 +643,13 @@ static inline void process_voice(Engine& e, int vi) {
 	// the lips: the opening follows the breath (the blades' stiffness stays: the closing pressure with it)
 	const real es = clampr(P.emb_soft, 0.1f, 1.0f);
 	const real lf = rmin(es + (1.0f - es) * rmax(s.amp, 0.0f), 1.0f);
-	const real h0 = clampr(P.reed_open * 1e-3f * lf * exp2s(-P.open_reg * oct - bitef), 2e-5f, 3e-3f);
-	const real pM = clampr(P.p_close * 1000.0f * lf * exp2s(-P.open_reg * oct - bitef), 300.0f, 60000.0f);
+	const real h0 = clampr(P.reed_open * 1e-3f * lf * exp2s(-P.open_reg * oct - bitef) * (1.0f + wlp), 2e-5f, 3e-3f);
+	const real pM = clampr(P.p_close * 1000.0f * lf * exp2s(-P.open_reg * oct - bitef) * (1.0f + wlp), 300.0f, 60000.0f);
 	const real ks = pM / h0; // the blades' stiffness per area (Pa / m)
 	const real iks = 1.0f / ks;
 	const real rw = clampr(P.reed_w * 1e-3f, 1e-3f, 0.03f);
 	const real ihd = 1.0f / clampr(P.duct * 1e-3f, 2e-5f, 0.01f);
-	const real c1 = dt * wr / rq;            // damping per sample
+	const real c1 = dt * wr / rq; // damping per sample
 	const real kcon = rmax(P.contact, 0.0f) * wr2;
 	const real ccon = dt * 2.0f * fsqrt(kcon); // contact damping
 	// bore input: wave impedance, the near field's inertance, the cavity's compliance
@@ -668,8 +660,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const real x0 = clampr(P.apex, 0.5f, 100.0f) * 0.01f;
 	const real La = RHO * x0 / S0;
 	const real Cv = clampr(P.cavity, 0.0f, 10.0f) * (S0 * x0 * (1.0f / 3)) / (RHO * C0 * C0);
-	const real alpha = 2.0f * Cv / dt;       // trapezoidal compliance
-	const real beta = 0.5f * dt / La;        // trapezoidal inertance
+	const real alpha = 2.0f * Cv / dt; // trapezoidal compliance
+	const real beta = 0.5f * dt / La;  // trapezoidal inertance
 	const real A = alpha + iZ0 + beta;
 	// the lattice: reflection lowpass (cutoff above the note, as the fingerings keep it), wall losses
 	const real fc = clampr(rmax(P.lat_hz * exp2s(P.lat_reg * oct), 1.2f * f0), 50.0f, 0.42f * sr);
@@ -800,7 +792,7 @@ static inline void process_voice(Engine& e, int vi) {
 			// breath -> mouth pressure (amp^p_curve: exp2s(p_curve log2 amp) without libm)
 			const real a = rmin(amp + accf, 1.5f);
 			const real ap = (pcv != 1.0f && a > 1e-6f) ? exp2s(pcv * log2s(a)) : a;
-			e.pmc[k] = gate * am * (p_lo + (p_hi - p_lo) * ap);
+			e.pmc[k] = gate * am * (p_lo + (p_hi - p_lo) * ap) * (1.0f + wbr);
 			e.tnc[k] = P.t_noise * tn * tn;
 		}
 		s.lv1 = lv1;
@@ -1012,8 +1004,8 @@ static constexpr ParamEntry param_table[] = {
     {{"pres_hz", "level", 2.0f, 200.0f, C_}, &Params::lv_hz},
     {{"release", "level", 0.005f, 1.0f, C_}, &Params::rel},
     {{"rel_pedal", "level", 0.0f, 3.0f, C_}, &Params::rel_ped},
-    {{"p_soft", "breath", 0.5f, 3.0f, C_}, &Params::p_soft},  // lightest touch re the threshold
-    {{"p_loud", "breath", 0.1f, 3.0f, C_}, &Params::p_loud},  // ff mouth pressure re the closing pressure
+    {{"p_soft", "breath", 0.5f, 3.0f, C_}, &Params::p_soft}, // lightest touch re the threshold
+    {{"p_loud", "breath", 0.1f, 3.0f, C_}, &Params::p_loud}, // ff mouth pressure re the closing pressure
     {{"p_reg", "breath", -1.0f, 1.0f, C_}, &Params::p_reg},
     {{"p_curve", "breath", 0.3f, 3.0f, C_}, &Params::p_curve},
     {{"reed_hz", "reed", 200.0f, 8000.0f, C_}, &Params::reed_hz},
@@ -1021,7 +1013,7 @@ static constexpr ParamEntry param_table[] = {
     {{"reed_q", "reed", 0.3f, 30.0f, C_}, &Params::reed_q},
     {{"reed_open", "reed", 0.05f, 2.5f, C_}, &Params::reed_open}, // mm
     {{"open_reg", "reed", -1.0f, 1.5f, C_}, &Params::open_reg},
-    {{"reed_w", "reed", 2.0f, 25.0f, C_}, &Params::reed_w}, // mm
+    {{"reed_w", "reed", 2.0f, 25.0f, C_}, &Params::reed_w},   // mm
     {{"p_close", "reed", 1.0f, 40.0f, C_}, &Params::p_close}, // kPa
     {{"contact", "reed", 0.0f, 50.0f, C_}, &Params::contact},
     {{"duct", "reed", 0.05f, 5.0f, C_}, &Params::duct}, // mm
@@ -1029,6 +1021,9 @@ static constexpr ParamEntry param_table[] = {
     {{"emb_soft", "reed", 0.1f, 1.0f, C_}, &Params::emb_soft},
     {{"bite", "reed", -100.0f, 100.0f, C_}, &Params::bite},
     {{"jitter", "reed", 0.0f, 40.0f, C_}, &Params::jitter},
+    {{"wander", "player", 0.0f, 0.3f, C_}, &Params::wander},
+    {{"lip_wander", "player", 0.0f, 0.3f, C_}, &Params::lip_wander},
+    {{"wander_hz", "player", 0.3f, 30.0f, C_}, &Params::wander_hz},
     {{"apex", "bore", 0.5f, 80.0f, C_}, &Params::apex},     // cm
     {{"cavity", "bore", 0.0f, 4.0f, C_}, &Params::cavity},  // re the missing cone's volume
     {{"bore_d", "bore", 1.5f, 15.0f, C_}, &Params::bore_d}, // mm
