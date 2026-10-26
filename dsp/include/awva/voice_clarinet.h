@@ -626,6 +626,16 @@ static inline void process_voice(Engine& e, int vi) {
 			}
 		};
 		solve(iters);
+		// a short tube (the register hole shut, so where the bore is split doesn't matter): when
+		// section B can't get any shorter, section A gives it samples back (else the bore stays too
+		// long, flat, with the ear's trim at its end)
+		for (int g = 0; g < 16 && s.mode == 1 && DB <= lim_lo + 1e-3f && s.dA > 1; g++) {
+			s.dA--;
+			b.dA2 = 2.0f * (real)s.dA;
+			DB += 2.0f;
+			if (!jump) s.DBp += 2.0f; // (the block's ramp starts where the bore was)
+			solve(2);
+		}
 		s.DB = DB;
 		if (jump) {
 			s.DBp = DB;
