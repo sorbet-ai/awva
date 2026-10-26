@@ -40,7 +40,8 @@
  *              none = a breath attack. Apart from it, the attack's noise: a "t" on the strike
  *              (t_noise, tongue_noise, t_len) and the turbulence before the reed speaks
  *              (breath_pre), each silenced as the reed speaks (t_gate; the measure: the mouthpiece
- *              pressure periodic and oscillating). The sustain's noise (breath) and the breath's
+ *              pressure periodic and oscillating). The sustain's noise (breath: how much,
+ *              breath_mod: how far it pulses with the flow, breath_hp: its colour) and the breath's
  *              fluctuations (wander) are the reed's once it speaks, whatever the attack's are
  *   release    the breath stops, the bore rings out (the pedal lengthens the release)
  *   tilt fwd/back  embouchure: forward firmer (a smaller reed opening: brighter, a little sharp),
@@ -135,6 +136,8 @@ struct Params {
 	real tone_q;  //
 	// air
 	real breath;     // turbulence (riding on the flow) once the reed speaks: the sustain's noise
+	real breath_mod; // how far it follows the flow's pulses within a period (1) or the mean flow (0)
+	real breath_hp;  // its colour: a high-pass (Hz; 0 none) on the turbulence and the "t"
 	real wander;     // the player's breath is never quite steady: slow and fast fluctuations (re gamma)
 	real t_noise;    // the tongue's "t": a noise burst on a strike
 	real t_len;      // its decay (s)
@@ -196,6 +199,7 @@ struct VoiceState {
 	real acc, tn;    // accent and tongue noise envelopes
 	real spk, spk_t; // the reed speaks (0 .. 1): smoothed, and as measured from the last block
 	real pk, tcl;    // the mouthpiece pressure's oscillation (peak, held over a period), its last clean crossing
+	real um, nl;     // the flow's mean (its positive part), the noise high-pass's low-pass state
 	real accf;       // the accent's pressure
 	real ty1, ty2;   // tilt smoother
 	real gth;        // threshold mouth pressure (gamma)
@@ -375,7 +379,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.vneg = 0.0f;
 	s.level = 0.0f;
 	s.jn = s.dr = 0.0f;
-	s.spk = s.spk_t = s.pk = 0.0f;
+	s.spk = s.spk_t = s.pk = s.um = s.nl = 0.0f;
 	s.tcl = -1e4f;
 	s.xlp = s.xhp = s.xprev = 0.0f;
 	s.tlast = -1e4f;
@@ -520,7 +524,7 @@ static inline void process_voice(Engine& e, int vi) {
 		s.lv1 = s.lv2 = s.amp = s.bgate = 0.0f;
 		s.gam = 0.0f;
 		s.acc = s.accf = s.tn = 0.0f;
-		s.spk = s.spk_t = s.pk = 0.0f;
+		s.spk = s.spk_t = s.pk = s.um = s.nl = 0.0f;
 		s.tcl = -1e4f;
 	}
 	// the tongue: a strike holds the reed and lets it go (faster for a harder one); a press
@@ -746,8 +750,10 @@ static inline void process_voice(Engine& e, int vi) {
 	float* __restrict__ Bd = e.large->b_dn[vi];
 	float* __restrict__ Bu = e.large->b_up[vi];
 	real x1 = s.x1, x2 = s.x2, pe = s.pe, q = s.q, aprev = s.aprev, l1 = s.l1, l2 = s.l2, lsv = s.ls, rprev = s.rprev;
-	real gam = s.gam, pk = s.pk, tcl = s.tcl - (real)BLOCK;
-	const real k_xhp = 0.004f * e.r48;
+	real gam = s.gam, pk = s.pk, tcl = s.tcl - (real)BLOCK, um = s.um, nl = s.nl;
+	const real k_xhp = 0.004f * e.r48, k_um = 0.002f * e.r48;
+	const real bmod = clampr(P.breath_mod, 0.0f, 1.0f);
+	const real a_nhp = rmin(2.0f * PI * clampr(P.breath_hp, 0.0f, 0.25f * e.sr) * e.dt, 1.0f);
 	const real k_pk = 1.0f - 0.5f * fn * e.dt; // (the peak held over about two periods) // (time constants made at 48 kHz)
 	uint32_t w = s.w, nr = s.nrng;
 	const uint32_t dA = (uint32_t)s.dA, nbu = (uint32_t)s.nbu;
@@ -789,8 +795,12 @@ static inline void process_voice(Engine& e, int vi) {
 			real u = 0.5f * W * (sq - W);
 			u = Pd < 0.0f ? -u : u;
 			nr = nr * 1664525u + 1013904223u;
-			const real nz = (real)(int32_t)nr * 4.656613e-10f;
-			u += nz * (brk * rmax(u, 0.0f) + tnl * gtk);
+			real nz = (real)(int32_t)nr * 4.656613e-10f;
+			nl += a_nhp * (nz - nl);
+			nz -= nl;
+			const real up = rmax(u, 0.0f);
+			um += k_um * (up - um);
+			u += nz * (brk * (bmod * up + (1.0f - bmod) * um) + tnl * gtk);
 #ifdef CLARINET_TEST_HOOK
 			if (clarinet_dbg_imp && vi == 0) u = clarinet_dbg_n == 0 ? 1.0f : 0.0f;
 #endif
@@ -868,6 +878,8 @@ static inline void process_voice(Engine& e, int vi) {
 	s.w = w;
 	s.nrng = nr;
 	s.pk = pk;
+	s.um = um;
+	s.nl = nl;
 	s.tcl = rmax(tcl, -1e5f);
 	// the reed speaks: the mouthpiece pressure is periodic (a clean crossing within 1.5 periods)
 	// and oscillates (re the mouth pressure); not while the tongue is on the reed
@@ -971,6 +983,8 @@ static constexpr ParamEntry param_table[] = {
     {{"tone_hz", "radiation", 1000.0f, 20000.0f, C_}, &Params::tone_hz},
     {{"tone_q", "radiation", 0.5f, 2.0f, C_}, &Params::tone_q},
     {{"breath", "air", 0.0f, 1.0f, C_}, &Params::breath},
+    {{"breath_mod", "air", 0.0f, 1.0f, C_}, &Params::breath_mod},
+    {{"breath_hp", "air", 0.0f, 4000.0f, C_}, &Params::breath_hp},
     {{"wander", "air", 0.0f, 0.2f, C_}, &Params::wander},
     {{"t_noise", "air", 0.0f, 1.0f, C_}, &Params::t_noise},
     {{"t_len", "air", 0.001f, 0.05f, C_}, &Params::t_len},

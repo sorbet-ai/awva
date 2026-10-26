@@ -67,6 +67,8 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `53c95844` | `tone_hz` | radiation | 1000 | 20000 | 3077.53 | continuous |
 | `0cca7651` | `tone_q` | radiation | 0.5 | 2 | 0.7 | continuous |
 | `235d9fc7` | `breath` | air | 0 | 1 | 0.024494 | continuous |
+| `e23d0dfc` | `breath_mod` | air | 0 | 1 | 1 | continuous |
+| `c5316b30` | `breath_hp` | air | 0 | 4000 | 0 | continuous |
 | `f23b7114` | `wander` | air | 0 | 0.2 | 0.04533 | continuous |
 | `09ceaf46` | `t_noise` | air | 0 | 1 | 5.5e-05 | continuous |
 | `a5cd3dfb` | `t_len` | air | 0.001 | 0.05 | 0.006 | continuous |
@@ -91,7 +93,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 35000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 2.91406 KB (2984 bytes) (on a 64-bit host) |
+| engine object | 3.00781 KB (3080 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 100 KB |
 
