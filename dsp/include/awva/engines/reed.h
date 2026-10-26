@@ -17,6 +17,9 @@ struct reed {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "reed";
 	static constexpr const char* title = "Reed";
+	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
+	static constexpr const char* short_name = "reed";
+	static constexpr uint32_t led = 0x203000;
 	static constexpr const char* summary = "single reed: clarinet to saxophone, one model, tilt morphs the bore";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel;
 	static constexpr Budget budget = {::reed::MAX_VOICES, 20000, 2.0f};

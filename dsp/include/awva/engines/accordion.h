@@ -16,6 +16,9 @@ struct accordion {
 	using LargeMemory = NoMemory;
 	static constexpr const char* name = "accordion";
 	static constexpr const char* title = "Accordion";
+	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
+	static constexpr const char* short_name = "accord";
+	static constexpr uint32_t led = 0x401024;
 	static constexpr const char* summary =
 	    "free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets)";
 	// pressure drives the bellows, timbre the tilt expression; motion.accel_g the bellows shake, sustain its reversal

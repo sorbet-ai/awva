@@ -18,6 +18,9 @@ struct bowed {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "bowed";
 	static constexpr const char* title = "Bowed Strings";
+	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
+	static constexpr const char* short_name = "bowed";
+	static constexpr uint32_t led = 0x400000;
 	static constexpr const char* summary = "bowed strings: friction-driven waveguide strings, modal body, section (9 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_spin | in_sustain;
 	static constexpr Budget budget = {::bowed::MAX_VOICES, 32000, 2.0f};

@@ -125,11 +125,6 @@ template <dsp::VoiceEngine E> struct Shim {
 		}
 		return h;
 	}
-	// the engine's colour: E::led (0xrrggbb) when its traits say one, else 0 (none)
-	static constexpr uint32_t led_of() {
-		if constexpr (requires { E::led; }) return static_cast<uint32_t>(E::led);
-		return 0;
-	}
 	// "com.sorbet-ai.awva.<id>"
 	struct Uid {
 		char s[96];
@@ -159,7 +154,8 @@ template <dsp::VoiceEngine E> struct Shim {
 		d.schema_hash = schema();
 		d.inputs = in.inputs;
 		d.channels = in.channels;
-		d.led = led_of();
+		d.short_name = in.short_name;
+		d.led = in.led;
 		d.max_voices = in.budget.max_voices;
 		d.instr_per_block = in.budget.instr_per_block;
 		d.tail_seconds = in.budget.tail_seconds;

@@ -18,6 +18,9 @@ struct brass {
 	static constexpr bool init_writes_memory = true;
 	static constexpr const char* name = "brass";
 	static constexpr const char* title = "Brass";
+	// a short name (1 to 6 characters, for narrow displays) and a colour (0xrrggbb, not 0): required
+	static constexpr const char* short_name = "brass";
+	static constexpr uint32_t led = 0x402800;
 	static constexpr const char* summary = "brass: a lip source and a physical bore, bell, mutes (9 presets)";
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
 	static constexpr Budget budget = {::brass::MAX_VOICES, 30000, 2.0f};

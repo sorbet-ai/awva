@@ -11,6 +11,8 @@
 //       using FastMemory = ...;          // the engine's regions, or NoMemory; Engine has a pointer
 //       using LargeMemory = ...;         //   to each it uses: FastMemory* fast, LargeMemory* large
 //       static constexpr const char* name = "<name>", *summary = "...";
+//       static constexpr const char* short_name = "..."; // 1 to 6 characters (required)
+//       static constexpr uint32_t led = 0xrrggbb;   // its colour (required, not 0)
 //       static constexpr uint32_t inputs = in_pressure | ...;
 //       static constexpr Budget budget = {max_voices, instructions per block, tail seconds};
 //       static constexpr Heroes heroes = {{"cutoff", ...}};                        // optional, up to 8
@@ -48,6 +50,12 @@
 namespace awva {
 
 namespace detail {
+constexpr int length(const char* s) {
+	int n = 0;
+	while (s[n]) n++;
+	return n;
+}
+
 // the traits' title, if they have one
 template <class T> constexpr const char* title() {
 	if constexpr (requires { T::title; }) return T::title;
@@ -208,7 +216,9 @@ template <class T> struct Adapter {
 	    std::is_empty_v<typename T::FastMemory> ? 0 : sizeof(typename T::FastMemory),
 	    std::is_empty_v<typename T::LargeMemory> ? 0 : sizeof(typename T::LargeMemory), detail::num_presets<T>(),
 	    strisy::EngineParams<typename T::Engine>::count, detail::heroes<T>(), detail::preset_heroes<T>(), detail::num_preset_heroes<T>(),
-	    detail::title<T>(), detail::conformance<T>(), detail::min_rate<T>()};
+	    detail::title<T>(), detail::conformance<T>(), detail::min_rate<T>(), T::short_name, T::led};
+	static_assert(detail::length(T::short_name) >= 1 && detail::length(T::short_name) <= 6, "an engine declares a short name of 1 to 6 characters (traits short_name)");
+	static_assert(T::led != 0 && T::led <= 0xffffffu, "an engine declares its colour (traits led, 0xrrggbb, not 0)");
 };
 
 

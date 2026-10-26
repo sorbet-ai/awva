@@ -335,11 +335,16 @@ TEST_CASE("descriptor: complete and consistent") {
 	CAPTURE(id());
 	CHECK(d.magic == NSC_MAGIC);
 	CHECK(d.abi == NSC_ABI);
-	for (const char* s : {d.id, d.uid, d.name, d.summary, d.version}) {
+	REQUIRE(d.short_name != nullptr);
+	CHECK(std::strlen(d.short_name) >= 1);
+	CHECK(std::strlen(d.short_name) <= 6);
+	for (const char* s : {d.id, d.uid, d.name, d.short_name, d.summary, d.version}) {
 		REQUIRE(s != nullptr);
 		CHECK(std::strlen(s) > 0);
 	}
 	CHECK((d.channels == 1 || d.channels == 2));
+	CHECK(d.led != 0); // every engine has a colour
+	CHECK(d.led <= 0xffffffu);
 	CHECK(d.max_voices >= 1);
 	CHECK(d.tail_seconds > 0.0f);
 	CHECK(d.tail_seconds <= 30.0f);
