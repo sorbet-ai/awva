@@ -10,8 +10,10 @@
 // What the voice plays: the pitch and the tilt of the newest held note (the note being played),
 // the pressure and its velocity of the most strongly pressed held note (the dynamic): pressing
 // the next note while the last one is still held keeps the level, and as the old note lifts its
-// pressure hands over to the new one's, so the dynamic carries over and the new note's own strike
-// doesn't tongue the slur.
+// pressure hands over to the new one's, so the dynamic carries over. The new note's own strike
+// doesn't tongue the slur: a note pressed while another is held gives the voice no positive
+// pressure rate until its press is over (its rate has risen and come back to 0 or below), even
+// when it is the strongest; after that an accent on it strikes as on any held note.
 #ifndef AWVA_LEGATO_H_
 #define AWVA_LEGATO_H_
 
@@ -36,11 +38,14 @@ public:
 		}
 		if (at >= 0) {
 			sig_[at] = s;
+			if (slur_[at] == rising && s.pressure_rate <= 0.0f) slur_[at] = none; // its press is over
+			if (slur_[at] == pressed && s.pressure_rate > 0.0f) slur_[at] = rising;
 			return;
 		}
 		if (n_ == Max) remove(0);
 		id_[n_] = id;
 		sig_[n_] = s;
+		slur_[n_] = n_ == 0 ? none : (s.pressure_rate > 0.0f ? rising : pressed);
 		n_++;
 	}
 	// forget every note (the mode switched, all notes off)
@@ -60,11 +65,17 @@ public:
 		for (int k = 0; k < n_; k++)
 			if (sig_[k].pressure > sig_[loud].pressure) loud = k;
 		s.pressure = sig_[loud].pressure;
-		s.pressure_rate = sig_[loud].pressure_rate;
+		s.pressure_rate = slur_[loud] != none && sig_[loud].pressure_rate > 0.0f ? 0.0f : sig_[loud].pressure_rate;
 		return s;
 	}
 
 private:
+	enum Slur : unsigned char {
+		none,    // pressed with nothing held, or its press is over
+		pressed, // pressed while another note was held, its pressure not yet rising
+		rising,  // and rising from the press
+	};
+
 	[[nodiscard]] int find(int id) const {
 		for (int k = 0; k < n_; k++)
 			if (id_[k] == id) return k;
@@ -74,12 +85,14 @@ private:
 		for (int k = at; k + 1 < n_; k++) {
 			id_[k] = id_[k + 1];
 			sig_[k] = sig_[k + 1];
+			slur_[k] = slur_[k + 1];
 		}
 		n_--;
 	}
 
 	int id_[Max] = {};
 	Signals sig_[Max] = {};
+	Slur slur_[Max] = {};
 	int n_ = 0;
 };
 

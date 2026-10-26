@@ -305,7 +305,7 @@ doctest_discover_tests(awva_effect_fx_contract TEST_PREFIX "contract.fx." PROPER
 add_test(NAME contract.fx.names_without_semicolons COMMAND awva_effect_fx_contract --list-test-cases) # (a ';' splits a name in ctest)
 set_tests_properties(contract.fx.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION ";")
 
-add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp
+add_executable(awva_sdk_tests tests/main.cpp tests/test_helpers.cpp tests/test_midi.cpp tests/test_shell.cpp tests/test_ump.cpp tests/test_voice_allocator.cpp tests/test_legato.cpp
   tests/test_presets.cpp)
 target_include_directories(awva_sdk_tests PRIVATE "${AWVA_DOCTEST_DIR}")
 target_link_libraries(awva_sdk_tests PRIVATE awva_sdk awva_engines awva_performances)
