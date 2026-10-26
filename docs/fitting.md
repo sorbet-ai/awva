@@ -171,6 +171,40 @@ The step-0 back-test found the woodwinds' rejections invisible on isolated susta
 
   One reading for the lanes, a measurement and not a verdict: the clarinet dips deeper at its legato changes than its recordings do (median 25.6 against 18.0 dB, over 51 changes).
 
+## Calibrated streams: each engine plays the recording's control
+
+A phrase set's default stream infers the control once, for every engine. Three of its rules mislead an engine:
+
+- **Strike:** from the acoustic rise (strike = K π P / (2 rise), K fitted on finger presses). An acoustic attack rises in 20–30 ms, so most tongued notes strike at 0.7–1.0. On a ChoraleBricks trumpet line, the recording's attacks overshoot the sustain by a median +0.7 dB, the renders by +8 and +11 dB (up to +20).
+- **Pressure:** P = 0.4 · 10^((L − Lmed)/40). That is right only for an engine whose level grows 2 dB per dB of pressure, and the anchor 0.4 ignores where the engine speaks and how bright it is there.
+- **Legato:** a change counts as connected only where the level dips under 6 dB, which real slurs rarely do. Most slurs come out as one key let go and the next pressed 30–40 ms later.
+
+`awvafit.control` builds the stream per engine from the recording (`python -m awvafit control <item> --engine E --preset P --out s.csv`; `python -m awvafit strike` calibrates only the strikes). The render function is pluggable: `awva_render --rec` here, or any other player of key streams.
+
+1. **Pressure sweep.** Isolated notes at three of the phrase's pitches, 12 pressures from 0.04 to 1, strike 0.2. Each note gives:
+   - its sustain level;
+   - its brightness (the spectral centroid over f0);
+   - its periodicity (the autocorrelation peak at the period, median over 40 ms frames).
+
+   The oscillation threshold is the lowest pressure from which periodicity stays at 0.9 or more. The floor is 1.25 × the threshold.
+2. **Anchor.** The pressure whose brightness matches the recording's median note, at least the floor. It is refined once in the phrase itself, because an isolated note is not as bright as the same note in a line.
+3. **Pressure.** Every 10 ms of a note maps the recording's level (relative to the phrase's median note) to the pressure at which the engine's own level curve reaches the anchor's level plus that difference. It is clipped to between the floor and 1. Per-note dynamics and the motion within a note follow the recording through the engine's curve.
+4. **Legato.** At a connected change of pitch (the next onset less than 0.12 s after the note's end), the next key goes down at its onset on another key, and the last one lets go 30 ms later (`--overlap`). The breath is held. Repeated pitches and real gaps re-tongue, released 20 ms early.
+5. **Strike.** A strike sweep on isolated notes gives a curve of attack overshoot against strike. The overshoot is the attack's peak, −10 to +100 ms around the onset, over the sustain's 99th-percentile peak.
+   - Each note gets the strike whose overshoot matches the recording's own for that note (the manifest's `notes[].attack_db`, the same measure).
+   - Refinement passes in the phrase follow, and each note keeps its best pass.
+   - Slurred notes are calibrated too, so a tongued legato re-attacks on the held breath as far as the recording does.
+   - Only the rises are rewritten (`strike.restrike`): each hold keeps the original pressure at the same clock time, and each note keeps its end.
+
+Measured, on the audition builds' dry output:
+
+- **Trumpet line:** median attack overshoot +7.8 and +10.5 dB before, +1.3 dB after, against the recording's +0.7. The median per-note error is 0.9 dB.
+- **Trombone line:**
+  - The level error falls from 5.0 to 2.5 dB RMS, and the per-note level range from 14.6 to 8.7 dB (the recording's: 6.8 dB).
+  - The brightness rises from 2.15 to 2.6, against the recording's 2.96.
+  - Both builds speak periodically at every pressure swept, so their threshold is below 0.04, and the default stream left them dark rather than near threshold.
+- **Not reached:** on a held breath, the brass family's attack overshoot at a note change hardly answers to the strike (+5 to +9 dB, against the recording's −4 to +2). That is the engine's own legato transition, not the input.
+
 ## The Good-sounds back-test
 
 `python -m awvafit backtest --goodsounds` asks which distances separate Good-sounds' deliberately bad takes from its good ones, for the trumpet, clarinet and flute sessions (the research lane's design, kept):

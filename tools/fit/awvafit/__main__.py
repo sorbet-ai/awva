@@ -259,6 +259,29 @@ def cmd_clarinet(a, rest):
         print(C.fit(int(q.args[0]), q.args[1], q.gens, q.pop, q.sigma, q.workers, q.start)[0])
 
 
+def cmd_calibrate(a):
+    import shutil
+    import tempfile
+
+    from . import control, phraseset, strike
+    from .render import Renderer
+    it = next((i for i in phraseset.load(a.pset) if i.id == a.id), None)
+    if it is None:
+        env.die(f'no item {a.id} in the phrase set {a.pset}')
+    eng, pre = a.engine or it.engine, a.preset or it.preset
+    work = tempfile.mkdtemp(prefix='awvafit_cal_')
+    render = strike.render_with(Renderer(), eng, pre, it.transpose, work)
+    if a.cmd == 'strike':
+        path, rep = strike.calibrate(it, render, work, refine=a.refine)
+    else:
+        path, rep = control.calibrated(it, render, work, overlap=a.overlap, refine=a.refine)
+    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
+    shutil.copyfile(path, a.out)
+    shutil.copyfile(path[:-4] + '.notes.json', a.out[:-4] + '.notes.json')
+    control.write_report(a.out[:-4] + '.report.json', rep)
+    print(a.out)
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     inst = {'brassfamily': cmd_brassfamily, 'sax': cmd_sax, 'flute': cmd_flute, 'clarinet': cmd_clarinet}
@@ -311,6 +334,17 @@ def main(argv=None):
     s.add_argument('--preset')
     s.add_argument('--out', default=None)
     s.add_argument('set', nargs='*')
+    for name, h in (('strike', 'a phrase stream with its strikes calibrated on an engine (awvafit.strike)'),
+                    ('control', 'a phrase stream calibrated on an engine: pressure, legato, strikes (awvafit.control)')):
+        s = sub.add_parser(name, help=h)
+        s.add_argument('id', help='the phrase item id')
+        s.add_argument('--set', dest='pset', default='choralebricks')
+        s.add_argument('--engine')
+        s.add_argument('--preset')
+        s.add_argument('--out', required=True, help='the calibrated stream (.csv; its .notes.json and a .report.json beside it)')
+        s.add_argument('--refine', type=int, default=1)
+        if name == 'control':
+            s.add_argument('--overlap', type=float, default=0.03, help='s the last key is held into a slurred note')
     s = sub.add_parser('pack')
     s.add_argument('config')
     s.add_argument('out')
@@ -370,6 +404,8 @@ def main(argv=None):
             print(len(sched), 'notes ->', a.out)
         elif a.cmd == 'phraseset':
             cmd_phrases(a)
+        elif a.cmd in ('strike', 'control'):
+            cmd_calibrate(a)
         elif a.cmd == 'pack':
             from .pack import build
             build(a.config, a.out, dict(r.split('=', 1) for r in a.renderer))

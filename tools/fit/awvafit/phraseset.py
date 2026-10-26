@@ -107,7 +107,8 @@ def _item(d, base, default_source):
     for n in d['notes']:
         on = n.get('onset_s', n.get('t_s'))
         off = n.get('offset_s', on + n['dur_s'] if 'dur_s' in n else None)
-        notes.append(dict(onset_s=on, offset_s=off, midi=n['midi'], cents=n.get('cents', 0), level_db=n.get('level_db')))
+        notes.append(dict(onset_s=on, offset_s=off, midi=n['midi'], cents=n.get('cents', 0), level_db=n.get('level_db'),
+                          attack_db=n.get('attack_db')))
     trans = [dict(t, **{'from': t.get('from', t.get('from_'))}) for t in d.get('transitions', [])]
     return Item(d['id'], d['kind'], d['family'], d['instrument'], eng, pre, float(transpose), stream, float(audio0), source, rel,
                 float(ref['start_s']), float(ref['end_s']), notes, trans, d.get('swell'))
