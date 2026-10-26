@@ -274,17 +274,57 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
     return dict(bright_offset=round(bright_offset, 2), anchor_P=round(P_anchor, 3), anchor_level_db=round(L_anchor, 1), recording_brightness=round(bright, 2), notes=info)
 
 
-def calibrated(item, render, workdir, overlap=0.03, refine=1, log=print):
-    """-> (stream path, report). render(csv) -> the engine's dry output (time 0 = the first row)."""
+class SweepCache:
+    """the sweeps of one build, shared by its phrases (the same engine answers the same presses the
+    same way): {key: result}, each computed once even with phrases calibrated at once"""
+
+    def __init__(self, sweep_notes=None):
+        import threading
+        self.sweep_notes = sweep_notes or {}  # {octave: the layout notes to sweep}: the instrument's
+        self._lock = threading.Lock()
+        self._keys = {}
+        self._done = {}
+
+    def get(self, key, make):
+        import threading
+        with self._lock:
+            if key in self._done:
+                return self._done[key]
+            lk = self._keys.setdefault(key, threading.Lock())
+        with lk:
+            with self._lock:
+                if key in self._done:
+                    return self._done[key]
+            v = make()
+            with self._lock:
+                self._done[key] = v
+            return v
+
+
+def sweep_notes_for(items):
+    """{octave: lowest, middle and highest layout note} over an instrument's phrases"""
+    by = {}
+    for it in items:
+        o = _octave(it)
+        by.setdefault(o, set()).update(int(round(n['midi'])) - 12 * o for n in it.notes)
+    return {o: sorted({v[0], v[len(v) // 2], v[-1]}) for o, v in ((o, sorted(s)) for o, s in by.items())}
+
+
+def calibrated(item, render, workdir, overlap=0.03, refine=1, log=print, cache=None):
+    """-> (stream path, report). render(csv) -> the engine's dry output (time 0 = the first row).
+    cache: a SweepCache shared by one build's phrases (its sweeps run once, at the instrument's notes)"""
     from .phraseset import reference
     os.makedirs(workdir, exist_ok=True)
     rec, _ = reference(item)
     o = _octave(item)
     lay = sorted({int(round(n['midi'])) - 12 * o for n in item.notes})
-    sw_notes = sorted({lay[0], lay[len(lay) // 2], lay[-1]})
-    sw = os.path.join(workdir, 'pressure_sweep.csv')
-    sched = sweep_stream(sw, sw_notes)
-    cv = curves(render(sw), sched, o)
+    sw_notes = (cache.sweep_notes.get(o) if cache else None) or sorted({lay[0], lay[len(lay) // 2], lay[-1]})
+
+    def pressure_sweep():
+        sw = os.path.join(workdir, 'pressure_sweep.csv')
+        sched = sweep_stream(sw, sw_notes)
+        return curves(render(sw), sched, o)
+    cv = cache.get(('pressure', o, tuple(sw_notes)), pressure_sweep) if cache else pressure_sweep()
     for n in sw_notes:
         c = cv[n]
         log(f"pressure sweep note {n + 12 * o}: threshold {c['threshold']}, floor {c['floor']:.3f}, level "
@@ -306,7 +346,8 @@ def calibrated(item, render, workdir, overlap=0.03, refine=1, log=print):
     shim = copy.copy(item)
     shim.stream = p1
     rises = [strike.rise_time(rec, a, b) for a, b, _ in rec_notes(item)]
-    path, srep = strike.calibrate(shim, render, os.path.join(workdir, 'strike'), refine=refine + 1, log=log, every=True, rises=rises)
+    path, srep = strike.calibrate(shim, render, os.path.join(workdir, 'strike'), refine=refine + 1, log=log, every=True, rises=rises,
+                                  cache=cache, sweep_notes=(cache.sweep_notes.get(o) if cache else None))
     rep.update(pressure_curves={str(n + 12 * o): {k: (v if not isinstance(v, list) else [round(float(z), 3) for z in v]) for k, v in c.items()}
                                 for n, c in cv.items()}, strike=srep['final'], targets=srep['targets'], rise_targets=rises)
     return path, rep

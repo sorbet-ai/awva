@@ -266,7 +266,7 @@ def phrase_rise(x, notes, sr=SR):
     return [rise_time(x, n['t_on'] - t0, n['t_off'] - t0, sr) for n in notes]
 
 
-def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False, rises=None):
+def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False, rises=None, cache=None, sweep_notes=None):
     """-> (calibrated stream path, report dict). render(csv) -> the dry engine output of that stream.
     every: calibrate the slurred notes' strikes too (a held breath that re-attacks as the recording does).
     rises: the recording's onset rise per note (s, None where unmeasured): each such note's pressure
@@ -279,16 +279,23 @@ def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False, 
         raise ValueError(f'{item.id}: {len(tg)} reference notes, {len(notes)} in the stream')
     js = [j for j in (range(len(notes)) if every else struck(notes)) if tg[j] is not None]
     pitches = sorted({notes[j]['note'] for j in js})
-    sw_notes = sorted({pitches[0], pitches[len(pitches) // 2], pitches[-1]})
+    sw_notes = sweep_notes or sorted({pitches[0], pitches[len(pitches) // 2], pitches[-1]})
     Pv = [notes[j]['P'] for j in js]
-    Ps = Ps or sorted({round(float(np.percentile(Pv, 25)), 2), round(float(np.percentile(Pv, 75)), 2)})
+    q = 0.05 if cache else 0.01  # shared sweeps: the pressures to 0.05, the ramp to 5 ms
+    Ps = Ps or sorted({round(round(float(np.percentile(Pv, 25)) / q) * q, 3), round(round(float(np.percentile(Pv, 75)) / q) * q, 3)})
     ramps = {}
     if rises:
         ramps = {j: float(np.clip(rises[j], RAMP_MIN, RAMP_MAX)) for j in js if rises[j] is not None}
-    sw = os.path.join(workdir, 'sweep.csv')
-    sched = sweep_stream(sw, sw_notes, Ps, ramp=float(np.median(list(ramps.values()))) if ramps else None)
-    cv = curve(render(sw), sched)
-    log(f'sweep: notes {sw_notes}, P {Ps}, {len(sched)} presses')
+    ramp = float(np.median(list(ramps.values()))) if ramps else None
+    if ramp is not None and cache:
+        ramp = round(max(round(ramp / 0.005) * 0.005, RAMP_MIN), 3)
+
+    def strike_sweep():
+        sw = os.path.join(workdir, 'sweep.csv')
+        sched = sweep_stream(sw, sw_notes, Ps, ramp=ramp)
+        return curve(render(sw), sched), len(sched)
+    cv, n_sched = cache.get(('strike', tuple(sw_notes), tuple(Ps), ramp), strike_sweep) if cache else strike_sweep()
+    log(f'sweep: notes {sw_notes}, P {Ps}, {n_sched} presses')
     offs = {j: 0.0 for j in js}
     spoke = {j: False for j in js}  # a note that spoke in the phrase at any strike (a held breath) needs no floor
     path = item.stream

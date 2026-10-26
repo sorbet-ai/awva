@@ -9,6 +9,7 @@ import math
 import os
 import sys
 import tempfile
+import types
 import unittest
 
 import numpy as np
@@ -301,6 +302,29 @@ class Range(unittest.TestCase):
         res = RC.check(render_for, 'trombone', os.path.join(TMP, 'rng'))
         failing = {f['midi'] for f in res['failures']}
         self.assertEqual(failing, {45, 47})
+
+
+class Sweeps(unittest.TestCase):
+    def test_a_sweep_runs_once_for_a_build(self):
+        from concurrent.futures import ThreadPoolExecutor
+        import time
+        c = control.SweepCache({0: [57, 62, 67]})
+        calls = []
+
+        def make():
+            calls.append(1)
+            time.sleep(0.05)
+            return 'curve'
+        with ThreadPoolExecutor(8) as ex:
+            got = list(ex.map(lambda _: c.get(('pressure', 0, (57, 62, 67)), make), range(16)))
+        self.assertEqual(got, ['curve'] * 16)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(c.get(('other',), lambda: 'x'), 'x')
+
+    def test_the_instrument_s_sweep_notes(self):
+        it = types.SimpleNamespace(transpose=12.0, notes=[dict(midi=m) for m in (60, 64, 72)])
+        it2 = types.SimpleNamespace(transpose=12.0, notes=[dict(midi=m) for m in (55, 67)])
+        self.assertEqual(control.sweep_notes_for([it, it2]), {1: [43, 52, 60]})
 
 
 class Voicing(unittest.TestCase):
