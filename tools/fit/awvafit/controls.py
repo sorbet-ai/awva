@@ -4,7 +4,7 @@
 32-sample block, 10 voices x (pitch, pressure, pressure_rate, timbre), then the 8 globals.
 
   c = Ctl(seconds); c.note(voice, t0, note, P, v, hold); c.write('x.ctl')   synthesise scripted notes
-  read(path) -> (voices [blocks, 10, 5], globals [blocks, 8])
+  read(path) -> (voices [blocks, 10, 4], globals [blocks, 8])
   note_events(vc)    the notes in the controls: voice, onset and release block, note, strike, sustain
   held_runs(vc)      every press as (voice, b_on, b_off), in time order (no note-jump split)
 
@@ -29,7 +29,7 @@ class Ctl:
         self.c = np.zeros((self.nb, CTL_WIDTH), np.float32)
         for v in range(CTL_VOICES):
             self.c[:, 4 * v] = 69
-        self.c[:, 50:58] = GLOB
+        self.c[:, 4 * CTL_VOICES:] = GLOB
         self.t = np.arange(self.nb) * BLOCK / sr
         self.notes = []
 
