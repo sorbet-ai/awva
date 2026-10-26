@@ -180,6 +180,18 @@ class Gate(unittest.TestCase):
         r, p, _ = gate.comb_split(n, 220.0)
         self.assertAlmostEqual(10 * math.log10(np.mean(r ** 2) / np.mean(p ** 2)), 10 * math.log10(0.03 ** 2 / np.mean(t ** 2)), delta=2)
 
+    def test_a_note_that_does_not_speak_measures_without_a_crash(self):
+        from awvafit import gate
+        rng = np.random.default_rng(5)
+        for quiet in (np.zeros(SR // 2), 1e-9 * rng.standard_normal(SR // 2), 1e-4 * rng.standard_normal(SR // 2)):
+            f0 = gate._f0(quiet, 41.2)
+            self.assertTrue(41.2 * 0.94 <= f0 <= 41.2 * 1.06)
+            gate.comb_split(quiet, f0)
+            x = np.concatenate([np.zeros(SR // 10), tone(41.2, 0.8), quiet, tone(55.0, 0.8)])
+            notes = [(0.1, 0.9, 28), (0.9, 1.4, 29), (1.4, 2.2, 33)]
+            F = gate.features(x, notes)
+            self.assertEqual(len(F['notes']), 3)
+
     def test_features_on_a_phrase(self):
         from awvafit import gate
         x = np.concatenate([np.zeros(SR // 10)] + [tone(220 * 2 ** (k / 12), 0.6) for k in (0, 2, 4, 5)])
