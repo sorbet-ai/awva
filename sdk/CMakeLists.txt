@@ -19,6 +19,7 @@
 #          sdk.*               the shared helpers, the MIDI mapping and files, the shell
 #          awva_render.*     the renderer's log names its engine, preset and input; bad inputs fail;
 #                            the fitting tools' options (--params, the controls round trip)
+#          golden.*          every engine's renders against their hashes (tests/goldens/renders.txt)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.25)
   project(awva_sdk DESCRIPTION "awva sound engine SDK" LANGUAGES CXX)
@@ -334,13 +335,28 @@ foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va 
                    "missing_midi;--engine va --midi /nonexistent.mid" "two_inputs;--engine va --perf default --rec x.csv"
                    "too_many_voices;--engine trumpet --nv 64" "unknown_parameter;--engine va --set nosuch=1"
                    "bad_set;--engine va --set cut_base" "missing_controls;--engine va --ctl /nonexistent.ctl"
-                   "ctl_and_rec;--engine va --ctl x.ctl --rec x.csv" "bad_notes;--engine va --notes 60,x")
+                   "ctl_and_rec;--engine va --ctl x.ctl --rec x.csv" "bad_notes;--engine va --notes 60,x"
+                   "missing_ump;--engine va --ump /nonexistent.ump"
+                   "legato_without_midi;--engine va --legato" "two_inputs_ump;--engine va --ump x.ump --midi x.mid")
   list(GET t 0 name)
   list(GET t 1 args)
   separate_arguments(args)
   add_test(NAME awva_render.refuses_${name} COMMAND awva_render ${args})
   set_tests_properties(awva_render.refuses_${name} PROPERTIES LABELS unit WILL_FAIL TRUE)
 endforeach()
+add_test(NAME awva_render.log_names_ump COMMAND awva_render --engine va --ump "${CMAKE_CURRENT_SOURCE_DIR}/tests/goldens/midi2.ump" --legato --seconds 0.5)
+set_tests_properties(awva_render.log_names_ump PROPERTIES LABELS unit
+  PASS_REGULAR_EXPRESSION "input UMP file [^\n]*midi2.ump \\([0-9]+ bytes, fnv [0-9a-f]+\\): [0-9]+ packets, [0-9.]+ s, mono legato")
+# --compare: a render against an earlier one, the same (nothing differs) and another (by how much)
+set(_cmp "${CMAKE_CURRENT_BINARY_DIR}/compare_va.f32")
+add_test(NAME awva_render.compare_reference COMMAND awva_render --engine va --seconds 1 --out "${_cmp}")
+add_test(NAME awva_render.compare_same COMMAND awva_render --engine va --seconds 1 --compare "${_cmp}")
+add_test(NAME awva_render.compare_other COMMAND awva_render --engine va --preset 1 --seconds 1 --compare "${_cmp}")
+set_tests_properties(awva_render.compare_reference PROPERTIES LABELS unit FIXTURES_SETUP compare_va)
+set_tests_properties(awva_render.compare_same PROPERTIES LABELS unit FIXTURES_REQUIRED compare_va
+  PASS_REGULAR_EXPRESSION "compare [^\n]*compare_va.f32: 0 of 48000 samples differ\n")
+set_tests_properties(awva_render.compare_other PROPERTIES LABELS unit FIXTURES_REQUIRED compare_va
+  PASS_REGULAR_EXPRESSION "compare [^\n]*: [1-9][0-9]* of 48000 samples differ, the first at [0-9.]+ s, max \\|d\\| [^ ]+ \\(-?[0-9.]+ dB re 1.0")
 
 # (the docs are this repository's engines: a project that includes the SDK may
 # add engines of its own, so only a build of the SDK itself checks them)
@@ -356,6 +372,74 @@ endif()
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
   add_test(NAME docs.up_to_date COMMAND awva_docs "${CMAKE_CURRENT_SOURCE_DIR}/../docs" --check)
   set_tests_properties(docs.up_to_date PROPERTIES LABELS unit)
+endif()
+
+# The golden renders (sdk/tests/goldens/renders.txt): every engine and preset on the scripted
+# performances and the recorded takes, and every engine on the MIDI phrases (MPE, MIDI 2.0; also in
+# mono legato), each checked against its FNV-1a 64 hash: a change of any engine's output or of the
+# MIDI mapping fails here. Only a build of the SDK itself (a project that includes it may add engines
+# of its own). After an intended change: tools/goldens/update.sh <build dir> (and say so).
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  set(_golden_dir "${CMAKE_CURRENT_SOURCE_DIR}/tests/goldens")
+  set(_golden_file "${_golden_dir}/renders.txt")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_golden_file}")
+  if(EXISTS "${_golden_file}")
+    file(STRINGS "${_golden_file}" _golden_lines REGEX "^[^#]")
+  else()
+    set(_golden_lines "")
+  endif()
+  foreach(l IN LISTS _golden_lines)
+    if(l MATCHES "^([^ ]+) ([0-9a-f]+)$")
+      set("_golden_${CMAKE_MATCH_1}" "${CMAKE_MATCH_2}")
+    endif()
+  endforeach()
+  file(GLOB _takes "${AWVA_HARNESS_DIR}/rec/*.csv")
+  list(SORT _takes)
+  function(_golden name)
+    if(DEFINED "_golden_${name}")
+      set(h "${_golden_${name}}")
+    else()
+      set(h missing)
+    endif()
+    add_test(NAME ${name} COMMAND awva_render --nv 10 --check --golden-name ${name} --expect ${h} ${ARGN})
+    set_tests_properties(${name} PROPERTIES LABELS golden)
+  endfunction()
+  foreach(v IN LISTS AWVA_ENGINES)
+    set(np "${AWVA_ENGINE_${v}_PRESETS}")
+    set(presets none)
+    if(np)
+      math(EXPR last "${np} - 1")
+      set(presets "")
+      foreach(p RANGE ${last})
+        list(APPEND presets ${p})
+      endforeach()
+    endif()
+    foreach(p IN LISTS presets)
+      if(p STREQUAL "none")
+        set(tag "${v}")
+        set(parg "")
+      else()
+        set(tag "${v}.p${p}")
+        set(parg --preset ${p})
+      endif()
+      _golden(golden.${tag}.default --engine ${v} ${parg} --perf default)
+      # (a released voice's last pressure velocity left positive: silent and idle 12 s after it)
+      _golden(golden.${tag}.stale --engine ${v} ${parg} --perf stale --silent-after 12)
+      foreach(take IN LISTS _takes)
+        get_filename_component(tn "${take}" NAME_WE)
+        string(REGEX REPLACE "^play_" "" tn "${tn}")
+        _golden(golden.${tag}.take_${tn} --engine ${v} ${parg} --rec "${take}")
+      endforeach()
+    endforeach()
+    if(v IN_LIST AWVA_PERFORMANCES) # its own performance, tools/harness/perf_<v>.h
+      _golden(golden.${v}.perf --engine ${v} --perf ${v})
+    endif()
+    foreach(ph IN ITEMS mpe midi2)
+      _golden(golden.${v}.${ph} --engine ${v} --ump "${_golden_dir}/${ph}.ump")
+      _golden(golden.${v}.${ph}.legato --engine ${v} --ump "${_golden_dir}/${ph}.ump" --legato)
+    endforeach()
+  endforeach()
+  _golden(golden.va.p5.fx --engine va --preset 5 --perf default --fx)
 endif()
 
 # the engine components (component/: the C ABI, each engine as its own library)
