@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
-"""The recorded Striso takes (engine controls): per note from its key onset, in frames where it is
+"""The recorded key takes (engine controls): per note from its key onset, in frames where it is
 the only held voice: the pitch's deviation from the note in the first 150 ms (the scoop) and after
 (cents), off-register frames, and the level's jumps (> 4 dB per 10 ms while held)."""
 import os
