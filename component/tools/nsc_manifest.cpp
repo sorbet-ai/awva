@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
 	std::snprintf(h, sizeof h, "%06x", d.led);
 	j += R"(  "led": ")" + std::string(h) + "\",\n";
 	j += "  \"channels\": " + std::to_string(d.channels) + ",\n  \"max_voices\": " + std::to_string(d.max_voices) + ",\n";
+	j += "  \"max_events\": " + std::to_string(d.max_events) + ",\n  \"max_note_ids\": " + std::to_string(d.max_note_ids) + ",\n";
 	j += "  \"instr_per_block\": " + std::to_string(d.instr_per_block) + ",\n";
 	j += "  \"state_bytes\": " + std::to_string(d.state_bytes) + ",\n  \"fast_bytes\": " + std::to_string(d.fast_bytes) +
 	    ",\n  \"large_bytes\": " + std::to_string(d.large_bytes) + ",\n";

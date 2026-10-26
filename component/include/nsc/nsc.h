@@ -61,11 +61,9 @@
 extern "C" {
 #endif
 
-#define NSC_ABI 3
+#define NSC_ABI 4
 #define NSC_MAGIC 0x3143534eu /* "NSC1" */
 #define NSC_BLOCK 32          /* frames per process() */
-#define NSC_MAX_EVENTS 1024   /* events per process() for ended()'s guarantee */
-#define NSC_MAX_NOTE_IDS 64   /* notes with a host id tracked at once (see ended()) */
 #define NSC_MAX_HEROES 8
 
 #if defined(_WIN32)
@@ -93,7 +91,8 @@ typedef struct nsc_globals {
 } nsc_globals;
 
 /* The layout of what a host and a component pass each other is the ABI: these sizes and offsets
- * are NSC_ABI 3's (nsc_voice and nsc_globals since #36 and #41, nsc_desc's short_name). A layout
+ * are NSC_ABI 4's (nsc_voice and nsc_globals since #36 and #41, nsc_desc's short_name, its table
+ * sizes max_events and max_note_ids at its end). A layout
  * change fails to compile here until NSC_ABI goes up with it and these are written again. */
 #ifdef __cplusplus
 #define NSC_LAYOUT_ASSERT(c, m) static_assert(c, m)
@@ -101,7 +100,7 @@ typedef struct nsc_globals {
 #define NSC_LAYOUT_ASSERT(c, m) _Static_assert(c, m)
 #endif
 #define NSC_LAYOUT_MSG "nsc.h: a layout change of the ABI needs a new NSC_ABI (and these checks written for it)"
-NSC_LAYOUT_ASSERT(NSC_ABI == 3 && sizeof(nsc_voice) == 28 && offsetof(nsc_voice, pressure) == 4 && offsetof(nsc_voice, pressure_rate) == 8 &&
+NSC_LAYOUT_ASSERT(NSC_ABI == 4 && sizeof(nsc_voice) == 28 && offsetof(nsc_voice, pressure) == 4 && offsetof(nsc_voice, pressure_rate) == 8 &&
         offsetof(nsc_voice, timbre) == 12 && offsetof(nsc_voice, velocity) == 16 && offsetof(nsc_voice, release) == 20 &&
         offsetof(nsc_voice, gate) == 24,
     NSC_LAYOUT_MSG);
@@ -155,9 +154,13 @@ typedef struct nsc_desc {
 	const nsc_param* params;
 	const nsc_preset* presets;
 	const char* heroes[NSC_MAX_HEROES]; /* the engine's hero parameters (names; NULL-terminated) */
+	int32_t max_events;                 /* events a process() takes for ended()'s guarantee (its build's) */
+	int32_t max_note_ids;               /* notes with a host id tracked at once (see ended()) */
 } nsc_desc;
 NSC_LAYOUT_ASSERT(offsetof(nsc_desc, short_name) == offsetof(nsc_desc, name) + sizeof(const char*) &&
-        offsetof(nsc_desc, summary) == offsetof(nsc_desc, short_name) + sizeof(const char*),
+        offsetof(nsc_desc, summary) == offsetof(nsc_desc, short_name) + sizeof(const char*) &&
+        offsetof(nsc_desc, max_events) == offsetof(nsc_desc, heroes) + NSC_MAX_HEROES * sizeof(const char*) &&
+        offsetof(nsc_desc, max_note_ids) == offsetof(nsc_desc, max_events) + sizeof(int32_t),
     NSC_LAYOUT_MSG);
 
 /* what load_preset() did */
@@ -189,8 +192,8 @@ typedef struct nsc_component {
 	 * returns max.
 	 * The guarantee: every Note On's id comes back from ended() exactly once (ids on other events
 	 * are ignored; a MIDI 1.0 Note On of velocity 0 is a Note Off), provided the host calls it
-	 * after each process() until it returns less than max and passes at most NSC_MAX_EVENTS
-	 * events a block. NSC_MAX_NOTE_IDS notes are tracked at once; a Note On with an id beyond
+	 * after each process() until it returns less than max and passes at most desc->max_events
+	 * events a block. desc->max_note_ids notes are tracked at once; a Note On with an id beyond
 	 * that ends the oldest tracked note (the oldest released one, else the oldest held one) at
 	 * once, and a Note On that can't be queued ends at once itself. */
 	int32_t (*ended)(void* state, int32_t* note_ids, int32_t max);

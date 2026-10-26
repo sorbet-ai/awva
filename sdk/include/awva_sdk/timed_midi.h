@@ -35,6 +35,15 @@
 
 #include "awva_sdk/midi_voices.h"
 
+// The tables' sizes, a build's (a host with little RAM sets them smaller; the descriptor of a
+// component reports them: nsc_desc max_events, max_note_ids)
+#ifndef AWVA_MIDI_QUEUE
+#define AWVA_MIDI_QUEUE 1024 // events waiting for their step (and a block's at most)
+#endif
+#ifndef AWVA_NOTE_IDS
+#define AWVA_NOTE_IDS 64 // notes with a host id tracked at once
+#endif
+
 namespace awva::sdk {
 
 [[nodiscard]] constexpr uint64_t step_frame(uint64_t k, int sample_rate) {
@@ -43,9 +52,9 @@ namespace awva::sdk {
 
 class TimedMidi {
 public:
-	static constexpr int QUEUE = 1024;                       // events waiting for their step
-	static constexpr int NOTES = 64;                         // notes with a host id, tracked until they end
-	static constexpr int MAX_EVENTS = 1024;                  // events a block, for the guarantee above
+	static constexpr int QUEUE = AWVA_MIDI_QUEUE;            // events waiting for their step
+	static constexpr int NOTES = AWVA_NOTE_IDS;              // notes with a host id, tracked until they end
+	static constexpr int MAX_EVENTS = AWVA_MIDI_QUEUE;       // events a block, for the guarantee above
 	static constexpr int ENDED = QUEUE + MAX_EVENTS + NOTES; // ids ended at once, until ended() hands them out
 
 	explicit TimedMidi(int voices, int sample_rate) :

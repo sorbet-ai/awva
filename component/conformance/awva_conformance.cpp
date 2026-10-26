@@ -27,7 +27,7 @@
 //                random sizes, with late events at their negative frames, render the samples of
 //                events given on time, bit for bit
 //   note_ids     every Note On's id comes back from ended() exactly once: through voice
-//                stealing, re-struck keys and more notes than NSC_MAX_NOTE_IDS (note_ids),
+//                stealing, re-struck keys and more notes than the descriptor's max_note_ids (note_ids),
 //                through preset switches (note_ids.presets) and through reset() (note_ids.reset)
 //   output       (a component with the parameter "output") at 1 the samples are untouched, at
 //                0.5 and 2 exactly half and double
@@ -647,8 +647,8 @@ NoteIds note_ids_through(Instance& in, int rate, const std::function<void(int64_
 		for (Ev& e : v) e.frame += shift;
 		all.insert(all.end(), v.begin(), v.end());
 	}
-	// a burst of more notes than NSC_MAX_NOTE_IDS, held, then released
-	for (int i = 0; i < NSC_MAX_NOTE_IDS + 20; i++) {
+	// a burst of more notes than the component tracks (max_note_ids), held, then released
+	for (int i = 0; i < desc().max_note_ids + 20; i++) {
 		const auto ch = static_cast<uint32_t>(i % 16), key = static_cast<uint32_t>(30 + i / 16);
 		all.push_back({frames_of(5.5, rate) + 3 * i, ump2(0x9, ch, key), 0x8000u << 16, next++});
 		all.push_back({frames_of(6.5, rate) + 5 * i, ump2(0x8, ch, key), 0x8000u << 16, -1});
