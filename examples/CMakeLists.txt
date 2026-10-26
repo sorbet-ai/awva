@@ -25,8 +25,8 @@ target_link_libraries(mpe_file PRIVATE awva_sdk awva_engines)
 
 set(_run "${CMAKE_CURRENT_SOURCE_DIR}/run_example.cmake")
 set(_out "${CMAKE_CURRENT_BINARY_DIR}/out")
-add_test(NAME example.c_host COMMAND "${CMAKE_COMMAND}" -DMODE=twice -DHASH=be57af94c202917a "-DOUT=${_out}" "-DEXPECT=note 1 ended.*note 2 ended.*note 3 ended"
+add_test(NAME example.c_host COMMAND "${CMAKE_COMMAND}" -DMODE=twice -DHASH=6171d2a6efaf4bb4 "-DOUT=${_out}" "-DEXPECT=note 1 ended.*note 2 ended.*note 3 ended"
   "-DCMD=$<TARGET_FILE:c_host>;${AWVA_COMPONENT_DIR};va;${_out}/c_host_va.wav" -P "${_run}")
-add_test(NAME example.mpe_file COMMAND "${CMAKE_COMMAND}" -DMODE=renderer -DHASH=a8fa124451659c1a "-DOUT=${_out}"
+add_test(NAME example.mpe_file COMMAND "${CMAKE_COMMAND}" -DMODE=renderer -DHASH=b9e8f3ac581511c6 "-DOUT=${_out}"
   "-DMPE=$<TARGET_FILE:mpe_file>" "-DRENDER=$<TARGET_FILE:awva_render>" -P "${_run}")
 set_tests_properties(example.c_host example.mpe_file PROPERTIES LABELS "example;unit")

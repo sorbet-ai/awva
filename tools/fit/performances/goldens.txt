@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # The musical test performances' golden hashes on main's engines (sdk/CMakeLists.txt: awva_render.musical.*).
 # <performance> <engine> <preset number> <hash of the dry render>. Update: tools/fit/regress/goldens.py
-brass/brass_legato.ump brass 0 b299f2227d0d2242
-brass/brass_swell.ump brass 0 a6484bc63d804a3c
-brass/brass_tongued.ump brass 0 59ded48c5bc2282c
+brass/brass_legato.ump brass 0 f8d5ca670cdf95e7
+brass/brass_swell.ump brass 0 f9e2171dfbbe7c94
+brass/brass_tongued.ump brass 0 f9c4454d51109aae
 clarinet/clarinet_legato.ump wind 0 5293bd37e852b525
 clarinet/clarinet_swell.ump wind 0 4937451bee97ea8b
 clarinet/clarinet_tongued.ump wind 0 4f854460dd51ebd1

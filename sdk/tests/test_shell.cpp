@@ -92,6 +92,24 @@ TEST_CASE("shell: every engine plays a MIDI note through the shell") {
 	}
 }
 
+TEST_CASE("shell: no pedal is no sustain: a note with no CC64 plays as with the pedal sent up (0)") {
+	CHECK(awva::instrument_at_rest.sustain == 0.0f);
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		CAPTURE(e->info->name);
+		const auto play = [e](bool pedal_up) {
+			sdk::Shell s(*e, 48000, 10, false);
+			if (pedal_up) s.midi(0xb0, 64, 0);
+			s.midi(0x90, 57, 110);
+			s.midi(0x80, 57, 64, 24000);
+			std::vector<float> l(48000 * 3), r(l.size());
+			s.process(l.data(), r.data(), static_cast<int>(l.size()));
+			CHECK(s.globals().sustain == 0.0f);
+			return l;
+		};
+		CHECK(play(false) == play(true));
+	}
+}
+
 TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 	const sdk::MidiEvent ev[] = {
 	    {0.0, {0x90, 60, 100}, 3},

@@ -18,7 +18,7 @@ from .render import BLOCK, CTL_VOICES, CTL_WIDTH, read_ctl
 
 SR = 48000
 K = 0.033
-GLOB = [3 / 16, 1, 0, 0, 0]  # the instrument at rest (awva::instrument_at_rest)
+GLOB = [0, 1, 0, 0, 0]  # the instrument at rest (awva::instrument_at_rest)
 
 read = read_ctl
 

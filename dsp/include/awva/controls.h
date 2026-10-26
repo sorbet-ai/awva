@@ -42,8 +42,8 @@ struct InstrumentControls {
 	} motion;
 };
 
-// the instrument at rest: 1 g, no spin, the sustain pedal at 3/16
-inline constexpr InstrumentControls instrument_at_rest = {3.0f / 16, {1.0f, {0.0f, 0.0f, 0.0f}}};
+// the instrument at rest: no sustain (a host without a pedal has none), 1 g, no spin
+inline constexpr InstrumentControls instrument_at_rest = {0.0f, {1.0f, {0.0f, 0.0f, 0.0f}}};
 
 } // namespace awva
 

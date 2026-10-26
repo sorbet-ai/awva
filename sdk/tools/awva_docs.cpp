@@ -56,7 +56,7 @@ constexpr InputDoc INPUTS[] = {
     {dsp::in_timbre, "timbre", "`timbre`, -1 .. 1", "MPE: CC74 of the note's channel; MIDI 1.0: CC74 (64 = 0) or CC1; MIDI 2.0: Registered Per-Note Controller 74, CC74 (bipolar)"},
     {dsp::in_velocity, "velocity", "`velocity`, the Note On's velocity 0 .. 1", "Note On velocity"},
     {dsp::in_release, "release", "`release`, the Note Off's velocity 0 .. 1", "Note Off velocity"},
-    {dsp::in_sustain, "sustain", "`sustain`, 0 .. 1 (3/16 at rest)", "CC64"},
+    {dsp::in_sustain, "sustain", "`sustain`, 0 .. 1 (0 at rest)", "CC64"},
     {dsp::in_accel, "acceleration", "`motion.accel_g`, the acceleration's magnitude in g (1 at rest)", "a host's motion sensor (not from MIDI yet)"},
     {dsp::in_spin, "spin", "`motion.spin[3]`, the angular rate about each axis, -1 .. 1", "a host's gyroscope (not from MIDI yet)"},
 };
