@@ -45,6 +45,7 @@ TEST_CASE("soak: chaos, every voice held, the decay: finite, bounded, then silen
 		CAPTURE(preset_label(p));
 		sdk::Engine e = fresh(p);
 		std::vector<float> preset_values;
+		preset_values.reserve(static_cast<size_t>(e.num_params()));
 		for (int i = 0; i < e.num_params(); i++) preset_values.push_back(*e.param(i));
 		Keys k(e.voices());
 		Rng r{0x50a1u + static_cast<uint32_t>(p + 1)};
