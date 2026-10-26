@@ -281,6 +281,7 @@ struct VoiceState {
 	// the key's strike (v5): the rise from silence until its pressure stops rising (or 0.25 s)
 	int rise, rose;
 	real rise_t;
+	int was_held; // the key was held in the last block (a press on a voice still sounding its release)
 };
 
 struct Engine {
@@ -418,6 +419,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.xlp = s.xhp = s.xprev = 0.0f;
 	s.tlast = -1e4f;
 	s.pprev = 0.0f;
+	s.was_held = 0;
 	s.trim = s.xamp = 0.0f;
 	if (v >= 0 && v < MAX_VOICES) {
 		for (int h = 0; h < 2; h++)
@@ -522,6 +524,10 @@ static inline void process_voice(Engine& e, int vi) {
 		s.active = 1;
 		start = true;
 	}
+	// a press: a start, or the key pressed again on a voice still sounding its release (the same
+	// note played again): its articulation as a start's, over the tail (the state kept)
+	const bool press = start || (held && !s.was_held);
+	s.was_held = held;
 
 	// ---- block rate: the player and the pipe for this note -------------------------------------
 	const bool jump = start || fabsf(note - s.note_prev) >= 1.0f;
@@ -539,7 +545,7 @@ static inline void process_voice(Engine& e, int vi) {
 	// held note only a real re-strike, a fast rise (vpres at least RESTRIKE_V) at a pressure of at
 	// least RESTRIKE_P. A swell, a pressure that bounces as the key lifts, a falling or low pressure
 	// strike nothing (v4 re-tongued on any vpres over ~0.07 once the accent had decayed).
-	if (start) {
+	if (press) {
 		s.rise = 1;
 		s.rose = 0;
 		s.rise_t = 0.0f;
@@ -555,8 +561,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const real acc_in = s.rise ? vplev : vpl_sus;
 	const real tn_in = s.rise ? vpl_nz : vpl_sus;
 	// a strike opens the tongue: fast for a hard one
-	if (vstrike > 0.05f && (start || vstrike > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vstrike_rt), 0.0005f), 1.0f);
-	if (start && vplev <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(4.0f * P.tongue_t, 0.0005f), 1.0f);
+	if (vstrike > 0.05f && (press || vstrike > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vstrike_rt), 0.0005f), 1.0f);
+	if (press && vplev <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(4.0f * P.tongue_t, 0.0005f), 1.0f);
 	// the attack's jet: a strike (from silence or a re-strike) releases the pressure built behind the
 	// tongue, the jet starts fast and thin and grows more on its way to the edge; a breath attack or
 	// a slur gets att_soft of it. It decays in att_t: the sustained jet is the player's as before
@@ -564,7 +570,7 @@ static inline void process_voice(Engine& e, int vi) {
 		const real asoft = clampr(P.att_soft, 0.0f, 1.0f);
 		const real sl = rmin(4.0f * vp1, 1.0f);
 		const real at = asoft + (1.0f - asoft) * sl;
-		if (start || (held && vstrike > s.acc + 0.05f)) s.att = rmax(s.att, at);
+		if (press || (held && vstrike > s.acc + 0.05f)) s.att = rmax(s.att, at);
 		else if (jump && held) s.att = rmax(s.att, asoft);
 		s.att *= exp2s(-1.442695f * e.block_dt / clampr(P.att_t, 0.005f, 0.15f));
 		if (s.att < 1e-4f) s.att = 0.0f;

@@ -100,6 +100,9 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `af32797a` | `pitch_t` | attack | 0.002 | 1 | 0.03 | continuous |
 | `6a122da6` | `vib` | mod | 0 | 2 | 0.5 | continuous |
 | `9e2c50e9` | `vib_hz` | mod | 2 | 9 | 5.2 | continuous |
+| `dbdd06c6` | `tongue_nz` | attack | 0 | 2 | 0.516874 | continuous |
+| `e5f99898` | `tongue_rt` | attack | 0 | 2 | 0.516874 | continuous |
+| `69fb3ac7` | `tongue_sus` | attack | 0 | 2 | 0.516874 | continuous |
 
 ## Budget and memory
 
@@ -109,7 +112,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 37000 QEMU instructions per 32-sample block, worst preset, 10 voices, the default performance |
 | tail | silent and idle within 2 s of the last release |
-| engine object | 2.89844 KB (2968 bytes) (on a 64-bit host) |
+| engine object | 3.07812 KB (3152 bytes) (on a 64-bit host) |
 | FastMemory | none |
 | LargeMemory | 120 KB |
 
