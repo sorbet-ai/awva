@@ -134,6 +134,7 @@ struct Params {
 	real vib; // depth (cents)
 	real vib_hz;
 	real vib_delay; // seconds after the note start until full depth
+	real life;      // micro-randomness (0 = none): per-note variation, bow pressure and noise flicker
 	// motion
 	real trem;     // shake -> bow speed modulation (strong shakes reverse the bow)
 	real body_rot; // rotation -> body mode shift (octaves)
@@ -200,6 +201,10 @@ struct VoiceState {
 	real shelf;                     // tone shelf gain (ramped)
 	real gout;                      // output gain = dynamics (ramped; held after a release)
 	real bd[NB][2];                 // body resonator states
+	// life: per note (start pitch offset, decaying; bow force, corner sharpness, bow noise) and the
+	// flicker noises (bow pressure: force and level together; bow noise)
+	real lpo, lkf, ltau, lnn, lbp, lnz;
+	uint32_t lrng;
 };
 
 struct BodyCoef {
@@ -297,11 +302,13 @@ static inline void reset_voice(Engine& e, int v) {
 	for (int i = 0; i < NECK_LEN; i++) e.stream->neck[v][i] = 0.0f;
 	for (int i = 0; i < BRIDGE_LEN; i++) e.stream->bridge[v][i] = 0.0f;
 	int active = s.active;
-	uint32_t seed = s.seed;
+	uint32_t seed = s.seed, lrng = s.lrng;
 	real note_prev = s.note_prev, note_body = s.note_body, dn = s.dn, corr = s.corr, dcr = s.dcr, vib_ph = s.vib_ph;
 	s = VoiceState();
 	s.active = active;
 	s.seed = seed;
+	s.lrng = lrng;
+	s.lkf = s.ltau = s.lnn = 1.0f;
 	s.note_prev = note_prev;
 	s.note_body = note_body;
 	s.dn = dn;
@@ -349,6 +356,7 @@ static inline void init(Engine& e, int sample_rate, int nvoices) {
 		e.vc[v] = awva::note_at_rest;
 		e.vs[v] = VoiceState();
 		e.vs[v].seed = 0x9e3779b9u * (uint32_t)(v + 1);
+		e.vs[v].lrng = 0x165667B1u * (uint32_t)(v + 7) + 4242u;
 		e.vs[v].note_prev = e.vs[v].note_body = 69.0f;
 		e.vs[v].dn = 100.0f;
 		e.vs[v].corr = 0.003f;
@@ -388,6 +396,40 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 		s.seeded = onset && !pizz && e.seed_budget > 0;
 	}
 	s.age = rmin(s.age + e.block_dt, 100.0f);
+	// life (micro-randomness, never a vibrato): every note draws a start pitch offset (+-2 cents x
+	// life, settling in ~0.1 s), its bow force (+-6%), corner sharpness (+-8%) and bow noise (+-30%);
+	// the bow pressure flickers (force and level together, ~60 ms one-pole noise, ~0.35 dB at life
+	// 1) and the bow noise too (~40 ms). Off (life 0): the voice as without it.
+	const real life = clampf(p.life, 0.0f, 1.0f);
+	const bool life_on = life > 0.0f;
+	real l_cents = 0.0f, l_kap = 1.0f, l_tau = 1.0f, l_nz = 1.0f, l_lv = 1.0f;
+	if (life_on) {
+		uint32_t r = s.lrng;
+		auto rnd = [&r]() {
+			r = r * 1664525u + 1013904223u;
+			return (real)(int32_t)r * (1.0f / 2147483648.0f);
+		};
+		if (onset || jump) {
+			s.lpo = 2.0f * rnd();
+			s.lkf = 1.0f + 0.06f * rnd();
+			s.ltau = 1.0f + 0.08f * rnd();
+			s.lnn = 1.0f + 0.3f * rnd();
+		}
+		const real dt = e.block_dt;
+		s.lpo *= 1.0f - dt * 10.0f;
+		const auto flick = [&](real& x, real tau) {
+			const real a = rmin(dt / tau, 1.0f);
+			x = clampf(x + a * (1.732f * fsqrt(2.0f / a) * rnd() - x), -3.0f, 3.0f);
+		};
+		flick(s.lbp, 0.06f);
+		flick(s.lnz, 0.04f);
+		s.lrng = r;
+		l_cents = life * s.lpo;
+		l_kap = 1.0f + life * (s.lkf - 1.0f + 0.03f * s.lbp);
+		l_lv = 1.0f + 0.04f * life * s.lbp;
+		l_tau = 1.0f + life * (s.ltau - 1.0f);
+		l_nz = rmax(1.0f + life * (s.lnn - 1.0f + 0.35f * s.lnz), 0.0f);
+	}
 
 	// --- block rate control
 	// a bowed note starts at once: at a key press the bow is set to the pressure a few ms ahead
@@ -420,7 +462,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	s.vib_ph += clampf(p.vib_hz, 0.0f, 12.0f) * e.block_dt;
 	s.vib_ph -= (real)(int)s.vib_ph;
 	const real vib_amt = clampf((s.age - p.vib_delay) * 3.0f, 0.0f, 1.0f) * clampf(p.vib, 0.0f, 60.0f) * 0.01f;
-	const real note = note0 + vib_amt * sin_turn(s.vib_ph);
+	const real note = life_on ? note0 + vib_amt * sin_turn(s.vib_ph) + 0.01f * l_cents : note0 + vib_amt * sin_turn(s.vib_ph);
 
 	const real p2 = strisy::fastpow2(note * (1.0f / 12.0f));
 	const real f0 = 8.1757989156f * p2;
@@ -439,7 +481,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	// (a plucked string has no bow to re-sharpen its corners: much less rounding, so it rings)
 	// (and the floor of a third of a sample that keeps the bowed loop clean is not needed either;
 	// it would damp the high notes, where it is a large part of the period)
-	const real tau = rmax((pizz ? 0.3f * EPS_HI : EPS_LO + (EPS_HI - EPS_LO) * Pn) / clampf(p.bright, 0.3f, 3.0f) * L, pizz ? 0.05f : 0.3f);
+	const real tau = rmax((pizz ? 0.3f * EPS_HI : EPS_LO + (EPS_HI - EPS_LO) * Pn) / clampf(p.bright, 0.3f, 3.0f) * L * (life_on ? l_tau : 1.0f), pizz ? 0.05f : 0.3f);
 	const real pole = tau / (1.0f + tau);
 	const real t60s = pizz ? clampf(p.pizz_decay * exp2_fast((60.0f - note) * (1.0f / 36.0f)), 0.05f, 8.0f) : clampf(p.damp * exp2_fast((40.0f - note) * (1.0f / 24.0f)), 0.3f, 8.0f);
 	real t60 = t60s;
@@ -494,7 +536,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	// nominal bow speed (1, or 0 once the bow has left) and the pressure's dynamics, as fast as
 	// the key, never disturb the string's motion. Timbre still follows the pressure through the
 	// force ratio, bow position, corner rounding and tone.
-	const real amp_t = Pe * (1.0f - scur + scur * Pe);
+	const real amp_t = life_on ? Pe * (1.0f - scur + scur * Pe) * l_lv : Pe * (1.0f - scur + scur * Pe);
 	const real amp = pizz ? 0.0f : (pres > 0.0f ? 1.0f : 0.0f);
 	const real acc = rmin(s.acc, 1.0f);
 	const real vb = amp * trem; // (constant while bowing: the accent is force and output gain)
@@ -511,7 +553,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	// (force_over 1.0, the default: scratch ~ -26 dB under the tone at pressure 1.5, -23 dB at 2;
 	// 2: about v3's level, ~ -19 dB at 1.5; 0: clean)
 	const real grit = clampf(p.force_over, 0.0f, 2.0f) * 0.6f * osat;
-	const real kap = rmax(kfl + (khi - kfl) * Pn * fsqrt(Pn) + rmin(0.4f * grit, rmax(1.25f - khi, 0.0f)), 0.1f);
+	const real kap = rmax((kfl + (khi - kfl) * Pn * fsqrt(Pn) + rmin(0.4f * grit, rmax(1.25f - khi, 0.0f))) * (life_on ? l_kap : 1.0f), 0.1f);
 	// the accent firms the bow up towards, never past, the top of the clean (Helmholtz) range
 	// The start of a note needs a firm bow: while the string is still getting up to speed a light
 	// bow slips several times per period (a breathy, scratchy start; Guettler). For the first
@@ -540,7 +582,7 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	const real cw = FRIC_C * rmax(L * (1.0f / 250.0f), 1.0f) * amp + FRIC_CD * soft2 * ds + 1e-7f;
 	// bow noise: jitter of the static friction. On long strings the stick phase approaches the
 	// release threshold slowly, so the same jitter shakes the slip timing (the pitch) much more
-	const real nz = rmin(clampf(p.rosin, 0.0f, 0.2f) * rmin(200.0f / L, 1.0f) + clampf(p.acc_noise, 0.0f, 1.0f) * acc + 0.15f * grit, 0.9f);
+	const real nz = rmin((clampf(p.rosin, 0.0f, 0.2f) * rmin(200.0f / L, 1.0f) + clampf(p.acc_noise, 0.0f, 1.0f) * acc + 0.15f * grit) * (life_on ? l_nz : 1.0f), 0.9f);
 
 	// pizzicato: pluck at a key press, a strike while held, or a new note while held
 	if (pizz && pres > 0.0f && (onset || jump || (vp > 0.6f && s.vp_prev <= 0.3f))) {
@@ -982,6 +1024,7 @@ static constexpr ParamEntry param_table[] = {
     {{"vibrato", "mod", 0.0f, 60.0f, strisy::ParamKind::continuous}, &Params::vib},           // automatic vibrato (cents)
     {{"vib_hz", "mod", 2.0f, 9.0f, strisy::ParamKind::continuous}, &Params::vib_hz},
     {{"vib_delay", "mod", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::vib_delay},
+    {{"life", "mod", 0.0f, 1.0f, strisy::ParamKind::continuous}, &Params::life},          // micro-randomness
     {{"tremolo", "mod", 0.0f, 2.0f, strisy::ParamKind::continuous}, &Params::trem},       // shake -> bow
     {{"body_rot", "mod", -2.0f, 2.0f, strisy::ParamKind::continuous}, &Params::body_rot}, // rotation -> body (octaves)
     {{"ensemble", "section", 0.0f, 1.5f, strisy::ParamKind::continuous}, &Params::ens},   // two more players

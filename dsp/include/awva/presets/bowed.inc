@@ -7,7 +7,7 @@
 // presets/bowed/00-violin.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "violin",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -40,6 +40,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -55,7 +56,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/bowed/01-viola.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "viola",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -88,6 +89,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -103,7 +105,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/bowed/02-cello.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "cello",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -136,6 +138,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -151,7 +154,7 @@ inline constexpr char factory_json_2[] = R"awva-preset({
 // presets/bowed/03-bass.preset.json
 inline constexpr char factory_json_3[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "bass",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -184,6 +187,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -199,7 +203,7 @@ inline constexpr char factory_json_3[] = R"awva-preset({
 // presets/bowed/04-section.preset.json
 inline constexpr char factory_json_4[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "section",
   "heroes": ["ensemble", "ens_detune", "ens_spread", "force_hi", "pos", "bright", "body_amt", "vibrato"],
   "params": {
@@ -232,6 +236,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
     "vibrato": 12,
     "vib_hz": 5.2,
     "vib_delay": 0.4,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0.8,
@@ -247,7 +252,7 @@ inline constexpr char factory_json_4[] = R"awva-preset({
 // presets/bowed/05-ponticello.preset.json
 inline constexpr char factory_json_5[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "ponticello",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -280,6 +285,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -295,7 +301,7 @@ inline constexpr char factory_json_5[] = R"awva-preset({
 // presets/bowed/06-flautando.preset.json
 inline constexpr char factory_json_6[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "flautando",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -328,6 +334,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -343,7 +350,7 @@ inline constexpr char factory_json_6[] = R"awva-preset({
 // presets/bowed/07-sordino.preset.json
 inline constexpr char factory_json_7[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "sordino",
   "heroes": ["force_hi", "pos", "rosin", "bright", "body_amt", "damp", "vibrato", "ensemble"],
   "params": {
@@ -376,6 +383,7 @@ inline constexpr char factory_json_7[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
@@ -391,7 +399,7 @@ inline constexpr char factory_json_7[] = R"awva-preset({
 // presets/bowed/08-pizzicato.preset.json
 inline constexpr char factory_json_8[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "bowed", "params_hash": "ad066064"},
+  "engine": {"id": "bowed", "params_hash": "b81108ea"},
   "title": "pizzicato",
   "heroes": ["pizz_decay", "pizz_bright", "pos", "bright", "body_amt", "damp", "rel", "vibrato"],
   "params": {
@@ -424,6 +432,7 @@ inline constexpr char factory_json_8[] = R"awva-preset({
     "vibrato": 0,
     "vib_hz": 5.5,
     "vib_delay": 0.35,
+    "life": 0,
     "tremolo": 1.3,
     "body_rot": 0.7,
     "ensemble": 0,
