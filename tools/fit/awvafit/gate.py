@@ -142,6 +142,9 @@ def renderer(spec, workdir):
     if spec.startswith('cmd'):
         label, cmd = spec[3:].split(':', 1) if not spec.startswith('cmd[') else spec[4:].split(']:', 1)
         label = label or 'cmd'
+        if '{csv}' not in cmd or '{out}' not in cmd or ('{octave}' not in cmd and '{transpose}' not in cmd):
+            raise env.EnvError(f'{label}: the command must take {{csv}}, {{out}}, and {{octave}} or {{transpose}} '
+                               '(the stream is pressed at the note minus the transpose: without it the build plays in the wrong octave)')
 
         def factory(item):
             def render(csv):
@@ -380,24 +383,31 @@ def _render_notes(item, stream):
     return [(n['t_on'] - t0, n['t_off'] - t0, m) for n, (_, _, m) in zip(sn, rn)]
 
 
-def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=True):
+def run(inst, candidate, baseline, workdir, workers=4, log=print, reuse=False):
     from .phraseset import reference
     items = items_for(inst)
     if not items:
         raise env.EnvError(f'no held-out phrases on disk for {inst} (gate_set.json; AWVA_REFS)')
     builds = [renderer(candidate, workdir), renderer(baseline, workdir)]
+    # one folder per candidate-baseline pair: another gate run (another lane, other builds) never shares it
+    run_dir = os.path.join(workdir, inst, hashlib.sha1(f'{candidate} | {baseline}'.encode()).hexdigest()[:12])
     lock = threading.Lock()
 
     def one(bi, item):
         label, factory = builds[bi]
-        d = os.path.join(workdir, inst, f'b{bi}', item.id)
+        d = os.path.join(run_dir, f'b{bi}', item.id)  # its own folder per run, build and phrase
         os.makedirs(d, exist_ok=True)
         render = factory(item)
         path = os.path.join(d, 'strike', 'calibrated.csv')
-        if not (reuse and os.path.exists(path) and os.path.exists(os.path.join(d, 'label.txt'))
-                and open(os.path.join(d, 'label.txt')).read() == label):
+        lp = os.path.join(d, 'label.txt')
+        cached = False
+        if reuse and os.path.exists(path) and os.path.exists(lp):
+            with open(lp, encoding='utf-8') as f:
+                cached = f.read() == label
+        if not cached:
             path, _ = control.calibrated(item, render, d, log=lambda m: None)
-            open(os.path.join(d, 'label.txt'), 'w').write(label)
+            with open(lp, 'w', encoding='utf-8') as f:
+                f.write(label)
         x = render(path)
         with lock:
             log(f'  {inst} {label} {item.id}: rendered')
@@ -484,10 +494,10 @@ def main(argv=None):
     p.add_argument('--baseline', required=True)
     p.add_argument('--out')
     p.add_argument('--workers', type=int, default=4)
-    p.add_argument('--fresh', action='store_true', help='calibrate again even where a stream is cached')
+    p.add_argument('--reuse', action='store_true', help='reuse the calibrated streams of an earlier run with the same build labels (only for the same builds: a rebuilt engine under the same label needs them calibrated again)')
     a = p.parse_args(argv)
     work = env.workdir('gate')
-    res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=not a.fresh)
+    res = run(a.inst, a.candidate, a.baseline, work, a.workers, reuse=a.reuse)
     print(table(res))
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)

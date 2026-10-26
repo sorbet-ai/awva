@@ -344,9 +344,11 @@ def calibrate(item, render, workdir, refine=1, Ps=None, log=print, every=False, 
 
 
 def render_with(renderer, engine, preset, transpose, workdir):
-    """a render(csv) for calibrate() through awva_render --rec (the key path)"""
+    """a render(csv) for calibrate() through awva_render --rec (the key path). The output goes beside the
+    stream, so renders of different streams (phrases, builds) running at once never share a file;
+    workdir is not used for it (kept for the callers)"""
     def render(csv_path):
-        out = os.path.join(workdir, os.path.basename(csv_path)[:-4] + '.f32')
+        out = csv_path[:-4] + '.render.f32'
         r = renderer.render(engine, preset, rec=csv_path, out=out, transpose=transpose)
         return r.x.astype(np.float64)
     return render

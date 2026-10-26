@@ -4,6 +4,7 @@
 
   python -m unittest discover -s tools/fit/tests -v
 """
+import json
 import math
 import os
 import sys
@@ -187,6 +188,85 @@ class Gate(unittest.TestCase):
         self.assertAlmostEqual(F['phrase']['range'], 0.0, delta=0.5)
         d = gate.distance(F, F)
         self.assertTrue(all(v is None or v == 0 for v in d.values()))
+
+
+class GateRuns(unittest.TestCase):
+    """the gate end to end on a synthetic phrase and a stand-in build (tests/fake_player.py): parallel
+    renders never share a file, so workers 4 = workers 1, and a build against itself is identical"""
+
+    def setUp(self):
+        from awvafit import gate, phraseset
+        self.gate, self.phraseset = gate, phraseset
+        d = os.path.join(TMP, 'gate_runs')
+        os.makedirs(d, exist_ok=True)
+        self.items = []
+        rng = np.random.default_rng(7)
+        for k in range(4):  # four phrases, their recordings tones with a little noise
+            s = keys.Stream()
+            midis = [57 + int(v) for v in rng.integers(0, 8, 7)]
+            t = 0.3
+            notes = []
+            for m in midis:
+                end = s.press(t, 0.3, 0.4, 0.5, note=m)
+                notes.append(dict(onset_s=t, offset_s=end - 0.02, midi=m, cents=0.0, attack_db=0.0))
+                t = end + 0.15
+            p = os.path.join(d, f'ph{k}.csv')
+            s.write(p)
+            rec = np.zeros(int((t + 1.0) * SR))
+            for n in notes:
+                a, b = int(n['onset_s'] * SR), int(n['offset_s'] * SR)
+                tt = np.arange(b - a) / SR
+                f = 440 * 2 ** ((n['midi'] - 69) / 12)
+                rec[a:b] += 0.08 * sum(np.sin(2 * np.pi * f * j * tt) * 0.5 ** (j - 1) for j in range(1, 9)) * np.minimum(1, tt / 0.03)
+            rec += 1e-3 * rng.standard_normal(len(rec))
+            it = phraseset.Item(f'ph{k}', 'legato_line', 'test', 'Test', 'e', 'p', 0.0, p, 0.3, 'none', f'ph{k}.wav', 0.0, t + 1.0, notes)
+            self.items.append((it, rec))
+        self.saved = (gate.items_for, phraseset.reference, control.calibrated)
+        by = {it.id: rec for it, rec in self.items}
+        gate.items_for = lambda inst: [it for it, _ in self.items]
+        phraseset.reference = lambda it, sr_out=48000: (by[it.id], SR)
+
+        def calibrated(item, render, workdir, **kw):  # the stream as it is, copied into the build's folder
+            import shutil
+            os.makedirs(os.path.join(workdir, 'strike'), exist_ok=True)
+            p = os.path.join(workdir, 'strike', 'calibrated.csv')
+            shutil.copyfile(item.stream, p)
+            shutil.copyfile(item.stream[:-4] + '.notes.json', p[:-4] + '.notes.json')
+            return p, {}
+        control.calibrated = calibrated
+        player = os.path.join(HERE, 'fake_player.py')
+        self.spec = lambda b: f'cmd[b{b}]:"{sys.executable}" "{player}" "{{csv}}" "{{out}}" {{transpose}} {b}'
+
+    def tearDown(self):
+        self.gate.items_for, self.phraseset.reference, control.calibrated = self.saved
+
+    def test_parallel_runs_match_and_a_build_is_identical_to_itself(self):
+        g = self.gate
+        a = g.run('test', self.spec(0.6), self.spec(0.3), os.path.join(TMP, 'gw1'), workers=1, log=lambda m: None)
+        b = g.run('test', self.spec(0.6), self.spec(0.3), os.path.join(TMP, 'gw4'), workers=4, log=lambda m: None)
+        self.assertEqual(json.dumps(a['measures'], sort_keys=True, default=g._json), json.dumps(b['measures'], sort_keys=True, default=g._json))
+        self.assertEqual(a['verdict'], b['verdict'])
+        self.assertNotEqual(a['verdict'], 'identical')
+        same = g.run('test', self.spec(0.6), self.spec(0.6), os.path.join(TMP, 'gws'), workers=4, log=lambda m: None)
+        self.assertEqual(same['verdict'], 'identical')
+
+    def test_a_command_must_place_the_octave(self):
+        from awvafit import env
+        with self.assertRaises(env.EnvError):
+            self.gate.renderer('cmd[x]:player {csv} {out}', TMP)
+
+    def test_engine_renders_go_beside_their_streams(self):
+        seen = []
+
+        class R:
+            def render(self, engine, preset, rec, out, transpose):
+                seen.append(out)
+                return types.SimpleNamespace(x=np.zeros(4, np.float32))
+        import types
+        r = strike.render_with(R(), 'e', 'p', 0.0, TMP)
+        r(os.path.join(TMP, 'a', 'calibrated.csv'))
+        r(os.path.join(TMP, 'b', 'calibrated.csv'))
+        self.assertEqual(len(set(seen)), 2)
 
 
 class Bursts(unittest.TestCase):
