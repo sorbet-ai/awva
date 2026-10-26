@@ -12,13 +12,17 @@ ms later (a near-silent gap); most tongued notes strike at 0.7-1.0. Here the str
   sweep: isolated notes at the phrase's pitches over PRESSURES (strike 0.2): each one's sustain level
      (dB), brightness (spectral centroid over f0), periodicity (the autocorrelation peak at the period,
      median over 40 ms frames); the threshold = the lowest pressure from which the periodicity stays
-     >= 0.9; the floor = 1.25 x the threshold (every note sits clearly above it)
+     >= 0.9; the floor = 1.25 x the threshold, and at least where the engine's level comes within 30 dB of
+     its loudest (every note sits clearly above both)
   anchor: the pressure whose brightness matches the recording's (the median note's centroid / f0, at
      its pitch), at least the floor
   pressure: each moment of a note maps the recording's 10 ms level (re the phrase's median note) to the
      pressure at which the engine's level is the anchor's plus that difference (its own level curve,
      inverted; clipped to the floor and 1): per-note dynamics and the motion within a note follow the
-     recording's level through the engine's curve
+     recording's level through the engine's curve. Within a note the level followed goes at most 12 dB
+     under the note's own, the level is smoothed over 70 ms, and the pressure moves at most 1.5 /s (the
+     scanner's velocity <= 0.05): a breath's motion; a velocity that rises inside a held note is
+     played as a second strike (clicks in the clarinets at 0.05-0.08)
   legato: a connected change (the next onset < CONNECT after this note's end, another pitch) keeps the
      breath: the next key goes down at its onset with a slurred strike (SLUR_STRIKE) on another key, the
      last one lets go `overlap` s later; repeated pitches and gaps re-tongue (released 20 ms before)
@@ -47,6 +51,10 @@ SLUR_STRIKE = 0.1
 TONGUE_STRIKE = 0.2
 PERIODIC = 0.9
 FLOOR_X = 1.25
+FLOOR_DB = 30.0   # the floor is also where the engine's level is within this of its loudest
+HOLD_DIP = 12.0   # dB a held note's pressure may follow the recording's level under the note's own
+SLEW = 1.5        # /s: the fastest a held note's pressure moves (the scanner's velocity <= K * SLEW = 0.05)
+ENV_SMOOTH = 0.07  # s: the recording's 10 ms level, smoothed over this before the pressure follows it
 
 
 def env_db(x, sr=SR, hop=0.01):
@@ -156,7 +164,9 @@ def curves(x, sched, octave):
                 thr = c['P'][i]
                 break
         c['threshold'] = thr
-        c['floor'] = min(FLOOR_X * thr, 1.0) if thr is not None else 1.0
+        lv = np.nan_to_num(np.array(c['level']), nan=-200.0)
+        audible = c['P'][int(np.argmax(lv >= lv.max() - FLOOR_DB))]
+        c['floor'] = min(max(FLOOR_X * thr, audible), 1.0) if thr is not None else 1.0
     return out
 
 
@@ -209,6 +219,10 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
     Lmed = float(np.nanmedian(lv))
     jm = int(np.nanargmin(np.abs(lv - Lmed)))
     e = env_db(rec)
+    # the breath follows the level's motion, not its ripple (beats, a room's flutter): ENV_SMOOTH s
+    w = max(int(round(ENV_SMOOTH / 0.01)), 1)
+    e = np.convolve(np.pad(e, (w // 2, w - 1 - w // 2), mode='edge'), np.ones(w) / w, mode='valid')
+    te = np.arange(len(e))
     mids = [int(round(m)) for _, _, m in notes]
     lay = [m - 12 * o for m in mids]
     c_med = _curve_for(cv, lay[jm])
@@ -226,20 +240,25 @@ def build(item, rec, cv, path, overlap=0.03, strikes=None, bright_offset=0.0):
         c = _curve_for(cv, lay[j])
         end = nxt[0] + overlap if conn_out else (min(b, nxt[0] - 0.02) if nxt is not None and nxt[0] - b < CONNECT else b)
 
-        def p_at(t, c=c):
-            k = min(max(int(t / 0.01), 0), len(e) - 1)
-            return pressure_for(c, L_anchor + (e[k] - Lmed))
-
         lvl_j = lv[j] if math.isfinite(lv[j]) else Lmed
+        low = (lvl_j - Lmed) - HOLD_DIP  # a held note's pressure stays within HOLD_DIP dB of its own level
+
+        def target(t, c=c, low=low):
+            return pressure_for(c, L_anchor + max(float(np.interp(t / 0.01, te, e)) - Lmed, low))
+
         P0 = pressure_for(c, L_anchor + (lvl_j - Lmed))
         v = SLUR_STRIKE if conn_in else (strikes[j] if strikes and j in strikes else TONGUE_STRIKE)
-        for _ in range(4):  # the rise goes to the pressure where the hold starts: no step at its end
-            tr = max(keys.K * math.pi * P0 / (2 * v), 0.004)
-            P0 = p_at(a + tr)
         tr = max(keys.K * math.pi * P0 / (2 * v), 0.004)
         hold = max(end - a - tr, 0.05)
+        # the hold's pressure follows the recording's level from the rise's end, slew-limited (the
+        # scanner's velocity stays under K * SLEW: a breath's motion, never a second strike)
+        ug = np.arange(0.0, hold + keys.DT, keys.DT)
+        y = np.empty(len(ug))
+        y[0] = P0
+        for k in range(1, len(ug)):
+            y[k] = y[k - 1] + float(np.clip(target(a + tr + ug[k]) - y[k - 1], -SLEW * keys.DT, SLEW * keys.DT))
         avoid = (last_kid,) if conn_in and last_kid is not None else ()
-        s.press(a - t_first + 0.3, v, P0, hold, note=lay[j], avoid=avoid, shape=lambda u, a=a, tr=tr, P0=P0, p_at=p_at: p_at(a + tr + u) / P0)
+        s.press(a - t_first + 0.3, v, P0, hold, note=lay[j], avoid=avoid, shape=lambda u, ug=ug, y=y, P0=P0: float(np.interp(u, ug, y)) / P0)
         last_kid = s.notes[-1]['kid']
         info.append(dict(P0=round(P0, 3), floor=round(c['floor'], 3), slur_in=conn_in))
     s.write(path)

@@ -188,7 +188,13 @@ A phrase set's default stream infers the control once, for every engine. Three o
 
    The oscillation threshold is the lowest pressure from which periodicity stays at 0.9 or more. The floor is 1.25 × the threshold.
 2. **Anchor.** The pressure whose brightness matches the recording's median note, at least the floor. It is refined once in the phrase itself, because an isolated note is not as bright as the same note in a line.
-3. **Pressure.** Every 10 ms of a note maps the recording's level (relative to the phrase's median note) to the pressure at which the engine's own level curve reaches the anchor's level plus that difference. It is clipped to between the floor and 1. Per-note dynamics and the motion within a note follow the recording through the engine's curve.
+3. **Pressure.** Every 10 ms of a note maps the recording's level (relative to the phrase's median note) to the pressure at which the engine's own level curve reaches the anchor's level plus that difference. It is clipped to between the floor and 1. Per-note dynamics and the motion within a note follow the recording through the engine's curve. Within a note, the pressure follows the recording's level under four limits:
+   - the level is smoothed over 70 ms;
+   - it goes at most 12 dB under the note's own level;
+   - the pressure moves at most 1.5 per second, which keeps the scanner's velocity at 0.05 or less;
+   - the floor is also held where the engine's level comes within 30 dB of its loudest.
+
+   The key path plays a velocity that rises inside a held key as a second strike: following the raw 10 ms level made both clarinets click.
 4. **Legato.** At a connected change of pitch (the next onset less than 0.12 s after the note's end), the next key goes down at its onset on another key, and the last one lets go 30 ms later (`--overlap`). The breath is held. Repeated pitches and real gaps re-tongue, released 20 ms early.
 5. **Strike.** A strike sweep on isolated notes gives a curve of attack overshoot against strike. The overshoot is the attack's peak, −10 to +100 ms around the onset, over the sustain's 99th-percentile peak.
    - Each note gets the strike whose overshoot matches the recording's own for that note (the manifest's `notes[].attack_db`, the same measure).
