@@ -7,7 +7,7 @@
 // presets/doublereed/00-oboe.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "doublereed", "params_hash": "d13324fa"},
+  "engine": {"id": "doublereed", "params_hash": "a3d73e6a"},
   "title": "oboe",
   "heroes": ["reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"],
   "params": {
@@ -53,6 +53,8 @@ inline constexpr char factory_json_0[] = R"awva-preset({
     "hiss": 0,
     "t_noise": 0.000821,
     "tongue": 1.21443,
+    "att_rate": 1.21443,
+    "att_noise": 1.21443,
     "acc_level": 1.45496,
     "acc_decay": 0.037843,
     "tongue_t": 0.0008,
@@ -68,7 +70,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/doublereed/01-cor-anglais.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "doublereed", "params_hash": "d13324fa"},
+  "engine": {"id": "doublereed", "params_hash": "a3d73e6a"},
   "title": "cor anglais",
   "heroes": ["reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"],
   "params": {
@@ -114,6 +116,8 @@ inline constexpr char factory_json_1[] = R"awva-preset({
     "hiss": 0,
     "t_noise": 0.000821,
     "tongue": 1.21443,
+    "att_rate": 1.21443,
+    "att_noise": 1.21443,
     "acc_level": 1.45496,
     "acc_decay": 0.037843,
     "tongue_t": 0.0008,
@@ -129,7 +133,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/doublereed/02-bassoon.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "doublereed", "params_hash": "d13324fa"},
+  "engine": {"id": "doublereed", "params_hash": "a3d73e6a"},
   "title": "bassoon",
   "heroes": ["reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"],
   "params": {
@@ -175,6 +179,8 @@ inline constexpr char factory_json_2[] = R"awva-preset({
     "hiss": 0,
     "t_noise": 0.668566,
     "tongue": 1.64998,
+    "att_rate": 1.64998,
+    "att_noise": 1.64998,
     "acc_level": 0.071255,
     "acc_decay": 0.059369,
     "tongue_t": 0.000806,

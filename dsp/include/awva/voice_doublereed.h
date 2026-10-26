@@ -15,7 +15,11 @@
  *   tongue   the strike is the tongue on the reed's tip: it holds the reed closed while the strike
  *            rises (a harder strike: more closed) and lets it go at the peak, with the pressure built
  *            up behind it (an accent that decays) and a turbulent "t". A press without a strike is a
- *            breath attack
+ *            breath attack. Three sensitivities to the strike, independent: tongue (the accent),
+ *            att_rate (how fast the tongue lets go, and how far it held the reed shut: the attack's
+ *            rate) and att_noise (the "t"); the sustain's texture (breath, jitter, the player's
+ *            wander) doesn't follow the strike. A strike counts while the note starts (STRIKE_WIN
+ *            after a start or a new note): inside a held note a swell of the pressure is breath
  *   REED     two blades as one mechanical mode, blown closed (the mouth pressure pushes them
  *            shut; Fletcher 1979, Vergez et al. 2003): resonance and Q (the lips' damping), the tip
  *            opening at rest and the closing pressure (the blades' stiffness), contact stiffness and
@@ -104,8 +108,8 @@ static constexpr real DMAX = (real)(BLEN - 4);
 static constexpr real RHO = 1.2f;
 static constexpr real C0 = 343.0f;
 static constexpr real PI = 3.14159265f;
-static constexpr real NOTE_LO = 31.5f;  // below: an octave up (the delay line's length)
-static constexpr real NOTE_HI = 100.0f; // above: an octave down
+static constexpr real NOTE_LO = 31.5f;    // below: an octave up (the delay line's length)
+static constexpr real NOTE_HI = 100.0f;   // above: an octave down
 static constexpr real STRIKE_WIN = 0.05f; // s: a strike counts while the note starts
 
 // the bore delay lines, placed by the host (engine SDK): LargeMemory (on an embedded target, its slower SRAM)
@@ -164,7 +168,9 @@ struct Params {
 	real hiss;    // steady jet turbulence (re the mean flow)
 	real t_noise; // tongue "t"
 	// attack
-	real tongue;      // strike sensitivity
+	real tongue;      // strike sensitivity of the accent (the pressure built up behind the tongue)
+	real att_rate;    // strike sensitivity of the attack's rate: how fast the tongue lets the reed go, and how far it held it shut
+	real att_noise;   // strike sensitivity of the attack's noise (the tongue's "t")
 	real acc_amp;     // the pressure built up behind the tongue: overshoot
 	real acc_t;       // its decay (s)
 	real tongue_t;    // tongue release time of a soft "d" (s); a hard strike is ~16x faster
@@ -218,6 +224,7 @@ struct VoiceState {
 	real gate;               // tongue / breath gate
 	real gate_rate;          // its opening rate (per control step)
 	real acc, tn;            // accent and tongue noise envelopes
+	real racc;               // the attack rate's strike envelope (as acc, of the rate's strike)
 	real accf;               // the accent's pressure
 	real ty1, ty2;           // tilt smoother
 	real pm_prev;            // mouth pressure at the end of the last block
@@ -359,6 +366,7 @@ static inline void reset_voice(Engine& e, VoiceState& s, int v) {
 	s.lv1 = s.lv2 = s.amp = s.gate = 0.0f;
 	s.gate_rate = 0.0f;
 	s.acc = s.tn = s.accf = 0.0f;
+	s.racc = 0.0f;
 	s.ty1 = s.ty2 = 0.0f;
 	s.pm_prev = 0.0f;
 	s.jn = s.dr = 0.0f;
@@ -439,6 +447,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const real vpres = clampr(cc.vpres, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
 	const real vp1 = rmax(vpres - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
+	const real vrlev = rmin(rmax(P.att_rate, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
+	const real vnlev = rmin(rmax(P.att_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	real note = clampr(cc.note, 0.0f, 132.0f);
 	while (note > NOTE_HI) note -= 12.0f;
 	while (note < NOTE_LO) note += 12.0f;
@@ -455,12 +465,18 @@ static inline void process_voice(Engine& e, int vi) {
 
 	// ---- block rate: the player and the instrument for this note ----------------------------------
 	const bool jump = start || fabsf(note - s.note_prev) >= 1.0f;
-	if (jump && !start && held) s.acc = rmax(s.acc, P.slur); // legato change: a small articulation
+	if (jump && !start && held) {
+		s.acc = rmax(s.acc, P.slur); // legato change: a small articulation
+		s.racc = rmax(s.racc, P.slur);
+	}
 	if (jump) s.vneg = 0.0f;
 	// only a strike strikes: the key's speed counts while the note starts (STRIKE_WIN after a start or a
 	// new note); later in the note a swell of the pressure (a positive vpres) is breath, not the tongue
 	s.sage = jump ? 0.0f : rmin(s.sage + e.block_dt, 1.0f);
-	const real vstrike = s.sage < STRIKE_WIN ? vplev : 0.0f;
+	const bool striking = s.sage < STRIKE_WIN;
+	const real vstrike = striking ? vplev : 0.0f; // the accent's strike
+	const real vrate = striking ? vrlev : 0.0f;   // the attack rate's
+	const real vnoise = striking ? vnlev : 0.0f;  // the attack noise's
 	s.note_prev = note;
 	if (start) {
 		// from silence: the reed at rest, the bore quiet
@@ -471,8 +487,8 @@ static inline void process_voice(Engine& e, int vi) {
 		s.pm_prev = 0.0f;
 	}
 	// a strike opens the tongue: fast for a hard one
-	if (vstrike > 0.05f && (start || vstrike > s.acc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vstrike), 0.0005f), 1.0f);
-	if (start && vstrike <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
+	if (vrate > 0.05f && (start || vrate > s.racc + 0.05f)) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t * exp2s(-4.0f * vrate), 0.0005f), 1.0f);
+	if (start && vrate <= 0.05f) s.gate_rate = rmin(e.ctrl_dt / rmax(P.tongue_t, 0.0005f), 1.0f);
 
 	const real by = clampr(cc.but_y, -1.0f, 1.0f);
 	if (start) {
@@ -650,13 +666,14 @@ static inline void process_voice(Engine& e, int vi) {
 	const real shake = e.shake * rmax(P.flutter, 0.0f);
 	const real flut_inc = P.flut_hz * e.ctrl_dt;
 	{
-		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, accf = s.accf, tn = s.tn, gate = s.gate, fph = s.flut_ph;
+		real lv1 = s.lv1, lv2 = s.lv2, amp = s.amp, acc = s.acc, racc = s.racc, accf = s.accf, tn = s.tn, gate = s.gate, fph = s.flut_ph;
 		// the lungs follow the key slowly (the breath smoother); the tongue's accent is fast
 		const real fac_af = rmin(e.ctrl_dt / rmax(rmax(P.tongue_t, 0.0005f) * exp2s(-4.0f * acc), 0.001f), 1.0f);
 		const strisy::SvfCoef bc = e.lv_c;
 		for (int k = 0; k < NCTRL; k++) {
 			acc = rmax(acc * fac_acc, vstrike);
-			tn = rmax(tn * fac_tn, vstrike);
+			racc = rmax(racc * fac_acc, vrate);
+			tn = rmax(tn * fac_tn, vnoise);
 			real t1, ls;
 			SVF_TICK(rmin(pcl, 2.0f), lv1, lv2, bc, t1, ls);
 			amp = rmax(rmax(ls, 0.0f), amp * fac);
@@ -676,6 +693,7 @@ static inline void process_voice(Engine& e, int vi) {
 		s.lv2 = lv2;
 		s.amp = amp;
 		s.acc = acc;
+		s.racc = racc;
 		s.accf = accf;
 		s.tn = tn;
 		s.gate = gate;
@@ -692,9 +710,9 @@ static inline void process_voice(Engine& e, int vi) {
 	} else if (s.age < 1000) {
 		s.age++;
 	}
-	if (s.age < 24 && vstrike > s.tlev + 0.02f) {
-		s.tlev = vstrike;
-		s.y = rmin(s.y, -h0 * clampr(P.tongue_shut, 0.0f, 1.2f) * vstrike);
+	if (s.age < 24 && vrate > s.tlev + 0.02f) {
+		s.tlev = vrate;
+		s.y = rmin(s.y, -h0 * clampr(P.tongue_shut, 0.0f, 1.2f) * vrate);
 		s.yv = rmin(s.yv, 0.0f);
 	}
 	real y = s.y, yv = s.yv, p = s.p, ic = s.ic, ul = s.ul, um = s.um;
@@ -917,6 +935,8 @@ static constexpr ParamEntry param_table[] = {
     {{"hiss", "air", 0.0f, 0.5f, C_}, &Params::hiss},
     {{"t_noise", "air", 0.0f, 1.0f, C_}, &Params::t_noise},
     {{"tongue", "attack", 0.0f, 2.0f, C_}, &Params::tongue},
+    {{"att_rate", "attack", 0.0f, 2.0f, C_}, &Params::att_rate},
+    {{"att_noise", "attack", 0.0f, 2.0f, C_}, &Params::att_noise},
     {{"acc_level", "attack", 0.0f, 1.5f, C_}, &Params::acc_amp},
     {{"acc_decay", "attack", 0.005f, 0.3f, C_}, &Params::acc_t},
     {{"tongue_t", "attack", 0.0005f, 0.05f, C_}, &Params::tongue_t},

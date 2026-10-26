@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "doublereed", "params_hash": "d13324fa"},
+  "engine": {"id": "doublereed", "params_hash": "a3d73e6a"},
   "title": "bassoon",
   "heroes": ["reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"],
   "params": {
@@ -46,6 +46,8 @@
     "hiss": 0,
     "t_noise": 0.668566,
     "tongue": 1.64998,
+    "att_rate": 1.64998,
+    "att_noise": 1.64998,
     "acc_level": 0.071255,
     "acc_decay": 0.059369,
     "tongue_t": 0.000806,

@@ -1,6 +1,6 @@
 {
   "format": "awva-preset/1",
-  "engine": {"id": "doublereed", "params_hash": "d13324fa"},
+  "engine": {"id": "doublereed", "params_hash": "a3d73e6a"},
   "title": "cor anglais",
   "heroes": ["reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"],
   "params": {
@@ -46,6 +46,8 @@
     "hiss": 0,
     "t_noise": 0.000821,
     "tongue": 1.21443,
+    "att_rate": 1.21443,
+    "att_noise": 1.21443,
     "acc_level": 1.45496,
     "acc_decay": 0.037843,
     "tongue_t": 0.0008,
