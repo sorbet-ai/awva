@@ -40,7 +40,7 @@
 
 #define AWVA_ENGINE_PRESETS(ns) \
 	static constexpr int num_presets = ::ns::NUM_PRESETS; \
-	[[nodiscard]] static const char* preset_name(int i) { return ::ns::preset_name(i); } \
+	[[nodiscard]] static constexpr const char* preset_name(int i) { return ::ns::preset_name(i); } \
 	static void set_preset(Engine& e, int i) { ::ns::set_preset(e, i); } \
 	static void params_loaded(Engine& e, int i) { ::ns::params_loaded(e, i); } \
 	[[nodiscard]] static const char* factory_text(int i) { return ::ns::factory_json[i]; }
@@ -164,7 +164,7 @@ template <class T> struct Adapter {
 	[[nodiscard]] int voices() const { return e.nvoices; }
 
 	[[nodiscard]] static constexpr int num_presets() { return detail::num_presets<T>(); }
-	[[nodiscard]] static const char* preset_name(int i) {
+	[[nodiscard]] static constexpr const char* preset_name(int i) {
 		if constexpr (has_presets) return i >= 0 && i < T::num_presets ? T::preset_name(i) : nullptr;
 		else return (void)i, nullptr;
 	}
@@ -197,7 +197,7 @@ template <class T> struct Adapter {
 	}
 
 	static constexpr int num_params = Params::count;
-	[[nodiscard]] static const ParamDesc* param_desc(int i) { return Params::desc(i); }
+	[[nodiscard]] static constexpr const ParamDesc* param_desc(int i) { return Params::desc(i); }
 	[[nodiscard]] float* param(int i) { return Params::ptr(e, i); }
 	[[nodiscard]] bool set_param(int i, float v) {
 		if (!strisy::write_param(Params::desc(i), Params::ptr(e, i), v)) return false;

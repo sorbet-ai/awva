@@ -30,7 +30,7 @@ struct ParamDesc {
 
 template <class E> struct EngineParams {
 	static constexpr int count = 0;
-	[[nodiscard]] static const ParamDesc* desc(int) { return nullptr; }
+	[[nodiscard]] static constexpr const ParamDesc* desc(int) { return nullptr; }
 	[[nodiscard]] static float* ptr(E&, int) { return nullptr; }
 	static void changed(E&, int) {}
 };
