@@ -3,7 +3,7 @@
 // MIDI in -> the engines' voice controls on the PC, by the same code an embedded host runs: the
 // decoder (awva/ump.h: MIDI 2.0 and MIDI 1.0 / MPE in UMP, the notes and the instrument's
 // messages: the bend range, the MCM, the instrument's bend, the sustain pedal, motion) and the
-// voices (awva/voice_allocator.h, awva/legato.h). What an instrument does beyond them (its MIDI
+// voices (awva/voice_allocator.h, awva/mono.h). What an instrument does beyond them (its MIDI
 // out, its other CCs) a host on the PC doesn't need.
 //
 // Time: MIDI is taken in fixed steps, the host's control rate (set_step(): 2 ms unless it says
@@ -17,7 +17,7 @@
 #include <array>
 
 #include "awva/engine.h"
-#include "awva/legato.h"
+#include "awva/mono.h"
 #include "awva/ump.h"
 #include "awva/voice_allocator.h"
 
@@ -48,14 +48,18 @@ public:
 	void set_step(double seconds) {
 		alloc_.set_step(seconds);
 		dec_.set_step(seconds);
+		step_s_ = static_cast<float>(seconds);
 	}
 
 	[[nodiscard]] const NoteControls* voices() const { return vc_.data(); }
 	[[nodiscard]] int num_voices() const { return nv_; }
-	// mono legato (legato.h): one voice, a note pressed while another is held slurs to it; the
-	// held notes are forgotten on a switch, and the voices beyond the first go quiet
-	void set_legato(bool on);
-	[[nodiscard]] bool legato() const { return legato_on_; }
+	// mono (mono.h): one voice, played by every held key; the held notes are forgotten on a
+	// switch, and the voices beyond the first go quiet
+	void set_mono(bool on);
+	[[nodiscard]] bool mono() const { return mono_on_; }
+	// how mono's voice goes note to note: the engine's family and the player's thresholds (mono.h)
+	void set_mono_style(const voices::MonoStyle& m) { mono_.set_style(m); }
+	[[nodiscard]] const voices::MonoStyle& mono_style() const { return mono_.style(); }
 	[[nodiscard]] const dsp::InstrumentControls& globals() const { return g_; }
 	[[nodiscard]] int notes_held() const;
 	[[nodiscard]] int members() const { return dec_.members(); }
@@ -81,7 +85,7 @@ public:
 	[[nodiscard]] float floor(int s) const { return floor_[s]; }
 
 private:
-	void write_legato(int s, const NoteControls& n);
+	void write_mono(int s, const NoteControls& n);
 
 	awva::ump::Decoder<NOTES> dec_;
 	voices::VoiceAllocator<NOTES, 16> alloc_;
@@ -89,8 +93,9 @@ private:
 	std::array<NoteControls, MAX_VOICES> vc_;
 	dsp::InstrumentControls g_;
 	int nv_ = 0;
-	voices::Legato<NOTES> legato_;
-	bool legato_on_ = false;
+	voices::Mono<NOTES> mono_;
+	bool mono_on_ = false;
+	float step_s_ = 0.002f; // the control step's length
 	float bend_range_ = 48.0f;
 	bool held_[NOTES] = {};
 	float floor_[NOTES] = {};

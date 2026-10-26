@@ -13,10 +13,10 @@ MidiVoices::MidiVoices(int voices) :
 	alloc_.set_voices(nv_);
 }
 
-void MidiVoices::set_legato(bool on) {
-	if (on == legato_on_) return;
-	legato_on_ = on;
-	legato_.clear();
+void MidiVoices::set_mono(bool on) {
+	if (on == mono_on_) return;
+	mono_on_ = on;
+	mono_.clear();
 	if (on)
 		for (int v = 1; v < nv_; v++) {
 			NoteControls& c = vc_[static_cast<size_t>(v)];
@@ -25,19 +25,17 @@ void MidiVoices::set_legato(bool on) {
 		}
 }
 
-// mono legato: the one voice plays the newest held note at the strongest held
-// note's pressure; a release returns to the newest still held; the last note's release is the voice's
-void MidiVoices::write_legato(int s, const NoteControls& n) {
-	legato_.note(s, n);
-	NoteControls c = n;
-	if (legato_.empty()) {
+// mono: every held key plays the one voice (mono.h); the voice is the player's, each step; the
+// last key's release is the voice's at once
+void MidiVoices::write_mono(int s, const NoteControls& n) {
+	mono_.note(s, n);
+	if (mono_.empty()) {
 		if (alloc_.voice(s) < 0) return;
-	} else {
-		const int top = legato_.top();
-		if (alloc_.voice(top) < 0) alloc_.take(top, 0);
-		c = legato_.signals();
+		vc_[0] = mono_.voice();
+		return;
 	}
-	vc_[0] = c;
+	const int top = mono_.top();
+	if (alloc_.voice(top) < 0) alloc_.take(top, 0);
 }
 
 int MidiVoices::notes_held() const {
@@ -71,13 +69,17 @@ void MidiVoices::step() {
 		dec_.flush(*this);
 	}
 	queued_ = 0;
+	if (mono_on_ && !mono_.empty()) { // the player: the voice from every held key, this step
+		mono_.step(step_s_);
+		vc_[0] = mono_.voice();
+	}
 }
 
 // a note starts: held, its level, a voice
 void MidiVoices::note_started(int s, const NoteControls& n) {
 	held_[s] = true;
 	alloc_.set_level(s, n.pressure + n.pressure_rate); // a new note: no old estimate
-	if (legato_on_) return;                            // (its voice is the legato voice's, at note_changed)
+	if (mono_on_) return;                              // (its voice is the mono voice, at note_changed)
 	(void)alloc_.start(*this, s);
 }
 
@@ -85,8 +87,8 @@ void MidiVoices::note_changed(int s, const NoteControls& n) {
 	held_[s] = n.gate != 0;
 	floor_[s] = n.gate ? n.pressure + n.pressure_rate : -1.0f;
 	alloc_.raise_level(s, floor_[s]);
-	if (legato_on_) {
-		write_legato(s, n);
+	if (mono_on_) {
+		write_mono(s, n);
 		return;
 	}
 	const int v = alloc_.voice(s);
@@ -95,11 +97,11 @@ void MidiVoices::note_changed(int s, const NoteControls& n) {
 }
 
 void MidiVoices::note_silenced(int s) {
-	if (legato_on_) { // (the note leaves the legato stack)
+	if (mono_on_) { // (the note leaves the player's keys)
 		NoteControls c = vc_[0];
 		c.pressure = c.pressure_rate = 0.0f;
 		c.gate = 0;
-		write_legato(s, c);
+		write_mono(s, c);
 		return;
 	}
 	const int v = alloc_.voice(s);

@@ -100,7 +100,7 @@ TEST_CASE("preset reader: JSON's syntax, flat, and what it refuses") {
 	const auto p = read_ok(R"( { "format" : "awva-preset/1", "future": {"a": [1, {"b": null}], "c": "x"},
 	    "engine": {"id": "modal", "version": "1.2.3", "params_hash": "77b3f666", "extra": true},
 	    "title": "a \"b\" \\ c\/d\n", "tags": ["one", "two"], "heroes": ["level"],
-	    "params": {"level": 1.5, "trem": true, "model": 2}, "modes": {"legato": true, "x": 0} } )");
+	    "params": {"level": 1.5, "trem": true, "model": 2}, "modes": {"mono": true, "x": 0} } )");
 	CHECK(p->engine == "modal");
 	CHECK(p->version == "1.2.3");
 	CHECK(p->has_hash);
@@ -112,8 +112,8 @@ TEST_CASE("preset reader: JSON's syntax, flat, and what it refuses") {
 	CHECK(*p->param("level") == 1.5f);
 	CHECK(*p->param("trem") == 1.0f);
 	CHECK(p->param("nothing") == nullptr);
-	REQUIRE(p->mode("legato") != nullptr);
-	CHECK(*p->mode("legato"));
+	REQUIRE(p->mode("mono") != nullptr);
+	CHECK(*p->mode("mono"));
 	CHECK_FALSE(*p->mode("x"));
 
 	// written and read again: the same preset

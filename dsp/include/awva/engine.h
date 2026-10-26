@@ -169,11 +169,12 @@ struct EngineInfo {
 	Heroes heroes;                     // the engine's hero parameters
 	const PresetHeroes* preset_heroes; // presets with their own (num_preset_heroes of them)
 	int num_preset_heroes;
-	const char* title = nullptr;  // a title for people ("Electric Piano"); nullptr: name
-	Conformance conformance = {}; // what the conformance checks allow it (the defaults unless its traits say)
-	int min_rate = 11025;         // the lowest sample rate it is made for (a component refuses lower ones)
-	const char* short_name;       // a name of 1 to 6 characters for narrow displays ("tpt")
-	uint32_t led;                 // its colour, 0xrrggbb, never 0 (a host's LED or UI shows the engine in it)
+	const char* title = nullptr;          // a title for people ("Electric Piano"); nullptr: name
+	Conformance conformance = {};         // what the conformance checks allow it (the defaults unless its traits say)
+	int min_rate = 11025;                 // the lowest sample rate it is made for (a component refuses lower ones)
+	const char* short_name;               // a name of 1 to 6 characters for narrow displays ("tpt")
+	uint32_t led;                         // its colour, 0xrrggbb, never 0 (a host's LED or UI shows the engine in it)
+	MonoFamily mono = MonoFamily::finger; // how its voice goes note to note in a host's mono mode (mono.h)
 };
 
 // the hero parameters of a preset, by its name (not nullptr; the engine's own if it has none).

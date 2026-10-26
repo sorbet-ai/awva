@@ -19,7 +19,7 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 - **`process(events)`** takes UMP events at frames within the 32-frame block and renders one block. Inside the component are:
   - the decoder (`ump.h`);
   - the voice allocator;
-  - mono legato (`mode(NSC_MODE_LEGATO, 1)`).
+  - mono (`mode(NSC_MODE_MONO, 1)`: one voice, played by every held key; `dsp/include/awva/mono.h`).
 - **Presets as text.** `load_preset(json)` takes an `awva-preset/1` file (`awva/preset.h`) by name. The report counts what was clamped, skipped (names this engine lacks) and missing (set to their values after `init()`). Another engine's preset, or text that isn't a preset, is refused with nothing changed. `save_preset(title)` writes the current values as such a file. ABI 2 added these two calls.
 - **`process_voices(controls)`** is for a host that allocates voices itself, such as an embedded instrument: the engine's own `process()` on the host's controls.
 
@@ -63,6 +63,6 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 `ctest -R component` checks:
 - every library loads, and its descriptor and manifest match the engine's;
 - accordion and trumpet from their libraries render bit for bit as linked in, through every preset, the scripted performances and the key takes;
-- `process()` with a MIDI 2.0 performance renders bit for bit what the SDK's `MidiVoices` driving the linked engine renders, polyphonic and mono legato, on accordion, trumpet and va.
+- `process()` with a MIDI 2.0 performance renders bit for bit what the SDK's `MidiVoices` driving the linked engine renders, polyphonic and mono, on accordion, trumpet and va.
 
 `awva_conformance <library>` checks the ABI on any component library, this repository's or another's (`conformance/`; [docs/conformance.md](../docs/conformance.md)). The tests run it on every engine's library as `conformance.<engine>.*`.

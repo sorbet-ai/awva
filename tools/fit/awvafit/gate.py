@@ -9,9 +9,9 @@ anyone listens? Nothing goes to a listener unless it passes.
 held-out recording (awvafit.gate_set: fit_tracks_allowed() builds a fit set that can't).
 
 Voicing: the recordings are one instrument playing one line, so by default the builds play the keys in
-mono legato (awva_render --rec --legato: one voice, a key pressed while one is held slurs to it, as a
-wind player's fingers on one breath). A voice per key would keep the old note's release sounding over a
-slur's onset and swamp the onset measures. A build that can't play mono legato runs --voicing poly (its
+mono (awva_render --rec --mono: one voice, played by every held key, as a
+wind player's fingers on one breath; mono.h). A voice per key would keep the old note's release sounding over a
+slur's onset and swamp the onset measures. A build that can't play mono runs --voicing poly (its
 baseline too); then the onsets are measured only where no old voice overlaps them (the first note, and
 notes pressed 100 ms or more after the last key let go).
 
@@ -19,7 +19,7 @@ X and Y say how to render a key stream:
   <engine>:<preset>       awva_render --rec (AWVA_RENDER), the SDK's engines
   cmd:<command>           any other player; the command gets {csv} (the key stream), {out} (where to
                           write the dry output: mono float32, 48 kHz, time 0 = the stream's first row),
-                          {octave} and {transpose}, and {legato} (1: play the keys in mono legato); a label
+                          {octave} and {transpose}, and {mono} (1: play the keys in mono); a label
                           may lead it: cmd[label]:<command>
 
 The phrases: the instrument's held-out set (gate_set.json: a third of its performances in ChoraleBricks
@@ -232,8 +232,8 @@ def items_for(inst):
 # --- renderers -------------------------------------------------------------------------------------
 
 def renderer(spec, workdir, voicing='mono'):
-    """(label, factory(item) -> render(csv) -> mono float64). voicing 'mono': the keys in mono legato (one
-    voice, a key pressed while one is held slurs to it); 'poly': a voice per key"""
+    """(label, factory(item) -> render(csv) -> mono float64). voicing 'mono': the keys in mono (one
+    voice, played by every held key: mono.h); 'poly': a voice per key"""
     if spec.startswith('cmd'):
         label, cmd = spec[3:].split(':', 1) if not spec.startswith('cmd[') else spec[4:].split(']:', 1)
         label = label or 'cmd'
@@ -241,15 +241,15 @@ def renderer(spec, workdir, voicing='mono'):
             raise env.EnvError(f'{label}: the command must take {{csv}}, {{out}}, and {{octave}} or {{transpose}} '
                                '(the stream is pressed at the note minus the transpose: without it the build plays in the wrong octave)')
 
-        if voicing == 'mono' and '{legato}' not in cmd:
-            raise env.EnvError(f'{label}: a mono gate run needs the command to take {{legato}} (1: mono legato) and play it so; '
-                               'a build that cannot play mono legato runs with --voicing poly, its baseline too')
+        if voicing == 'mono' and '{mono}' not in cmd:
+            raise env.EnvError(f'{label}: a mono gate run needs the command to take {{mono}} (1: mono) and play it so; '
+                               'a build that cannot play mono runs with --voicing poly, its baseline too')
 
         def factory(item):
             def render(csv):
                 out = csv[:-4] + '.dry.f32'
                 o = int(round(item.transpose / 12))
-                r = subprocess.run(cmd.format(csv=csv, out=out, octave=o, transpose=item.transpose, legato=int(voicing == 'mono')),
+                r = subprocess.run(cmd.format(csv=csv, out=out, octave=o, transpose=item.transpose, mono=int(voicing == 'mono')),
                                    shell=True, capture_output=True, text=True)
                 if r.returncode or not os.path.exists(out):
                     raise RuntimeError(f'{label}: {r.stderr.strip() or r.stdout.strip()}')
@@ -261,7 +261,7 @@ def renderer(spec, workdir, voicing='mono'):
     rd = Renderer()
 
     def factory(item):
-        return strike.render_with(rd, eng, int(pre) if pre.isdigit() else pre, item.transpose, workdir, legato=voicing == 'mono')
+        return strike.render_with(rd, eng, int(pre) if pre.isdigit() else pre, item.transpose, workdir, mono=voicing == 'mono')
     return spec, factory
 
 
@@ -671,7 +671,7 @@ def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=No
                      the stream's first row), or a spec as the gate takes (<engine>:<preset>, cmd[...]:...)
     fit_set          the phrases to score on: phraseset Items, or a fit-set manifest (gate_set.read_fit_set's
                      format, phrases by id); refused if any is from a held-out recording
-    voicing          'mono' (the gate's default: the keys in mono legato) or 'poly' (onsets only where clean)
+    voicing          'mono' (the gate's default: the keys in mono) or 'poly' (onsets only where clean)
     streams_frozen   False (the default): every call calibrates each phrase on this build, as the gate
                      does, in a folder of its own that is deleted when the call returns; `streams` is not
                      used. True: the phrases are calibrated once, on the first build that plays them, kept
@@ -807,8 +807,8 @@ def main(argv=None):
     p.add_argument('--out')
     p.add_argument('--workers', type=int, default=4)
     p.add_argument('--voicing', choices=('mono', 'poly'), default='mono',
-                   help='mono (default): the keys in mono legato, as the recordings are played; poly: a voice per key, for a build '
-                        'that cannot play mono legato (its baseline too), onsets measured only where no old voice overlaps them')
+                   help='mono (default): the keys in mono, as the recordings are played; poly: a voice per key, for a build '
+                        'that cannot play mono (its baseline too), onsets measured only where no old voice overlaps them')
     fit = p.add_mutually_exclusive_group(required=True)
     fit.add_argument('--fit-set', help='the fit set the candidate was fitted on (a manifest: awvafit.gate_set.read_fit_set); '
                                        'refused if it uses any held-out recording')

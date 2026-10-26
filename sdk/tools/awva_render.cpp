@@ -21,8 +21,8 @@
 //   --tail S          seconds after the input's own length (default 0)
 //   --settle S        seconds of silence rendered before the input and not written (default 0):
 //                     the parameter glide of --set has arrived when the input starts
-//   --legato          (--midi, --ump, --rec) mono legato: one voice, a note pressed while another is held
-//                     slurs to it (the MIDI mapping's mode; for --rec, the keys the same way)
+//   --mono            (--midi, --ump, --rec) mono: one voice, played by every held key (awva/mono.h,
+//                     the engine's family: the MIDI mapping's mode; for --rec, the keys the same way)
 //   --nv N            voices (default 10)
 //   --control-hz H    (--midi, --ump) the control rate MIDI is taken at, Hz (default 0: every
 //                     engine block; an embedded host's scan, e.g. 500: awva_sdk/host_config.h)
@@ -361,7 +361,7 @@ int main(int argc, char** argv) {
 	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0, target_lufs = -23.0, tp_ceiling = -1.0;
 	int nv = 10, rate = 0, control_hz = 0;
 	float transpose = 0.0f;
-	bool use_fx = false, check = false, list_params = false, ftz = false, legato = false, listen = false;
+	bool use_fx = false, check = false, list_params = false, ftz = false, mono = false, listen = false;
 	std::vector<Set> sets;
 	std::vector<float> notes;
 	for (int a = 1; a < argc; a++) {
@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
 		else if (s == "--midi") midi = next();
 		else if (s == "--ctl") ctl = next();
 		else if (s == "--ump") ump = next();
-		else if (s == "--legato") legato = true;
+		else if (s == "--mono") mono = true;
 		else if (s == "--control-hz") control_hz = std::atoi(next());
 		else if (s == "--compare") compare = next();
 		else if (s == "--listen") listen = true;
@@ -433,7 +433,7 @@ int main(int argc, char** argv) {
 
 	// the input: exactly one
 	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --rec, --midi, --ctl or --ump");
-	if (legato && !midi && !ump && !rec) fail("--legato: mono legato for --midi, --ump or --rec");
+	if (mono && !midi && !ump && !rec) fail("--mono: mono for --midi, --ump or --rec");
 	if (control_hz != 0 && !midi && !ump) fail("--control-hz: the control rate of --midi or --ump");
 	if (control_hz < 0) fail("--control-hz: 0 (every engine block) or a rate in Hz");
 	const bool default_input = !perf && !rec && !midi && !ctl && !ump;
@@ -475,9 +475,11 @@ int main(int argc, char** argv) {
 		if (cp) ctl_blocks = cp->blocks();
 		player = std::move(cp);
 	} else {
-		player = rec ? sdk::key_player(rec, nv, sr, &error, legato) :
-		    midi     ? sdk::midi_player(midi, sdk::HostConfig{sr, control_hz, nv}, &error, legato) :
-		    ump      ? sdk::ump_player(ump, sdk::HostConfig{sr, control_hz, nv}, legato, &error) :
+		const awva::voices::MonoStyle style = awva::voices::MonoStyle::of(entry->info->mono); // (as its component)
+		const awva::voices::MonoStyle* ms = mono ? &style : nullptr;
+		player = rec ? sdk::key_player(rec, nv, sr, &error, ms) :
+		    midi     ? sdk::midi_player(midi, sdk::HostConfig{sr, control_hz, nv}, &error, ms) :
+		    ump      ? sdk::ump_player(ump, sdk::HostConfig{sr, control_hz, nv}, ms, &error) :
 		               sdk::scripted_player(perf, nv, sr, &error);
 	}
 	if (!player) fail(error);
@@ -673,7 +675,7 @@ int main(int argc, char** argv) {
 		                            midi                  ? "midi" :
 		                            ump                   ? "ump" :
 		                                                    "perf"));
-		field("legato", legato ? "true" : "false");
+		field("mono", mono ? "true" : "false");
 		field("sample_rate", std::to_string(sr));
 		field("control_hz", std::to_string(control_hz));
 		field("block", std::to_string(dsp::BLOCK));
