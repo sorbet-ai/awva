@@ -923,7 +923,7 @@ TEST_CASE("presets as files: save, then load, gives the same file again (its her
 	}
 }
 
-TEST_CASE("presets as files: a file's heroes that aren't the engine's parameters are dropped; a factory preset has its own again") {
+TEST_CASE("presets as files: a file's heroes that aren't the engine's parameters are dropped, and a factory preset has its own again") {
 	Loaded dll("ep");
 	const nsc_component& c = dll.c();
 	REQUIRE(c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV) == 0);
