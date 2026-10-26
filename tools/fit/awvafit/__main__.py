@@ -12,6 +12,9 @@
   pack <config.json> <out dir> --renderer NAME=PATH ...
   stimuli <out.csv> [--notes 62,67,..] [--soft]   test notes from the recorded takes (or the soft-strike set)
   backtest [--metrics a,b] [--require a,b] [--json f]   every metric on the listener verdict pairs
+  backtest --goodsounds [--metrics a,b] [--json f]       which distances separate Good-sounds' good takes from bad
+  phraseset list|render|score [--set choralebricks] [--family f] [--kind legato_line] [--id ID] [--limit n]
+                            [--engine E --preset P] [name=value ...]   phrase sets from recordings
   brassfamily | sax | flute | clarinet <command> ...     an instrument's steps (their docstrings)
 """
 import argparse
@@ -46,7 +49,10 @@ def cmd_sources(a):
     if a.action == 'list':
         for k, s in sources.SOURCES.items():
             n = len([e for e in sources.registry() if e['source'] == k])
-            print(f"{k:13s} {'permissive' if s['permissive'] else 'REFUSED   '} {n:4d} files  {s['title']}: {s['licence']}")
+            arc = sources.archives(k)
+            what = f'{n:4d} files' if n or not arc else f"{len(arc)} archive, {sum(e['bytes'] for e in arc) / 1e9:.1f} GB"
+            status = 'permissive' if s['permissive'] else ('fit-eval  ' if s.get('use') == 'fit-eval' else 'REFUSED   ')
+            print(f"{k:13s} {status} {what:20s} {s['title']}: {s['licence']}")
         sets = sorted({x for e in sources.registry() for x in e['sets']})
         print('sets:', ', '.join(f"{x} ({len(sources.files(x))})" for x in sets))
     elif a.action == 'fetch':
@@ -57,6 +63,10 @@ def cmd_sources(a):
         bad = sources.verify(a.args)
         for e in bad:
             print('missing or different:', e['source'], e['path'])
+        for e in sources.archives(*a.args):
+            for problem in sources.verify_archive(e):
+                print(f"{e['source']}: {problem}")
+                bad.append(problem)
         sys.exit(1 if bad else 0)
 
 
@@ -79,6 +89,38 @@ def cmd_measure(a):
         m = note_measures(x, sr, note, n.onset, n.off)
         print(f"note {note} lvl {m['lvl']:6.1f} dB cents {m['cents']:+6.1f} settle {m['settle']:.3f} s hnr {m['hnr']:5.1f} dB "
               f"bright {m['bright']:6.1f} dB tilt {m['tilt']:6.1f} dB/oct rise {m['rise']:.3f} s over {m['over']:+.1f} dB")
+
+
+def cmd_phrases(a):
+    from collections import Counter
+    from . import phraseset as P
+    items = P.load(a.pset, a.family, a.kind)
+    if a.id:
+        items = [i for i in items if i.id in a.id]
+    if a.limit:
+        items = items[:a.limit]
+    notes = {i.note for i in items if i.note}
+    for n in notes:
+        print('licence:', n)
+    if a.action == 'list':
+        for (fam, kind, eng), n in sorted(Counter((i.family, i.kind, f'{i.engine}:{i.preset}') for i in items).items()):
+            print(f'{fam:10s} {kind:12s} {eng:24s} {n:5d}')
+        print(len(items), 'items')
+        return
+    out = a.out or env.workdir('phrases', a.pset)
+    rows = []
+    for it in items:
+        if a.action == 'render':
+            res = P.render(it, os.path.join(out, it.id + '.f32'), a.engine, a.preset, kv(a.set))
+            print(it.id, res.manifest['hash'], f"{res.manifest['seconds']:.1f} s")
+            continue
+        d, _, _ = P.score(it, out, a.engine, a.preset, kv(a.set))
+        rows.append(dict(d, id=it.id, family=it.family, instrument=it.instrument, engine=a.engine or it.engine,
+                         preset=a.preset if a.preset is not None else it.preset))
+        print(f"{it.id[:56]:56s} n={d['_n']:2d} " + P.PHRASE_OBJECTIVE.fmt(d))
+    if rows:
+        P.summary_csv(rows, os.path.join(out, 'scores.csv'))
+        print('median total', f"{np.median([r['total'] for r in rows]):.3f}", 'over', len(rows), 'items ->', os.path.join(out, 'scores.csv'))
 
 
 def cmd_robust(a):
@@ -250,6 +292,7 @@ def main(argv=None):
     s.add_argument('--pressures', default='0.12,0.4,0.9')
     s.add_argument('set', nargs='*')
     s = sub.add_parser('backtest')
+    s.add_argument('--goodsounds', action='store_true', help="on Good-sounds' good/bad labels instead of the listener verdicts")
     s.add_argument('--metrics')
     s.add_argument('--require')
     s.add_argument('--json')
@@ -257,6 +300,17 @@ def main(argv=None):
     s.add_argument('out')
     s.add_argument('--notes', default='62,67,72,77')
     s.add_argument('--soft', action='store_true', help='the fixed soft-strike set (0.07, 0.12, 0.2, 0.3 at 0.4)')
+    s = sub.add_parser('phraseset', help='phrase sets from recordings: list, render, score')
+    s.add_argument('action', choices=['list', 'render', 'score'])
+    s.add_argument('--set', dest='pset', default='choralebricks')
+    s.add_argument('--family')
+    s.add_argument('--kind', default=None)
+    s.add_argument('--id', action='append', default=[])
+    s.add_argument('--limit', type=int)
+    s.add_argument('--engine')
+    s.add_argument('--preset')
+    s.add_argument('--out', default=None)
+    s.add_argument('set', nargs='*')
     s = sub.add_parser('pack')
     s.add_argument('config')
     s.add_argument('out')
@@ -284,6 +338,12 @@ def main(argv=None):
                 print(f'{lufs(x, sr):7.2f} LUFS  {f}')
         elif a.cmd == 'robust':
             cmd_robust(a)
+        elif a.cmd == 'backtest' and a.goodsounds:
+            from .goodsounds import run
+            res = run(a.metrics.split(',') if a.metrics else None)
+            if a.json:
+                with open(a.json, 'w', encoding='utf-8') as f:
+                    json.dump(res, f, indent=1, default=float)
         elif a.cmd == 'backtest':
             from .verdicts import run
             res = run(a.metrics.split(',') if a.metrics else None)
@@ -308,6 +368,8 @@ def main(argv=None):
             with open(a.out.replace('.csv', '.notes.json'), 'w', encoding='utf-8') as f:
                 json.dump(sched, f, indent=0)
             print(len(sched), 'notes ->', a.out)
+        elif a.cmd == 'phraseset':
+            cmd_phrases(a)
         elif a.cmd == 'pack':
             from .pack import build
             build(a.config, a.out, dict(r.split('=', 1) for r in a.renderer))

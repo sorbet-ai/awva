@@ -1,0 +1,4 @@
+{"archives": [
+{"source": "choralebricks", "path": "dl/01_AudioAndAnnotations.zip", "url": "https://zenodo.org/records/20849469/files/01_AudioAndAnnotations.zip?download=1", "bytes": 1157617569, "sha256": "7eeae073be007ce0d9ad623ae056e22f644c6f9137928009c1364096db7b6b10", "md5": "297f56cd78be1b3277a437c7206cfb7c", "into": "data", "version": "1.1.0", "sets": ["phrases", "brass", "sax", "clarinet", "flute", "doublereed"]},
+{"source": "goodsounds", "path": "dl/good-sounds.zip", "url": "https://zenodo.org/records/820937/files/good-sounds.zip?download=1", "bytes": 13906331564, "sha256": "c94409355ea7e67af11144d25c7aa5e882b07827329230d185b4d34a9571f142", "md5": "2137bbb2d32c1d60aa51e1301225f541", "into": "data", "version": "2017-06-29", "sets": ["goodsounds"]}
+]}

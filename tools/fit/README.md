@@ -44,6 +44,10 @@ python -m awvafit loudness <file>...                       # BS.1770 integrated 
 python -m awvafit stimuli out/notes.csv --notes 62,67      # test notes at the strikes and pressures of the takes
 python -m awvafit robust flute 0 59 98                     # every note at three pressures must speak
 python -m awvafit backtest --require attack,jtfs           # the distances on the listener verdict pairs
+python -m awvafit backtest --goodsounds                    # which distances separate Good-sounds' good takes from bad
+python -m awvafit sources fetch choralebricks              # a Zenodo archive: download, check, extract
+python -m awvafit phraseset list                           # the phrase sets: legato lines and swells from recordings
+python -m awvafit phraseset score --family sax --limit 20  # render each line, measure its note changes against the recording
 python -m awvafit pack <config.json> <out> --renderer v2=<awva_render> --renderer v3=<awva_render>
 
 python -m awvafit brassfamily refs | score <inst> | finish <inst> --preset | fit <inst> <run> | pitch <inst> | bake <inst> <final.json>
@@ -72,10 +76,11 @@ The block is always 32 samples. Renders are deterministic: the engines seed thei
 |---|---|
 | `render` | `awva_render` from Python: `Renderer.render(...)`, `.params(...)`; the `.ctl` layout |
 | `keys`, `controls`, `phrases`, `stimuli` | the inputs:<br>- key streams as a keyboard's scanner reports them, and the default key layout;<br>- engine-level controls and the note events in them;<br>- the standard expression phrases and the listening phrases;<br>- test notes from the recorded takes |
-| `sources`, `sources.json` | the recordings: source, licence, citation, size and SHA-256 per file. `fetch`, `import`, `verify`. Permissive sources only |
+| `sources`, `sources.json`, `archives.json` | the recordings: source, licence, citation, size and SHA-256 per file, and the Zenodo archives (SHA-256, members checked by CRC-32). `fetch`, `import`, `verify`. Permissive sources only, plus URMP and Bach10 for fitting and evaluation only |
 | `labels`, `segment`, `audio` | the recordings' file names (Iowa, MTG, VSCO), and cutting them into notes (the lanes' five methods). AIFF and WAV are read here; FLAC through soundfile or ffmpeg |
 | `features` | `frames`: frame features of a render on its controls.<br>`notes`: the lanes' three per-note analyses, exactly.<br>`measures`: harmonics, HNR, attack, sustain pitch, settle time, brightness, tilt, dynamics.<br>`loudness`: BS.1770.<br>`ranking`: the distances tested against listener verdicts |
 | `objective`, `terms` | the objective framework (terms, scales, weights from the config); the frame-wise and note-wise comparisons |
+| `phraseset`, `goodsounds` | phrase sets from recordings (`awvafit-phrases/1`): rendering each line, the note changes' dip, glide and timing, the phrase distance; the back-test on Good-sounds' good/bad labels |
 | `verdicts`, `verdicts.json` | the back-test: every distance on the pairs listeners judged |
 | `constraints` | user-set limits a recording can't show (e.g. a maximum rise time per strike), as penalties |
 | `fit`, `robust`, `bake`, `pack` | CMA-ES with checkpoints and hold-out; every note at three pressures speaks; fitted values into the headers; listening packs |

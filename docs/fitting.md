@@ -41,6 +41,8 @@ fetch -> segment -> features -> objective -> fit -> bake -> listen
 
 - **No recording is in this repository.** `sources.json` holds where each file comes from, its licence, the citation, its size and hash; the files are fetched into `$AWVA_REFS`, with `LICENSES.md` written next to them.
 - **Permissive sources only.** A source whose terms restrict use is listed with `permissive: false` and is refused: the Philharmonia samples (free in music, not to be redistributed as samples).
+- **One recorded exception, `use: fit-eval`.** URMP and Bach10 state no licence. Permission has been asked of their authors, and meanwhile the owner allows them for fitting and evaluation only, never redistributed. They are never fetched (they have no public download either). Files already on disk may be imported and read, and every command that reads them prints the restriction.
+- **Archives are pinned whole.** ChoraleBricks and Good-sounds are Zenodo archives: `archives.json` holds each one's URL, size, SHA-256 and Zenodo's MD5. Every extracted file is checked against the CRC-32 the archive records for it (`sources verify`), and a file not extracted is read from the archive.
 - **Attribution where the licence asks for it.** MTG Solo Saxophones is CC BY 4.0: credit "MTG Solo Saxophones by kinwie, from the MTG (Universitat Pompeu Fabra) Freesound packs, CC BY 4.0" wherever the recordings, or works made from them, are shared. Listening packs carry the citation in their index.
 - **No path, user name or machine-specific folder in a committed file.** Everything comes from the environment.
 
@@ -49,6 +51,10 @@ fetch -> segment -> features -> objective -> fit -> bake -> listen
 | University of Iowa Musical Instrument Samples (Lawrence Fritts) | "freely available ... may be downloaded and used for any projects, without restrictions" | sax, flute, alto flute, clarinets, oboe, bassoon, trumpet, trombone, horn, tuba |
 | MTG Solo Saxophones (kinwie, from the MTG Freesound packs) | CC BY 4.0 | soprano, alto, tenor, baritone sax |
 | VS Chamber Orchestra 2: Community Edition (Versilian Studios) | CC0 1.0 | piccolo |
+| ChoraleBricks 1.1.0 (Balke, Berndt, Mueller; Zenodo 15081740) | CC BY 4.0 (the sheet music excluded) | phrase sets: legato lines and swells, 13 wind instruments |
+| Good-sounds (MTG, Universitat Pompeu Fabra; Zenodo 820937) | CC BY 4.0 | the good/bad back-test |
+| URMP (University of Rochester) | none stated: fitting and evaluation only, pending the authors | phrase sets, when on disk |
+| Bach10 (University of Rochester) | none stated: fitting and evaluation only, pending the authors | phrase sets, when on disk |
 
 ## Rendering
 
@@ -128,6 +134,66 @@ Add a metric to an objective only after it passes, and add new verdicts to `verd
 - The Iowa flute rises as slowly as flute v1, which listening tagged slow-attack, so a distance to the recordings would keep the slowness.
 - A constraint states the wish directly. The flute's config has two: a rise from the key of at most 50 ms at strikes of 0.4 and up, and at most 120 ms below.
 - Its penalty is added to a candidate's total. A listener sets the limits; a fit never moves them.
+
+## Phrase sets: what isolated notes can't show
+
+The step-0 back-test found the woodwinds' rejections invisible on isolated sustained notes. Phrases show the note changes. A phrase set (`awvafit.phraseset`) takes legato lines and swells from recordings and gives each as a key stream that any engine plays, with the recording to compare it with.
+
+- **The sets:** ChoraleBricks now (2,072 items: brass, sax, clarinet, flute, double reed); URMP and Bach10 under the same format once they are on disk. They are built by the research lane's `build_phrases.py` from each recording's notes and f0 annotations. The control is inferred, not measured: pressure follows the recording's level, a phrase's first note strikes as fast as its recorded attack rises, connected notes press softly before the last key lets go.
+- **The manifest** (`awvafit-phrases/1`, at `$AWVA_REFS/phrases/<set>/manifest.json`), per item:
+  - `engine`, `preset` (`awva_render`'s names) and `transpose` (the keys are pressed at the note minus it);
+  - `stream`, the key stream, relative to the manifest;
+  - `audio0_s`, the stream-clock time where a render's audio starts (the stream's first row; `awva_render --rec` starts there);
+  - `source` and `reference`: the recording (`path` relative to the source's root, `start_s` the recording's time of stream time 0);
+  - `notes` (onset, offset, MIDI note, cents, level), the builder's `transitions` and, for swells, `swell`.
+  The reader also takes the builder's first, unversioned form.
+- **Playing one:** `python -m awvafit phraseset render --id <item>` runs `awva_render --rec <stream> --transpose T --settle 1 --tail 1`, on the item's engine and preset or on `--engine/--preset`. Every engine plays the same line as the recording.
+- **Measuring:** `phraseset score` renders each item and measures each note change on the render and on the recording (resampled to 48 kHz), with the same code:
+
+| measure | definition |
+|---|---|
+| level dip | the 10 ms level's dip at the change, re the mean of the two notes' levels around it (dB), and its width below −3 dB (ms) |
+| level step | from the first note's level to the second's (dB) |
+| glide | the pitch's 10 → 90 % of the interval (ms), the overshoot past the target (cents), and the shape: the glide as a fraction of the interval every 10 ms from −60 to +120 ms |
+| onset timing | when the second note's pitch arrives (within 50 cents, periodic), on the stream clock |
+
+  The phrase distance (`PHRASE_OBJECTIVE`) takes, over an item's note changes, the medians of: the glide shapes' RMS difference (% of the interval), the glide times', the arrival times', the dips' and the steps' absolute differences. On the recordings the toolkit's dips agree with the builder's to a median 0.3 dB and its glide times to 10 ms (its own pitch track against the annotated f0).
+- **Not yet trusted.** These are new distances. Like any, they enter an objective only after a back-test: listener verdicts on phrases are what would test them.
+- **The glide time is fragile.** Where the pitch drops out through a change, its 10 → 90 % time jumps: the builder's own glide times are bimodal (the flute's median 17 ms, its upper quartile 145 ms). The glide shape, which skips the frames without a pitch, is the steadier measure.
+- **A first baseline** (`phraseset score --kind legato_line --limit 20`, each family's shipped presets on its lane's engine build; medians over the lines):
+
+| family | lines (note changes) | glide shape | glide | onset | dip | dip width | step | total |
+|---|---|---|---|---|---|---|---|---|
+| sax | 20 (126) | 43 % | 25 ms | 30 ms | 2.9 dB | 30 ms | 5.9 dB | 6.92 |
+| clarinet | 20 (122) | 34 % | 10 ms | 20 ms | 11.0 dB | 20 ms | 3.6 dB | 7.47 |
+| flute | 20 (131) | 40 % | 58 ms | 30 ms | 4.7 dB | 38 ms | 3.8 dB | 9.46 |
+| brass (euphonium, trombone, ...) | 20 (128) | 33 % | 18 ms | 20 ms | 5.1 dB | 28 ms | 3.4 dB | 6.59 |
+
+  One reading for the lanes, a measurement and not a verdict: the clarinet dips deeper at its legato changes than its recordings do (median 25.6 against 18.0 dB, over 51 changes).
+
+## The Good-sounds back-test
+
+`python -m awvafit backtest --goodsounds` asks which distances separate Good-sounds' deliberately bad takes from its good ones, for the trumpet, clarinet and flute sessions (the research lane's design, kept):
+- **References:** the session's good-sound takes at each semitone. A take's score is its distance to the closest one, so the dynamic doesn't decide.
+- **Good comparisons:** the session's good-attack (good-timbre, good-air) takes, which are not references.
+- **Per bad class:** AUC = P(score(bad) > score(good)) over the pairs at the same semitone; 1 means the distance always puts the bad take farther, 0.5 is chance.
+- **Caveat:** only the attack session compares like with like. The other sessions were recorded on other days than the references, so a distance can separate them by the day rather than the fault; those rows are marked confounded.
+
+The results (`backtest --goodsounds`, every distance; they reproduce the research lane's run exactly). Mean AUC over the 11 clean classes, how many of them reach 0.75, and the mean over every class:
+
+| distance | clean classes: mean AUC | at 0.75 or more | every class |
+|---|---|---|---|
+| `mrstft` | 0.78 | 7 of 11 | 0.68 |
+| `lanes` | 0.75 | 5 of 11 | 0.63 |
+| `noise` | 0.74 | 4 of 11 | 0.65 |
+| `jtfs` | 0.72 | 5 of 11 | 0.62 |
+| `attack` | 0.68 | 4 of 11 | 0.52 |
+| `atk_noise` | 0.55 | 2 of 11 | 0.50 |
+
+What it says:
+- **Gross faults are easy, subtle ones are not.** The trumpet's airy attacks are separated by every distance (`attack` and `mrstft` 1.00, `jtfs` 0.97); the clarinet's tongue-blocked attack by none (0.54–0.74).
+- **The ranks differ from the listener verdicts'.** On expert-labelled single notes, the spectral distances (`mrstft`, the lanes' terms) separate best; on the listener verdicts between engine builds, they don't (the lanes' terms prefer the rejected trumpet). The two tests measure different things: Good-sounds asks whether a distance sees a player's fault in a recording; the verdicts ask whether it orders builds the way a listener does. A distance should pass both before it gates.
+- **Attack HF noise is near chance here too,** as it was on the verdicts.
 
 ## The regression proof
 
