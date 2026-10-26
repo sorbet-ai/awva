@@ -282,7 +282,7 @@ include("${AWVA_DOCTEST_DIR}/cmake/doctest.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/tests/known_failures.cmake")
 foreach(v IN LISTS AWVA_ENGINES)
   add_executable(awva_engine_${v}_contract tests/main.cpp tests/contract.cpp tests/contract_blocks.cpp tests/contract_denormals.cpp
-    tests/contract_memory.cpp tests/contract_rates.cpp tests/contract_repress.cpp tests/contract_soak.cpp tests/contract_tuning.cpp)
+    tests/contract_memory.cpp tests/contract_rates.cpp tests/contract_repress.cpp tests/contract_slur.cpp tests/contract_soak.cpp tests/contract_tuning.cpp)
   list(JOIN AWVA_KNOWN_${v} "," _known)
   target_compile_definitions(awva_engine_${v}_contract PRIVATE AWVA_ENGINE_ENTRY=awva_engine_${v} "AWVA_KNOWN_FAILURES=\"${_known}\""
     "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"" "AWVA_ENGINE_TRAITS=\"${AWVA_ENGINE_${v}_TRAITS}\"" AWVA_ENGINE_TYPE=awva::engines::${v})
