@@ -105,7 +105,7 @@ static_assert(sizeof(Params) == NUM_PARAMS * sizeof(real), "Params must be plain
 
 // the factory presets: presets/ep/NN-<name>.preset.json, compiled in (the end of this file)
 static constexpr int NUM_PRESETS = 14;
-[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static constexpr const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
 // preset after init() (host renders: -DEP_PRESET=n)
@@ -771,11 +771,11 @@ namespace ep {
 #include "presets/ep.inc"
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/ep/: a file per preset");
 
-[[nodiscard]] static inline const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
+[[nodiscard]] static constexpr const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
 	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
-[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+[[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
 
 [[nodiscard]] static inline Params preset_params(int i) {
 	const awva::preset::Factory<NUM_PARAMS>& f = factory_preset(i);

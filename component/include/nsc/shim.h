@@ -29,9 +29,10 @@
 
 namespace nsc {
 
-// a parameter's declared default: its value after init() (the engine's first preset), measured at
-// build time by awva_defaults (component/CMakeLists.txt) into NSC_DEFAULTS_HEADER
-template <class E> float defaults(int i);
+// the parameters' declared defaults: their values after init() (the engine's first preset),
+// measured at build time by awva_defaults (component/CMakeLists.txt) into a header that sets this
+// for the engine to its constant array (num_params of them)
+template <class E> inline constexpr const float* defaults_v = nullptr;
 
 namespace dsp = awva;
 
@@ -71,45 +72,53 @@ template <dsp::VoiceEngine E> struct Shim {
 	static State& st(void* p) { return *static_cast<State*>(p); }
 	static const State& st(const void* p) { return *static_cast<const State*>(p); }
 
+	// The descriptor and its tables are constant data, made at compile time (no static is written
+	// at run time, nothing runs before main: the component is plain read-only data and code)
 	static constexpr int NP = E::info.num_params; // the engine's; then "output"
-	static const nsc_param* params() {
-		static nsc_param p[NP + 1];
-		static const bool done = [] {
-			p[NP] = {fnv1a("output"), "output", "output", 0.0f, 2.0f, NSC_PARAM_CONTINUOUS, 1.0f};
-			for (int i = 0; i < NP; i++) {
-				const dsp::ParamDesc* d = E::param_desc(i);
-				p[i] = {fnv1a(d->name), d->name, d->group, d->min, d->max, static_cast<int32_t>(d->kind), defaults<E>(i)};
-			}
-			return true;
-		}();
-		(void)done;
-		return p;
+	static_assert(NP == 0 || defaults_v<E> != nullptr, "the declared defaults (awva_defaults, NSC_DEFAULTS_HEADER) are compiled in");
+	struct Params {
+		nsc_param p[NP + 1];
+	};
+	static constexpr Params make_params() {
+		Params r{};
+		r.p[NP] = {fnv1a("output"), "output", "output", 0.0f, 2.0f, NSC_PARAM_CONTINUOUS, 1.0f};
+		for (int i = 0; i < NP; i++) {
+			const dsp::ParamDesc* d = E::param_desc(i);
+			r.p[i] = {fnv1a(d->name), d->name, d->group, d->min, d->max, static_cast<int32_t>(d->kind), defaults_v<E>[i]};
+		}
+		return r;
 	}
-	static const nsc_preset* presets() {
-		static nsc_preset p[E::info.num_presets > 0 ? E::info.num_presets : 1];
-		static const bool done = [] {
-			for (int i = 0; i < E::info.num_presets; i++) {
-				p[i].name = E::preset_name(i);
-				const dsp::Heroes& h = dsp::heroes_of(E::info, p[i].name);
-				for (int k = 0; k < NSC_MAX_HEROES; k++) p[i].heroes[k] = h.name[k];
-			}
-			return true;
-		}();
-		(void)done;
-		return p;
+	static constexpr Params params_ = make_params();
+	static constexpr const nsc_param* params() { return params_.p; }
+
+	static constexpr int NPR = E::info.num_presets > 0 ? E::info.num_presets : 1;
+	struct Presets {
+		nsc_preset p[NPR];
+	};
+	static constexpr Presets make_presets() {
+		Presets r{};
+		for (int i = 0; i < E::info.num_presets; i++) {
+			r.p[i].name = E::preset_name(i);
+			const dsp::Heroes& h = dsp::heroes_of(E::info, r.p[i].name);
+			for (int k = 0; k < NSC_MAX_HEROES; k++) r.p[i].heroes[k] = h.name[k];
+		}
+		return r;
 	}
+	static constexpr Presets presets_ = make_presets();
+	static constexpr const nsc_preset* presets() { return presets_.p; }
+
 	// the presets' params_hash (awva/preset.h schema_hash): the engine's parameters (without output)
-	static uint32_t preset_hash() {
+	static constexpr uint32_t preset_hash() {
 		return awva::preset::schema_hash(E::info.num_params, [](int i) { return E::param_desc(i); });
 	}
-	static uint32_t schema() {
+	static constexpr uint32_t schema() {
 		uint32_t h = 2166136261u;
-		const nsc_param* p = params();
 		for (int i = 0; i <= NP; i++) {
-			h = fnv1a_word(h, p[i].id);
-			h = fnv1a_word(h, std::bit_cast<uint32_t>(p[i].min));
-			h = fnv1a_word(h, std::bit_cast<uint32_t>(p[i].max));
-			h = fnv1a_word(h, static_cast<uint32_t>(p[i].kind));
+			const nsc_param& p = params_.p[i];
+			h = fnv1a_word(h, p.id);
+			h = fnv1a_word(h, std::bit_cast<uint32_t>(p.min));
+			h = fnv1a_word(h, std::bit_cast<uint32_t>(p.max));
+			h = fnv1a_word(h, static_cast<uint32_t>(p.kind));
 		}
 		return h;
 	}
@@ -118,53 +127,54 @@ template <dsp::VoiceEngine E> struct Shim {
 		if constexpr (requires { E::led; }) return static_cast<uint32_t>(E::led);
 		return 0;
 	}
-	static const char* uid() {
-		static char u[96];
-		static const bool done = [] {
-			const char* p = "com.sorbet-ai.awva.";
-			size_t n = 0;
-			for (; p[n]; n++) u[n] = p[n];
-			for (const char* s = E::info.name; *s && n + 1 < sizeof u; s++) u[n++] = *s;
-			u[n] = 0;
-			return true;
-		}();
-		(void)done;
+	// "com.sorbet-ai.awva.<id>"
+	struct Uid {
+		char s[96];
+	};
+	static constexpr Uid make_uid() {
+		Uid u{};
+		const char* p = "com.sorbet-ai.awva.";
+		size_t n = 0;
+		for (; p[n]; n++) u.s[n] = p[n];
+		for (const char* s = E::info.name; *s && n + 1 < sizeof u.s; s++) u.s[n++] = *s;
+		u.s[n] = 0;
 		return u;
 	}
-	static const nsc_desc* desc() {
-		static nsc_desc d;
-		static const bool done = [] {
-			const dsp::EngineInfo& in = E::info;
-			d.magic = NSC_MAGIC;
-			d.abi = NSC_ABI;
-			d.id = in.name;
-			d.uid = uid();
-			d.name = in.title ? in.title : in.name;
-			d.summary = in.summary;
-			d.version = NSC_VERSION;
-			d.schema_hash = schema();
-			d.inputs = in.inputs;
-			d.channels = in.channels;
-			d.led = led_of();
-			d.max_voices = in.budget.max_voices;
-			d.instr_per_block = in.budget.instr_per_block;
-			d.tail_seconds = in.budget.tail_seconds;
-			d.min_rate = E::info.min_rate;
-			d.max_rate = MAX_RATE;
-			d.state_bytes = static_cast<uint32_t>(sizeof(State));
-			d.fast_bytes = static_cast<uint32_t>(in.fast_bytes); // (0: none; an empty region is still passed)
-			d.large_bytes = static_cast<uint32_t>(in.large_bytes);
-			d.stack_bytes = 0;
-			d.num_params = NP + 1;
-			d.num_presets = in.num_presets;
-			d.params = params();
-			d.presets = presets();
-			for (int k = 0; k < NSC_MAX_HEROES; k++) d.heroes[k] = in.heroes.name[k];
-			return true;
-		}();
-		(void)done;
-		return &d;
+	static constexpr Uid uid_ = make_uid();
+	static constexpr const char* uid() { return uid_.s; }
+
+	static constexpr nsc_desc make_desc() {
+		const dsp::EngineInfo& in = E::info;
+		nsc_desc d{};
+		d.magic = NSC_MAGIC;
+		d.abi = NSC_ABI;
+		d.id = in.name;
+		d.uid = uid_.s;
+		d.name = in.title ? in.title : in.name;
+		d.summary = in.summary;
+		d.version = NSC_VERSION;
+		d.schema_hash = schema();
+		d.inputs = in.inputs;
+		d.channels = in.channels;
+		d.led = led_of();
+		d.max_voices = in.budget.max_voices;
+		d.instr_per_block = in.budget.instr_per_block;
+		d.tail_seconds = in.budget.tail_seconds;
+		d.min_rate = in.min_rate;
+		d.max_rate = MAX_RATE;
+		d.state_bytes = static_cast<uint32_t>(sizeof(State));
+		d.fast_bytes = static_cast<uint32_t>(in.fast_bytes); // (0: none; an empty region is still passed)
+		d.large_bytes = static_cast<uint32_t>(in.large_bytes);
+		d.stack_bytes = 0;
+		d.num_params = NP + 1;
+		d.num_presets = in.num_presets;
+		d.params = params_.p;
+		d.presets = presets_.p;
+		for (int k = 0; k < NSC_MAX_HEROES; k++) d.heroes[k] = in.heroes.name[k];
+		return d;
 	}
+	static constexpr nsc_desc desc_ = make_desc();
+	static constexpr const nsc_desc* desc() { return &desc_; }
 
 	static int32_t init(void* state, void* fast, void* large, int32_t sr, int32_t nv) {
 		if (sr < E::info.min_rate || sr > MAX_RATE) return -1;
@@ -305,17 +315,14 @@ template <dsp::VoiceEngine E> struct Shim {
 		return out ? static_cast<uint32_t>(awva::preset::write(p, out, capacity)) : 0;
 	}
 	static int32_t param_index(uint32_t id) {
-		const nsc_param* p = params();
 		for (int i = 0; i <= NP; i++)
-			if (p[i].id == id) return i;
+			if (params_.p[i].id == id) return i;
 		return -1;
 	}
 
-	static const nsc_component* get() {
-		static const nsc_component c = {desc(), init, reset, mode, process, process_voices, active_voices, ended, voices,
-		    preset, set_preset, param, set_param, param_index, load_preset, save_preset};
-		return &c;
-	}
+	static constexpr nsc_component component_ = {&desc_, init, reset, mode, process, process_voices, active_voices, ended, voices,
+	    preset, set_preset, param, set_param, param_index, load_preset, save_preset};
+	static constexpr const nsc_component* get() { return &component_; }
 };
 
 } // namespace nsc

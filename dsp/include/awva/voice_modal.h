@@ -152,7 +152,7 @@ struct Params {
 static constexpr int NUM_PARAMS = (int)(sizeof(Params) / sizeof(float));
 
 // the factory presets: presets/modal/NN-<name>.preset.json, compiled in (the end of this file)
-[[nodiscard]] static inline const char* preset_name(int i);
+[[nodiscard]] static constexpr const char* preset_name(int i);
 [[nodiscard]] static inline Params preset_params(int i);
 
 static constexpr strisy::ParamDesc param_desc[NUM_PARAMS] = {
@@ -685,11 +685,11 @@ namespace modal {
 #include "presets/modal.inc"
 static_assert(NUM_FACTORY_PRESETS == NUM_PRESETS, "presets/modal/: a file per preset");
 
-[[nodiscard]] static inline const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
+[[nodiscard]] static constexpr const awva::preset::Factory<NUM_PARAMS>& factory_preset(int i) {
 	return awva::preset::factories<strisy::EngineParams<Engine>, factory_json, NUM_PRESETS>[(i >= 0 && i < NUM_PRESETS) ? i : 0];
 }
 
-[[nodiscard]] static inline const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
+[[nodiscard]] static constexpr const char* preset_name(int i) { return factory_preset(i).name.c_str(); }
 
 [[nodiscard]] static inline Params preset_params(int i) {
 	const awva::preset::Factory<NUM_PARAMS>& f = factory_preset(i);
