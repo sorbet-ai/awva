@@ -26,6 +26,9 @@
 //   blocks       a host's block size makes no difference: blocks of 1, 7, 33, 256 frames and of
 //                random sizes, with late events at their negative frames, render the samples of
 //                events given on time, bit for bit
+//   frames       process() at any frame count: calls of 1, 33, 256, 480 frames and of random
+//                sizes, each with the events in it at their frames, render the 32-frame calls'
+//                samples bit for bit
 //   note_ids     every Note On's id comes back from ended() exactly once: through voice
 //                stealing, re-struck keys and more notes than the descriptor's max_note_ids (note_ids),
 //                through preset switches (note_ids.presets) and through reset() (note_ids.reset)
@@ -120,7 +123,7 @@ public:
 	static constexpr size_t GUARD = 1024;
 	static constexpr uint8_t PATTERN = 0xa5;
 	Instance() {
-		const uint32_t sizes[3] = {desc().state_bytes, desc().fast_bytes, desc().large_bytes};
+		const uint32_t sizes[3] = {desc().hot_bytes, desc().stream_bytes, desc().bulk_bytes};
 		for (int r = 0; r < 3; r++) {
 			size_[r] = sizes[r];
 			mem_[r].assign(size_[r] + 2 * GUARD + 64, PATTERN);
@@ -136,7 +139,10 @@ public:
 	Instance& operator=(Instance&&) = delete;
 
 	[[nodiscard]] void* state() const { return region_[0]; }
-	int init(int rate, int voices = nvoices()) { return comp().init(region_[0], region_[1], region_[2], rate, voices); }
+	int init(int rate, int voices = nvoices(), int control_hz = 0) {
+		const nsc_config c{rate, control_hz, voices};
+		return comp().init(region_[0], region_[1], region_[2], &c);
+	}
 	[[nodiscard]] bool guards_intact() const {
 		for (int r = 0; r < 3; r++) {
 			const uint8_t* lo = mem_[r].data();
@@ -262,7 +268,7 @@ Rendered render(Instance& in, const std::vector<Ev>& perf, int64_t frames, int h
 				ev.push_back({static_cast<int32_t>(seen[taken].frame - b0), seen[taken].note_id, {seen[taken].w0, seen[taken].w1, 0, 0}});
 			seen.erase(seen.begin(), seen.begin() + static_cast<std::ptrdiff_t>(taken));
 			if (before) before(block);
-			comp().process(in.state(), ev.data(), static_cast<int32_t>(ev.size()), o.data());
+			comp().process(in.state(), NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o.data());
 			if (ids) ids->drain(in.state());
 			for (int i = 0; i < nc * NSC_BLOCK; i++) {
 				const float x = buf[static_cast<size_t>(i)];
@@ -343,8 +349,8 @@ TEST_CASE("descriptor: complete and consistent") {
 		CHECK(std::strlen(s) > 0);
 	}
 	CHECK((d.channels == 1 || d.channels == 2));
-	CHECK(d.led != 0); // every engine has a colour
-	CHECK(d.led <= 0xffffffu);
+	CHECK(d.colour != 0); // every engine has a colour
+	CHECK(d.colour <= 0xffffffu);
 	CHECK(d.max_voices >= 1);
 	CHECK(d.tail_seconds > 0.0f);
 	CHECK(d.tail_seconds <= 30.0f);
@@ -405,7 +411,38 @@ TEST_CASE("descriptor: complete and consistent") {
 		check_heroes(d.presets[i].heroes);
 	}
 	MESSAGE(id() << " (" << d.uid << ", " << d.version << "): " << d.num_presets << " presets, " << d.num_params << " parameters, rates " << d.min_rate << " .. "
-	             << d.max_rate << ", tail " << d.tail_seconds << " s, regions " << d.state_bytes << " + " << d.fast_bytes << " + " << d.large_bytes << " B");
+	             << d.max_rate << ", tail " << d.tail_seconds << " s, regions " << d.hot_bytes << " + " << d.stream_bytes << " + " << d.bulk_bytes << " B");
+}
+
+TEST_CASE("frames: process() at any frame count renders the 32-frame calls' samples bit for bit") {
+	int32_t next_id = 1;
+	const std::vector<Ev> perf = performance(base_rate(), &next_id);
+	const int64_t frames = static_cast<int64_t>(base_rate()) * 4;
+	const int nc = channels();
+	const auto run = [&](int call) {
+		Instance in;
+		REQUIRE(in.init(base_rate()) == 0);
+		std::vector<float> out(static_cast<size_t>(nc) * static_cast<size_t>(frames));
+		std::vector<float*> o(static_cast<size_t>(nc));
+		size_t k = 0;
+		uint32_t rng = 777u;
+		for (int64_t at = 0; at < frames;) {
+			rng = rng * 1664525u + 1013904223u;
+			const int64_t n = std::min<int64_t>(call > 0 ? call : 1 + (rng >> 8) % 1024, frames - at);
+			std::vector<nsc_event> ev;
+			for (; k < perf.size() && perf[k].frame < at + n; k++)
+				ev.push_back({static_cast<int32_t>(perf[k].frame - at), perf[k].note_id, {perf[k].w0, perf[k].w1, 0, 0}});
+			for (int c = 0; c < nc; c++) o[static_cast<size_t>(c)] = &out[static_cast<size_t>(c) * static_cast<size_t>(frames) + static_cast<size_t>(at)];
+			comp().process(in.state(), static_cast<int32_t>(n), ev.data(), static_cast<int32_t>(ev.size()), o.data());
+			at += n;
+		}
+		return out;
+	};
+	const std::vector<float> ref = run(NSC_BLOCK);
+	for (const int call : {1, 33, 256, 480, 0}) {
+		INFO("calls of " << call << " frames (0: random)");
+		CHECK(same_bits(run(call), ref));
+	}
 }
 
 TEST_CASE("rates: init() takes min_rate .. max_rate and refuses the others, and at each a note sounds and ends within the tail") {
@@ -605,7 +642,7 @@ TEST_CASE("determinism: the same events give the same samples, two instances sha
 			const auto block = [&](Instance& in, const std::vector<Ev>& v, size_t& k, std::vector<float>& out) {
 				std::vector<nsc_event> ev;
 				for (; k < v.size() && v[k].frame < b0 + NSC_BLOCK; k++) ev.push_back({static_cast<int32_t>(v[k].frame - b0), v[k].note_id, {v[k].w0, v[k].w1, 0, 0}});
-				comp().process(in.state(), ev.data(), static_cast<int32_t>(ev.size()), o.data());
+				comp().process(in.state(), NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o.data());
 				out.insert(out.end(), buf.begin(), buf.end());
 			};
 			block(a, perf, ka, both_a);

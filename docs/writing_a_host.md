@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Writing a host
 
-A host loads an engine component (`component/include/nsc/nsc.h`, ABI 4), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
+A host loads an engine component (`component/include/nsc/nsc.h`, ABI 5), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
 - **a plugin**, which plays from a DAW's notes;
 - **an embedded instrument**, which reads its own sensors and allocates voices itself.
 
@@ -14,22 +14,22 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - Load it, and call `nsc_entry()`. `component/include/nsc/load.h` does this, and checks that `desc->magic` is `NSC_MAGIC` and `desc->abi` is `NSC_ABI`. Refuse a component of another ABI.
 - Read the descriptor. It is static and readable before any instance exists:
   - `id` (the short name), `uid` (`com.sorbet-ai.awva.<id>`, the plugin or package id), `name` (a title for people), `short_name` (1 to 6 characters, for narrow displays), `summary`, `version`;
-  - `led`: its colour, 0xrrggbb (never 0);
+  - `colour`: its colour, 0xrrggbb (never 0);
   - `min_rate` .. `max_rate`: the sample rates it supports;
-  - `max_voices`, `channels`, `tail_seconds`, `instr_per_block` (the budget);
+  - `max_voices`, `channels`, `tail_seconds`, `cost` (instructions per voice and frame on the reference core: its worst preset; times your voices and rate, the share of your processor it needs);
   - the three region sizes;
   - the parameters, the presets, the heroes.
 
 ## 2. Give it memory and a rate
 
-- Allocate the regions: `state_bytes`, `fast_bytes`, `large_bytes`, zero-filled and 64-byte aligned. `nsc_instance_new()` in `load.h` does it on the heap. An embedded host without a heap places them in its own memories.
-- Call `init(state, fast, large, sample_rate, voices)`, on the main thread. It returns -1 for a rate outside `min_rate` .. `max_rate`; offer only those rates.
+- Allocate the regions: `hot_bytes`, `stream_bytes`, `bulk_bytes` (by how they are used: the hot one every sample and small, the stream one every sample and large, the bulk one rarely), zero-filled and 64-byte aligned. `nsc_instance_new()` in `load.h` does it on the heap. An embedded host without a heap places them in its own memories.
+- Call `init(state, stream, bulk, &config)`, on the main thread, with `nsc_config {sample_rate, control_hz, voices}`: `control_hz` 0 takes MIDI every engine block (a plugin's), an embedded host passes its scan rate (500 Hz). It returns -1 for a rate outside `min_rate` .. `max_rate`; offer only those rates.
 - On a rate change, `init()` again: the regions are reused, nothing carries over, and the notes end. Re-apply your parameter values and preset after it.
 
 ## 3. Play it
 
-**A plugin: `process(state, events, n, out)`**, one block of `NSC_BLOCK` (32) frames per call. Split the host's buffer into 32-frame blocks.
-- An event is a UMP packet with its frame, counted from the block's start. An event that arrives after its block was rendered gets a negative frame, down to -32; it lands where it would have on time. The component takes MIDI in control steps on an integer-frame grid (every block; `NSC_MODE_CONTROL_HZ` sets another rate, e.g. an embedded host's 500 Hz scan), so place events by frame and nothing more.
+**A plugin: `process(state, frames, events, n, out)`**, any number of frames per call: the host's buffer as it comes. The engine runs 32-frame blocks inside, each rendered when its first frame is due, so the calls' sizes make no difference to the samples.
+- An event is a UMP packet with its frame, counted from the call's start. An event that arrives after its frame was rendered gets a negative frame, down to -32. The component takes MIDI in control steps on an integer-frame grid (`nsc_config.control_hz`), so place events by frame and nothing more.
 - Send MIDI 2.0 (UMP type 4) in its standard meaning, or MIDI 1.0 in UMP (type 2, MPE included). One channel can carry every note: per-note timbre as Registered Per-Note Controller 74, per-note pitch as Pitch 7.25 (docs/midi.md has the table, a sensor's controllers included).
 - Give a Note On the host's note id (`nsc_event.note_id`, else -1). After each `process()`, drain `ended()` (call it again while it returns `max`) and send each id's note-end (CLAP_EVENT_NOTE_END). Pass at most `desc->max_events` events a block; `desc->max_note_ids` notes are tracked at once (a build's sizes: `AWVA_MIDI_QUEUE`, `AWVA_NOTE_IDS`).
 - Mono: `mode(state, NSC_MODE_MONO, 1)`: one voice, played by every held key (`mono.h`: the player slurs or re-articulates by the keys' pressures, the engine's `EngineInfo::mono` family says how its pitch moves).

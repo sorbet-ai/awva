@@ -63,11 +63,11 @@ struct ModuleHeader {
 	char float_abi[8];  // "softfp"; "" on a PC
 	char toolchain[24]; // "gcc 14.2.1"
 	uint32_t image_size, reloc_count;
-	uint32_t entry_offset; // nsc_entry from the image's start (Thumb bit set on Arm; 0 on a PC)
-	uint32_t stack_bytes;  // deepest stack of the component's functions (0: not measured)
-	uint32_t state_bytes, fast_bytes, large_bytes;
+	uint32_t entry_offset;                        // nsc_entry from the image's start (Thumb bit set on Arm; 0 on a PC)
+	uint32_t stack_bytes;                         // deepest stack of the component's functions (0: not measured)
+	uint32_t hot_bytes, stream_bytes, bulk_bytes; // the regions (nsc_desc's)
 	int32_t max_voices, channels;
-	uint32_t led, schema_hash;
+	uint32_t colour, schema_hash; // 0xrrggbb
 	char id[32], uid[64], version[32];
 	uint32_t payload_crc; // crc32 of everything after the header: the relocations, then the image
 	uint32_t reserved;
@@ -164,7 +164,7 @@ struct Target {
 	const char* arch;      // the module header's arch
 	const char* fpu;       // "" on a PC
 	const char* float_abi; // "" on a PC
-	uint32_t state_max, fast_max, large_max;
+	uint32_t hot_max, stream_max, bulk_max;
 	uint32_t stack_max; // 0: not checked (a PC's images aren't measured)
 	int32_t voices;     // the host's voices: a module must take at least this many
 };
@@ -187,9 +187,9 @@ inline bool check_module(const ModuleHeader& m, uint32_t size, const Target& t, 
 	if (m.reloc_count > MAX_RELOCS) return why.s("relocations ").u(m.reloc_count).s(" > ").u(MAX_RELOCS), false;
 	if (size && size != sizeof(ModuleHeader) + 4ull * m.reloc_count + m.image_size) return why.s("image size"), false;
 	if (m.image_size == 0 || (m.entry_offset & ~1u) >= m.image_size) return why.s("entry out of range"), false;
-	if (m.state_bytes > t.state_max) return why.s("state ").kb(m.state_bytes).s(" > ").kb(t.state_max), false;
-	if (m.fast_bytes > t.fast_max) return why.s("stream ").kb(m.fast_bytes).s(" > ").kb(t.fast_max), false;
-	if (m.large_bytes > t.large_max) return why.s("bulk ").kb(m.large_bytes).s(" > ").kb(t.large_max), false;
+	if (m.hot_bytes > t.hot_max) return why.s("hot ").kb(m.hot_bytes).s(" > ").kb(t.hot_max), false;
+	if (m.stream_bytes > t.stream_max) return why.s("stream ").kb(m.stream_bytes).s(" > ").kb(t.stream_max), false;
+	if (m.bulk_bytes > t.bulk_max) return why.s("bulk ").kb(m.bulk_bytes).s(" > ").kb(t.bulk_max), false;
 	if (t.stack_max && m.stack_bytes == 0) return why.s("stack not measured"), false;
 	if (t.stack_max && m.stack_bytes > t.stack_max) return why.s("stack ").u(m.stack_bytes).s(" > ").u(t.stack_max), false;
 	if (m.max_voices < t.voices) return why.s("voices ").u(static_cast<uint32_t>(m.max_voices)).s(" < ").u(static_cast<uint32_t>(t.voices)), false;

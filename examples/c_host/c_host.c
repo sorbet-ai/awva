@@ -18,8 +18,8 @@
 
 #include "nsc/nsc.h"
 
-/* written for ABI 4: nsc_event.note_id and ended() (2), short_name (3), max_events (4) */
-_Static_assert(NSC_ABI == 4, "c_host follows ABI 4");
+/* written for ABI 5: nsc_event.note_id and ended() (2), short_name (3), max_events (4), nsc_config and process() at any frame count (5) */
+_Static_assert(NSC_ABI == 5, "c_host follows ABI 5");
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -151,21 +151,22 @@ int main(int argc, char** argv) {
 		printf("  param %08x %-12s %-10s %g .. %g\n", (unsigned)d->params[i].id, d->params[i].name, d->params[i].group, d->params[i].min, d->params[i].max);
 
 	/* an instance: the memory it asks for, then init() */
-	void *raw_state, *raw_fast, *raw_large;
-	void* state = region(d->state_bytes, &raw_state);
-	void* fast = region(d->fast_bytes, &raw_fast);
-	void* large = region(d->large_bytes, &raw_large);
-	if (!state || !fast || !large) return 2;
-	c->init(state, fast, large, SR, VOICES);
+	void *raw_state, *raw_stream, *raw_bulk;
+	void* state = region(d->hot_bytes, &raw_state);
+	void* stream = region(d->stream_bytes, &raw_stream);
+	void* bulk = region(d->bulk_bytes, &raw_bulk);
+	if (!state || !stream || !bulk) return 2;
+	const nsc_config config = {SR, 0, VOICES}; /* 48 kHz, MIDI every block, 10 voices */
+	if (c->init(state, stream, bulk, &config) != 0) return 2;
 
-	/* play: one process() per 32-frame block, with that block's events */
+	/* play: one process() per 32-frame block (any count would do), with that block's events */
 	const uint32_t blocks = SECONDS * SR / NSC_BLOCK, frames = blocks * NSC_BLOCK;
 	float* out = (float*)calloc(frames * (size_t)d->channels, sizeof(float));
 	float* chan[2];
 	nsc_event ev[16];
 	for (uint32_t b = 0; b < blocks; b++) {
 		for (int ch = 0; ch < d->channels; ch++) chan[ch] = out + (size_t)ch * frames + (size_t)b * NSC_BLOCK;
-		c->process(state, ev, phrase((int)b, ev), chan);
+		c->process(state, NSC_BLOCK, ev, phrase((int)b, ev), chan);
 		/* the notes that have ended (released, and their sound has died away) */
 		int32_t ended[VOICES];
 		const int32_t n = c->ended(state, ended, VOICES);
@@ -187,7 +188,7 @@ int main(int argc, char** argv) {
 	printf("wrote %s: %u frames, rms %.4f\nhash %016llx\n", wav, (unsigned)frames, sqrt(energy / frames), (unsigned long long)h);
 	free(out);
 	free(raw_state);
-	free(raw_fast);
-	free(raw_large);
+	free(raw_stream);
+	free(raw_bulk);
 	return finite && energy > 1e-6 ? 0 : 1; /* fail if silent or broken */
 }

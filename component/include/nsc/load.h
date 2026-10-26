@@ -64,9 +64,9 @@ static inline void nsc_unload(nsc_library* lib) {
 	lib->c = NULL;
 }
 
-/* one instance's three regions */
+/* one instance's three regions (the state is the hot region) */
 typedef struct nsc_instance {
-	void *state, *fast, *large;
+	void *state, *stream, *bulk;
 } nsc_instance;
 
 static inline void* nsc_region(size_t n) {
@@ -91,21 +91,21 @@ static inline void nsc_region_free(void* p) {
 
 /* 0 ok, -1 out of memory */
 static inline int nsc_instance_new(const nsc_component* c, nsc_instance* in) {
-	in->state = nsc_region(c->desc->state_bytes);
-	in->fast = nsc_region(c->desc->fast_bytes);
-	in->large = nsc_region(c->desc->large_bytes);
-	if (in->state && in->fast && in->large) return 0;
+	in->state = nsc_region(c->desc->hot_bytes);
+	in->stream = nsc_region(c->desc->stream_bytes);
+	in->bulk = nsc_region(c->desc->bulk_bytes);
+	if (in->state && in->stream && in->bulk) return 0;
 	nsc_region_free(in->state);
-	nsc_region_free(in->fast);
-	nsc_region_free(in->large);
-	in->state = in->fast = in->large = NULL;
+	nsc_region_free(in->stream);
+	nsc_region_free(in->bulk);
+	in->state = in->stream = in->bulk = NULL;
 	return -1;
 }
 static inline void nsc_instance_free(nsc_instance* in) {
 	nsc_region_free(in->state);
-	nsc_region_free(in->fast);
-	nsc_region_free(in->large);
-	in->state = in->fast = in->large = NULL;
+	nsc_region_free(in->stream);
+	nsc_region_free(in->bulk);
+	in->state = in->stream = in->bulk = NULL;
 }
 
 #endif /* NSC_LOAD_H_ */

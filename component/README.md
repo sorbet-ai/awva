@@ -31,13 +31,13 @@ cmake -S sdk -B build/sdk -G Ninja && cmake --build build/sdk && ctest --test-di
 - **A static component:** `awva_add_component(<target> <engine> STATIC|SHARED|MODULE)` builds an engine as a component library: the entry, the shim, the MIDI side, the defaults. A plugin project links it and copies no glue; the libraries here are built with it too.
 - **An output level:** every component has the parameter `output` after the engine's own (0..2, default 1). At 1 the samples are the engine's, bit for bit. reed and sine thus have a parameter too.
 - **Sample rates:** `min_rate` .. `max_rate` in the descriptor: 11025 .. 192000, or from a higher `min_rate` where the engine's traits declare one (an engine unstable or out of tune below some rate). `init()` returns -1 for a rate outside them and does nothing; hosts refuse such rates. Outside its range an engine may go silent or loud.
-- **A colour:** `nsc_desc.led` (0xrrggbb, 0 for none) is the engine's colour, from its traits' `led`; none have one yet.
+- **A colour:** `nsc_desc.colour` (0xrrggbb, never 0) is the engine's colour, from its traits' `led`.
 
 ## Answers to the CLAP prototype's questions
 
 | # | question | answer |
 |---|---|---|
-| 1 | time in integer frames | An event carries its frame within the block (0..31). The control steps are on an integer grid: every block by default (step k at frame 32k), or at a control rate of h Hz (`NSC_MODE_CONTROL_HZ`) step k at frame ceil(k × sr / h); an event is taken at the first step at or after its frame. One rule, in `awva_sdk/timed_midi.h`, used by the component, the Shell and the renderer (`awva_render`: a MIDI file event at its time rounded to the nearest frame). No ties are decided in floating point. |
+| 1 | time in integer frames | An event carries its frame within the call (`process()` takes any frame count). The control steps are on an integer grid: every block (step k at frame 32k, `nsc_config.control_hz` 0), or at a control rate of h Hz step k at frame ceil(k × sr / h); an event is taken at the first step at or after its frame. One rule, in `awva_sdk/timed_midi.h`, used by the component, the Shell and the renderer (`awva_render`: a MIDI file event at its time rounded to the nearest frame). No ties are decided in floating point. |
 | 2 | the MIDI control step | The component owns it, in `process()`, on the grid above. At 500 Hz and 44.1 kHz the steps are 88 or 89 frames apart, never accumulating drift. The voices' level decay and the strike's fade a step follow from their time constants. The host only places events by frame. |
 | 3 | voice-ended callback with the host's note id | `nsc_event.note_id` carries the host's id on a Note On (-1: none). `ended(state, ids, max)`, polled after `process()`, hands out the ids of the notes that ended: released, then either the engine's `tail_seconds` passed, or the engine went idle, or another note took their key. |
 | 4 | note ids end to end | The host's id goes in with the Note On (`note_id`) and comes back from `ended()`. Inside, a note is (channel, key) → a slot, as before. |

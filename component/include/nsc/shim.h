@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // nsc::component<E>(): any awva::VoiceEngine as an nsc_component (nsc.h), unchanged. The
-// state region holds the engine object and the component's MIDI side (awva_sdk/note_mapper.h:
-// the decoder of MIDI 2.0 and MIDI 1.0 in UMP, the voice allocator, mono) and its
-// event queue; the fast and large regions are the engine's. process_voices() is the engine's own
-// process() on the host's controls, so a host that gives an engine's controls gets the same
-// samples as the engine compiled in, bit for bit.
+// state (the hot region) holds the engine object, the component's MIDI side
+// (awva_sdk/note_mapper.h: the decoder of MIDI 2.0 and MIDI 1.0 in UMP, the voice allocator,
+// mono), its event queue and the block being played out (process() at any frame count);
+// the stream and bulk regions are the engine's. process_voices() is the engine's own process()
+// on the host's controls, so a host that gives an engine's controls gets the same samples as the
+// engine compiled in, bit for bit.
 #ifndef NSC_SHIM_H_
 #define NSC_SHIM_H_
 
@@ -48,11 +49,15 @@ using awva::preset::fnv1a_word;
 
 
 template <dsp::VoiceEngine E> struct Shim {
+	static_assert(E::info.channels >= 1 && E::info.channels <= 2, "mono or stereo");
 	// the sample rates a component takes: from its engine's min_rate (EngineInfo, MIN_RATE at the
 	// lowest) to MAX_RATE (outside, an engine may go silent or loud: hosts refuse them)
 	static constexpr int32_t MIN_RATE = 11025, MAX_RATE = 192000;
 	struct State {
 		awva::sdk::TimedMidi midi; // the control steps in integer frames, the notes and their host ids
+		float buf[2][NSC_BLOCK];   // the engine block being played out
+		int32_t pos;               // its frames played out (NSC_BLOCK: none left)
+		uint64_t played;           // frames process() has given out
 		dsp::InstrumentControls g;
 		float output;   // the output level (the component's own parameter, after the engine's)
 		uint64_t frame; // frames rendered by process()
@@ -63,8 +68,8 @@ template <dsp::VoiceEngine E> struct Shim {
 		char heroes[NSC_MAX_HEROES][awva::preset::NAME];
 		int32_t num_heroes; // -1: none from a file
 		E engine;
-		State(int nv, int sr) :
-		    midi(awva::sdk::HostConfig{sr, 0, nv}), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), heroes(), num_heroes(-1),
+		State(int nv, int sr, int hz) :
+		    midi(awva::sdk::HostConfig{sr, hz, nv}), buf(), pos(NSC_BLOCK), played(0), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), heroes(), num_heroes(-1),
 		    engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
@@ -154,16 +159,15 @@ template <dsp::VoiceEngine E> struct Shim {
 		d.inputs = in.inputs;
 		d.channels = in.channels;
 		d.short_name = in.short_name;
-		d.led = in.led;
+		d.colour = in.led;
 		d.max_voices = in.max_voices;
-		d.instr_per_block = static_cast<uint32_t>(in.cost.instr_per_voice_frame * 320.0f); // (10 voices, 32 frames)
+		d.cost = in.cost.instr_per_voice_frame;
 		d.tail_seconds = in.tail_seconds;
 		d.min_rate = in.min_rate;
 		d.max_rate = MAX_RATE;
-		d.state_bytes = static_cast<uint32_t>(sizeof(State));
-		d.fast_bytes = static_cast<uint32_t>(in.regions.stream); // (0: none; an empty region is still passed)
-		d.large_bytes = static_cast<uint32_t>(in.regions.bulk);
-		d.stack_bytes = 0;
+		d.hot_bytes = static_cast<uint32_t>(sizeof(State));
+		d.stream_bytes = static_cast<uint32_t>(in.regions.stream); // (0: none; an empty region is still passed)
+		d.bulk_bytes = static_cast<uint32_t>(in.regions.bulk);
 		d.num_params = NP + 1;
 		d.num_presets = in.num_presets;
 		d.params = params_.p;
@@ -171,17 +175,20 @@ template <dsp::VoiceEngine E> struct Shim {
 		for (int k = 0; k < NSC_MAX_HEROES; k++) d.heroes[k] = in.heroes.name[k];
 		d.max_events = awva::sdk::TimedMidi::MAX_EVENTS; // (ended()'s guarantee is TimedMidi's)
 		d.max_note_ids = awva::sdk::TimedMidi::NOTES;
+		d.max_notes = awva::sdk::TimedMidi::Mapper::NOTES;
 		return d;
 	}
 	static constexpr nsc_desc desc_ = make_desc();
 	static constexpr const nsc_desc* desc() { return &desc_; }
 
-	static int32_t init(void* state, void* fast, void* large, int32_t sr, int32_t nv) {
-		if (sr < E::info.min_rate || sr > MAX_RATE) return -1;
-		State* s = new (state) State(nv, sr);
+	static int32_t init(void* state, void* stream, void* bulk, const nsc_config* c) {
+		if (!c) return -1;
+		const int32_t sr = c->sample_rate, hz = c->control_hz, nv = c->voices;
+		if (sr < E::info.min_rate || sr > MAX_RATE || hz < 0 || hz > sr) return -1;
+		State* s = new (state) State(nv, sr, hz);
 		s->g = dsp::instrument_at_rest;
 		s->midi.midi().set_mono_style(awva::voices::MonoStyle::of(E::info.mono)); // (mono: the engine's family)
-		s->engine.init(*static_cast<typename E::StreamMemory*>(fast), *static_cast<typename E::BulkMemory*>(large), sr, nv);
+		s->engine.init(*static_cast<typename E::StreamMemory*>(stream), *static_cast<typename E::BulkMemory*>(bulk), sr, nv);
 		for (int i = 0; i < E::info.num_params; i++) s->defaults[i] = *s->engine.param(i);
 		return 0;
 	}
@@ -190,6 +197,8 @@ template <dsp::VoiceEngine E> struct Shim {
 		s.midi.reset(); // (afresh, mono kept; the notes' ids end: ended() hands them out)
 		s.g = dsp::instrument_at_rest;
 		s.frame = 0;
+		s.pos = NSC_BLOCK;
+		s.played = 0;
 		s.engine.reset();
 	}
 	static int32_t mode(void* state, int32_t which, int32_t value) {
@@ -198,27 +207,37 @@ template <dsp::VoiceEngine E> struct Shim {
 			s.midi.midi().set_mono(value != 0);
 			return 1;
 		}
-		if (which == NSC_MODE_CONTROL_HZ) {
-			if (value < 0 || value > s.sample_rate) return 0;
-			s.midi.set_control_hz(value);
-			return 1;
-		}
 		return 0;
 	}
-	static void process(void* state, const nsc_event* ev, int32_t n, float* const* out) {
+	// frames of output: the events at their frames, the engine's blocks rendered as they are due (a
+	// block when its first frame is: what a call's size can't change)
+	static void process(void* state, int32_t frames, const nsc_event* ev, int32_t n, float* const* out) {
 		const ScopedNoDenormals no_denormals; // (no_denormals.h: the host's FPU mode, restored on return)
 		State& s = st(state);
+		if (frames < 0) frames = 0;
 		for (int i = 0; i < n; i++) {
-			// (a late event, before this block: at its own frame, whose step hasn't run yet)
-			const int32_t f = ev[i].frame < -NSC_BLOCK ? -NSC_BLOCK : (ev[i].frame >= NSC_BLOCK ? NSC_BLOCK - 1 : ev[i].frame);
-			const int64_t at = static_cast<int64_t>(s.frame) + f;
+			// (a late event, before this call: at its own frame, whose step hasn't run yet)
+			const int32_t last = frames > 0 ? frames - 1 : 0;
+			const int32_t f = ev[i].frame < -NSC_BLOCK ? -NSC_BLOCK : (ev[i].frame > last ? last : ev[i].frame);
+			const int64_t at = static_cast<int64_t>(s.played) + f;
 			(void)s.midi.ump(at < 0 ? 0u : static_cast<uint64_t>(at), ev[i].words, ev[i].note_id);
 		}
-		s.midi.advance(s.frame); // (awva_sdk/timed_midi.h: the steps due by this block's start)
-		s.g = s.midi.midi().globals();
-		s.engine.process(s.midi.midi().voices(), s.g, out);
-		level(s, out);
-		s.frame += NSC_BLOCK;
+		for (int32_t i = 0; i < frames;) {
+			if (s.pos == NSC_BLOCK) {
+				s.midi.advance(s.frame); // (awva_sdk/timed_midi.h: the steps due by this block's start)
+				s.g = s.midi.midi().globals();
+				float* const b[2] = {s.buf[0], s.buf[1]};
+				s.engine.process(s.midi.midi().voices(), s.g, b);
+				level(s, b);
+				s.frame += NSC_BLOCK;
+				s.pos = 0;
+			}
+			const int32_t k = frames - i < NSC_BLOCK - s.pos ? frames - i : NSC_BLOCK - s.pos;
+			for (int c = 0; c < E::info.channels; c++) std::memcpy(out[c] + i, s.buf[c] + s.pos, sizeof(float) * static_cast<size_t>(k));
+			i += k;
+			s.pos += k;
+			s.played += static_cast<uint64_t>(k);
+		}
 	}
 	static void process_voices(void* state, const nsc_voice* vc, const nsc_globals* g, float* const* out) {
 		const ScopedNoDenormals no_denormals;

@@ -6,7 +6,7 @@
 // what the engine renders (the scripted performances and the key recordings, through every
 // preset of accordion, trumpet, flute and clarinet), and process() with UMP renders bit for bit the SDK's MIDI
 // side (NoteMapper) driving the engine on the same integer-frame step grid (every block, and at
-// NSC_MODE_CONTROL_HZ 500).
+// a control rate of 500 Hz).
 #include <bit>
 #include <cmath>
 #include <cstdio>
@@ -33,6 +33,15 @@
 namespace {
 
 namespace sdk = awva::sdk;
+
+namespace nsc_test {
+// a configuration for init(): a temporary that converts to its pointer for the call
+struct Cfg {
+	nsc_config c;
+	operator const nsc_config*() const { return &c; }
+};
+[[nodiscard]] inline Cfg cfg(int sr, int nv, int hz = 0) { return Cfg{{sr, hz, nv}}; }
+} // namespace nsc_test
 namespace dsp = awva;
 constexpr int SR = 48000, NV = 10;
 
@@ -72,7 +81,7 @@ void render_both(const char* id, int preset, sdk::Player& player, double seconds
 	sdk::Engine linked(*e);
 	linked.init(SR, NV);
 	Loaded dll(id);
-	dll.c().init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	dll.c().init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
 	if (preset >= 0) {
 		linked.set_preset(preset);
 		dll.c().set_preset(dll.in.state, preset);
@@ -124,9 +133,9 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 		CHECK(d.min_rate >= 11025);
 		CHECK(d.max_rate == 192000);
 		CHECK(d.num_presets == e->info->num_presets);
-		CHECK(d.fast_bytes == e->info->regions.stream);
-		CHECK(d.large_bytes == e->info->regions.bulk);
-		CHECK(d.state_bytes >= e->info->regions.hot);
+		CHECK(d.stream_bytes == e->info->regions.stream);
+		CHECK(d.bulk_bytes == e->info->regions.bulk);
+		CHECK(d.hot_bytes >= e->info->regions.hot);
 		for (int i = 0; i < e->info->num_params; i++) {
 			CHECK(std::strcmp(d.params[i].name, e->param_desc(i)->name) == 0);
 			CHECK(dll.c().param_index(d.params[i].id) == i);
@@ -185,16 +194,15 @@ std::vector<Ev> ump_performance() {
 	return v;
 }
 
-// (hz: the control rate, NSC_MODE_CONTROL_HZ; 0: every block, the default)
+// (hz: the control rate, nsc_config.control_hz; 0: every block)
 std::vector<float> render_ump(const char* id, bool mono, bool from_library, int hz = 0) {
 	const std::vector<Ev> perf = ump_performance();
 	const int blocks = 2 * SR / NSC_BLOCK;
 	std::vector<float> out(static_cast<size_t>(blocks) * NSC_BLOCK);
 	if (from_library) {
 		Loaded dll(id);
-		dll.c().init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+		dll.c().init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV, hz));
 		if (mono) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_MONO, 1) == 1);
-		if (hz) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_CONTROL_HZ, hz) == 1);
 		size_t k = 0;
 		for (int b = 0; b < blocks; b++) {
 			std::vector<nsc_event> ev;
@@ -202,7 +210,7 @@ std::vector<float> render_ump(const char* id, bool mono, bool from_library, int 
 			for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
 				ev.push_back({static_cast<int32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
 			float* o[1] = {&out[start]};
-			dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+			dll.c().process(dll.in.state, NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o);
 		}
 		return out;
 	}
@@ -278,8 +286,8 @@ TEST_CASE("UMP in through the component's own MIDI side, bit for bit the SDK's (
 TEST_CASE("parameters by index and id, the write rule, reset and sample rates") {
 	Loaded dll("accordion");
 	const nsc_component& c = dll.c();
-	CHECK(c.init(dll.in.state, dll.in.fast, dll.in.large, 8000, NV) == -1); // (outside min_rate .. max_rate)
-	REQUIRE(c.init(dll.in.state, dll.in.fast, dll.in.large, 44100, NV) == 0);
+	CHECK(c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(8000, NV)) == -1); // (outside min_rate .. max_rate)
+	REQUIRE(c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(44100, NV)) == 0);
 	const nsc_desc& d = *c.desc;
 	REQUIRE(d.num_params > 0);
 	const float before = c.param(dll.in.state, 0);
@@ -291,7 +299,7 @@ TEST_CASE("parameters by index and id, the write rule, reset and sample rates") 
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
 	const nsc_event on = {0, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
-	for (int b = 0; b < 200; b++) c.process(dll.in.state, b == 0 ? &on : nullptr, b == 0 ? 1 : 0, o);
+	for (int b = 0; b < 200; b++) c.process(dll.in.state, NSC_BLOCK, b == 0 ? &on : nullptr, b == 0 ? 1 : 0, o);
 	CHECK(c.active_voices(dll.in.state) > 0);
 	c.reset(dll.in.state);
 	CHECK(c.active_voices(dll.in.state) == 0);
@@ -368,7 +376,7 @@ TEST_CASE("every engine's library renders bit for bit as linked in with the glob
 TEST_CASE("declared defaults: every parameter's default is its value after init()") {
 	for (const sdk::EngineEntry* e : sdk::engines()) {
 		Loaded dll(e->info->name);
-		dll.c().init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+		dll.c().init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
 		const nsc_desc& d = *dll.c().desc;
 		for (int i = 0; i < d.num_params; i++) {
 			INFO(e->info->name << " " << d.params[i].name);
@@ -381,28 +389,28 @@ TEST_CASE("declared defaults: every parameter's default is its value after init(
 TEST_CASE("ended: a note's host id comes back once it has ended (its tail, or the engine idle), not before") {
 	Loaded dll("va");
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
 	int32_t ids[8];
 	const nsc_event on[2] = {{0, 101, {0x40903c00u, 0xc0000000u, 0, 0}}, {5, 102, {0x40914000u, 0xc0000000u, 0, 0}}};
-	c.process(dll.in.state, on, 2, o);
-	for (int b = 0; b < 100; b++) c.process(dll.in.state, nullptr, 0, o);
+	c.process(dll.in.state, NSC_BLOCK, on, 2, o);
+	for (int b = 0; b < 100; b++) c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 	CHECK(c.ended(dll.in.state, ids, 8) == 0);                       // (held)
 	const nsc_event off = {0, -1, {0x40803c00u, 0x40000000u, 0, 0}}; // note 60 off
-	c.process(dll.in.state, &off, 1, o);
+	c.process(dll.in.state, NSC_BLOCK, &off, 1, o);
 	CHECK(c.ended(dll.in.state, ids, 8) == 0); // (released: its tail)
 	int got = 0;
 	for (int b = 0; b < 48000 * 12 / NSC_BLOCK && got == 0; b++) {
-		c.process(dll.in.state, nullptr, 0, o);
+		c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 		got = c.ended(dll.in.state, ids, 8);
 	}
 	REQUIRE(got == 1);
 	CHECK(ids[0] == 101);
 	// the other: a new note on its key takes it at once
 	const nsc_event again = {0, 103, {0x40914000u, 0xc0000000u, 0, 0}};
-	c.process(dll.in.state, &again, 1, o);
-	for (int b = 0; b < 10; b++) c.process(dll.in.state, nullptr, 0, o);
+	c.process(dll.in.state, NSC_BLOCK, &again, 1, o);
+	for (int b = 0; b < 10; b++) c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 	REQUIRE(c.ended(dll.in.state, ids, 8) == 1);
 	CHECK(ids[0] == 102);
 }
@@ -443,7 +451,7 @@ nsc_event ump_note(uint32_t frame, bool on, int i, int32_t id) {
 TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked at once: every id back exactly once") {
 	Loaded dll("va"); // (its tail is long: the released notes stay tracked, the table overflows)
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
 	constexpr int N = 200, EVERY = 6, HOLD = 600; // a note every 6 blocks, held 600: 100 at once
 	static_assert(N > sdk::TimedMidi::NOTES && HOLD / EVERY > sdk::TimedMidi::NOTES);
 	Ids back(N);
@@ -455,7 +463,7 @@ TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked 
 		std::vector<nsc_event> ev;
 		if (b % EVERY == 0 && b / EVERY < N) ev.push_back(ump_note(static_cast<uint32_t>(b % NSC_BLOCK), true, b / EVERY, b / EVERY));
 		if (b >= HOLD && (b - HOLD) % EVERY == 0 && (b - HOLD) / EVERY < N) ev.push_back(ump_note(3, false, (b - HOLD) / EVERY, -1));
-		c.process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+		c.process(dll.in.state, NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o);
 		const int got = back.drain(c, dll.in.state);
 		if (b < HOLD) early += got;
 		if (b > last && c.active_voices(dll.in.state) == 0 && back.each_once()) break;
@@ -468,31 +476,30 @@ TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked 
 TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest once each") {
 	Loaded dll("va");
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
-	REQUIRE(c.mode(dll.in.state, NSC_MODE_CONTROL_HZ, 500) == 1); // (2 ms steps: the queue fills before one)
-	constexpr int Q = 1024, MORE = 500;                           // the queue's size, then more than it takes
+	c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV, 500)); // (2 ms steps: the queue fills before one)
+	constexpr int Q = 1024, MORE = 500;                                           // the queue's size, then more than it takes
 	Ids back(Q + MORE);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
 	std::vector<nsc_event> ev;
 	ev.reserve(Q);
 	for (int i = 0; i < Q; i++) ev.push_back(ump_note(31, true, i, i)); // block 0, frame 31: waits for the step at 96
-	c.process(dll.in.state, ev.data(), Q, o);
+	c.process(dll.in.state, NSC_BLOCK, ev.data(), Q, o);
 	CHECK(back.drain(c, dll.in.state) == 0);
 	ev.clear();
 	for (int i = Q; i < Q + MORE; i++) ev.push_back(ump_note(31, true, i, i)); // block 1: the queue is full
-	c.process(dll.in.state, ev.data(), MORE, o);
+	c.process(dll.in.state, NSC_BLOCK, ev.data(), MORE, o);
 	CHECK(back.drain(c, dll.in.state) == MORE); // (they will never sound)
 	for (int b = 2; b < 8; b++) {
-		c.process(dll.in.state, nullptr, 0, o); // the step at 96 takes the 1024: all but 64 end at once
+		c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o); // the step at 96 takes the 1024: all but 64 end at once
 		back.drain(c, dll.in.state);
 	}
 	ev.clear();
 	for (int i = 0; i < Q; i++) ev.push_back(ump_note(0, false, i, -1));
-	c.process(dll.in.state, ev.data(), Q, o);
+	c.process(dll.in.state, NSC_BLOCK, ev.data(), Q, o);
 	for (int b = 0; b < 15 * SR / NSC_BLOCK && !back.each_once(); b++) {
 		back.drain(c, dll.in.state);
-		c.process(dll.in.state, nullptr, 0, o);
+		c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 	}
 	back.drain(c, dll.in.state);
 	CHECK(back.each_once());
@@ -500,8 +507,8 @@ TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest 
 
 TEST_CASE("the output level: at its default the samples are the engine's, at 0.5 half of them") {
 	Loaded a("ep"), b("ep");
-	REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
-	REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+	REQUIRE(a.c().init(a.in.state, a.in.stream, a.in.bulk, nsc_test::cfg(SR, NV)) == 0);
+	REQUIRE(b.c().init(b.in.state, b.in.stream, b.in.bulk, nsc_test::cfg(SR, NV)) == 0);
 	const int out = a.c().param_index(a.c().desc->params[a.c().desc->num_params - 1].id); // ("output")
 	REQUIRE(out == a.c().desc->num_params - 1);
 	CHECK(b.c().set_param(b.in.state, out, 0.5f) == 1);
@@ -511,8 +518,8 @@ TEST_CASE("the output level: at its default the samples are the engine's, at 0.5
 	float* oy[1] = {y};
 	bool sounded = false;
 	for (int k = 0; k < 400; k++) {
-		a.c().process(a.in.state, k == 0 ? &on : nullptr, k == 0 ? 1 : 0, ox);
-		b.c().process(b.in.state, k == 0 ? &on : nullptr, k == 0 ? 1 : 0, oy);
+		a.c().process(a.in.state, NSC_BLOCK, k == 0 ? &on : nullptr, k == 0 ? 1 : 0, ox);
+		b.c().process(b.in.state, NSC_BLOCK, k == 0 ? &on : nullptr, k == 0 ? 1 : 0, oy);
 		for (int n = 0; n < NSC_BLOCK; n++) {
 			REQUIRE(y[n] == x[n] * 0.5f);
 			sounded |= x[n] != 0.0f;
@@ -523,8 +530,8 @@ TEST_CASE("the output level: at its default the samples are the engine's, at 0.5
 
 TEST_CASE("a late event (a negative frame, before its block) lands where it would have on time") {
 	Loaded a("va"), b("va");
-	REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, 44100, NV) == 0);
-	REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, 44100, NV) == 0);
+	REQUIRE(a.c().init(a.in.state, a.in.stream, a.in.bulk, nsc_test::cfg(44100, NV)) == 0);
+	REQUIRE(b.c().init(b.in.state, b.in.stream, b.in.bulk, nsc_test::cfg(44100, NV)) == 0);
 	// a note at frame 40 at 44.1 kHz (step 1 is at frame 89): in time, at frame 8 of block 1, or
 	// late, at frame -24 of block 2
 	const nsc_event in_time = {8, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
@@ -533,8 +540,8 @@ TEST_CASE("a late event (a negative frame, before its block) lands where it woul
 	for (int k = 0; k < 300; k++) {
 		float* ox[1] = {&x[static_cast<size_t>(k) * NSC_BLOCK]};
 		float* oy[1] = {&y[static_cast<size_t>(k) * NSC_BLOCK]};
-		a.c().process(a.in.state, k == 1 ? &in_time : nullptr, k == 1 ? 1 : 0, ox);
-		b.c().process(b.in.state, k == 2 ? &late : nullptr, k == 2 ? 1 : 0, oy);
+		a.c().process(a.in.state, NSC_BLOCK, k == 1 ? &in_time : nullptr, k == 1 ? 1 : 0, ox);
+		b.c().process(b.in.state, NSC_BLOCK, k == 2 ? &late : nullptr, k == 2 ? 1 : 0, oy);
 	}
 	CHECK(x == y);
 }
@@ -567,7 +574,7 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 		INFO(e->info->name);
 		Loaded dll(e->info->name);
 		const nsc_component& c = dll.c();
-		c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+		c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
 		for (int i = 0; i < e->info->num_presets; i++) {
 			CAPTURE(i);
 			const std::string json = factory_file(e->info->name, i);
@@ -625,16 +632,16 @@ TEST_CASE("presets as text through the ABI: the factory files, saved and loaded,
 
 TEST_CASE("a late frame in the very first block is frame 0 (nothing before the start)") {
 	Loaded a("va"), b("va");
-	REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
-	REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+	REQUIRE(a.c().init(a.in.state, a.in.stream, a.in.bulk, nsc_test::cfg(SR, NV)) == 0);
+	REQUIRE(b.c().init(b.in.state, b.in.stream, b.in.bulk, nsc_test::cfg(SR, NV)) == 0);
 	const nsc_event at0 = {0, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
 	const nsc_event early = {-32, -1, {0x40903c00u, 0xc0000000u, 0, 0}};
 	std::vector<float> x(NSC_BLOCK * 200), y(x.size());
 	for (int k = 0; k < 200; k++) {
 		float* ox[1] = {&x[static_cast<size_t>(k) * NSC_BLOCK]};
 		float* oy[1] = {&y[static_cast<size_t>(k) * NSC_BLOCK]};
-		a.c().process(a.in.state, k == 0 ? &at0 : nullptr, k == 0 ? 1 : 0, ox);
-		b.c().process(b.in.state, k == 0 ? &early : nullptr, k == 0 ? 1 : 0, oy);
+		a.c().process(a.in.state, NSC_BLOCK, k == 0 ? &at0 : nullptr, k == 0 ? 1 : 0, ox);
+		b.c().process(b.in.state, NSC_BLOCK, k == 0 ? &early : nullptr, k == 0 ? 1 : 0, oy);
 	}
 	CHECK(x == y);
 }
@@ -648,7 +655,7 @@ TEST_CASE("every engine at its min_rate: lower rates refused, finite, within its
 		// the regions with a guard after each: a write past one shows there
 		std::vector<std::vector<uint8_t>> mem;
 		void* region[3];
-		const uint32_t sizes[3] = {d.state_bytes, d.fast_bytes, d.large_bytes};
+		const uint32_t sizes[3] = {d.hot_bytes, d.stream_bytes, d.bulk_bytes};
 		for (int r = 0; r < 3; r++) {
 			mem.emplace_back(sizes[r] + GUARD + 64, uint8_t{0});
 			uint8_t* base = mem.back().data();
@@ -656,8 +663,8 @@ TEST_CASE("every engine at its min_rate: lower rates refused, finite, within its
 			std::memset(static_cast<uint8_t*>(region[r]) + sizes[r], 0xa5, GUARD);
 		}
 		const int rate = d.min_rate;
-		CHECK(lib.c->init(region[0], region[1], region[2], rate - 1, NV) == -1);
-		REQUIRE(lib.c->init(region[0], region[1], region[2], rate, NV) == 0);
+		CHECK(lib.c->init(region[0], region[1], region[2], nsc_test::cfg(rate - 1, NV)) == -1);
+		REQUIRE(lib.c->init(region[0], region[1], region[2], nsc_test::cfg(rate, NV)) == 0);
 		// notes across the range, struck, pressed, bent, released (8 s)
 		float peak = 0.0f;
 		bool finite = true;
@@ -676,7 +683,7 @@ TEST_CASE("every engine at its min_rate: lower rates refused, finite, within its
 				const uint32_t key = 36u + static_cast<uint32_t>((b / 40) * 5 % 60), ch = static_cast<uint32_t>(1 + (b / 40) % 8);
 				ev.push_back({0, -1, {0x40800000u | ch << 16 | key << 8, 0x80000000u, 0, 0}});
 			}
-			lib.c->process(region[0], ev.data(), static_cast<int32_t>(ev.size()), o);
+			lib.c->process(region[0], NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o);
 			for (float s : buf) {
 				finite = finite && std::isfinite(s);
 				peak = std::fmax(peak, std::fabs(s));
@@ -751,52 +758,28 @@ std::vector<float> render_midi_file(const char* id, const std::string& path, int
 	return out;
 }
 
-// a plugin-like host: host blocks of `block` frames (0: random 1..1024), the component's 32-frame
-// blocks rendered when their first frame is due, with the events seen so far; an event seen after
-// its block was rendered goes to the next one with its negative frame (late: true), or at that
-// block's frame 0 (late: false, what a host without negative frames could do)
-std::vector<float> render_host(const char* id, const std::vector<sdk::MidiEvent>& perf, int sr, int frames, int block, bool late, int hz) {
+// a plugin-like host: calls of `block` frames (0: random 1..1024), each with the events whose
+// frames fall in it, at their frame in the call (process() at any frame count, ABI 5)
+std::vector<float> render_host(const char* id, const std::vector<sdk::MidiEvent>& perf, int sr, int frames, int block, int hz) {
 	Loaded dll(id);
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, sr, NV);
-	if (hz) REQUIRE(c.mode(dll.in.state, NSC_MODE_CONTROL_HZ, hz) == 1);
-	struct Ev {
-		uint64_t frame;
-		uint32_t w0;
-	};
-	std::vector<Ev> seen; // events seen, not yet given
+	c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(sr, NV, hz));
 	std::vector<float> out(static_cast<size_t>(frames));
-	float buf[NSC_BLOCK] = {};
-	int pos = NSC_BLOCK;
-	uint64_t blocks = 0;
 	size_t k = 0;
 	uint32_t rng = 12345;
 	for (uint64_t at = 0; at < static_cast<uint64_t>(frames);) {
 		rng = rng * 1664525u + 1013904223u;
 		const uint64_t n = std::min<uint64_t>(block > 0 ? static_cast<uint64_t>(block) : 1 + (rng >> 8) % 1024, frames - at);
-		for (; k < perf.size(); k++) { // (the events of this host block: at their frame, as awva_render places them)
+		std::vector<nsc_event> ev;
+		for (; k < perf.size(); k++) { // (the events of this call: at their frame, as awva_render places them)
 			const uint64_t f = perf[k].t <= 0 ? 0u : static_cast<uint64_t>(std::llround(perf[k].t * sr));
 			if (f >= at + n) break;
 			const uint8_t* m = perf[k].bytes;
-			seen.push_back({f, 0x20000000u | static_cast<uint32_t>(m[0]) << 16 | static_cast<uint32_t>(m[1]) << 8 | (perf[k].len > 2 ? m[2] : 0u)});
+			ev.push_back({static_cast<int32_t>(f - at), -1,
+			    {0x20000000u | static_cast<uint32_t>(m[0]) << 16 | static_cast<uint32_t>(m[1]) << 8 | (perf[k].len > 2 ? m[2] : 0u), 0, 0, 0}});
 		}
-		for (uint64_t i = at; i < at + n; i++) {
-			if (pos == NSC_BLOCK) {
-				const uint64_t b0 = blocks * NSC_BLOCK;
-				std::vector<nsc_event> ev;
-				size_t taken = 0;
-				for (; taken < seen.size() && seen[taken].frame < b0 + NSC_BLOCK; taken++) {
-					const int64_t f = static_cast<int64_t>(seen[taken].frame) - static_cast<int64_t>(b0);
-					ev.push_back({static_cast<int32_t>(late || f >= 0 ? f : 0), -1, {seen[taken].w0, 0, 0, 0}});
-				}
-				seen.erase(seen.begin(), seen.begin() + static_cast<std::ptrdiff_t>(taken));
-				float* o[1] = {buf};
-				c.process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
-				blocks++;
-				pos = 0;
-			}
-			out[i] = buf[pos++];
-		}
+		float* o[1] = {out.data() + at};
+		c.process(dll.in.state, static_cast<int32_t>(n), ev.data(), static_cast<int32_t>(ev.size()), o);
 		at += n;
 	}
 	return out;
@@ -807,7 +790,7 @@ std::vector<float> render_host(const char* id, const std::vector<sdk::MidiEvent>
 TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked at once: every id back exactly once") {
 	Loaded dll("va"); // (its tail is long: the released notes stay tracked, the table overflows)
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
+	c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
 	constexpr int N = 200, EVERY = 6, HOLD = 600; // a note every 6 blocks, held 600: 100 at once
 	static_assert(N > sdk::TimedMidi::NOTES && HOLD / EVERY > sdk::TimedMidi::NOTES);
 	Ids back(N);
@@ -819,7 +802,7 @@ TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked 
 		std::vector<nsc_event> ev;
 		if (b % EVERY == 0 && b / EVERY < N) ev.push_back(ump_note(static_cast<uint32_t>(b % NSC_BLOCK), true, b / EVERY, b / EVERY));
 		if (b >= HOLD && (b - HOLD) % EVERY == 0 && (b - HOLD) / EVERY < N) ev.push_back(ump_note(3, false, (b - HOLD) / EVERY, -1));
-		c.process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+		c.process(dll.in.state, NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o);
 		const int got = back.drain(c, dll.in.state);
 		if (b < HOLD) early += got;
 		if (b > last && c.active_voices(dll.in.state) == 0 && back.each_once()) break;
@@ -832,36 +815,35 @@ TEST_CASE("ended: 200 overlapping notes on 10 voices, more than the ids tracked 
 TEST_CASE("ended: Note Ons the queue can't take come back at once, and the rest once each") {
 	Loaded dll("va");
 	const nsc_component& c = dll.c();
-	c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV);
-	REQUIRE(c.mode(dll.in.state, NSC_MODE_CONTROL_HZ, 500) == 1); // (2 ms steps: the queue fills before one)
-	constexpr int Q = 1024, MORE = 500;                           // the queue's size, then more than it takes
+	c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV, 500)); // (2 ms steps: the queue fills before one)
+	constexpr int Q = 1024, MORE = 500;                                           // the queue's size, then more than it takes
 	Ids back(Q + MORE);
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
 	std::vector<nsc_event> ev;
 	for (int i = 0; i < Q; i++) ev.push_back(ump_note(31, true, i, i)); // block 0, frame 31: waits for the step at 96
-	c.process(dll.in.state, ev.data(), Q, o);
+	c.process(dll.in.state, NSC_BLOCK, ev.data(), Q, o);
 	CHECK(back.drain(c, dll.in.state) == 0);
 	ev.clear();
 	for (int i = Q; i < Q + MORE; i++) ev.push_back(ump_note(31, true, i, i)); // block 1: the queue is full
-	c.process(dll.in.state, ev.data(), MORE, o);
+	c.process(dll.in.state, NSC_BLOCK, ev.data(), MORE, o);
 	CHECK(back.drain(c, dll.in.state) == MORE); // (they will never sound)
 	for (int b = 2; b < 8; b++) {
-		c.process(dll.in.state, nullptr, 0, o); // the step at 96 takes the 1024: all but 64 end at once
+		c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o); // the step at 96 takes the 1024: all but 64 end at once
 		back.drain(c, dll.in.state);
 	}
 	ev.clear();
 	for (int i = 0; i < Q; i++) ev.push_back(ump_note(0, false, i, -1));
-	c.process(dll.in.state, ev.data(), Q, o);
+	c.process(dll.in.state, NSC_BLOCK, ev.data(), Q, o);
 	for (int b = 0; b < 15 * SR / NSC_BLOCK && !back.each_once(); b++) {
 		back.drain(c, dll.in.state);
-		c.process(dll.in.state, nullptr, 0, o);
+		c.process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 	}
 	back.drain(c, dll.in.state);
 	CHECK(back.each_once());
 }
 
-TEST_CASE("late events: a plugin host at any block size takes every event at awva_render's step, bit for bit (44.1 and 48 kHz)") {
+TEST_CASE("call sizes: a plugin host at any call size takes every event at awva_render's step, bit for bit (44.1 and 48 kHz)") {
 	const std::vector<sdk::MidiEvent> perf = late_performance();
 	const std::vector<uint8_t> file = sdk::make_midi(perf);
 	for (const int sr : {44100, 48000}) {
@@ -881,13 +863,10 @@ TEST_CASE("late events: a plugin host at any block size takes every event at awv
 				double e2 = 0;
 				for (float x : ref) e2 += static_cast<double>(x) * x;
 				CHECK(e2 > 0.0);
-				for (const int block : {1, 33, 256, 0}) {
-					INFO(id << " at " << sr << " Hz, control " << hz << " Hz, host blocks " << block);
-					CHECK(same(render_host(id, parsed.events, sr, frames, block, true, hz), ref));
+				for (const int block : {1, 32, 33, 256, 480, 0}) {
+					INFO(id << " at " << sr << " Hz, control " << hz << " Hz, calls of " << block);
+					CHECK(same(render_host(id, parsed.events, sr, frames, block, hz), ref));
 				}
-				// with a late event at the next block's frame 0 instead, at 500 Hz and 44.1 kHz (steps
-				// between block starts) some land a step late: what the negative frames are for
-				if (sr == 44100 && hz == 500) CHECK(!same(render_host(id, parsed.events, sr, frames, 33, false, hz), ref));
 			}
 		}
 		std::filesystem::remove(path);
@@ -908,7 +887,7 @@ std::vector<float> preset_render(Loaded& dll) {
 		for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
 			ev.push_back({static_cast<int32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
 		float* o[1] = {&out[start]};
-		dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), o);
+		dll.c().process(dll.in.state, NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), o);
 	}
 	return out;
 }
@@ -927,8 +906,8 @@ TEST_CASE("presets as files: save, then load, gives the same file again (its her
 		for (int i = -1; i < presets; i++) { // (-1: the defaults after init())
 			INFO(id << " preset " << i);
 			Loaded a(id), b(id);
-			REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
-			REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+			REQUIRE(a.c().init(a.in.state, a.in.stream, a.in.bulk, nsc_test::cfg(SR, NV)) == 0);
+			REQUIRE(b.c().init(b.in.state, b.in.stream, b.in.bulk, nsc_test::cfg(SR, NV)) == 0);
 			if (i >= 0) a.c().set_preset(a.in.state, i);
 			const std::string file = saved(a, "t");
 			REQUIRE(!file.empty());
@@ -939,7 +918,7 @@ TEST_CASE("presets as files: save, then load, gives the same file again (its her
 			CHECK(same(preset_render(a), preset_render(b)));
 			// and loaded again from what was loaded: the file's own heroes stay
 			Loaded c(id);
-			REQUIRE(c.c().init(c.in.state, c.in.fast, c.in.large, SR, NV) == 0);
+			REQUIRE(c.c().init(c.in.state, c.in.stream, c.in.bulk, nsc_test::cfg(SR, NV)) == 0);
 			const std::string again = saved(b, "t");
 			REQUIRE(c.c().load_preset(c.in.state, again.data(), static_cast<uint32_t>(again.size()), nullptr) == 1);
 			CHECK(saved(c, "t") == file);
@@ -950,7 +929,7 @@ TEST_CASE("presets as files: save, then load, gives the same file again (its her
 TEST_CASE("presets as files: a file's heroes that aren't the engine's parameters are dropped, and a factory preset has its own again") {
 	Loaded dll("ep");
 	const nsc_component& c = dll.c();
-	REQUIRE(c.init(dll.in.state, dll.in.fast, dll.in.large, SR, NV) == 0);
+	REQUIRE(c.init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV)) == 0);
 	const std::string text = R"({"format": "awva-preset/1", "engine": {"id": "ep"}, "heroes": ["decay", "nosuch", "tone"], "params": {"decay": 3}})";
 	REQUIRE(c.load_preset(dll.in.state, text.data(), static_cast<uint32_t>(text.size()), nullptr) == 1);
 	const std::string out = saved(dll, "x");
@@ -966,7 +945,7 @@ namespace {
 std::vector<float> settle_then_play(Loaded& dll, double seconds) {
 	float buf[NSC_BLOCK];
 	float* o[1] = {buf};
-	for (int b = 0; b < static_cast<int>(seconds * SR / NSC_BLOCK); b++) dll.c().process(dll.in.state, nullptr, 0, o);
+	for (int b = 0; b < static_cast<int>(seconds * SR / NSC_BLOCK); b++) dll.c().process(dll.in.state, NSC_BLOCK, nullptr, 0, o);
 	const std::vector<Ev> perf = ump_performance();
 	const int blocks = 2 * SR / NSC_BLOCK;
 	std::vector<float> out(static_cast<size_t>(blocks) * NSC_BLOCK);
@@ -977,7 +956,7 @@ std::vector<float> settle_then_play(Loaded& dll, double seconds) {
 		for (; k < perf.size() && perf[k].frame < start + NSC_BLOCK; k++)
 			ev.push_back({static_cast<int32_t>(perf[k].frame - start), -1, {perf[k].w0, perf[k].w1, 0, 0}});
 		float* oo[1] = {&out[start]};
-		dll.c().process(dll.in.state, ev.data(), static_cast<int32_t>(ev.size()), oo);
+		dll.c().process(dll.in.state, NSC_BLOCK, ev.data(), static_cast<int32_t>(ev.size()), oo);
 	}
 	return out;
 }
@@ -993,8 +972,8 @@ TEST_CASE("glides arrive: an edit after a preset, given its glide's time, sounds
 		for (int pr = 0; pr < presets; pr++) {
 			INFO(std::string(id) << " preset " << pr);
 			Loaded a(id), b(id);
-			REQUIRE(a.c().init(a.in.state, a.in.fast, a.in.large, SR, NV) == 0);
-			REQUIRE(b.c().init(b.in.state, b.in.fast, b.in.large, SR, NV) == 0);
+			REQUIRE(a.c().init(a.in.state, a.in.stream, a.in.bulk, nsc_test::cfg(SR, NV)) == 0);
+			REQUIRE(b.c().init(b.in.state, b.in.stream, b.in.bulk, nsc_test::cfg(SR, NV)) == 0);
 			const nsc_desc& d = *a.c().desc;
 			if (e->info->num_presets > 0) a.c().set_preset(a.in.state, pr);
 			uint32_t rng = 1234u + static_cast<uint32_t>(pr);

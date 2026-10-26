@@ -38,8 +38,10 @@ from pathlib import Path
 PACKAGE_MAGIC, MODULE_MAGIC, FORMAT, NSC_MAGIC = 0x5043534E, 0x4D43534E, 1, 0x3143534E
 # the component ABI whose descriptor layout this reads (nsc.h nsc_desc, 32-bit pointers); a module
 # built against another is refused, so an ABI change fails here first (update NSC_DESC with it)
-NSC_ABI = 4
-NSC_DESC = struct.Struct("<2I6I2IiIiIf2i4I2i2I")  # magic, abi, id uid name short_name summary version, schema inputs, ... presets (ABI 4 adds max_events, max_note_ids after the heroes: not read)
+NSC_ABI = 5
+NSC_DESC = struct.Struct("<2I6I2IiIiff2i3I2i2I")  # magic, abi, id uid name short_name summary version, schema inputs,
+# channels colour max_voices cost tail_seconds, min/max_rate, hot stream bulk, num_params num_presets, params presets
+# (then heroes[8], max_events, max_note_ids, max_notes: not read)
 KIND_MANIFEST, KIND_IMAGE, KIND_PRESET = 1, 2, 3
 BOARD_TAG = "armv7em-fpv5-d16-softfp"
 MAX_RELOCS, SLOT_IMAGE_MAX = 4096, 128 * 1024 - 256
@@ -76,7 +78,7 @@ def module_header(f, payload):
     """f: dict of the fields; payload: the relocations and the image (crc'd)."""
     h = HDR.pack(MODULE_MAGIC, FORMAT, 256, f["abi"], cstr(f["arch"], 16), cstr(f["fpu"], 12), cstr(f["float_abi"], 8),
                  cstr(f["toolchain"], 24), f["image_size"], f["reloc_count"], f["entry_offset"], f["stack_bytes"],
-                 f["state_bytes"], f["fast_bytes"], f["large_bytes"], f["max_voices"], f["channels"], f["led"],
+                 f["hot_bytes"], f["stream_bytes"], f["bulk_bytes"], f["max_voices"], f["channels"], f["colour"],
                  f["schema_hash"], cstr(f["id"], 32), cstr(f["uid"], 64), cstr(f["version"], 32),
                  zlib.crc32(payload), 0)
     return h + struct.pack("<I", zlib.crc32(h))
@@ -87,7 +89,7 @@ def parse_header(b):
         die("not an image payload (short)")
     v = HDR.unpack(b[:252])
     names = ["magic", "format", "header_size", "abi", "arch", "fpu", "float_abi", "toolchain", "image_size", "reloc_count",
-             "entry_offset", "stack_bytes", "state_bytes", "fast_bytes", "large_bytes", "max_voices", "channels", "led",
+             "entry_offset", "stack_bytes", "hot_bytes", "stream_bytes", "bulk_bytes", "max_voices", "channels", "colour",
              "schema_hash", "id", "uid", "version", "payload_crc", "reserved"]
     f = dict(zip(names, v))
     for k in ("arch", "fpu", "float_abi", "toolchain", "id", "uid", "version"):
@@ -175,12 +177,12 @@ def host_limits(path):
     return out
 
 
-def check_limits(path, state_b, fast_b, large_b, stack):
+def check_limits(path, hot_b, stream_b, bulk_b, stack):
     """A module the host would refuse is refused here, at the build, in the host's words."""
     lim = host_limits(path)
     kb = lambda n: (n + 1023) // 1024
-    for what, need, have in (("state", state_b, lim["kStateArena"]), ("stream", fast_b, lim["kFastArena"]),
-                             ("bulk", large_b, lim["kLargeArena"])):
+    for what, need, have in (("hot", hot_b, lim["kStateArena"]), ("stream", stream_b, lim["kFastArena"]),
+                             ("bulk", bulk_b, lim["kLargeArena"])):
         if need > have:
             die(f"{what} {kb(need)} KB > {kb(have)} KB: the host's arena ({path})")
     if stack > lim["kStackSpare"]:
@@ -270,8 +272,8 @@ def cmd_module(a):
     if magic != NSC_MAGIC or abi != NSC_ABI:
         die(f"the descriptor's magic/abi 0x{magic:x}/{abi}: not a component of ABI {NSC_ABI}")
     d = NSC_DESC.unpack_from(image, desc)
-    (magic, abi, p_id, p_uid, p_name, p_short, p_summary, p_version, schema, inputs, channels, led, max_voices, instr, tail,
-     min_rate, max_rate, state_b, fast_b, large_b, stack_b, num_params, num_presets, p_params, p_presets) = d
+    (magic, abi, p_id, p_uid, p_name, p_short, p_summary, p_version, schema, inputs, channels, colour, max_voices, cost, tail,
+     min_rate, max_rate, hot_b, stream_b, bulk_b, num_params, num_presets, p_params, p_presets) = d
     # the component's functions: the stack check's roots
     fns = [word(comp + 4 * i) & ~1 for i in range(1, 16)]
     by_addr = {s["value"] & ~1: s["name"] for s in elf.syms if s["type"] == 2 and s["name"]}
@@ -283,17 +285,17 @@ def cmd_module(a):
     audio = {k: v for k, v in per_fn.items() if k not in ("load_preset", "save_preset")}
     stack = max(audio.values()) if audio else deepest
     if a.limits:
-        check_limits(a.limits, state_b, fast_b, large_b, stack)
+        check_limits(a.limits, hot_b, stream_b, bulk_b, stack)
     f = dict(abi=abi, arch="armv7em", fpu="fpv5-d16", float_abi="softfp", toolchain=toolchain_of(elf), image_size=size,
-             reloc_count=len(relocs), entry_offset=entry["value"], stack_bytes=stack, state_bytes=state_b, fast_bytes=fast_b,
-             large_bytes=large_b, max_voices=max_voices, channels=channels, led=led, schema_hash=schema, id=string(p_id),
+             reloc_count=len(relocs), entry_offset=entry["value"], stack_bytes=stack, hot_bytes=hot_b, stream_bytes=stream_b,
+             bulk_bytes=bulk_b, max_voices=max_voices, channels=channels, colour=colour, schema_hash=schema, id=string(p_id),
              uid=string(p_uid), version=string(p_version))
     payload = b"".join(struct.pack("<I", o) for o in relocs) + bytes(image)
     Path(a.out).write_bytes(module_header(f, payload) + payload)
     other = ", ".join(f"{k} {v}" for k, v in sorted(kinds.items()))
     print(f"{f['id']}: image {size} bytes ({sum(s['size'] for s in image_secs if s['name'] == '.text')} text), "
           f"{len(relocs)} relocations (PC-relative, resolved: {other or 'none'}), entry 0x{entry['value']:x}, "
-          f"stack {stack} (with the preset files {deepest}), state {state_b} fast {fast_b} large {large_b}, {f['toolchain']}")
+          f"stack {stack} (with the preset files {deepest}), hot {hot_b} stream {stream_b} bulk {bulk_b}, {f['toolchain']}")
     if per_fn:
         print(f"{f['id']}: stack per function: " + ", ".join(f"{k} {v}" for k, v in sorted(per_fn.items(), key=lambda kv: -kv[1])))
 
@@ -308,8 +310,8 @@ def cmd_host(a):
                 f"with {want[0]}, {want[1]} (AWVA_PACKAGE_MIDI; awva_add_package_library)")
     lib = Path(a.library).read_bytes()
     f = dict(abi=m["abi"], arch=a.tag, fpu="", float_abi="", toolchain=a.toolchain[:23], image_size=len(lib), reloc_count=0,
-             entry_offset=0, stack_bytes=0, state_bytes=m["state_bytes"], fast_bytes=m["fast_bytes"],
-             large_bytes=m["large_bytes"], max_voices=m["max_voices"], channels=m["channels"], led=int(m.get("led", "0"), 16),
+             entry_offset=0, stack_bytes=0, hot_bytes=m["hot_bytes"], stream_bytes=m["stream_bytes"],
+             bulk_bytes=m["bulk_bytes"], max_voices=m["max_voices"], channels=m["channels"], colour=int(m.get("colour", "0"), 16),
              schema_hash=int(m["schema_hash"], 16), id=m["id"], uid=m["uid"], version=m["version"])
     Path(a.out).write_bytes(module_header(f, lib) + lib)
     print(f"{f['id']}: {a.tag} image {len(lib)} bytes")
@@ -411,7 +413,7 @@ def cmd_show(a):
         if kind == KIND_IMAGE:
             h = parse_header(b[off:off + sz])
             print("    " + ", ".join(f"{k} {h[k]}" for k in ("id", "version", "arch", "toolchain", "image_size", "reloc_count",
-                                                            "stack_bytes", "state_bytes", "fast_bytes", "large_bytes")))
+                                                            "stack_bytes", "hot_bytes", "stream_bytes", "bulk_bytes")))
 
 
 def main():

@@ -40,13 +40,15 @@ int main(int argc, char** argv) {
 	char h[16];
 	std::snprintf(h, sizeof h, "%08x", d.schema_hash);
 	j += R"(  "schema_hash": ")" + std::string(h) + "\",\n";
-	std::snprintf(h, sizeof h, "%06x", d.led);
-	j += R"(  "led": ")" + std::string(h) + "\",\n";
+	std::snprintf(h, sizeof h, "%06x", d.colour);
+	j += R"(  "colour": ")" + std::string(h) + "\",\n";
 	j += "  \"channels\": " + std::to_string(d.channels) + ",\n  \"max_voices\": " + std::to_string(d.max_voices) + ",\n";
-	j += "  \"max_events\": " + std::to_string(d.max_events) + ",\n  \"max_note_ids\": " + std::to_string(d.max_note_ids) + ",\n";
-	j += "  \"instr_per_block\": " + std::to_string(d.instr_per_block) + ",\n";
-	j += "  \"state_bytes\": " + std::to_string(d.state_bytes) + ",\n  \"fast_bytes\": " + std::to_string(d.fast_bytes) +
-	    ",\n  \"large_bytes\": " + std::to_string(d.large_bytes) + ",\n";
+	j += "  \"max_events\": " + std::to_string(d.max_events) + ",\n  \"max_note_ids\": " + std::to_string(d.max_note_ids) + ",\n  \"max_notes\": " + std::to_string(d.max_notes) + ",\n";
+	char cost[32];
+	std::snprintf(cost, sizeof cost, "%.6g", static_cast<double>(d.cost));
+	j += "  \"cost\": " + std::string(cost) + ",\n";
+	j += "  \"hot_bytes\": " + std::to_string(d.hot_bytes) + ",\n  \"stream_bytes\": " + std::to_string(d.stream_bytes) +
+	    ",\n  \"bulk_bytes\": " + std::to_string(d.bulk_bytes) + ",\n";
 	j += "  \"params\": [";
 	for (int i = 0; i < d.num_params; i++) j += std::string(i ? ", " : "") + esc(d.params[i].name);
 	j += "],\n  \"presets\": [";
