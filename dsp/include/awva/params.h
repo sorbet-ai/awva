@@ -54,16 +54,18 @@ template <class E> struct EngineParams {
 // (a 0.006 glide: 470 blocks, 0.31 s); while the fraction moves more than the floor, a step is the
 // exponential's, bit for bit. A NaN target is ignored; a NaN value takes the target.
 inline constexpr float kGlideStep = 1e-3f;
-[[nodiscard]] inline float glide_param(float a, float t, float k, const ParamDesc& d) {
+// the same for any value that glides over a known range (a value derived from parameters)
+[[nodiscard]] inline float glide_value(float a, float t, float k, float range) {
 	if (t != t) return a;
 	const float diff = t - a;
 	if (diff != diff) return t;
-	const float floor = kGlideStep * (d.max - d.min);
+	const float floor = kGlideStep * range;
 	if (diff <= floor && diff >= -floor) return t;
 	const float step = k * diff;
 	if (step < floor && step > -floor) return a + (diff > 0.0f ? floor : -floor);
 	return a + step;
 }
+[[nodiscard]] inline float glide_param(float a, float t, float k, const ParamDesc& d) { return glide_value(a, t, k, d.max - d.min); }
 
 } // namespace strisy
 
