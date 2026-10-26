@@ -21,6 +21,7 @@ import os
 import pickle
 
 import numpy as np
+from ..audio import read_render
 
 from .. import env, labels, sources
 from ..audio import read
@@ -170,7 +171,7 @@ def render(exe, preset, params, jobs, outdir):
             job_controls(note, P, S, R, HOLD, TAIL, tilt).tofile(cp)
         o = os.path.join(outdir, name + '.f32')
         r.render('clarinet', preset, ctl=cp, nv=1, sets=params, settle=SETTLE, out=o)
-        out[name] = np.fromfile(o, np.float32)
+        out[name] = read_render(o)
     return out
 
 

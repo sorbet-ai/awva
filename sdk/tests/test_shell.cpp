@@ -50,8 +50,8 @@ TEST_CASE("shell: a MIDI note sounds and ends, the call size makes no difference
 		peak = std::fmax(peak, std::fabs(a[static_cast<size_t>(n)]));
 		if (n > 48000 * 5 / 2) tail = std::fmax(tail, std::fabs(a[static_cast<size_t>(n)]));
 	}
-	CHECK(peak > 0.01f);
-	CHECK(tail < 1e-3f);
+	CHECK(peak > 0.0025f);
+	CHECK(tail < 2.5e-4f);
 	// (the note off goes in before the block of frame 24000 either way: 750 blocks)
 	CHECK(a == b);
 }
@@ -75,7 +75,7 @@ TEST_CASE("shell: timed MIDI goes in at the first control step at or after its f
 		CHECK(la == lb);
 		float peak = 0;
 		for (float x : la) peak = std::fmax(peak, std::fabs(x));
-		CHECK(peak > 1e-3f);
+		CHECK(peak > 2.5e-4f);
 	}
 }
 
@@ -93,7 +93,7 @@ TEST_CASE("shell: every engine plays a MIDI note through the shell") {
 			peak = std::fmax(peak, std::fabs(x));
 		}
 		CHECK(finite);
-		CHECK(peak > 1e-3f);
+		CHECK(peak > 2.5e-4f);
 	}
 }
 
@@ -147,7 +147,7 @@ TEST_CASE("players: a MIDI file plays an engine and says what it is") {
 		e.process(vc.data(), g, o);
 		for (float x : out) peak = std::fmax(peak, std::fabs(x));
 	}
-	CHECK(peak > 0.01f);
+	CHECK(peak > 0.0025f);
 	CHECK(e.active_voices() == 0);
 	std::remove(path);
 	CHECK(sdk::midi_player("no/such/file.mid", sdk::HostConfig{48000, 0, 10}, &error) == nullptr);

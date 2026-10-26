@@ -11,7 +11,7 @@
 //   s.set_preset(5);
 //   s.midi(0x90, 60, 100);           // MIDI in (applied at the next block)
 //   s.midi(0x80, 60, 0, 17);         // ... at frame 17 of the next process() call
-//   s.process(left, right, frames);  // stereo out, about +-4 full scale (x0.25 for unity)
+//   s.process(left, right, frames);  // stereo out, nominal +-1 (full scale 1)
 #ifndef AWVA_SDK_SHELL_H_
 #define AWVA_SDK_SHELL_H_
 

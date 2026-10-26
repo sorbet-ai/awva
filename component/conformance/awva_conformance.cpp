@@ -69,8 +69,8 @@ std::string g_known, g_expect;
 // the rate the checks play at (48 kHz if the component takes it)
 [[nodiscard]] int base_rate() { return std::clamp(48000, static_cast<int>(desc().min_rate), static_cast<int>(desc().max_rate)); }
 
-constexpr float SILENT = 1e-4f; // the render checks' silence
-constexpr float PEAK = 32.0f;   // a blow-up (nominal level is about +-1, peaks up to +-4)
+constexpr float SILENT = 2.5e-5f; // the render checks' silence
+constexpr float PEAK = 8.0f;      // a blow-up (nominal level +-1, full scale 1)
 
 // every preset, or -1 for a component without presets
 [[nodiscard]] std::vector<int> presets() {
@@ -471,7 +471,7 @@ TEST_CASE("rates: init() takes min_rate .. max_rate and refuses the others, and 
 		}
 		const Rendered r = render(in, v, frames_of(1.0 + tail + 0.5, rate));
 		CHECK(r.finite());
-		CHECK(r.peak > 1e-3f);
+		CHECK(r.peak > 2.5e-4f);
 		CHECK(r.peak < PEAK);
 		const double silent_after = static_cast<double>(r.last_loud + 1) / rate - 1.0;
 		CAPTURE(silent_after);

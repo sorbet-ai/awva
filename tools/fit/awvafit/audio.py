@@ -164,6 +164,16 @@ def resample(x, sr_in, sr_out):
     return resample_poly(x, int(sr_out) // g, int(sr_in) // g)
 
 
+# awva_render's output is nominal +-1 (awva's OUTPUT_SCALE, x0.25 of the engines' own scale); the
+# features here were made at the engines' scale: a render is read back x4 (exact)
+RENDER_SCALE = np.float32(4.0)
+
+
+def read_render(path):
+    """awva_render's raw float32 output (--out), at the engines' scale (x RENDER_SCALE)"""
+    return np.fromfile(path, np.float32) * RENDER_SCALE
+
+
 def read_f32(path):
     return np.fromfile(path, np.float32)
 

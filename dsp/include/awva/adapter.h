@@ -181,6 +181,7 @@ template <class T> struct Adapter {
 		e.g = g;
 		for (int v = 0; v < e.nvoices; v++) e.vc[v] = vc[v];
 		T::process(e, out[0]);
+		for (int n = 0; n < BLOCK; n++) out[0][n] *= OUTPUT_SCALE; // (nominal +-1: engine.h)
 	}
 
 	[[nodiscard]] int active_voices() const { return T::active_voices(e); }
@@ -280,7 +281,20 @@ template <class T> struct EffectAdapter {
 		T::init(e, sample_rate);
 		saved.restore(e);
 	}
-	void process(const float* const* in, float* const* out) { T::process(e, in, out); }
+	// in and out at the output's scale (nominal +-1); inside, the effect runs at the engines' own
+	// scale (its drive, its limiter and its delay line's quantization are set for it): x 1 / OUTPUT_SCALE
+	// in, x OUTPUT_SCALE out, both exact
+	void process(const float* const* in, float* const* out) {
+		float buf[T::inputs][BLOCK];
+		const float* ins[T::inputs];
+		for (int c = 0; c < T::inputs; c++) {
+			for (int n = 0; n < BLOCK; n++) buf[c][n] = in[c][n] * (1.0f / OUTPUT_SCALE);
+			ins[c] = buf[c];
+		}
+		T::process(e, ins, out);
+		for (int c = 0; c < T::outputs; c++)
+			for (int n = 0; n < BLOCK; n++) out[c][n] *= OUTPUT_SCALE;
+	}
 
 	static constexpr int num_params = Params::count;
 	[[nodiscard]] static const ParamDesc* param_desc(int i) { return Params::desc(i); }

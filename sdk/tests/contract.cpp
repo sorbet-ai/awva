@@ -106,12 +106,12 @@ TEST_CASE("init: silent and idle with no input, a note sounds") {
 		Keys k(e.voices());
 		const Stats idle = play(e, k, blocks(1.0));
 		CHECK(idle.nonfinite == 0);
-		CHECK(idle.peak < 1e-5f);
+		CHECK(idle.peak < 2.5e-6f);
 		CHECK(e.active_voices() == 0);
 		k.press(0, 60, 0.7f);
 		const Stats note = play(e, k, blocks(1.0));
 		CHECK(note.nonfinite == 0);
-		CHECK(note.peak > 1e-3f);
+		CHECK(note.peak > 2.5e-4f);
 		CHECK(note.peak < PEAK_PLAYING);
 	}
 }
@@ -156,7 +156,7 @@ TEST_CASE("reset: back to silence, preset and parameters kept, then as fresh") {
 		}
 		Keys rest(e.voices());
 		const Stats quiet = play(e, rest, blocks(0.2));
-		CHECK(quiet.peak < 1e-5f);
+		CHECK(quiet.peak < 2.5e-6f);
 		CHECK(e.active_voices() == 0);
 		// and from here exactly as a fresh engine with that preset and those values (made after
 		// this one is done: the independence of instances is a check of its own)

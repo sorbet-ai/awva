@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .audio import read_render
+
 from . import env
 
 BLOCK = 32
@@ -51,7 +53,7 @@ class Result:
 
     @property
     def x(self):
-        return np.fromfile(self.out, np.float32)
+        return read_render(self.out)
 
     @property
     def finite(self):

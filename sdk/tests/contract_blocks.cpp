@@ -92,7 +92,7 @@ TEST_CASE("blocks: through the Shell, any call size gives the same samples bit f
 		for (float x : ref) peak = std::max(peak, std::fabs(x));
 		CAPTURE(name());
 		CAPTURE(preset_label(p));
-		CHECK(peak > 1e-3f);
+		CHECK(peak > 2.5e-4f);
 		for (int call : {1, 7, 256, 0}) {
 			CAPTURE(call);
 			CHECK(same_bits(through_shell(p, msgs, frames, call), ref));

@@ -29,8 +29,8 @@ using dsp::InstrumentControls;
 using dsp::NoteControls;
 
 constexpr int SR = 48000;
-constexpr float SILENT = 1e-4f;       // the render checks' silence
-constexpr float PEAK_PLAYING = 32.0f; // every voice at full pressure (a host at x0.25 volume clips at 4)
+constexpr float SILENT = 2.5e-5f;    // the render checks' silence (output scale: engine.h OUTPUT_SCALE)
+constexpr float PEAK_PLAYING = 8.0f; // every voice at full pressure
 
 [[nodiscard]] inline const sdk::EngineEntry& entry() { return AWVA_ENGINE_ENTRY(); }
 [[nodiscard]] inline const dsp::EngineInfo& info() { return *entry().info; }
@@ -255,7 +255,7 @@ inline std::vector<float> fuzz_render(sdk::Engine& e, uint32_t seed, int n, Stat
 
 [[nodiscard]] inline bool subnormal(float x) { return x != 0.0f && std::fabs(x) < 1.17549435e-38f; }
 
-constexpr float INAUDIBLE = 1e-6f; // -120 dBFS (full scale 1)
+constexpr float INAUDIBLE = 2.5e-7f; // -132 dBFS (full scale 1)
 
 // The deviation in cents of x's period from a note's frequency f, or from an octave of it
 // (f 2^j, j = -2..2: an organ register sounds an octave or two away): over each octave's lags

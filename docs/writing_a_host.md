@@ -48,7 +48,7 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - The audio thread only, never concurrently: `process`, `process_voices`, `set_param`, `set_preset`, `mode`, `reset`.
 - Any thread: the descriptor, `param_index`, `param`.
 - The main thread: `init`, before any audio-thread call.
-- Output is mono, nominally about ±1, with peaks up to ±4. Scale as you like.
+- Output is mono, nominal ±1 at full scale 1 (`OUTPUT_SCALE`, engine.h): play it at unity.
 - Denormals: the component flushes them itself during `process()` and `process_voices()`, and restores your FPU mode on return. Nothing to set. The SDK's own renders run without the guard; the two differ only in tails far below hearing, and not at all in 24-bit PCM.
 
 ## 6. Check it

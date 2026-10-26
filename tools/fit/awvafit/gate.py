@@ -74,6 +74,7 @@ import types
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
+from .audio import read_render
 from scipy.signal import butter, hilbert, resample_poly, sosfilt, sosfiltfilt
 
 from . import control, env, labels, range_check, sources, strike
@@ -253,7 +254,7 @@ def renderer(spec, workdir, voicing='mono'):
                                    shell=True, capture_output=True, text=True)
                 if r.returncode or not os.path.exists(out):
                     raise RuntimeError(f'{label}: {r.stderr.strip() or r.stdout.strip()}')
-                return np.fromfile(out, np.float32).astype(np.float64)
+                return read_render(out).astype(np.float64)
             return render
         return label, factory
     from .render import Renderer

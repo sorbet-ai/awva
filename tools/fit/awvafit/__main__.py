@@ -23,6 +23,7 @@ import os
 import sys
 
 import numpy as np
+from .audio import read_render
 
 from . import env
 
@@ -40,7 +41,7 @@ def load_audio(path):
     if path.lower().endswith(('.aif', '.aiff', '.wav')):
         return read(path, np.float64)
     if path.lower().endswith('.f32'):
-        return np.fromfile(path, np.float32).astype(np.float64), 48000
+        return read_render(path).astype(np.float64), 48000  # (a render: awva_render --out)
     return decode_ffmpeg(path, 48000).astype(np.float64), 48000
 
 

@@ -407,7 +407,7 @@ class CutoffScore:
         vc = controls.read(self.ctl)[0]
         o = os.path.join(self.d, f'w{wid}.f32')
         R(self.exe).render('va', 0, ctl=self.ctl, sets=params, settle=1.0, out=o)
-        c = framewise.compare(A.analyse(np.fromfile(self.ref, np.float32), vc), A.analyse(np.fromfile(o, np.float32), vc), self.obj)
+        c = framewise.compare(A.analyse(audio.read_render(self.ref), vc), A.analyse(audio.read_render(o), vc), self.obj)
         return self.obj.total(c), c
 
 

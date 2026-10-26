@@ -40,6 +40,12 @@ namespace awva {
 namespace dsp = ::awva;
 
 
+// The engines compute at their own scale (about +-4 at full pressure: the level the instrument they
+// were written for played x0.25); their output is that x OUTPUT_SCALE, nominal +-1, full scale 1.
+// A power of two: the scaling is exact (below 2^-124 a sample may lose its last bits as a
+// subnormal, or flush to 0 under a host's FTZ: far below any DAC).
+inline constexpr float OUTPUT_SCALE = 0.25f;
+
 // ---------------------------------------------------------------------------------------------
 // What an engine declares about itself
 
@@ -126,7 +132,7 @@ struct Conformance {
 	// the peak with extreme but legal parameter writes (the fuzz, the presets going round, the
 	// soak): only blow-ups fail. An engine louder there declares its measured peak with a small
 	// margin and why; a peak above it still fails
-	float fuzz_peak = 64.0f;
+	float fuzz_peak = 16.0f; // (at the output's scale, nominal +-1)
 	const char* fuzz_peak_why = nullptr;
 	const PresetTuning* preset_tuning = nullptr;
 	int num_preset_tuning = 0;
@@ -218,7 +224,7 @@ concept PlainData = std::is_trivially_default_constructible_v<T> && std::is_triv
 //                                             until the next init (voices <= info.max_voices)
 //   reset()             back to silence, keeping the preset and the live parameter values
 //   process(vc, g, out) one block: vc[voices()] controls, g the globals, out[0..channels) BLOCK
-//                       samples each (full scale about +-4: hosts typically play it x0.25)
+//                       samples each, nominal +-1 (OUTPUT_SCALE: the engines' own scale x0.25)
 //   active_voices()     voices sounding now; voices() the count init() set
 //   presets: num_presets() (static), preset_name(i), set_preset(i) (any time, between blocks),
 //            preset() (-1 without presets)

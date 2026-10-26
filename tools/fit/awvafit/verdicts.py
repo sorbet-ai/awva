@@ -24,6 +24,7 @@ import math
 import os
 
 import numpy as np
+from .audio import read_render
 
 from . import env, labels, sources
 from .audio import decode_ffmpeg
@@ -47,7 +48,7 @@ def data_root():
 
 
 def render_notes(set_dir, inst, build):
-    x = np.fromfile(os.path.join(set_dir, f'{inst}__{build}.mono.f32'), np.float32).astype(np.float64)
+    x = read_render(os.path.join(set_dir, f'{inst}__{build}.mono.f32')).astype(np.float64)
     sched = json.load(open(os.path.join(set_dir, f'{inst}.notes.json')))
     out = {}
     t0 = sched[0]['t_on']  # the audio starts at the first note

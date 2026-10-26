@@ -46,7 +46,7 @@ std::vector<int> clicks(const std::vector<float>& x) {
 		for (int i = b * MS; i < (b + 1) * MS; i++) bm[static_cast<size_t>(b)] = std::max(bm[static_cast<size_t>(b)], std::fabs(x[i + 1] - x[i]));
 	std::vector<int> out;
 	for (int b = 0; b < nb; b++) {
-		float ref = 1e-7f;
+		float ref = 2.5e-8f;
 		for (int d = NEAR_MS; d <= FAR_MS; d++) {
 			if (b - d >= 0) ref = std::max(ref, bm[static_cast<size_t>(b) - static_cast<size_t>(d)]);
 			if (b + d < nb) ref = std::max(ref, bm[static_cast<size_t>(b) + static_cast<size_t>(d)]);

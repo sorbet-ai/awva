@@ -25,6 +25,7 @@ import pickle
 import re
 
 import numpy as np
+from ..audio import read_render
 
 from .. import env, labels, sources
 from ..audio import read, resample
@@ -176,7 +177,7 @@ def refs(log=print):
     json.dump(idx, open(os.path.join(out, 'index.json'), 'w'), indent=0)
     F = {}
     for r in idx:
-        x = np.fromfile(os.path.join(out, r['name'] + '.f32'), np.float32)
+        x = read_render(os.path.join(out, r['name'] + '.f32'))
         F[r['name']] = dict(r, **feat.note_feats(x, r['note'], r['onset'], r['off']))
     pickle.dump(F, open(os.path.join(out, 'feats.pkl'), 'wb'))
     return F
@@ -224,7 +225,7 @@ def render(exe, inst, params, outdir, every=1):
     evs = np.load(evp)
     op = os.path.join(outdir, f'{inst}.f32')
     res = Renderer(exe).render('flute', PRESET[inst], ctl=cp, sets=params, settle=SETTLE, out=op)
-    return rows, evs, np.fromfile(op, np.float32), res
+    return rows, evs, read_render(op), res
 
 
 def evaluate(exe, inst, params, outdir, every=1):
@@ -249,7 +250,7 @@ def probe(exe, preset, plays, params, strike=0.5, hold=1.0, tag='probe'):
     cp, op = os.path.join(d, 'p.ctl'), os.path.join(d, 'p.f32')
     c.write(cp)
     Renderer(exe).render('flute', preset, ctl=cp, sets=params, settle=SETTLE, out=op)
-    return np.fromfile(op, np.float32), evs
+    return read_render(op), evs
 
 
 def robust(exe, preset, params, notes, pres=(0.04, 0.4, 1.0), tag='rb'):
@@ -291,7 +292,7 @@ def rises(exe, preset, params, tag):
     for fn in TAKES:
         cp, op = os.path.join(capd, fn), os.path.join(d, fn + '.f32')
         Renderer(exe).render('flute', preset, ctl=cp, sets=params, settle=SETTLE, out=op)
-        x = np.fromfile(op, np.float32)
+        x = read_render(op)
         c = np.fromfile(cp, np.float32).reshape(-1, 58)[:, :50].reshape(-1, 10, 5)
         held = c[:, :, 1] > 0
         anyh = held.any(1)

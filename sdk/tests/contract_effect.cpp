@@ -130,7 +130,7 @@ TEST_CASE("effect: random parameter writes over noise and silence stay finite an
 	long bad = 0;
 	run(f, 8 * SR / dsp::BLOCK, 7u, true, true, &peak, &bad);
 	CHECK(bad == 0);
-	CHECK(peak <= 64.0f);
+	CHECK(peak <= 16.0f);
 	MESSAGE("fx: fuzz peak " << peak);
 }
 
@@ -148,7 +148,7 @@ TEST_CASE("effect: silence in, silence out, reset keeps the parameters") {
 	for (int i = 0; i < f.num_params(); i++) CHECK(*f.param(i) == want[static_cast<size_t>(i)]);
 	float peak = 0.0f;
 	run(f, SR / dsp::BLOCK, 3u, false, false, &peak);
-	CHECK(peak < 1e-6f);
+	CHECK(peak < 2.5e-7f);
 }
 
 TEST_CASE("effect: deterministic and independent instances") {

@@ -28,6 +28,7 @@ import re
 import sys
 
 import numpy as np
+from ..audio import read_render
 
 from .. import env, labels, sources
 from ..audio import decode_ffmpeg
@@ -210,7 +211,7 @@ def render(exe, preset, params, jobs, outdir, engine='sax'):
 
 def model_notes(out, template, notes):
     """per press: dict(dyn, slot, note, v, f: the features)"""
-    x = np.fromfile(out[0], np.float32)
+    x = read_render(out[0])
     ev = held_runs(voice_controls(out[1]))
     res = []
     for (v, a, b), m in zip(ev, meta(template)):

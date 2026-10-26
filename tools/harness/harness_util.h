@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// Shared helpers of the host renderers and tests: WAV output (x0.25, the usual output volume), a
+// Shared helpers of the host renderers and tests: WAV output (at full scale 1), a
 // hash of a render (for golden checksums), parameter writes by the hosts' rule, and the replay of
 // recorded streams of per-note sensor values (CSV, below).
 #ifndef AWVA_HARNESS_UTIL_H_
@@ -21,7 +21,7 @@
 
 namespace harness {
 
-// 16 bit WAV, x0.25 and hard clipped (the usual output volume, (volume/127)^2 ~ 0.25)
+// 16 bit WAV, hard clipped at full scale (the engines' output is nominal +-1: engine.h OUTPUT_SCALE)
 [[nodiscard]] inline bool write_wav(const char* path, std::span<const float> x, int channels, int sample_rate) {
 	FILE* f = std::fopen(path, "wb");
 	if (!f) return false;
@@ -43,7 +43,7 @@ namespace harness {
 	std::fwrite(&data, 4, 1, f);
 	std::vector<int16_t> s(n);
 	for (uint32_t k = 0; k < n; k++) {
-		float v = x[k] * 0.25f;
+		float v = x[k];
 		v = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
 		s[k] = static_cast<int16_t>(std::lrintf(v * 32767.0f));
 	}

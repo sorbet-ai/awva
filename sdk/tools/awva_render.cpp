@@ -35,7 +35,7 @@
 //   --ftz             each block with subnormals flushed, as the engine component runs it
 //                     (component/include/nsc/no_denormals.h): a plugin's output, bit for bit
 //   --out FILE.f32    the render as float32 (mono, or L R interleaved)
-//   --wav FILE.wav    16 bit WAV, x0.25 and clipped (an embedded host at its usual level); its INFO chunk names the
+//   --wav FILE.wav    16 bit WAV, clipped at full scale (1); its INFO chunk names the
 //                     engine, preset and input
 //   --ctl-out FILE    the controls the engine got, float32 per block (the --ctl layout)
 //   --manifest FILE   a JSON record of the render: engine, preset, parameters, input, settings,
@@ -48,7 +48,7 @@
 //                     performances (--perf) are stress scripts for regression, not for listening.
 //   --lufs L, --true-peak C   the listening render's loudness and ceiling
 //   --check           fail (exit 1) on non-finite output, a peak over --max-peak (default 8), or
-//                     with --silent-after T any sample above 1e-4 after T s or voices still active
+//                     with --silent-after T any sample above 2.5e-5 after T s or voices still active
 //   --expect HASH     fail unless the render's hash (FNV-1a 64 of the float bits) is HASH
 //   --golden-name N   with AWVA_GOLDEN_OUT=<dir>: write the hash to <dir>/N.hash instead
 //   --compare FILE.f32  how far the render is from another (an --out of an earlier build): the
@@ -111,7 +111,7 @@ void list() {
 	return std::fclose(f) == 0 && ok;
 }
 
-// 16 bit WAV, x0.25 and hard clipped (an embedded host at its usual volume), with a LIST/INFO chunk
+// 16 bit WAV, hard clipped at full scale (1), with a LIST/INFO chunk
 [[nodiscard]] bool write_wav(const char* path, const std::vector<float>& x, int channels, int sample_rate, const std::string& comment) {
 	FILE* f = std::fopen(path, "wb");
 	if (!f) return false;
@@ -146,7 +146,7 @@ void list() {
 	u32(data);
 	std::vector<int16_t> s(n);
 	for (uint32_t k = 0; k < n; k++) {
-		float v = x[k] * 0.25f;
+		float v = x[k];
 		v = v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v);
 		s[k] = static_cast<int16_t>(std::lrintf(v * 32767.0f));
 	}
@@ -358,7 +358,7 @@ struct Set {
 int main(int argc, char** argv) {
 	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr, *ump = nullptr, *compare = nullptr;
 	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr, *ctl_out = nullptr, *manifest = nullptr;
-	double seconds = -1, max_peak = 8.0, silent_after = -1, tail = 0, settle = 0, target_lufs = -23.0, tp_ceiling = -1.0;
+	double seconds = -1, max_peak = 2.0, silent_after = -1, tail = 0, settle = 0, target_lufs = -23.0, tp_ceiling = -1.0;
 	int nv = 10, rate = 0, control_hz = 0;
 	float transpose = 0.0f;
 	bool use_fx = false, check = false, list_params = false, ftz = false, mono = false, listen = false;
@@ -600,7 +600,7 @@ int main(int argc, char** argv) {
 		if (!std::isfinite(x)) bad++;
 		else {
 			peak = std::fmax(peak, std::fabs(x));
-			if (i >= tail_from && std::fabs(x) > 1e-4f) loud_tail++;
+			if (i >= tail_from && std::fabs(x) > 2.5e-5f) loud_tail++;
 		}
 	}
 	if (bad) std::fprintf(stderr, "!! %zu NON-FINITE OUTPUT SAMPLES\n", bad);
@@ -714,7 +714,7 @@ int main(int argc, char** argv) {
 		if (silent_after >= 0) {
 			const int active = engine.active_voices();
 			if (loud_tail) {
-				std::fprintf(stderr, "!! %zu samples above 1e-4 after %.2f s\n", loud_tail, silent_after);
+				std::fprintf(stderr, "!! %zu samples above 2.5e-5 after %.2f s\n", loud_tail, silent_after);
 				failed = 1;
 			}
 			if (active) {
