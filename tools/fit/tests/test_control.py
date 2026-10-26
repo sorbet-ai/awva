@@ -264,6 +264,36 @@ class GateRuns(unittest.TestCase):
         same = g.run('test', self.spec(0.6), self.spec(0.6), os.path.join(TMP, 'gws'), workers=4, log=lambda m: None)
         self.assertEqual(same['verdict'], 'identical')
 
+    def test_the_objective_is_the_gate_s_score(self):
+        g = self.gate
+        items = [it for it, _ in self.items]
+        calls = []
+        cal = control.calibrated
+
+        def counting(*a, **k):
+            calls.append(1)
+            return cal(*a, **k)
+        control.calibrated = counting
+        streams = {}
+        near = g.objective(self.spec(0.5), items, workdir=os.path.join(TMP, 'obj'), streams=streams)
+        far = g.objective(self.spec(0.9), items, workdir=os.path.join(TMP, 'obj'), streams=streams)
+        self.assertEqual(len(calls), len(items))  # calibrated once, reused by the second build
+        self.assertLess(near['groups']['harmonics'], far['groups']['harmonics'])  # the recordings roll off as 0.5 per harmonic
+        self.assertTrue(math.isfinite(near['total']))
+        self.assertEqual(set(near['groups']), set(g.GROUPS))
+        control.calibrated = cal
+        res = g.run('test', self.spec(0.5), self.spec(0.9), os.path.join(TMP, 'objg'), workers=2, log=lambda m: None)
+        for m, v in near['measures'].items():  # the same scores as the gate's candidate column
+            if v is not None and res['measures'][m]['cand'] is not None:
+                self.assertAlmostEqual(v, res['measures'][m]['cand'], places=6)
+
+    def test_the_objective_refuses_held_out_recordings(self):
+        from awvafit import env, gate_set
+        s, t = sorted(gate_set.held_out())[0]
+        it = types.SimpleNamespace(id='x', source=s, ref_path=t)
+        with self.assertRaises(env.EnvError):
+            self.gate.objective(self.spec(0.5), [it], workdir=os.path.join(TMP, 'objh'))
+
     def test_a_command_must_place_the_octave(self):
         from awvafit import env
         with self.assertRaises(env.EnvError):
