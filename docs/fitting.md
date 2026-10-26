@@ -41,7 +41,7 @@ fetch -> segment -> features -> objective -> fit -> bake -> listen
 
 - **No recording is in this repository.** `sources.json` holds where each file comes from, its licence, the citation, its size and hash; the files are fetched into `$AWVA_REFS`, with `LICENSES.md` written next to them.
 - **Permissive sources only.** A source whose terms restrict use is listed with `permissive: false` and is refused: the Philharmonia samples (free in music, not to be redistributed as samples).
-- **One recorded exception, `use: fit-eval`.** URMP and Bach10 state no licence. Permission has been asked of their authors, and meanwhile the owner allows them for fitting and evaluation only, never redistributed. They are never fetched (they have no public download either). Files already on disk may be imported and read, and every command that reads them prints the restriction.
+- **One recorded exception, `use: fit-eval`.** Bach10 states no licence. Permission has been asked of their authors, and meanwhile the owner allows them for fitting and evaluation only, never redistributed. They are never fetched (they have no public download either). Files already on disk may be imported and read, and every command that reads them prints the restriction.
 - **Archives are pinned whole.** ChoraleBricks and Good-sounds are Zenodo archives: `archives.json` holds each one's URL, size, SHA-256 and Zenodo's MD5. Every extracted file is checked against the CRC-32 the archive records for it (`sources verify`), and a file not extracted is read from the archive.
 - **Attribution where the licence asks for it.** MTG Solo Saxophones is CC BY 4.0: credit "MTG Solo Saxophones by kinwie, from the MTG (Universitat Pompeu Fabra) Freesound packs, CC BY 4.0" wherever the recordings, or works made from them, are shared. Listening packs carry the citation in their index.
 - **No path, user name or machine-specific folder in a committed file.** Everything comes from the environment.
@@ -53,7 +53,7 @@ fetch -> segment -> features -> objective -> fit -> bake -> listen
 | VS Chamber Orchestra 2: Community Edition (Versilian Studios) | CC0 1.0 | piccolo |
 | ChoraleBricks 1.1.0 (Balke, Berndt, Mueller; Zenodo 15081740) | CC BY 4.0 (the sheet music excluded) | phrase sets: legato lines and swells, 13 wind instruments |
 | Good-sounds (MTG, Universitat Pompeu Fabra; Zenodo 820937) | CC BY 4.0 | the good/bad back-test |
-| URMP (University of Rochester) | none stated: fitting and evaluation only, pending the authors | phrase sets, when on disk |
+| URMP (University of Rochester; Dryad doi:10.5061/dryad.ng3r749) | CC0 1.0 (scholarly citation asked) | phrase sets, including bowed strings; downloaded by hand (Dryad gates it), checked by its MD5 |
 | Bach10 (University of Rochester) | none stated: fitting and evaluation only, pending the authors | phrase sets, when on disk |
 
 ## Rendering

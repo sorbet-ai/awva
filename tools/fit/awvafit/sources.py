@@ -8,7 +8,9 @@ Only sources whose licence is permissive are fetched (SOURCES[...]['permissive']
 with permissive False (it is known, but its terms restrict use) is refused. One exception, recorded
 per source: use "fit-eval" (no stated licence; the owner has allowed fitting and evaluation only,
 with no redistribution, while permission is asked of the authors): never fetched, but files already
-on disk may be imported and read, and every read says so (allowed()).
+on disk may be imported and read, and every read says so (allowed()). A source with "manual" (e.g.
+URMP: its host serves it only to a browser) is not fetched either: it is downloaded by hand and
+checked by its hash (sha256, else the md5 its host publishes).
 
 Two kinds of entry:
   sources.json   one file each: source, path, bytes, sha256, sets (served file by file)
@@ -86,12 +88,12 @@ SOURCES = {
                  'Zenodo 820937, CC BY 4.0. Credit it wherever the recordings, or works made from them, are shared.'),
     'urmp': dict(
         title='URMP: University of Rochester Multi-Modal Music Performance dataset',
-        author='B. Li, X. Liu, K. Dinesh, Z. Duan, G. Sharma (IEEE Transactions on Multimedia, 2019)',
-        home='https://labsites.rochester.edu/air/projects/URMP.html',
-        base=None, root='data',
-        licence='no licence stated; permission asked of the authors. The owner allows fitting and evaluation only, no redistribution',
-        spdx=None, permissive=False, use='fit-eval',
-        citation='URMP, Li et al., IEEE TMM 2019 (arXiv:1612.08727). Fitting and evaluation only; not redistributed.'),
+        author='B. Li, X. Liu, K. Dinesh, Z. Duan, G. Sharma (IEEE Transactions on Multimedia 21(2), 2019)',
+        home='https://doi.org/10.5061/dryad.ng3r749',
+        base=None, root='data', manual='Dryad serves it only through a browser check: download it by hand into $AWVA_REFS/urmp/dl/',
+        licence='CC0 1.0 (Dryad: "available to the public under a CC0 instrument"; scholarly citation asked)', spdx='CC0-1.0', permissive=True,
+        citation='URMP, B. Li, X. Liu, K. Dinesh, Z. Duan, G. Sharma, "Creating a Multitrack Classical Music Performance Dataset for Multimodal Music Analysis", '
+                 'IEEE Transactions on Multimedia 21(2), 2019; Dryad doi:10.5061/dryad.ng3r749 (version 1, 2019-09-21), CC0 1.0.'),
     'bach10': dict(
         title='Bach10 dataset',
         author='Z. Duan, B. Pardo, C. Zhang (AIR Lab, University of Rochester, 2010)',
@@ -236,6 +238,18 @@ def extract(e, log=print):
     log('extracted', e['source'], e['path'])
 
 
+def _archive_ok(e, p):
+    if os.path.getsize(p) != e['bytes']:
+        return False
+    if e.get('sha256'):
+        return sha256(p) == e['sha256']
+    h = hashlib.md5()
+    with open(p, 'rb') as f:
+        for b in iter(lambda: f.read(1 << 20), b''):
+            h.update(b)
+    return h.hexdigest() == e['md5']
+
+
 def verify_archive(e, members=True):
     """[problems] of an archive entry: the archive's size and SHA-256; with members, every extracted
     file's CRC-32 against the archive's record (a member not extracted is not a problem: it is read
@@ -246,9 +260,9 @@ def verify_archive(e, members=True):
     if not os.path.exists(p):
         return [f"{e['path']}: missing (python -m awvafit sources fetch {e['source']})"]
     bad = []
-    if os.path.getsize(p) != e['bytes'] or sha256(p) != e['sha256']:
-        bad.append(f"{e['path']}: size or SHA-256 differs from the registry")
-    if members and not bad:
+    if not _archive_ok(e, p):
+        bad.append(f"{e['path']}: size or hash differs from the registry")
+    if members and not bad and e['path'].endswith('.zip'):
         dst = os.path.join(env.refs_root(), e['source'], e['into'])
         with zipfile.ZipFile(p) as z:
             for info in z.infolist():
@@ -269,6 +283,11 @@ def fetch(sets_or_sources, log=print):
     archives are downloaded, checked and extracted"""
     for e in archives(*sets_or_sources):
         _refuse(e['source'])
+        if SOURCES[e['source']].get('manual') or not e.get('url'):
+            if os.path.exists(archive_path(e)) and not verify_archive(e, members=False):
+                log(e['source'], 'is on disk and checks out; extract it by hand (', SOURCES[e['source']].get('manual', ''), ')')
+                continue
+            raise PermissionError(f"{e['source']}: not fetched automatically - {SOURCES[e['source']].get('manual', 'no download URL')}")
         if not (os.path.exists(archive_path(e)) and not verify_archive(e, members=False)):
             log('fetching', e['url'], f"({e['bytes'] / 1e9:.1f} GB)")
             _download(e['url'], archive_path(e), e['sha256'])

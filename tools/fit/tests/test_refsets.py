@@ -50,13 +50,13 @@ def legato(notes, sr=SR, dur=0.6, glide=0.04, dip_db=8.0, lead=0.3):
 class Registry(unittest.TestCase):
     def test_archives_and_licences(self):
         a = sources.archives()
-        self.assertEqual({e['source'] for e in a}, {'choralebricks', 'goodsounds'})
+        self.assertEqual({e['source'] for e in a}, {'choralebricks', 'goodsounds', 'urmp'})
         for e in a:
-            self.assertRegex(e['sha256'], r'^[0-9a-f]{64}$')
-            self.assertTrue(e['url'].startswith('https://zenodo.org/'))
+            self.assertTrue(e.get('sha256') or e.get('md5'))
+            self.assertTrue(e['url'] is None or e['url'].startswith('https://zenodo.org/'))
             self.assertTrue(sources.SOURCES[e['source']]['permissive'])
         self.assertEqual(sources.allowed('choralebricks'), (True, ''))
-        ok, note = sources.allowed('urmp', 'read')
+        ok, note = sources.allowed('bach10', 'read')
         self.assertTrue(ok)
         self.assertIn('fitting and evaluation only', note)
         self.assertFalse(sources.allowed('bach10', 'fetch')[0])
