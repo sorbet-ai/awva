@@ -892,8 +892,7 @@ std::vector<float> settle_then_play(Loaded& dll, double seconds) {
 } // namespace
 
 TEST_CASE("glides arrive: an edit after a preset, given its glide's time, sounds as the same values loaded at once") {
-	// (bowed's preset glide is its own change)
-	for (const char* id : {"accordion", "brass", "ep", "modal", "reed", "sine", "trumpet", "va", "wind"}) {
+	for (const char* id : {"accordion", "bowed", "brass", "ep", "modal", "reed", "sine", "trumpet", "va", "wind"}) {
 		const sdk::EngineEntry* e = sdk::find_engine(id);
 		REQUIRE(e != nullptr);
 		const int presets = e->info->num_presets > 0 ? e->info->num_presets : 1;
