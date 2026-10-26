@@ -195,8 +195,9 @@ A phrase set's default stream infers the control once, for every engine. Three o
    - the floor is also held where the engine's level comes within 30 dB of its loudest.
 
    The key path plays a velocity that rises inside a held key as a second strike: following the raw 10 ms level made both clarinets click.
-4. **Legato.** At a connected change of pitch (the next onset less than 0.12 s after the note's end), the next key goes down at its onset on another key, and the last one lets go 30 ms later (`--overlap`). The breath is held. Repeated pitches and real gaps re-tongue, released 20 ms early.
+4. **Legato.** At a connected change of pitch (the next onset less than 0.12 s after the note's end), the next key goes down at its onset on another key, and the last one lets go 30 ms later (`--overlap`). The breath is held. Repeated pitches and real gaps re-tongue, released 20 ms early. From 50 ms before a slurred note's end, the old key's pressure follows the recording's dip down as fast as it falls: a falling pressure is a negative velocity, never a strike.
 5. **Strike.** A strike sweep on isolated notes gives a curve of attack overshoot against strike. The overshoot is the attack's peak, −10 to +100 ms around the onset, over the sustain's 99th-percentile peak.
+   - Each note's pressure rises over its own ramp, set apart from the strike (`keys.Stream.press(ramp=)`: the velocity over the rise is scaled to peak at the strike). The ramp starts at the recording's onset rise (10 → 90 % of the 5 ms envelope) and is refined in the phrase until the render's rise matches it. A recording that speaks by a quick ramp with no strong attack gets a soft strike on a quick ramp, not a hard strike.
    - Each note gets the strike whose overshoot matches the recording's own for that note (the manifest's `notes[].attack_db`, the same measure).
    - Refinement passes in the phrase follow, and each note keeps its best pass.
    - Slurred notes are calibrated too, so a tongued legato re-attacks on the held breath as far as the recording does.
@@ -209,7 +210,31 @@ Measured, on the audition builds' dry output:
   - The level error falls from 5.0 to 2.5 dB RMS, and the per-note level range from 14.6 to 8.7 dB (the recording's: 6.8 dB).
   - The brightness rises from 2.15 to 2.6, against the recording's 2.96.
   - Both builds speak periodically at every pressure swept, so their threshold is below 0.04, and the default stream left them dark rather than near threshold.
-- **Not reached:** on a held breath, the brass family's attack overshoot at a note change hardly answers to the strike (+5 to +9 dB, against the recording's −4 to +2). That is the engine's own legato transition, not the input.
+- **Across nine instruments:** brass dynamics and attacks come within about 1 dB of the recordings, where the default streams were 8–20 dB too hard. The oboe's slur gaps of 55–68 dB come down to 9–10 dB, against the recording's 18.
+
+## The listening gate: nothing reaches a listener unless the measures say it is better
+
+`python -m awvafit gate --inst I --candidate X --baseline Y` decides, before anyone listens, whether a new build is closer to the recordings than the one before it.
+
+- **Builds:** `<engine>:<preset>` (through `awva_render --rec`), or `cmd[label]:<command>` for any other player of key streams. The command gets `{csv}`, `{out}`, `{octave}` and `{transpose}`, and writes the dry output to `{out}`.
+- **Phrases:** the instrument's held-out set (`awvafit/gate_set.json`): 3 ChoraleBricks and 2 URMP legato lines per instrument, picked in SHA-1 order with the listening kits' phrases left out. **No fit may use them.** Each phrase is played through a stream calibrated on that very build (`awvafit.control`), so the comparison is the engine's.
+- **Measures** (`awvafit.gate`, the clarinet and double reed lanes' analyses together):
+
+| group | measures |
+|---|---|
+| dynamics | per-note level re the phrase median; the phrase's level range |
+| harmonics | h1–h10 re the total in the sustain's middle third; their spread across notes; their change over the note |
+| noise | the aperiodic part (a one-period comb): its level re the tone, its band shape, its pulsing within the period above 1.5 kHz |
+| onset | the rise (10 → 90 %); the overshoot over the sustain; the noise before the tone speaks |
+| slurs | the dip at each connected change and its recovery |
+| texture | band-envelope modulation in 0.5–8 kHz carriers at 4–20, 20–80 and 80–300 Hz |
+
+- **Floors:** every measure's floor is the recording's own spread, either between its notes of the same pitch or between the phrase's halves. A measure's score is its distance from the recording in floors. A group's score is the mean of its measures, and the total is the mean of the groups.
+- **Verdicts:**
+  - *identical*: the two builds are within a floor of each other on every measure, so there is nothing to hear and no kit is made;
+  - *pass*: the candidate's total is lower, it is better on most groups, and it is worse on no group by more than a floor;
+  - *fail*: anything else.
+- **The rule:** a listening kit is made only after a pass, and every lane runs the gate before handing a kit on. The recordings and the renders are high-passed alike, below min(60 Hz, 0.8 × the phrase's lowest note), to remove URMP's rumble.
 
 ## The Good-sounds back-test
 

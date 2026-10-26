@@ -287,6 +287,12 @@ def main(argv=None):
     inst = {'brassfamily': cmd_brassfamily, 'sax': cmd_sax, 'flute': cmd_flute, 'clarinet': cmd_clarinet}
     if argv and argv[0] in inst:
         return inst[argv[0]](None, argv[1:])
+    if argv and argv[0] == 'gate':  # the listening gate (awvafit.gate): its own arguments
+        from .gate import main as gate_main
+        try:
+            sys.exit(gate_main(argv[1:]))
+        except env.EnvError as ex:
+            env.die(str(ex))
     p = argparse.ArgumentParser(prog='awvafit', description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest='cmd', required=True)
     s = sub.add_parser('params')

@@ -150,6 +150,45 @@ class Room(unittest.TestCase):
         self.assertIsNone(room.measure(x, SR).rt60_s)  # dry: no decay to read
 
 
+class Gate(unittest.TestCase):
+    def per_item(self, cand, base, between):
+        from awvafit import gate
+        fl = dict(gate.MIN_FLOOR)
+        return [dict(id='x', floor=fl, cand={m: cand * fl[m] for m in fl}, base={m: base * fl[m] for m in fl},
+                     between={m: between * fl[m] for m in fl})]
+
+    def test_the_verdicts(self):
+        from awvafit import gate
+        self.assertEqual(gate.verdict('t', 'c', 'b', self.per_item(1.0, 2.0, 1.5))['verdict'], 'pass')
+        self.assertEqual(gate.verdict('t', 'c', 'b', self.per_item(2.0, 1.0, 1.5))['verdict'], 'fail')
+        self.assertEqual(gate.verdict('t', 'c', 'b', self.per_item(1.0, 1.2, 0.5))['verdict'], 'identical')
+        p = self.per_item(1.0, 3.0, 2.0)
+        p[0]['cand']['dip'] = p[0]['cand']['recovery'] = 9 * p[0]['floor']['dip']  # one group far worse
+        p[0]['cand']['recovery'] = 9 * p[0]['floor']['recovery']
+        r = gate.verdict('t', 'c', 'b', p)
+        self.assertEqual(r['verdict'], 'fail')
+        self.assertIn('slurs', r['worse_groups'])
+
+    def test_the_comb_leaves_noise_not_tone(self):
+        from awvafit import gate
+        t = tone(220, 0.5)
+        r, p, _ = gate.comb_split(t, 220.0)
+        self.assertLess(10 * math.log10(np.mean(r ** 2) / np.mean(p ** 2)), -40)
+        n = t + 0.03 * np.random.default_rng(4).standard_normal(len(t))
+        r, p, _ = gate.comb_split(n, 220.0)
+        self.assertAlmostEqual(10 * math.log10(np.mean(r ** 2) / np.mean(p ** 2)), 10 * math.log10(0.03 ** 2 / np.mean(t ** 2)), delta=2)
+
+    def test_features_on_a_phrase(self):
+        from awvafit import gate
+        x = np.concatenate([np.zeros(SR // 10)] + [tone(220 * 2 ** (k / 12), 0.6) for k in (0, 2, 4, 5)])
+        notes = [(0.1 + 0.6 * k, 0.1 + 0.6 * (k + 1) - 0.01, 57 + d) for k, d in enumerate((0, 2, 4, 5))]
+        F = gate.features(x, notes)
+        self.assertEqual(len(F['notes']), 4)
+        self.assertAlmostEqual(F['phrase']['range'], 0.0, delta=0.5)
+        d = gate.distance(F, F)
+        self.assertTrue(all(v is None or v == 0 for v in d.values()))
+
+
 class Bursts(unittest.TestCase):
     def test_a_bright_burst_in_a_held_note(self):
         from awvafit.features.transients import hf_bursts
