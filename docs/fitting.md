@@ -247,7 +247,8 @@ Measured, on the audition builds' dry output:
 - **Fit on what the gate scores:** `awvafit.gate.objective(build, fit_set, voicing='mono')` scores one build exactly as the gate does: the same features, R's floors, per-measure medians over the phrases, group means and their mean. It returns `dict(total, groups, measures, phrases)` in floors, lower closer.
   - `build` is a `factory(item) -> render(csv)`, or a gate spec.
   - `fit_set` is phraseset Items or a fit-set manifest. A fit set that uses any held-out recording is refused.
-  - Pass the same `streams={}` dict on every call of a fit, so each phrase is calibrated once and reused. Empty it to calibrate again.
+  - By default every call calibrates each phrase on the build it scores, as the gate does, and deletes that calibration when it returns.
+  - `streams_frozen=True` with the same `streams={}` dict calibrates each phrase once, on the first build, and reuses it. That is the trap: the calibration fits the build that played it, so a fit scored on its baseline's calibration learns that calibration, not the recordings. The bowed lane's violin fit lowered its own loss this way and then failed the gate. Freeze only to compare builds that share a calibration, and recalibrate before trusting a total.
   - R's features are computed once per process.
 
   A lane's own objective can disagree with the gate: the double reed v3 fit scored well on its own measures and lost to v2 at the gate. So fit on this.

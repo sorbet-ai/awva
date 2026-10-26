@@ -68,6 +68,7 @@ import math
 import os
 import shutil
 import subprocess
+import tempfile
 import threading
 import types
 from concurrent.futures import ThreadPoolExecutor
@@ -639,7 +640,8 @@ def reference_features(item):
     return v
 
 
-def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=None, workers=4, log=None):
+def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=None, workers=4, log=None,
+              streams_frozen=False):
     """The gate's own score of one build, for fitting on: dict(total, groups, measures, phrases).
 
     build_render_fn  a build: factory(item) -> render(csv) -> the dry output (mono float, 48 kHz, time 0 =
@@ -647,9 +649,18 @@ def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=No
     fit_set          the phrases to score on: phraseset Items, or a fit-set manifest (gate_set.read_fit_set's
                      format, phrases by id); refused if any is from a held-out recording
     voicing          'mono' (the gate's default: the keys in mono legato) or 'poly' (onsets only where clean)
-    streams          {phrase id: calibrated stream}: pass the same dict on every call of a fit to calibrate
-                     each phrase once (on the first build that plays it) and reuse it; empty it to calibrate
-                     again (the gate itself calibrates every build: recalibrate before a gate run's verdict)
+    streams_frozen   False (the default): every call calibrates each phrase on this build, as the gate
+                     does, in a folder of its own that is deleted when the call returns; `streams` is not
+                     used. True: the phrases are calibrated once, on the first build that plays them, kept
+                     in `streams` and reused by every later call with the same dict (empty it to calibrate
+                     again)
+    streams          {phrase id: calibrated stream}, only with streams_frozen=True
+    The trap that streams_frozen=True sets: the calibration is fitted to the build that played it (its
+    breath, its strikes), so a fit scored on streams calibrated on its baseline learns to play the
+    baseline's calibration, not the recordings. Its own loss falls, and then the gate, which calibrates
+    every build on itself, fails it (the bowed lane's violin fit). Freeze only to compare builds that
+    share a calibration (one engine, a parameter that doesn't touch breath or strike), and recalibrate
+    before trusting a total.
     Scores as the gate does (features, R's floors, per-measure medians over the phrases, group means, the
     mean of the groups), lower is closer to the recordings; R's features are computed once per process.
     """
@@ -675,7 +686,13 @@ def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=No
                            + '; '.join(f'{s_} {t}' for s_, t in over))
     workdir = workdir or env.workdir('objective')
     factory = renderer(build_render_fn, workdir, voicing)[1] if isinstance(build_render_fn, str) else build_render_fn
-    streams = {} if streams is None else streams
+    if streams_frozen:
+        streams = {} if streams is None else streams
+        scratch = None
+    else:  # this build's own calibration, this call's only
+        streams = {}
+        os.makedirs(workdir, exist_ok=True)
+        scratch = tempfile.mkdtemp(prefix='cal_', dir=workdir)
     cache = control.SweepCache(control.sweep_notes_for(items))
     lock = threading.Lock()
 
@@ -684,7 +701,7 @@ def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=No
         with lock:
             path = streams.get(item.id)
         if not path or not os.path.exists(path):
-            d = os.path.join(workdir, hashlib.sha1(f'{id(streams)} {item.id}'.encode()).hexdigest()[:12])
+            d = os.path.join(scratch or workdir, hashlib.sha1(f'{id(streams)} {item.id}'.encode()).hexdigest()[:12])
             path, _ = control.calibrated(item, render, d, log=lambda m: None, cache=cache)
             with lock:
                 streams[item.id] = path
@@ -699,8 +716,12 @@ def objective(build_render_fn, fit_set, voicing='mono', workdir=None, streams=No
             log(f'  objective: {item.id}')
         return dict(id=item.id, floor=fl, cand=distance(R, F))
 
-    with ThreadPoolExecutor(max_workers=workers) as ex:
-        per_item = list(ex.map(one, items))
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            per_item = list(ex.map(one, items))
+    finally:
+        if scratch:
+            shutil.rmtree(scratch, ignore_errors=True)
     measures = {m: score(per_item, 'cand', m) for g in GROUPS.values() for m in g}
     groups = {g: (float(np.mean([measures[m] for m in ms if measures[m] is not None]))
                   if any(measures[m] is not None for m in ms) else None) for g, ms in GROUPS.items()}
