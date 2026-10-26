@@ -7,7 +7,7 @@
 // presets/flute/00-flute.preset.json
 inline constexpr char factory_json_0[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "flute", "params_hash": "970059d8"},
+  "engine": {"id": "flute", "params_hash": "a214de77"},
   "title": "flute",
   "heroes": ["p_loud", "theta", "y0", "turb", "ob_amt", "cut_hz", "tongue", "release"],
   "params": {
@@ -80,7 +80,7 @@ inline constexpr char factory_json_0[] = R"awva-preset({
 // presets/flute/01-alto-flute.preset.json
 inline constexpr char factory_json_1[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "flute", "params_hash": "970059d8"},
+  "engine": {"id": "flute", "params_hash": "a214de77"},
   "title": "alto flute",
   "heroes": ["p_loud", "theta", "y0", "turb", "ob_amt", "cut_hz", "tongue", "release"],
   "params": {
@@ -153,7 +153,7 @@ inline constexpr char factory_json_1[] = R"awva-preset({
 // presets/flute/02-piccolo.preset.json
 inline constexpr char factory_json_2[] = R"awva-preset({
   "format": "awva-preset/1",
-  "engine": {"id": "flute", "params_hash": "970059d8"},
+  "engine": {"id": "flute", "params_hash": "a214de77"},
   "title": "piccolo",
   "heroes": ["p_loud", "theta", "y0", "turb", "ob_amt", "cut_hz", "tongue", "release"],
   "params": {
