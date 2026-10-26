@@ -1,37 +1,52 @@
 /* SPDX-FileCopyrightText: 2026 Sorbet AI
  * SPDX-License-Identifier: Apache-2.0
  *
- * The engine component: one sound engine as a C ABI, for a plugin, the virtual board or any host
- * that loads it from a DLL / dylib (and later the board, from a module). UMP in, audio out,
- * parameters by stable id and name, factory presets, and what the host needs to know first:
- * the heroes, the budget, the memory and the stack.
+ * The engine component (ABI 2): one sound engine as a C ABI, for a plugin, the virtual board or
+ * any host that loads it from a DLL / dylib (and later the board, from a module). UMP in, audio
+ * out, parameters by stable id and name, factory presets, and what the host needs to know first:
+ * a title, a colour, the heroes, the sample rates, the budget, the memory and the stack.
+ * (docs/writing_a_host.md walks through a host.)
  *
  * One exported symbol, nsc_entry(), gives the component: a descriptor (static, readable before
  * any instance exists) and its functions. The host owns the memory: it allocates the three regions
  * the descriptor asks for (state, fast, large; zero-filled, 64-byte aligned) and passes them to
- * init(). No call allocates, blocks or throws; nothing is global (two instances are independent).
+ * init(), which refuses (-1) a sample rate outside min_rate .. max_rate. No call allocates, blocks
+ * or throws; nothing is global (two instances are independent).
  *
- * Time: process() renders one block of NSC_BLOCK frames. Its events are UMP packets with their
- * frame within the block; they are taken in 2 ms steps, as the board takes MIDI in: before each
- * block, every step due by its start runs with the events at or before its time (a plugin's
- * events land within one step, 2 ms, of their frame, the same rule as the SDK's renderer).
+ * Time, in integer frames: process() renders one block of NSC_BLOCK frames. Its events are UMP
+ * packets with their frame, counted from the block's start: 0 .. NSC_BLOCK - 1, or negative (down
+ * to -NSC_BLOCK) for an event that arrived after its block was rendered. MIDI is taken in 2 ms
+ * steps, as the board takes it: step k is at frame ceil(k sr / 500), and an event is taken at the
+ * first step at or after its frame; before each block, every step due by its start runs. So a late
+ * event lands where it would have on time, at every rate, with no added latency (in the first
+ * block, a negative frame is frame 0).
+ *
+ * Notes: a Note On may carry the host's id for it (nsc_event.note_id; -1: none). After process(),
+ * ended() hands out the ids of the notes that have ended: released, then the engine's tail passed
+ * or it went idle, or another note took their key (CLAP NOTE_END).
  *
  * Input: MIDI 2.0 channel voice messages (UMP type 4) in their standard meaning (pressure full
- * scale = the Striso's full press, 16-bit velocities, Pitch 7.25, bipolar controllers centred), and
- * MIDI 1.0 channel voice messages in UMP (type 2, including MPE); the other types are ignored.
- * Inside, the component runs the one decoder (awva/ump.h), the voice allocator and, in
- * NSC_MODE_LEGATO, mono legato.
+ * scale = the Striso's full press, 16-bit velocities, Pitch 7.25, bipolar controllers centred;
+ * per-note y as Assignable Per-Note Controller 4 or Registered 74, per-note x as Assignable 3), and
+ * MIDI 1.0 channel voice messages in UMP (type 2, including MPE); the other types are ignored, and
+ * every group is taken as one. Inside, the component runs the one decoder (awva/ump.h), the voice
+ * allocator and, in NSC_MODE_LEGATO, mono legato.
+ *
+ * Parameters: the engine's own, then "output" (the output level, 0 .. 2, default 1: at 1 the
+ * engine's samples bit for bit). Each has a stable id (FNV-1a of its name) and a declared default
+ * (its value after init()). After set_preset() every parameter may have changed.
  *
  * process_voices() is the other way in: the host allocates the voices itself and gives each its
  * controls (the board's synth_control does so today), and the component only renders.
  *
- * Map to CLAP: desc->id is the plugin id's last part, name / summary / version its descriptor;
- * process() is clap_plugin.process with its note and MIDI 2.0 events (CLAP_EVENT_MIDI2) given per
- * 32-frame block; params by id are clap_plugin_params (id = nsc_param.id, value in min .. max,
- * NSC_PARAM_STEPS / NSC_PARAM_TOGGLE = CLAP_PARAM_IS_STEPPED); presets are a preset-discovery
+ * Map to CLAP: desc->uid is the plugin id (com.sorbet-ai.awva.<id>), name (a title) / summary /
+ * version its descriptor; process() is clap_plugin.process with its note and MIDI 2.0 events
+ * (CLAP_EVENT_MIDI2), a late one at its negative frame; ended() gives CLAP_EVENT_NOTE_END with the
+ * note ids; params by id are clap_plugin_params (id = nsc_param.id, value in min .. max, default
+ * def; NSC_PARAM_STEPS / NSC_PARAM_TOGGLE = CLAP_PARAM_IS_STEPPED); presets are a preset-discovery
  * provider's factory presets (by index here); active_voices() is the voice-info extension's count;
- * tail_seconds the tail extension; reset() clap_plugin.reset; the regions are what activate()
- * allocates.
+ * tail_seconds the tail extension; min_rate .. max_rate what activate() accepts; reset()
+ * clap_plugin.reset; the regions are what activate() allocates.
  */
 #ifndef NSC_NSC_H_
 #define NSC_NSC_H_

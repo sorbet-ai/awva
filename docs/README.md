@@ -30,3 +30,5 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 | [wind](engines/wind.md) | woodwinds: reed and jet driven bores, cylindrical and conical (9 presets) | 9 | 36 |
 
 <!-- awva_docs: end -->
+
+- [Writing a host](writing_a_host.md): a plugin or the board, on the engine component (ABI 2).
