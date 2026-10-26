@@ -102,6 +102,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `f15d1b51` | `gyro_chorus` | mod | 0 | 1 | 0.22 | continuous |
 | `e4d88d72` | `vibrato` | mod | 0 | 1.5 | 0.35 | continuous |
 | `9e2c50e9` | `vib_hz` | mod | 1 | 9 | 5.3 | continuous |
+| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
 
 ## Cost and memory
 
@@ -111,7 +112,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 75 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 10 s of the last release |
-| hot (the engine object) | 3.53906 KB (3624 bytes) (on a 64-bit host) |
+| hot (the engine object) | 4.10938 KB (4208 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | none |
 | bulk (BulkMemory) | none |
 

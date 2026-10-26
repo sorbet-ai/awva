@@ -26,7 +26,7 @@ None: the parameters are the sound.
 
 ## Hero parameters
 
-(none)
+`growl_from`, `life`
 
 ## Parameters
 
@@ -34,7 +34,8 @@ Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of t
 
 | id | name | group | min | max | default | kind |
 |---|---|---|---|---|---|---|
-| | (none) | | | | | |
+| `ef88e6bb` | `growl_from` | expr | 0.5 | 1.5 | 0.7 | continuous |
+| `e7c742df` | `life` | expr | 0 | 1 | 0 | continuous |
 
 ## Cost and memory
 
@@ -44,7 +45,7 @@ Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of t
 | channels | 1 (mono) |
 | CPU | 62.5 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| hot (the engine object) | 1.50781 KB (1544 bytes) (on a 64-bit host) |
+| hot (the engine object) | 1.90625 KB (1952 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | none |
 | bulk (BulkMemory) | 160 KB |
 

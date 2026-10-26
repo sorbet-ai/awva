@@ -77,6 +77,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `e4d88d72` | `vibrato` | mod | 0 | 60 | 0 | continuous |
 | `9e2c50e9` | `vib_hz` | mod | 2 | 9 | 5.5 | continuous |
 | `a52aeefa` | `vib_delay` | mod | 0 | 2 | 0.35 | continuous |
+| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
 | `9d64fcc3` | `tremolo` | mod | 0 | 2 | 1.3 | continuous |
 | `86a498df` | `body_rot` | mod | -2 | 2 | 0.7 | continuous |
 | `cf9f7e5a` | `ensemble` | section | 0 | 1.5 | 0 | continuous |
@@ -94,7 +95,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 100 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| hot (the engine object) | 2.73438 KB (2800 bytes) (on a 64-bit host) |
+| hot (the engine object) | 3.01562 KB (3088 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | 100 KB |
 | bulk (BulkMemory) | 8 KB |
 

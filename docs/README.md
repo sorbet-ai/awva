@@ -20,19 +20,19 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 
 | engine | what it is | presets | parameters |
 |---|---|---|---|
-| [accordion](engines/accordion.md) | free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets) | 9 | 42 |
-| [bowed](engines/bowed.md) | bowed strings: friction-driven waveguide strings, modal body, section (9 presets) | 9 | 37 |
-| [brass](engines/brass.md) | brass: a lip source and a physical bore, bell, mutes (9 presets) | 9 | 43 |
+| [accordion](engines/accordion.md) | free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets) | 9 | 43 |
+| [bowed](engines/bowed.md) | bowed strings: friction-driven waveguide strings, modal body, section (9 presets) | 9 | 38 |
+| [brass](engines/brass.md) | brass: a lip source and a physical bore, bell, mutes (9 presets) | 9 | 47 |
 | [clarinet](engines/clarinet.md) | physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets) | 2 | 45 |
 | [doublereed](engines/doublereed.md) | physical double reeds: reed, conical bore and tone holes, a living player (oboe, cor anglais, bassoon) | 3 | 52 |
-| [ep](engines/ep.md) | electric pianos: modal tines and reeds, pickups, damper (14 presets) | 14 | 25 |
+| [ep](engines/ep.md) | electric pianos: modal tines and reeds, pickups, damper (14 presets) | 14 | 26 |
 | [flute](engines/flute.md) | physical flutes: an air jet on the edge of an open-open bore (flute, alto flute, piccolo) | 3 | 62 |
 | [modal](engines/modal.md) | tuned percussion: banks of damped resonators, struck or rubbed (6 presets) | 6 | 21 |
-| [reed](engines/reed.md) | single reed: clarinet to saxophone, one model, tilt morphs the bore | 0 | 0 |
+| [reed](engines/reed.md) | single reed: clarinet to saxophone, one model, tilt morphs the bore | 0 | 2 |
 | [sine](engines/sine.md) | the minimal example engine: one sine per voice, level from pressure | 0 | 0 |
 | [trumpet](engines/trumpet.md) | physical trumpet: lips, mouthpiece and bore, played like the brass trumpet (1 preset) | 1 | 45 |
-| [va](engines/va.md) | virtual analog: saw/pulse/sub oscillators, sync, ladder-style filter, envelopes (8 presets) | 8 | 55 |
-| [wind](engines/wind.md) | woodwinds: reed and jet driven bores, cylindrical and conical (9 presets) | 9 | 37 |
+| [va](engines/va.md) | virtual analog: saw/pulse/sub oscillators, sync, ladder-style filter, envelopes (8 presets) | 8 | 56 |
+| [wind](engines/wind.md) | woodwinds: reed and jet driven bores, cylindrical and conical (9 presets) | 9 | 38 |
 
 <!-- awva_docs: end -->
 

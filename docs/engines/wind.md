@@ -78,10 +78,11 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `492d7c4f` | `tilt_bright` | expr | 0 | 1 | 0.5 | continuous |
 | `e98585d5` | `tilt_breath` | expr | 0 | 1 | 0.5 | continuous |
 | `77bdc182` | `growl` | expr | 0 | 0.8 | 0 | continuous |
-| `ef88e6bb` | `growl_from` | expr | 0.5 | 1.5 | 1.05 | continuous |
+| `ef88e6bb` | `growl_from` | expr | 0.5 | 1.5 | 0.7 | continuous |
 | `6a122da6` | `vib` | mod | 0 | 0.6 | 0 | continuous |
 | `9e2c50e9` | `vib_hz` | mod | 2 | 8 | 5 | continuous |
 | `2819a4b5` | `vib_breath` | mod | 0 | 0.3 | 0 | continuous |
+| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
 | `9a67fb30` | `instrument` | bore | 0 | 8 | 0 | steps |
 
 ## Cost and memory
@@ -92,7 +93,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 62.5 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| hot (the engine object) | 2.125 KB (2176 bytes) (on a 64-bit host) |
+| hot (the engine object) | 2.875 KB (2944 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | none |
 | bulk (BulkMemory) | 120 KB |
 

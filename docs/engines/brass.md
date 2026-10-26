@@ -88,6 +88,10 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | `9e2c50e9` | `vib_hz` | mod | 2 | 9 | 5.5 | continuous |
 | `175c54d9` | `flutter` | mod | 0 | 1 | 0.6 | continuous |
 | `e6f3c1b1` | `flut_hz` | mod | 8 | 40 | 24 | continuous |
+| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
+| `77bdc182` | `growl` | growl | 0 | 1 | 0 | continuous |
+| `ef88e6bb` | `growl_from` | growl | 0 | 1.5 | 0.7 | continuous |
+| `aed9b325` | `growl_hz` | growl | 10 | 80 | 15 | continuous |
 | `7c445ab1` | `pair` | section | 0 | 1 | 0 | continuous |
 | `bb5fdd2c` | `detune` | section | 0 | 30 | 8 | continuous |
 
@@ -99,7 +103,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 | channels | 1 (mono) |
 | CPU | 93.75 instructions a voice and frame (Cortex-M7 (FPv5-D16), gcc -O3, instructions counted under QEMU: 10 voices at 48 kHz, the engine's worst preset) |
 | tail | silent and idle within 2 s of the last release |
-| hot (the engine object) | 8.09375 KB (8288 bytes) (on a 64-bit host) |
+| hot (the engine object) | 8.94531 KB (9160 bytes) (on a 64-bit host) |
 | stream (StreamMemory) | none |
 | bulk (BulkMemory) | 80 KB |
 
