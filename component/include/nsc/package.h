@@ -202,7 +202,7 @@ inline bool check_relocs(const uint8_t* relocs, uint32_t count, uint32_t image_s
 	uint32_t last = 0;
 	for (uint32_t i = 0; i < count; i++) {
 		const uint32_t o = rd32(relocs + 4 * i);
-		if (o % 4 || o + 4 > image_size || (i && o <= last)) return why.s("relocation offset out of range"), false;
+		if (o % 4 || image_size < 4 || o > image_size - 4 || (i && o <= last)) return why.s("relocation offset out of range"), false;
 		last = o;
 	}
 	return true;

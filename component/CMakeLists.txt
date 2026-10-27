@@ -221,6 +221,17 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
               --label "bowed presets" --presets "${CMAKE_CURRENT_SOURCE_DIR}/../presets/bowed"
       DEPENDS "${AWVA_PACK}" VERBATIM)
     add_custom_target(test_package_presets DEPENDS "${_tp}/bowed_presets.awvapkg")
+    # the packager refuses a preset file every host's reader refuses: without "format", or another
+    # engine's
+    file(WRITE "${_tp}/no_format.preset.json" "{\"engine\": {\"id\": \"bowed\"}, \"title\": \"t\", \"params\": {}}\n")
+    file(WRITE "${_tp}/other_engine.preset.json" "{\"format\": \"awva-preset/1\", \"engine\": {\"id\": \"va\"}, \"title\": \"t\", \"params\": {}}\n")
+    foreach(_bad "no_format;not an awva-preset/1 file" "other_engine;a preset of va, the package is bowed")
+      list(GET _bad 1 _why)
+      list(GET _bad 0 _bad)
+      add_test(NAME component.pack_refuses_${_bad} COMMAND "${Python3_EXECUTABLE}" "${AWVA_PACK}" package "${_tp}/refused_${_bad}.awvapkg"
+        --engine bowed --preset "${_bad}=${_tp}/${_bad}.preset.json")
+      set_tests_properties(component.pack_refuses_${_bad} PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "${_why}")
+    endforeach()
     add_dependencies(nsc_component_tests test_package_va test_package_presets)
     target_compile_definitions(nsc_component_tests PRIVATE "NSC_TEST_PACKAGES=\"${_tp}\"" "NSC_PACKAGE_TAG=\"${AWVA_PACKAGE_TAG}\""
       "NSC_COMPONENT_SUFFIX=\"${CMAKE_SHARED_LIBRARY_SUFFIX}\"" "NSC_PACKAGE_LIBS=\"${CMAKE_CURRENT_BINARY_DIR}/package_libs\"")
