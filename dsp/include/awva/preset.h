@@ -24,7 +24,7 @@
 // The reader takes JSON's syntax, flat: the top-level object, its two objects (engine, params,
 // modes: string -> string/number/bool) and arrays of strings (tags, heroes). Unknown keys are
 // skipped (their value may be any JSON value, nested too); strings may have the escapes \" \\ \/
-// \b \f \n \r \t, and \uXXXX below 0x80 (others read as '?').
+// \b \f \n \r \t, and \uXXXX from 1 to 0x7f (others, \u0000 too, read as '?').
 #ifndef AWVA_PRESET_H_
 #define AWVA_PRESET_H_
 
@@ -240,7 +240,9 @@ public:
 						if (d < 0) return fail(Error::syntax);
 						u = u * 16 + static_cast<uint32_t>(d);
 					}
-					c = u < 0x80 ? static_cast<char>(u) : '?';
+					// (\u0000 too: a NUL inside a string cut it short wherever it was used as a C
+					// string, so "level\u0000x" named the parameter "level", and the writer lost the rest)
+					c = u > 0 && u < 0x80 ? static_cast<char>(u) : '?';
 					break;
 				}
 				default: return fail(Error::syntax);
