@@ -45,6 +45,9 @@ static_assert(sizeof(nsc_voice) == sizeof(dsp::NoteControls) && offsetof(nsc_voi
         offsetof(nsc_voice, gate) == offsetof(dsp::NoteControls, gate),
     "nsc_voice is dsp::NoteControls");
 static_assert(sizeof(nsc_globals) == sizeof(dsp::InstrumentControls), "nsc_globals is dsp::InstrumentControls");
+static_assert(static_cast<int>(dsp::MonoFamily::glide) == NSC_MONO_GLIDE && static_cast<int>(dsp::MonoFamily::finger) == NSC_MONO_FINGER &&
+        static_cast<int>(dsp::MonoFamily::struck) == NSC_MONO_STRUCK,
+    "nsc_mono_family is dsp::MonoFamily");
 using awva::preset::fnv1a; // (the parameters' ids, the schema hash: preset.h's)
 using awva::preset::fnv1a_word;
 
@@ -179,6 +182,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		d.max_events = awva::sdk::TimedMidi::MAX_EVENTS; // (ended()'s guarantee is TimedMidi's)
 		d.max_note_ids = awva::sdk::TimedMidi::NOTES;
 		d.max_notes = awva::sdk::TimedMidi::Mapper::NOTES;
+		d.mono = static_cast<int32_t>(in.mono);
 		return d;
 	}
 	static constexpr nsc_desc desc_ = make_desc();

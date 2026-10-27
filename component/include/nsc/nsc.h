@@ -1,7 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Sorbet AI
  * SPDX-License-Identifier: Apache-2.0
  *
- * The engine component (ABI 6): one sound engine as a C ABI, for a plugin or any host that loads
+ * The engine component (ABI 7): one sound engine as a C ABI, for a plugin or any host that loads
  * it from a DLL / dylib / .so (and later an embedded host, from a module). UMP in, audio
  * out, parameters by stable id and name, factory presets, and what the host needs to know first:
  * a title, a colour, the heroes, the sample rates, its cost and its memory.
@@ -74,7 +74,7 @@
 extern "C" {
 #endif
 
-#define NSC_ABI 6
+#define NSC_ABI 7
 #define NSC_MAGIC 0x3143534eu /* "NSC1" */
 #define NSC_BLOCK 32          /* the engines' block: frames per process_voices() */
 #define NSC_MAX_HEROES 8
@@ -104,9 +104,10 @@ typedef struct nsc_globals {
 } nsc_globals;
 
 /* The layout of what a host and a component pass each other is the ABI: these sizes and offsets
- * are NSC_ABI 6's (nsc_voice and nsc_globals since #36 and #41; nsc_config; nsc_desc's colour,
+ * are NSC_ABI 7's (nsc_voice and nsc_globals since #36 and #41; nsc_config; nsc_desc's colour,
  * cost and region sizes in the slots of ABI 4's led, instr_per_block and state, fast and large
- * bytes, stack_bytes gone, max_notes at its end; nsc_param's label, hover and icon at its end, ABI 6).
+ * bytes, stack_bytes gone, max_notes at its end; nsc_param's label, hover and icon at its end, ABI 6;
+ * nsc_desc's mono family at its end, ABI 7).
  * A layout change fails to compile here until NSC_ABI goes up with it and these are written again. */
 #ifdef __cplusplus
 #define NSC_LAYOUT_ASSERT(c, m) static_assert(c, m)
@@ -114,7 +115,7 @@ typedef struct nsc_globals {
 #define NSC_LAYOUT_ASSERT(c, m) _Static_assert(c, m)
 #endif
 #define NSC_LAYOUT_MSG "nsc.h: a layout change of the ABI needs a new NSC_ABI (and these checks written for it)"
-NSC_LAYOUT_ASSERT(NSC_ABI == 6 && sizeof(nsc_voice) == 28 && offsetof(nsc_voice, pressure) == 4 && offsetof(nsc_voice, pressure_rate) == 8 &&
+NSC_LAYOUT_ASSERT(NSC_ABI == 7 && sizeof(nsc_voice) == 28 && offsetof(nsc_voice, pressure) == 4 && offsetof(nsc_voice, pressure_rate) == 8 &&
         offsetof(nsc_voice, timbre) == 12 && offsetof(nsc_voice, velocity) == 16 && offsetof(nsc_voice, release) == 20 &&
         offsetof(nsc_voice, gate) == 24,
     NSC_LAYOUT_MSG);
@@ -188,15 +189,26 @@ typedef struct nsc_desc {
 	int32_t max_events;                 /* events a process() takes for ended()'s guarantee (its build's) */
 	int32_t max_note_ids;               /* notes with a host id tracked at once (see ended()) */
 	int32_t max_notes;                  /* notes held at once (the MIDI side's table; one more takes the oldest) */
+	int32_t mono;                       /* how its one voice goes note to note in mono (nsc_mono_family): the
+	                                       component's own NSC_MODE_MONO plays it so; a host that plays mono
+	                                       itself (process_voices) takes it for its own player */
 } nsc_desc;
 NSC_LAYOUT_ASSERT(offsetof(nsc_desc, short_name) == offsetof(nsc_desc, name) + sizeof(const char*) &&
         offsetof(nsc_desc, summary) == offsetof(nsc_desc, short_name) + sizeof(const char*) &&
         offsetof(nsc_desc, max_events) == offsetof(nsc_desc, heroes) + NSC_MAX_HEROES * sizeof(const char*) &&
         offsetof(nsc_desc, max_note_ids) == offsetof(nsc_desc, max_events) + sizeof(int32_t) &&
         offsetof(nsc_desc, max_notes) == offsetof(nsc_desc, max_note_ids) + sizeof(int32_t) &&
+        offsetof(nsc_desc, mono) == offsetof(nsc_desc, max_notes) + sizeof(int32_t) &&
         offsetof(nsc_desc, cost) == offsetof(nsc_desc, max_voices) + sizeof(int32_t) && sizeof(float) == 4 &&
         offsetof(nsc_desc, num_params) == offsetof(nsc_desc, bulk_bytes) + sizeof(uint32_t),
     NSC_LAYOUT_MSG);
+
+/* nsc_desc.mono: how an engine's one voice goes note to note in mono (awva/mono.h, MonoFamily) */
+enum nsc_mono_family {
+	NSC_MONO_GLIDE = 0,  /* its pitch slides to the new note (a synth, a bowed string) */
+	NSC_MONO_FINGER = 1, /* the new note starts on the sounding voice, as a fingered instrument */
+	NSC_MONO_STRUCK = 2, /* the new key strikes again (a struck or plucked note can't slide) */
+};
 
 /* what load_preset() did */
 typedef struct nsc_preset_report {

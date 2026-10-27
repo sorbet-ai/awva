@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
 	j += R"(  "colour": ")" + std::string(h) + "\",\n";
 	j += "  \"channels\": " + std::to_string(d.channels) + ",\n  \"max_voices\": " + std::to_string(d.max_voices) + ",\n";
 	j += "  \"max_events\": " + std::to_string(d.max_events) + ",\n  \"max_note_ids\": " + std::to_string(d.max_note_ids) + ",\n  \"max_notes\": " + std::to_string(d.max_notes) + ",\n";
+	j += "  \"mono\": " + std::to_string(d.mono) + ",\n";
 	char cost[32];
 	std::snprintf(cost, sizeof cost, "%.6g", static_cast<double>(d.cost));
 	j += "  \"cost\": " + std::string(cost) + ",\n";

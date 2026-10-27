@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Writing a host
 
-A host loads an engine component (`component/include/nsc/nsc.h`, ABI 6), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
+A host loads an engine component (`component/include/nsc/nsc.h`, ABI 7), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
 - **a plugin**, which plays from a DAW's notes;
 - **an embedded instrument**, which reads its own sensors and allocates voices itself.
 
@@ -32,7 +32,7 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - An event is a UMP packet with its frame, counted from the call's start. An event that arrives after its frame was rendered gets a negative frame, down to -32. The component takes MIDI in control steps on an integer-frame grid (`nsc_config.control_hz`), so place events by frame and nothing more.
 - Send MIDI 2.0 (UMP type 4) in its standard meaning, or MIDI 1.0 in UMP (type 2, MPE included). One channel can carry every note: per-note timbre as Registered Per-Note Controller 74, per-note pitch as Pitch 7.25 (docs/midi.md has the table, a sensor's controllers included).
 - Give a Note On the host's note id (`nsc_event.note_id`, else -1). After each `process()`, drain `ended()` (call it again while it returns `max`) and send each id's note-end (CLAP_EVENT_NOTE_END). Pass at most `desc->max_events` events a block; `desc->max_note_ids` notes are tracked at once (a build's sizes: `AWVA_MIDI_QUEUE`, `AWVA_NOTE_IDS`).
-- Mono: `mode(state, NSC_MODE_MONO, 1)`: one voice, played by every held key (`mono.h`: the player slurs or re-articulates by the keys' pressures, the engine's `EngineInfo::mono` family says how its pitch moves).
+- Mono: `mode(state, NSC_MODE_MONO, 1)`: one voice, played by every held key (`mono.h`: the player slurs or re-articulates by the keys' pressures, the engine's mono family, `nsc_desc.mono` (`EngineInfo::mono`), says how its pitch moves). A host that plays mono itself, through `process_voices()`, takes the same family for its own player.
 
 **An instrument: `process_voices(state, voices, globals, out)`.** The host allocates voices itself and gives each its controls (`nsc_voice`: pitch, pressure, pressure rate, timbre, the velocities and the gate, as `awva::NoteControls`). The component only renders, bit for bit as the same engine compiled in.
 

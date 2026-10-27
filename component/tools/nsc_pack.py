@@ -38,7 +38,7 @@ from pathlib import Path
 PACKAGE_MAGIC, MODULE_MAGIC, FORMAT, NSC_MAGIC = 0x5043534E, 0x4D43534E, 1, 0x3143534E
 # the component ABI whose descriptor layout this reads (nsc.h nsc_desc, 32-bit pointers); a module
 # built against another is refused, so an ABI change fails here first (update NSC_DESC with it)
-NSC_ABI = 6
+NSC_ABI = 7
 NSC_DESC = struct.Struct("<2I6I2IiIiff2i3I2i2I")  # magic, abi, id uid name short_name summary version, schema inputs,
 # channels colour max_voices cost tail_seconds, min/max_rate, hot stream bulk, num_params num_presets, params presets
 # (then heroes[8], max_events, max_note_ids, max_notes: not read)
