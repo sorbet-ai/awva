@@ -92,6 +92,12 @@ public:
 	}
 	[[nodiscard]] int control_hz() const { return hz_; }
 
+	// another voice count (the mapper's, reset() keeps it)
+	void set_voices(int voices) {
+		midi_.set_voices(voices);
+		voices_ = midi_.num_voices();
+	}
+
 	// Back to the start, as a fresh TimedMidi (a host's reset: the engine goes silent), mono and
 	// its style kept. The guarantee holds through it: every tracked note's id, and the id of every queued Note
 	// On that will now never sound, ends here and comes back from the next ended(), after the ids
@@ -130,12 +136,13 @@ public:
 		return push(e);
 	}
 
-	// the steps due by a block that starts at frame f
+	// the steps due by a block that starts at frame f. A step takes at most Mapper::QUEUE events
+	// (fewer than a block may bring): the rest wait, in order, for the next step, never dropped.
 	void advance(uint64_t f) {
 		int taken = 0;
 		for (; base_ + step_frame(steps_, sr_, hz_) <= f; steps_++) {
 			const uint64_t fs = base_ + step_frame(steps_, sr_, hz_);
-			for (; taken < queued_ && queue_[taken].frame <= fs; taken++) feed(queue_[taken]);
+			for (; taken < queued_ && queue_[taken].frame <= fs && !midi_.full(); taken++) feed(queue_[taken]);
 			midi_.step();
 		}
 		if (taken > 0) {

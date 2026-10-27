@@ -21,6 +21,7 @@ Shell::Shell(const EngineEntry& engine, const HostConfig& host, bool fx) :
 void Shell::set_engine(const EngineEntry& engine) {
 	engine_ = Engine(engine);
 	nv_ = std::min(nv_, engine.info->max_voices);
+	midi_->set_voices(nv_); // (the mapper gave notes the old engine's voices)
 	engine_.init(sr_, nv_);
 }
 

@@ -66,6 +66,8 @@ public:
 		queued_++;
 		return true;
 	}
+	// the step's queue is full: a message now would be refused (it waits for the next step)
+	[[nodiscard]] bool full() const { return queued_ == QUEUE; }
 	// one step: the voices' level decay, the strike fade, then the queued messages
 	void step() {
 		alloc_.tick(*this);
@@ -89,6 +91,12 @@ public:
 
 	[[nodiscard]] const NoteControls* voices() const { return vc_.data(); }
 	[[nodiscard]] int num_voices() const { return nv_; }
+	// another voice count (an engine with fewer): notes on a voice beyond it lose it
+	void set_voices(int voices) {
+		nv_ = std::clamp(voices, 1, MaxVoices);
+		alloc_.set_voices(nv_);
+		for (int v = nv_; v < MaxVoices; v++) vc_[static_cast<size_t>(v)] = note_at_rest;
+	}
 	// mono (mono.h): one voice, played by every held key; the held notes are forgotten on a
 	// switch, and the voices beyond the first go quiet
 	void set_mono(bool on) {

@@ -66,7 +66,9 @@ MidiFile parse_midi(std::span<const uint8_t> data) {
 		f.error = "MIDI file format " + std::to_string(f.format) + " (only 0 and 1)";
 		return f;
 	}
-	if (f.division == 0) {
+	// (SMPTE time, bit 15: frames a second in the high byte, ticks a frame in the low one; 0 of
+	// those would make every time infinite or NaN)
+	if (f.division == 0 || ((f.division & 0x8000) != 0 && (f.division & 0xff) == 0)) {
 		f.error = "MIDI file division 0";
 		return f;
 	}

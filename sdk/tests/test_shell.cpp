@@ -176,3 +176,25 @@ TEST_CASE("shell: MIDI 2.0 in (UMP) plays as its MIDI 1.0 counterpart, and a not
 	REQUIRE(got == 1);
 	CHECK(ids[0] == 7);
 }
+
+TEST_CASE("shell: another engine with fewer voices: MIDI gives notes only the voices it renders (the newest note sounds)") {
+	const sdk::EngineEntry* va = sdk::find_engine("va");
+	const sdk::EngineEntry* bowed = sdk::find_engine("bowed");
+	REQUIRE(va != nullptr);
+	REQUIRE(bowed != nullptr);
+	REQUIRE(va->info->max_voices > bowed->info->max_voices);
+	sdk::Shell s(*va, sdk::HostConfig{48000, 0, va->info->max_voices});
+	s.set_engine(*bowed);
+	REQUIRE(s.voices() == bowed->info->max_voices);
+	std::vector<float> l(32), r(32);
+	const int notes = bowed->info->max_voices + 2;
+	for (int k = 0; k < notes; k++) {
+		s.midi(0x90, static_cast<uint8_t>(40 + k), 100);
+		s.process(l.data(), r.data(), 32);
+	}
+	s.process(l.data(), r.data(), 32);
+	const float newest = static_cast<float>(40 + notes - 1);
+	bool sounds = false;
+	for (int v = 0; v < s.voices(); v++) sounds |= s.controls()[v].gate != 0 && std::fabs(s.controls()[v].pitch - newest) < 1e-3f;
+	CHECK(sounds); // (it had a voice the engine doesn't have)
+}

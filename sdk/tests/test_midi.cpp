@@ -139,6 +139,24 @@ TEST_CASE("midi files: written and read back, tempo map applied") {
 	CHECK(!sdk::parse_midi(std::vector<uint8_t>{'R', 'I', 'F', 'F'}).error.empty());
 }
 
+TEST_CASE("midi files: SMPTE time (25 fps x 40 ticks), and 0 ticks a frame refused (its times were NaN and infinite)") {
+	const auto file = [](uint8_t div_hi, uint8_t div_lo) {
+		std::vector<uint8_t> t = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, div_hi, div_lo, 'M', 'T', 'r', 'k', 0, 0, 0, 0};
+		const std::vector<uint8_t> body = {0x00, 0x90, 60, 100, 0x81, 0x48, 0x80, 60, 0, 0x00, 0xff, 0x2f, 0x00}; // (200 ticks)
+		t[21] = static_cast<uint8_t>(body.size());
+		t.insert(t.end(), body.begin(), body.end());
+		return sdk::parse_midi(t);
+	};
+	const sdk::MidiFile f = file(0xe7, 40); // -25: 25 fps
+	REQUIRE(f.error.empty());
+	REQUIRE(f.events.size() == 2);
+	CHECK(f.events[0].t == 0.0);
+	CHECK(f.events[1].t == doctest::Approx(0.2));
+	const sdk::MidiFile g = file(0xe7, 0);
+	CHECK(g.error == "MIDI file division 0");
+	CHECK(g.events.empty());
+}
+
 TEST_CASE("midi in: MIDI 2.0 per-note timbre (Registered Per-Note Controller 74, or a sensor's Assignable 2) on one channel, which CC74 then leaves alone") {
 	Mapper m(4);
 	const auto ump = [&m](uint32_t w0, uint32_t w1) { REQUIRE(m.ump(w0, w1)); };
@@ -272,6 +290,22 @@ TEST_CASE("control rate: TimedMidi takes events at the first step at or after th
 	CHECK(voice_of(t.midi(), 64.0f) < 0);
 	t.advance(224);
 	CHECK(voice_of(t.midi(), 64.0f) >= 0);
+}
+
+TEST_CASE("timed midi: a block of more events than a step's queue loses none (a Note Off past it is not dropped)") {
+	if (sdk::TimedMidi::QUEUE < Mapper::QUEUE + 2) return; // (a build whose block brings no more than a step takes)
+	auto t = std::make_unique<sdk::TimedMidi>(sdk::HostConfig{48000, 0, 10});
+	const uint8_t on[3] = {0x90, 60, 100}, off[3] = {0x80, 60, 0}, cc[3] = {0xb0, 7, 100};
+	REQUIRE(t->midi1(0, on, 3, 1));
+	for (int i = 0; i < Mapper::QUEUE; i++) REQUIRE(t->midi1(0, cc, 3)); // (a controller's burst)
+	REQUIRE(t->midi1(0, off, 3));
+	t->advance(0);
+	for (int k = 1; k <= 4; k++) t->advance(static_cast<uint64_t>(k) * awva::dsp::BLOCK);
+	const awva::NoteControls* v = t->midi().voices();
+	for (int i = 0; i < t->midi().num_voices(); i++) CHECK(v[i].gate == 0);
+	CHECK(t->midi().notes_held() == 0);
+	int32_t ids[4];
+	CHECK(t->ended(ids, 4, 0, false) == 1); // (released: its id ends)
 }
 
 #if defined(__has_feature)
