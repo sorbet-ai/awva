@@ -30,7 +30,8 @@ struct NoteControls {
 inline constexpr NoteControls note_at_rest = {69.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0};
 
 // The whole instrument at block rate: MIDI 2.0's sustain pedal and, from a host with a motion
-// sensor (or from MIDI: Assignable Controllers), its motion as physical quantities.
+// sensor (or from MIDI 2.0's Assignable Controllers 0x10 and 0x14 .. 0x16, which the decoder,
+// ump.h, passes to its host's set_accel() and set_spin()), its motion as physical quantities.
 struct InstrumentControls {
 	float sustain; // CC64, 0 .. 1
 	struct Motion {

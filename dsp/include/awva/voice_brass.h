@@ -49,7 +49,7 @@
  *
  * Playing:
  *   pressure   breath: dynamics and brightness together (pp mellow -> ff blaring)
- *   strike     tonguing (positive vpres while held): a hard strike gives a bright blat, an accent,
+ *   strike     tonguing (positive pressure_rate while held): a hard strike gives a bright blat, an accent,
  *              a slight scoop from below and a tongue "t"; re-striking a held key re-tongues
  *   release    the lips stop, the bore rings out briefly (pedal lengthens the tail a little)
  *   timbre     open presets: brighter / darker (lips and bell; the horn's hand). Mute presets:
@@ -574,8 +574,8 @@ static inline void process_voice(Engine& e, int v) {
 	const awva::NoteControls cc = e.vc[v];
 	const real pres = rmin(rmax(cc.pressure, 0.0f), 1.5f);
 	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
-	const real vpres = rmin(rmax(cc.pressure_rate, -1.0f), 1.0f);
-	const real vp1 = rmax(vpres - 0.02f, 0.0f);
+	const real pressure_rate = rmin(rmax(cc.pressure_rate, -1.0f), 1.0f);
+	const real vp1 = rmax(pressure_rate - 0.02f, 0.0f);
 	real vplev = rmin(P.tongue * vp1 / (0.4f + vp1), 1.0f);
 	const real note = rmin(rmax(cc.pitch, 0.0f), 132.0f);
 	const bool held = pres > 0.0f;
@@ -765,8 +765,8 @@ static inline void process_voice(Engine& e, int v) {
 	}
 
 	// envelope rates
-	if (vpres > 0.1f) s.vneg = 0.0f;
-	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
+	if (pressure_rate > 0.1f) s.vneg = 0.0f;
+	if (held && pressure_rate < 0.0f) s.vneg = rmax(s.vneg, -pressure_rate);
 	const real ped = rmin(rmax(e.g.sustain, 0.0f), 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);

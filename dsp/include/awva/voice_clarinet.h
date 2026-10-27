@@ -529,8 +529,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const awva::NoteControls cc = e.vc[vi];
 	const real pres = clampr(cc.pressure, 0.0f, 1.5f);
 	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
-	const real vpres = clampr(cc.pressure_rate, -1.0f, 1.0f);
-	const real vp1 = rmax(vpres - 0.02f, 0.0f);
+	const real pressure_rate = clampr(cc.pressure_rate, -1.0f, 1.0f);
+	const real vp1 = rmax(pressure_rate - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vnlev = rmin(rmax(P.tongue_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real low = e.low_note;
@@ -733,8 +733,8 @@ static inline void process_voice(Engine& e, int vi) {
 	}
 
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
-	if (vpres > 0.1f) s.vneg = 0.0f;
-	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
+	if (pressure_rate > 0.1f) s.vneg = 0.0f;
+	if (held && pressure_rate < 0.0f) s.vneg = rmax(s.vneg, -pressure_rate);
 	const real ped = clampr(e.g.sustain, 0.0f, 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);

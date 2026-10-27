@@ -457,10 +457,10 @@ static inline void process_voice(Engine& e, int vi) {
 	const Params& P = e.ps;
 	const awva::NoteControls cc = e.vc[vi];
 	const real pres = clampr(cc.pressure, 0.0f, 1.5f);
-	// after a release a host may leave the last vpres in place: a positive leftover must not
+	// after a release a host may leave the last pressure_rate in place: a positive leftover must not
 	// strike or hold a released voice; negative values still set the release speed
-	const real vpres = clampr(cc.pressure_rate, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
-	const real vp1 = rmax(vpres - 0.02f, 0.0f);
+	const real pressure_rate = clampr(cc.pressure_rate, -1.0f, pres > 0.0f ? 1.0f : 0.0f);
+	const real vp1 = rmax(pressure_rate - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vrlev = rmin(rmax(P.att_rate, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vnlev = rmin(rmax(P.att_noise, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
@@ -493,7 +493,7 @@ static inline void process_voice(Engine& e, int vi) {
 	}
 	if (jump) s.vneg = 0.0f;
 	// only a strike strikes: the key's speed counts while the note starts (STRIKE_WIN after a start or a
-	// new note); later in the note a swell of the pressure (a positive vpres) is breath, not the tongue
+	// new note); later in the note a swell of the pressure (a positive pressure_rate) is breath, not the tongue
 	s.sage = (jump || press) ? 0.0f : rmin(s.sage + e.block_dt, 1.0f);
 	const bool striking = s.sage < STRIKE_WIN;
 	const real vstrike = striking ? vplev : 0.0f; // the accent's strike
@@ -673,8 +673,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const real gain = clampr(P.gain, 0.0f, 100.0f) * 1e-4f;
 
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
-	if (vpres > 0.1f) s.vneg = 0.0f;
-	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
+	if (pressure_rate > 0.1f) s.vneg = 0.0f;
+	if (held && pressure_rate < 0.0f) s.vneg = rmax(s.vneg, -pressure_rate);
 	const real ped = clampr(e.g.sustain, 0.0f, 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);

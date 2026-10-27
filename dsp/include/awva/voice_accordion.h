@@ -66,7 +66,7 @@
  *   note   pitch and bends (reeds follow exactly).
  *   pedal  press: bellows reversal.
  *   acc_abs  the instrument's motion (a global input): shaking it gives the bellows shake.
- *   vpres  unused (the attack follows the pressure rise itself).
+ *   pressure_rate  unused (the attack follows the pressure rise itself).
  *   life   (a dial) micro-randomness, never a vibrato: every note a little different (start pitch
  *          offset that settles, speaking time, voicing brightness), a tiny broadband pitch,
  *          pressure (level) and brightness flicker, each voice its own.

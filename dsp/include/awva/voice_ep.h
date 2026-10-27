@@ -29,15 +29,15 @@
  * blocker, soft safety ceiling at 4.0 (full scale at the usual x0.25 output volume). Optional tape wobble (wow + flutter) on all voices.
  *
  * Playing:
- *   strike (vpres at key-down)  velocity: soft = warm and round, hard = bright, barking
- *   pressure while holding      digging in adds a little pickup drive (bark), nothing else
- *   timbre                      pickup alignment: below 0 = sweeter/rounder, above 0 = barkier
- *   release / pedal             damper; pedal 0..1 is a sustain pedal (fully lifted at 0.8)
- *   repeated strikes            lifting a held key a little and striking again re-strikes
- *   life (a dial)               micro-randomness, never a vibrato or tremolo: every strike a little
- *                               different (velocity, hardness, bell / tick, decay, pickup alignment,
- *                               a start pitch offset of a few cents that settles), a tiny broadband
- *                               pitch and pickup (brightness) flicker, each voice its own
+ *   strike (pressure_rate at key-down)  velocity: soft = warm and round, hard = bright, barking
+ *   pressure while holding              digging in adds a little pickup drive (bark), nothing else
+ *   timbre                              pickup alignment: below 0 = sweeter/rounder, above 0 = barkier
+ *   release / pedal                     damper; pedal 0..1 is a sustain pedal (fully lifted at 0.8)
+ *   repeated strikes                    lifting a held key a little and striking again re-strikes
+ *   life (a dial)                       micro-randomness, never a vibrato or tremolo: every strike a little
+ *                                       different (velocity, hardness, bell / tick, decay, pickup alignment,
+ *                                       a start pitch offset of a few cents that settles), a tiny broadband
+ *                                       pitch and pickup (brightness) flicker, each voice its own
  *
  * Cost: the per-sample loop is 43 instructions per voice-sample (30 FP, 1 division, all in
  * registers; 49 for the Wurlitzer curve, 67 with 2 divisions while morphing between the two),
@@ -78,7 +78,7 @@ using awva::rmin;
 struct Params {
 	// hammer
 	real hard;  // hammer hardness (shorter contact -> brighter, more bell/tick)
-	real vsens; // velocity sensitivity: vel = (vpres - 0.02) * vsens
+	real vsens; // velocity sensitivity: vel = (pressure_rate - 0.02) * vsens
 	real dyn;   // dynamic range: amplitude = vel * ((1 - dyn) + dyn * vel)
 	// tine
 	real decay;  // T60 of the fundamental at C4 (s)
@@ -129,9 +129,9 @@ static constexpr int DEFAULT_PRESET = 0;
 // Constants
 
 static constexpr real F_HI0 = 14000.0f, F_HI1 = 19000.0f; // upper modes fade out between these
-static constexpr real STRIKE_THR = 0.15f;                 // vpres re-striking a held (re-armed) key
+static constexpr real STRIKE_THR = 0.15f;                 // pressure_rate re-striking a held (re-armed) key
 static constexpr real DAMP_PRES = 0.06f;                  // below this key pressure the damper starts to touch
-static constexpr int ARM_BLOCKS = 2;                      // strike fires at the vpres peak, at most 2 blocks later
+static constexpr int ARM_BLOCKS = 2;                      // strike fires at the pressure_rate peak, at most 2 blocks later
 static constexpr int FADE_BLOCKS = 3;                     // fade-out of a voice taken over by a new key (2 ms)
 static constexpr real VEL_MIN = 0.06f;                    // softest note (a very slow press still sounds)
 static constexpr real PROMPT_SIG = 7.0f;                  // extra decay rate (1/s) of the prompt stage at prompt = 1
@@ -152,7 +152,7 @@ struct VoiceState {
 	real damp;                     // smoothed damper engagement 0..1
 	real ty, ps;                   // smoothed timbre and pressure
 	real pD, pA, pB, pP0, pNG, pW; // pickup values at the end of the last block
-	real vpk;                      // vpres peak while arming
+	real vpk;                      // pressure_rate peak while arming
 	real ppk;                      // pressure peak since the strike
 	real note_prev;
 	int arm;   // blocks until the armed strike fires (0: none)

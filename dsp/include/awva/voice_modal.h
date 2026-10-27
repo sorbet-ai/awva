@@ -18,7 +18,7 @@
  * (T60 scales with f^-alpha).
  *
  * Playing:
- * - strike (fast pressure rise, vpres): loudness; a harder strike is also a little brighter (upper
+ * - strike (fast pressure rise, pressure_rate): loudness; a harder strike is also a little brighter (upper
  *   partials grow modestly with mallet hardness). The timbre at the moment of the strike makes the mallet
  *   a bit softer (below 0) or harder (above 0). Nothing changes pitch.
  * - holding: the note rings with its natural decay. Lifting the key engages the damper gradually
@@ -133,8 +133,8 @@ static constexpr real CLIP = 7.5f;
 
 struct Params {
 	float level;     // level: strike level (preset level matching)
-	float thresh;    // mallet: vpres where a strike starts
-	float span;      // mallet: vpres above thresh for a full strike (sensitivity)
+	float thresh;    // mallet: pressure_rate where a strike starts
+	float span;      // mallet: pressure_rate above thresh for a full strike (sensitivity)
 	float hard;      // mallet: hardness of the softest strike
 	float hardvel;   // mallet: hardness added by strike strength
 	float tilt;      // mallet: hardness change per unit of timbre (at the strike)

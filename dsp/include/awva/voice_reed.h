@@ -37,7 +37,7 @@
  *          whispery bore resonance. Above it the tone blooms and gets louder and brighter;
  *          pushed hard (> growl_from, a live parameter: 0.7) a growl (hummed roughness) sets in. The register stays on the
  *          fundamental over the whole pressure/timbre range (tested on notes 36..91).
- *   vpres  tonguing: a fast strike gives a pressure kick and a short tongue/breath noise burst
+ *   pressure_rate  tonguing: a fast strike gives a pressure kick and a short tongue/breath noise burst
  *   timbre  below 0 = clarinet (cylindrical, hollow, odd harmonics, tighter embouchure),
  *          above 0 = saxophone (conical, all harmonics, buzzier, more open embouchure).
  *          High notes (above ~E5) are pulled towards the middle of the morph.

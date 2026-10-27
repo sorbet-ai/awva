@@ -7,7 +7,7 @@
 //
 // A note's level is the allocator's estimate of how loud it still is: set when it starts (its
 // pressure plus its strike), raised to its floor whenever the host has a new floor for it,
-// decaying every tick() towards the host's floor (the note's pres + vpres while held, -1 after:
+// decaying every tick() towards the host's floor (the note's pres + pressure_rate while held, -1 after:
 // a released note fades below any held one).
 //
 // A new note gets (start): its own voice if it still has it (a repeated note), else a voice no
@@ -17,7 +17,7 @@
 //
 // The host (any type with these members; the calls are templates, inlined):
 //   bool held(int note)      the note is on
-//   float floor(int note)    its level now: pres + vpres while held, -1 after the release
+//   float floor(int note)    its level now: pres + pressure_rate while held, -1 after the release
 #ifndef AWVA_VOICE_ALLOCATOR_H_
 #define AWVA_VOICE_ALLOCATOR_H_
 

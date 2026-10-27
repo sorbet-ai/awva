@@ -70,7 +70,7 @@ struct Params {
 	real lv_hz;            // pressure smoothing (critically damped 2-pole): lower = softer attack
 	real held_tc;          // fastest level decay while held (s): a quick lift leaves a tail
 	real rel_min, rel_ped; // release time constant (s): rel_min + rel_ped * pedal^2
-	real rel_vneg;         // a fast release divides the release time by (1 + rel_vneg * |vpres|)
+	real rel_vneg;         // a fast release divides the release time by (1 + rel_vneg * |pressure_rate|)
 	// strike accent
 	real acc_amp;         // added to the level target
 	real acc_t0, acc_key; // decay time constant (s): acc_t0 * 2^((132 - note) * acc_key)
@@ -135,7 +135,7 @@ struct VoiceState {
 	uint32_t rng;
 	real vib_ph, pwm_ph; // LFO phases [0, 1)
 	real note_prev;
-	real vneg; // release speed latch (largest negative vpres while releasing)
+	real vneg; // release speed latch (largest negative pressure_rate while releasing)
 	// life: per note (start pitch offset, decaying; cutoff offset; accent, accent decay factors)
 	// and flicker noises (pitch fast / slow, level, cutoff)
 	real lpo, lco, lac, lat;
@@ -268,8 +268,8 @@ static inline void process_voice(Engine& e, int v) {
 	const awva::NoteControls c = e.vc[v];
 	const real pres = rmin(rmax(c.pressure, 0.0f), 1.5f);
 	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
-	const real vpres = rmin(rmax(c.pressure_rate, -1.0f), 1.0f);
-	const real vp1 = rmax(vpres - 0.02f, 0.0f);
+	const real pressure_rate = rmin(rmax(c.pressure_rate, -1.0f), 1.0f);
+	const real vp1 = rmax(pressure_rate - 0.02f, 0.0f);
 	real vplev = vp1 / (0.4f + vp1);
 	const real note = rmin(rmax(c.pitch, 0.0f), 132.0f);
 	const bool held = pres > 0.0f;
@@ -419,8 +419,8 @@ static inline void process_voice(Engine& e, int v) {
 	const real din = 1.0f + P.bass_comp * kres;
 
 	// envelope rates
-	if (vpres > 0.1f) s.vneg = 0.0f;
-	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
+	if (pressure_rate > 0.1f) s.vneg = 0.0f;
+	if (held && pressure_rate < 0.0f) s.vneg = rmax(s.vneg, -pressure_rate);
 	const real ped = rmin(rmax(e.g.sustain, 0.0f), 1.0f);
 	const real rel_tc = (P.rel_min + P.rel_ped * ped * ped) / (1.0f + P.rel_vneg * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? P.held_tc : rel_tc);

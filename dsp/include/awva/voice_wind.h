@@ -47,7 +47,7 @@
  *   life   (a dial) micro-randomness, never a vibrato: every note a little different (start pitch
  *          offset that settles, embouchure brightness, attack, tongue and breath noise), and a tiny
  *          broadband pitch, level, brightness and breath-noise flicker, each voice its own
- *   vpres  tonguing: a fast strike gives a crisp tongued attack (pressure kick + "t" noise); a
+ *   pressure_rate  tonguing: a fast strike gives a crisp tongued attack (pressure kick + "t" noise); a
  *          slow press a breathy swell.
  *   timbre  embouchure, subtle: above 0 a little brighter / edgier, below 0 darker and breathier
  *          (subtone on the saxes, covered tone on the flute).

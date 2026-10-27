@@ -139,7 +139,7 @@ static constexpr real SM = 1.0e-4f;      // embouchure window area (m^2)
 static constexpr real NOTE_LO = 43.0f;   // the longest pipe the delay lines hold
 static constexpr real NOTE_HI = 114.4f;  // the highest tone the jet and the pipe make (6 kHz)
 static constexpr real LIMIT_ST = 3.0f;   // beyond either, the tone fades into the breath over this
-static constexpr real RESTRIKE_V = 0.3f; // a re-strike within a held note: vpres at least this (v5)
+static constexpr real RESTRIKE_V = 0.3f; // a re-strike within a held note: pressure_rate at least this (v5)
 static constexpr real RESTRIKE_P = 0.1f; // and a pressure of at least this
 
 struct BulkMemory {
@@ -503,8 +503,8 @@ static inline void process_voice(Engine& e, int vi) {
 	const awva::NoteControls cc = e.vc[vi];
 	const real pres = clampr(cc.pressure, 0.0f, 1.5f);
 	// (a released note's rate is never positive: NoteControls; negative values set the release speed)
-	const real vpres = clampr(cc.pressure_rate, -1.0f, 1.0f);
-	const real vp1 = rmax(vpres - 0.02f, 0.0f);
+	const real pressure_rate = clampr(cc.pressure_rate, -1.0f, 1.0f);
+	const real vp1 = rmax(pressure_rate - 0.02f, 0.0f);
 	const real vplev = rmin(rmax(P.tongue, 0.0f) * vp1 / (0.4f + vp1), 1.0f);
 	const real vpl_nz = rmin(rmax(P.tongue_nz, 0.0f) * vp1 / (0.4f + vp1), 1.0f);   // the attack's noise
 	const real vpl_rt = rmin(rmax(P.tongue_rt, 0.0f) * vp1 / (0.4f + vp1), 1.0f);   // the tongue's speed
@@ -546,19 +546,19 @@ static inline void process_voice(Engine& e, int vi) {
 		s.pm_prev = 0.0f;
 	}
 	// What strikes (v5): the key's own rise from silence, until its pressure stops rising; within a
-	// held note only a real re-strike, a fast rise (vpres at least RESTRIKE_V) at a pressure of at
+	// held note only a real re-strike, a fast rise (pressure_rate at least RESTRIKE_V) at a pressure of at
 	// least RESTRIKE_P. A swell, a pressure that bounces as the key lifts, a falling or low pressure
-	// strike nothing (v4 re-tongued on any vpres over ~0.07 once the accent had decayed).
+	// strike nothing (v4 re-tongued on any pressure_rate over ~0.07 once the accent had decayed).
 	if (press) {
 		s.rise = 1;
 		s.rose = 0;
 		s.rise_t = 0.0f;
 	} else if (s.rise) {
 		s.rise_t += e.block_dt;
-		if (!held || s.rise_t > 0.25f || (s.rose && vpres <= 0.05f)) s.rise = 0;
+		if (!held || s.rise_t > 0.25f || (s.rose && pressure_rate <= 0.05f)) s.rise = 0;
 	}
-	if (vpres > 0.05f) s.rose = 1;
-	const bool strikes = s.rise || (held && vpres >= RESTRIKE_V && pres >= RESTRIKE_P);
+	if (pressure_rate > 0.05f) s.rose = 1;
+	const bool strikes = s.rise || (held && pressure_rate >= RESTRIKE_V && pres >= RESTRIKE_P);
 	const real vstrike = strikes ? vplev : 0.0f;
 	const real vstrike_rt = strikes ? vpl_rt : 0.0f;
 	// the accent and the tongue's noise: during the key's rise the strike's, after it a swell's
@@ -645,8 +645,8 @@ static inline void process_voice(Engine& e, int vi) {
 	if (note > P.range_hi) gain *= exp2s(clampr(P.out_db, -24.0f, 6.0f) * (1.0f / 6.0206f));
 
 	// ---- control rate: breath, tongue, accent ----------------------------------------------------
-	if (vpres > 0.1f) s.vneg = 0.0f;
-	if (held && vpres < 0.0f) s.vneg = rmax(s.vneg, -vpres);
+	if (pressure_rate > 0.1f) s.vneg = 0.0f;
+	if (held && pressure_rate < 0.0f) s.vneg = rmax(s.vneg, -pressure_rate);
 	const real ped = clampr(e.g.sustain, 0.0f, 1.0f);
 	const real rel_tc = rmax(P.rel + P.rel_ped * ped * ped, 0.004f) / (1.0f + 3.0f * s.vneg);
 	const real fac = 1.0f - e.ctrl_dt / (held ? 0.03f : rel_tc);
