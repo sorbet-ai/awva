@@ -116,7 +116,7 @@ struct Keys {
 	void release(int v) { target[static_cast<size_t>(v)] = 0.0f; }
 	void release_all() { std::fill(target.begin(), target.end(), 0.0f); }
 	void step() {
-		// 1 per 20 ms (at 48 kHz 1/30 a block), vpres in units per 80 s (as the performances)
+		// 1 per 20 ms (at 48 kHz 1/30 a block), pres_rate in units per 80 s (as the performances)
 		const auto speed = static_cast<float>(dsp::BLOCK / (0.02 * rate));
 		const float blocks_per_s = static_cast<float>(rate) / dsp::BLOCK;
 		for (size_t v = 0; v < vc.size(); v++) {

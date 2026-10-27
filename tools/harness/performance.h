@@ -15,7 +15,7 @@
 // Scripted performance. Everything is a deterministic function of time, evaluated once per block
 // (an embedded host may update controls asynchronously at ~1.3 kHz, close to the 1.5 kHz block rate).
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 // gate envelope: 0 before t0, attack to 1, hold until t1, release to 0
 static double gate(double t, double t0, double t1, double att, double rel) {
@@ -73,9 +73,9 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		if (n.glide_t > 0 && t > n.glide_t) note = n.glide_to - (n.glide_to - n.note) * exp(-(t - n.glide_t) * 10.0);
 		double swell = 1.0 + 0.2 * sin(2 * M_PI * 0.7 * t + n.voice);
 		c.pres = n.pres * e * swell;
-		c.but_x = n.vib * sin(2 * M_PI * 5.0 * t + 1.3 * n.voice);
-		c.but_y = n.tilt * sin(2 * M_PI * t / 1.5 + n.voice);
-		c.note = note + 0.5 * c.but_x * c.but_x * c.but_x;  // pitch bend as in update_voice()
+		c.bend = n.vib * sin(2 * M_PI * 5.0 * t + 1.3 * n.voice);
+		c.timbre = n.tilt * sin(2 * M_PI * t / 1.5 + n.voice);
+		c.note = note + 0.5 * c.bend * c.bend * c.bend;  // pitch bend as in update_voice()
 		last_note[n.voice] = c.note;
 	}
 	// globals: acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal
@@ -93,12 +93,12 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 	if (t > 12.0 && t < 14.0) g[7] = 1.0;
 }
 
-// controls for block b; vpres is the pressure velocity, scaled so a 20 ms attack to 0.8 gives ~0.5
+// controls for block b; pres_rate is the pressure velocity, scaled so a 20 ms attack to 0.8 gives ~0.5
 static void block_controls(int b, Ctl* v, int nv, float* g) {
 	static float pres_old[NVOICES_MAX] = {0};
 	controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 	for (int i = 0; i < nv; i++) {
-		v[i].vpres = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		v[i].pres_rate = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 }

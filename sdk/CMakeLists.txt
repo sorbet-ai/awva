@@ -131,8 +131,8 @@ static void perf_block(int b, int nv, awva::NoteControls* vc, awva::InstrumentCo
 	for (int i = 0; i < nv; i++) {
 		vc[i].pitch = v[i].note;
 		vc[i].pressure = v[i].pres;
-		vc[i].pressure_rate = v[i].pres > 0.0f ? v[i].vpres : (v[i].vpres < 0.0f ? v[i].vpres : 0.0f); // (released: never positive)
-		vc[i].timbre = v[i].but_y;
+		vc[i].pressure_rate = v[i].pres > 0.0f ? v[i].pres_rate : (v[i].pres_rate < 0.0f ? v[i].pres_rate : 0.0f); // (released: never positive)
+		vc[i].timbre = v[i].timbre;
 		vc[i].gate = v[i].pres > 0.0f;
 	}
 	g = {gl[7], {gl[0], {gl[4], gl[5], gl[6]}}}; // (the performances' globals: acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal)
@@ -243,8 +243,8 @@ static void perf_block(int b, int nv, awva::NoteControls* vc, awva::InstrumentCo
 	for (int i = 0; i < nv; i++) {
 		vc[i].pitch = v[i].note;
 		vc[i].pressure = v[i].pres;
-		vc[i].pressure_rate = v[i].pres > 0.0f ? v[i].vpres : (v[i].vpres < 0.0f ? v[i].vpres : 0.0f); // (released: never positive)
-		vc[i].timbre = v[i].but_y;
+		vc[i].pressure_rate = v[i].pres > 0.0f ? v[i].pres_rate : (v[i].pres_rate < 0.0f ? v[i].pres_rate : 0.0f); // (released: never positive)
+		vc[i].timbre = v[i].timbre;
 		vc[i].gate = v[i].pres > 0.0f;
 	}
 	g = {gl[7], {gl[0], {gl[4], gl[5], gl[6]}}}; // (the performances' globals: acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal)

@@ -4,7 +4,7 @@
 // Sections (17.5 s, the renderer's default length):
 //  A 0-2.5      slow pressure swells 0.05 -> 1 -> 0.05 with vibrato, low and mid note together
 //  B 2.5-5      pressure tremolo (8 Hz, 0.15..0.95), timbre sweeps -1..1, a third voice holding
-//  C 5-6.5      extreme pressure: held at 1.5, and repeated instant 0 -> 1.4 attacks (vpres = 1)
+//  C 5-6.5      extreme pressure: held at 1.5, and repeated instant 0 -> 1.4 attacks (pres_rate = 1)
 //  D 6.5-8.5    fast strikes: 17 ms notes over the whole range on all voices, 2 ms attacks
 //  E 8.5-11     note jumps on a held bow (20 <-> 115 and everything between), then fast glides
 //  F 11-14.5    all (10) voices: extreme chord 20..115 at pressure 1.2, timbre extremes, shaking,
@@ -21,7 +21,7 @@
 #define pmax(x,y) ((x)>(y)?(x):(y))
 #define pmin(x,y) ((x)<(y)?(x):(y))
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 static double frac_(double x) { return x - floor(x); }
 // deterministic pseudo random in [0,1) from an integer
@@ -46,7 +46,7 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		if (i >= nv) return;
 		v[i].note = (float)(note + 0.5 * bx * bx * bx);
 		v[i].pres = (float)pmax(pres, 0.0);
-		v[i].but_x = (float)bx; v[i].but_y = (float)by;
+		v[i].bend = (float)bx; v[i].timbre = (float)by;
 		last_note[i] = v[i].note;
 	};
 	const double B = DEMO_BASE;
@@ -100,8 +100,8 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		if (i >= nv) return;
 		v[i].note = (float)(note + 0.5 * bx * bx * bx);
 		v[i].pres = (float)pmax(pres, 0.0);
-		v[i].but_x = (float)bx;
-		v[i].but_y = (float)by;
+		v[i].bend = (float)bx;
+		v[i].timbre = (float)by;
 		last_note[i] = v[i].note;
 	};
 	if (t < 2.5) {  // A
@@ -167,7 +167,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	static float pres_old[NVOICES_MAX] = {0};
 	controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 	for (int i = 0; i < nv; i++) {
-		v[i].vpres = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		v[i].pres_rate = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 }

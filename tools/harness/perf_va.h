@@ -19,7 +19,7 @@
 #define pmax(x,y) ((x)>(y)?(x):(y))
 #define pmin(x,y) ((x)<(y)?(x):(y))
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 static double gate(double t, double t0, double t1, double att, double rel) {
 	if (t < t0) return 0;
@@ -36,8 +36,8 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 	auto set = [&](int i, double note, double pres, double bx, double by) {
 		if (i >= nv) return;
 		v[i].pres = (float)pres;
-		v[i].but_x = (float)bx;
-		v[i].but_y = (float)by;
+		v[i].bend = (float)bx;
+		v[i].timbre = (float)by;
 		v[i].note = (float)(note + 0.5 * bx * bx * bx);
 		last_note[i] = v[i].note;
 	};
@@ -184,10 +184,10 @@ static void demo_controls(double t, Ctl* v, int nv, float* g) {
 		double swell = n.t1 - n.t0 > 1.0 ? 0.75 + 0.35 * sin(M_PI * pmin(u, 1.0)) : 1.0;
 		c.pres = (float)(n.pres * e * swell);
 		double vd = n.vib * pmin(pmax(u * 2 - 0.6, 0.0), 1.0);
-		c.but_x = (float)(vd * sin(2 * M_PI * 5.2 * t));
+		c.bend = (float)(vd * sin(2 * M_PI * 5.2 * t));
 		double tl = n.tilt0 == n.tilt1 ? n.tilt0 : (u < 0.5 ? n.tilt0 + (n.tilt1 - n.tilt0) * 2 * u : n.tilt1 * (2 - 2 * pmin(u, 1.0)));
-		c.but_y = (float)tl;
-		c.note = (float)(n.note + VA_DEMO_TRANSPOSE + 0.5 * c.but_x * c.but_x * c.but_x);
+		c.timbre = (float)tl;
+		c.note = (float)(n.note + VA_DEMO_TRANSPOSE + 0.5 * c.bend * c.bend * c.bend);
 		last_note[n.voice] = c.note;
 	}
 	g[0] = 1; g[1] = 0; g[2] = 0; g[3] = -1; g[4] = 0; g[5] = 0; g[6] = 0; g[7] = 3.0f / 16;
@@ -218,7 +218,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 #endif
 	for (int i = 0; i < nv; i++) {
-		v[i].vpres = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		v[i].pres_rate = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 }

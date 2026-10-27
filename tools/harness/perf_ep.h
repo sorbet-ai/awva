@@ -15,7 +15,7 @@
 //  F 12.0-14.0 high note 96 hard alone (aliasing check 12.2-12.9 s), then note 28 hard (bass bark)
 //  G 14.0-17.5 everything: dense random strikes on all voices, pedal toggling every 150 ms,
 //              chords, vibrato, timbre
-// -DEP_TONE: strike sweep for analysis: notes {28,40,52,64,76,88,100} x vpres {0.12,0.45,1.0},
+// -DEP_TONE: strike sweep for analysis: notes {28,40,52,64,76,88,100} x pres_rate {0.12,0.45,1.0},
 //            each held 1.2 s (pres 0.6) then released 0.3 s, on voice 0 (31.5 s)
 // -DEP_DEMO [-DEP_DEMO_TRANSPOSE=n]: musical demo (~16 s): chords, melody, soft to hard, pedal
 // -DEP_FUZZ: random abrupt controls every block (some out of range)
@@ -30,7 +30,7 @@
 #define pmax(x,y) ((x)>(y)?(x):(y))
 #define pmin(x,y) ((x)<(y)?(x):(y))
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 static double gate(double t, double t0, double t1, double att, double rel) {
 	if (t < t0) return 0;
@@ -53,8 +53,8 @@ static void stress_controls(double t, Ctl* v, int nv, float* g) {
 	auto set = [&](int i, double note, double pres, double bx, double by) {
 		if (i >= nv) return;
 		v[i].pres = (float)pres;
-		v[i].but_x = (float)bx;
-		v[i].but_y = (float)by;
+		v[i].bend = (float)bx;
+		v[i].timbre = (float)by;
 		v[i].note = (float)(note + 0.5 * bx * bx * bx);
 		last_note[i] = v[i].note;
 	};
@@ -100,7 +100,7 @@ static void stress_controls(double t, Ctl* v, int nv, float* g) {
 			double r1 = hrand(k, i), r2 = hrand(k, i + 20), r3 = hrand(k, i + 40);
 			if (r1 < 0.3) continue;
 			set(i, -10 + 150 * r2, 3.0 * r3, 2 * hrand(k, i + 60) - 1, 6 * hrand(k, i + 80) - 3);
-			if (r1 > 0.9) v[i].vpres = 2.0f;   // overridden below unless EP_VPRES_RAW
+			if (r1 > 0.9) v[i].pres_rate = 2.0f;   // overridden below unless EP_VPRES_RAW
 		}
 		g[7] = (k % 3) == 0 ? 1.0f : (k % 3 == 1 ? 0.0f : 3.0f);
 		double s = sin(2 * M_PI * 5 * t);
@@ -132,7 +132,7 @@ static const float tone_vel[3] = {0.12f, 0.45f, 1.0f};
 #ifndef EP_TONE_Y
 #define EP_TONE_Y 0.0f
 #endif
-// returns true when vpres is set explicitly
+// returns true when pres_rate is set explicitly
 static bool tone_controls(int b, Ctl* v, int nv, float* g) {
 	double t = (double)b * BLOCK / SAMPLERATE;
 	for (int i = 0; i < nv; i++) v[i] = {last_note[i], 0, 0, 0, 0};
@@ -144,10 +144,10 @@ static bool tone_controls(int b, Ctl* v, int nv, float* g) {
 	v[0].note = last_note[0] = (float)tone_notes[seg / 3];
 	if (u < 1.2) {
 		v[0].pres = 0.6f;
-		v[0].vpres = bi < 2 ? tone_vel[seg % 3] : 0.0f;
-		v[0].but_y = EP_TONE_Y;
+		v[0].pres_rate = bi < 2 ? tone_vel[seg % 3] : 0.0f;
+		v[0].timbre = EP_TONE_Y;
 	} else {
-		v[0].vpres = bi < 2 + (int)(1.2 * SAMPLERATE / BLOCK) ? -0.3f : 0.0f;
+		v[0].pres_rate = bi < 2 + (int)(1.2 * SAMPLERATE / BLOCK) ? -0.3f : 0.0f;
 	}
 	return true;
 }
@@ -157,7 +157,7 @@ static bool tone_controls(int b, Ctl* v, int nv, float* g) {
 #ifndef EP_DEMO_TRANSPOSE
 #define EP_DEMO_TRANSPOSE 0
 #endif
-// voice, start, end, note, strike (vpres), hold pressure
+// voice, start, end, note, strike (pres_rate), hold pressure
 struct DNote { int voice; double t0, t1; int note; double vel, pres; };
 static const DNote demo[] = {
 	// 1: soft chords, Fmaj9 -> Em9 (left hand + chord), pedal
@@ -188,7 +188,7 @@ static bool demo_controls(double t, Ctl* v, int nv, float* g) {
 	for (const DNote& n : demo) {
 		if (n.voice >= nv || t < n.t0 || t > n.t1 + 0.02) continue;
 		Ctl& c = v[n.voice];
-		// pressure rises at the speed giving vpres = vel (see block_controls), holds, releases fast
+		// pressure rises at the speed giving pres_rate = vel (see block_controls), holds, releases fast
 		double att = n.pres * 19.07 / n.vel * BLOCK / SAMPLERATE;
 		double e = gate(t, n.t0, n.t1, att, 0.012);
 		if (e <= 0) continue;
@@ -238,14 +238,14 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	stress_controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 #endif
 	for (int i = 0; i < nv; i++) {
-		if (!raw) v[i].vpres = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		if (!raw) v[i].pres_rate = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 #if !defined(EP_FUZZ) && !defined(EP_TONE) && !defined(EP_DEMO)
-	// section E: some raw out-of-range vpres
+	// section E: some raw out-of-range pres_rate
 	double t = (double)b * BLOCK / SAMPLERATE;
 	if (t >= 10.0 && t < 12.0)
-		for (int i = 0; i < nv; i++) if (hrand(b, i + 200) < 0.05) v[i].vpres = (float)(4 * hrand(b, i + 300) - 2);
+		for (int i = 0; i < nv; i++) if (hrand(b, i + 200) < 0.05) v[i].pres_rate = (float)(4 * hrand(b, i + 300) - 2);
 #endif
 }
 

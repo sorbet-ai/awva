@@ -16,7 +16,7 @@
 #define pmin(x, y) ((x) < (y) ? (x) : (y))
 
 struct Ctl {
-	float note, pres, vpres, but_x, but_y;
+	float note, pres, pres_rate, bend, timbre;
 };
 
 // key: voice, start, end, attack (s), release (s), note, pressure, bend at the end (fall/doit),
@@ -87,14 +87,14 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		c.pres = (float)p;
 		// the bend ramps in over the last 0.2 s for falls and doits
 		const double ramp = k.bx_end != 0 ? pmin(pmax((t - (k.t1 - 0.2)) / 0.2, 0.0), 1.0) : 0.0;
-		c.but_x = (float)(k.bx_end * ramp);
-		c.but_y = (float)(k.ty * sin(2 * M_PI * (t - k.t0) / 1.5));
+		c.bend = (float)(k.bx_end * ramp);
+		c.timbre = (float)(k.ty * sin(2 * M_PI * (t - k.t0) / 1.5));
 		double bend = 0;
 		if (k.bend != 0) {
 			const double u = (t - k.t0) / (k.t1 - k.t0);
 			bend = k.bend * sin(M_PI * pmin(u, 1.0));
 		}
-		c.note = (float)(k.note + bend + 0.5 * c.but_x * c.but_x * c.but_x); // pitch bend as update_voice()
+		c.note = (float)(k.note + bend + 0.5 * c.bend * c.bend * c.bend); // pitch bend as update_voice()
 		last_note[k.voice] = c.note;
 	}
 	// globals: acc_abs, acc_x, acc_y, acc_z, rot_x, rot_y, rot_z, pedal
@@ -110,7 +110,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	static float pres_old[NVOICES_MAX] = {0};
 	controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 	for (int i = 0; i < nv; i++) {
-		v[i].vpres = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		v[i].pres_rate = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 }

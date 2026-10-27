@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Stress performance for the modal voice (voice_modal.h), 17.5 s, same interface as performance.h.
 // Sections:
-//  A 0.0- 2.5  fast repeated hard strikes on one key (every 60 ms) while but_y sweeps all materials
+//  A 0.0- 2.5  fast repeated hard strikes on one key (every 60 ms) while timbre sweeps all materials
 //  B 2.5- 5.5  all 6 voices rubbed hard (pres up to 1.3, fast pressure wobble), fast full morph sweeps
 //  C 5.5- 8.0  note jumps every 90 ms on all voices (strike at each), notes 0..127, held between
 //  D 8.0-11.0  6-voice bell chords struck together in phase every 150 ms, pedal 1 (long ring)
-//  E 11.0-14.0 bowed chord with extreme vibrato (but_x +-1 at 7 Hz), gyro + shaking, pedal flipping
-//  F 14.0-16.0 random pres/vpres/but_y every block (vpres +-1), random notes, then release and ring out
+//  E 11.0-14.0 bowed chord with extreme vibrato (bend +-1 at 7 Hz), gyro + shaking, pedal flipping
+//  F 14.0-16.0 random pres/pres_rate/timbre every block (pres_rate +-1), random notes, then release and ring out
 #ifndef PERFORMANCE_H_
 #define PERFORMANCE_H_
 #include <math.h>
@@ -19,7 +19,7 @@
 #define pmax(x,y) ((x)>(y)?(x):(y))
 #define pmin(x,y) ((x)<(y)?(x):(y))
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 static double prand(uint32_t a, uint32_t b) {  // deterministic hash -> [0, 1)
 	uint32_t h = a * 2654435761u ^ (b + 0x9e3779b9u) * 2246822519u;
@@ -42,17 +42,17 @@ static void controls(double t, int blk, Ctl* v, int nv, float* g, bool* vp_overr
 	if (t < 2.5) {
 		v[0].note = 48;
 		v[0].pres = 0.9 * pulse(t, 0.06, 0.03);
-		v[0].but_y = -1 + 2 * (t / 2.5);
+		v[0].timbre = -1 + 2 * (t / 2.5);
 		v[1].note = 72;
 		v[1].pres = 1.0 * pulse(t + 0.02, 0.045, 0.02);
-		v[1].but_y = 1 - 2 * (t / 2.5);
+		v[1].timbre = 1 - 2 * (t / 2.5);
 	} else if (t < 5.5) {
 		double tt = t - 2.5;
 		for (int i = 0; i < nv && i < 6; i++) {
 			double e = pmin(tt / 0.2, 1.0) * pmin((5.5 - t) / 0.1, 1.0);
 			v[i].note = chord[i] + 12;
 			v[i].pres = e * (0.9 + 0.4 * sin(2 * M_PI * 8 * t + i));
-			v[i].but_y = sin(2 * M_PI * 1.5 * t + 0.7 * i);
+			v[i].timbre = sin(2 * M_PI * 1.5 * t + 0.7 * i);
 		}
 	} else if (t < 8.0) {
 		double tt = t - 5.5;
@@ -61,7 +61,7 @@ static void controls(double t, int blk, Ctl* v, int nv, float* g, bool* vp_overr
 			v[i].note = (float)(int)(128 * prand(k, i));
 			double p = fmod(tt, 0.09);
 			v[i].pres = 0.4 + 0.6 * pmin(p / 0.004, 1.0) * prand(k, i + 10);
-			v[i].but_y = 2 * prand(k, i + 20) - 1;
+			v[i].timbre = 2 * prand(k, i + 20) - 1;
 		}
 	} else if (t < 11.0) {
 		double tt = t - 8.0;
@@ -69,16 +69,16 @@ static void controls(double t, int blk, Ctl* v, int nv, float* g, bool* vp_overr
 		for (int i = 0; i < nv && i < 6; i++) {
 			v[i].note = chord[i] + 24;
 			v[i].pres = 1.0 * pulse(tt, 0.15, 0.05);
-			v[i].but_y = 1.0;
+			v[i].timbre = 1.0;
 		}
 	} else if (t < 14.0) {
 		double tt = t - 11.0;
 		for (int i = 0; i < nv && i < 6; i++) {
 			double e = pmin(tt / 0.05, 1.0) * pmin((14.0 - t) / 0.05, 1.0);
 			v[i].pres = e * (0.6 + 0.3 * sin(2 * M_PI * 0.5 * t + i));
-			v[i].but_x = sin(2 * M_PI * 7 * t + 1.3 * i);
-			v[i].note = chord[i] + 12 + 0.5 * v[i].but_x * v[i].but_x * v[i].but_x;
-			v[i].but_y = -0.5 + 0.5 * i / 5.0 * 3;
+			v[i].bend = sin(2 * M_PI * 7 * t + 1.3 * i);
+			v[i].note = chord[i] + 12 + 0.5 * v[i].bend * v[i].bend * v[i].bend;
+			v[i].timbre = -0.5 + 0.5 * i / 5.0 * 3;
 		}
 		double s = sin(2 * M_PI * 4 * t);
 		g[0] = 1 + 3 * s * s;
@@ -88,8 +88,8 @@ static void controls(double t, int blk, Ctl* v, int nv, float* g, bool* vp_overr
 		for (int i = 0; i < nv && i < 6; i++) {
 			v[i].note = 20 + (float)(95 * prand(blk / 37, i));
 			v[i].pres = 1.5 * prand(blk, i + 30) * (prand(blk, i + 40) > 0.3);
-			v[i].but_y = 2 * prand(blk, i + 50) - 1;
-			v[i].but_x = 2 * prand(blk, i + 60) - 1;
+			v[i].timbre = 2 * prand(blk, i + 50) - 1;
+			v[i].bend = 2 * prand(blk, i + 60) - 1;
 			vp_override[i] = true;
 			vp[i] = 2 * prand(blk, i + 70) - 1;
 		}
@@ -105,7 +105,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	float vp[NVOICES_MAX];
 	controls((double)b * BLOCK / SAMPLERATE, b, v, nv, g, ovr, vp);
 	for (int i = 0; i < nv; i++) {
-		v[i].vpres = ovr[i] ? vp[i] : pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		v[i].pres_rate = ovr[i] ? vp[i] : pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 }

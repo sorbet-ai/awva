@@ -11,7 +11,7 @@
 #define BLOCK 32
 #define NVOICES_MAX 15
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 struct ANote { int voice; double t0, t1, att, rel, note, pres, glide_to; };
 
@@ -86,7 +86,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 	for (int i = 0; i < nv; i++) {
 		float d = (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f;
-		v[i].vpres = d < -1 ? -1 : (d > 1 ? 1 : d);
+		v[i].pres_rate = d < -1 ? -1 : (d > 1 ? 1 : d);
 		pres_old[i] = v[i].pres;
 	}
 }

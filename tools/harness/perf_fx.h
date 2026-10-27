@@ -15,7 +15,7 @@
 #define pmax(x,y) ((x)>(y)?(x):(y))
 #define pmin(x,y) ((x)<(y)?(x):(y))
 
-struct Ctl { float note, pres, vpres, but_x, but_y; };
+struct Ctl { float note, pres, pres_rate, bend, timbre; };
 
 static double gate(double t, double t0, double t1, double att, double rel) {
 	if (t < t0) return 0;
@@ -57,9 +57,9 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		Ctl& c = v[n.voice];
 		double swell = n.vib > 0 ? 0.8 + 0.4 * sin(2 * M_PI * 0.4 * (t - n.t0)) : 1.0;
 		c.pres = n.pres * e * swell;
-		c.but_x = n.vib * sin(2 * M_PI * 5.0 * t + 1.3 * n.voice) * pmin((t - n.t0) / 0.8, 1.0);
-		c.but_y = 0;
-		c.note = n.note + 0.5 * c.but_x * c.but_x * c.but_x;
+		c.bend = n.vib * sin(2 * M_PI * 5.0 * t + 1.3 * n.voice) * pmin((t - n.t0) / 0.8, 1.0);
+		c.timbre = 0;
+		c.note = n.note + 0.5 * c.bend * c.bend * c.bend;
 		last_note[n.voice] = c.note;
 	}
 	g[0] = 1; g[1] = 0; g[2] = 0; g[3] = -1; g[4] = 0; g[5] = 0; g[6] = 0; g[7] = 3.0f / 16;
@@ -69,7 +69,7 @@ static void block_controls(int b, Ctl* v, int nv, float* g) {
 	static float pres_old[NVOICES_MAX] = {0};
 	controls((double)b * BLOCK / SAMPLERATE, v, nv, g);
 	for (int i = 0; i < nv; i++) {
-		v[i].vpres = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
+		v[i].pres_rate = pmax(-1.0f, pmin(1.0f, (v[i].pres - pres_old[i]) * (SAMPLERATE / BLOCK) * 0.0125f));
 		pres_old[i] = v[i].pres;
 	}
 }
