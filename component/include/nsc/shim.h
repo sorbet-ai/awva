@@ -277,15 +277,14 @@ template <dsp::VoiceEngine E> struct Shim {
 		const float* p = const_cast<E&>(st(state).engine).param(i);
 		return p ? *p : 0.0f;
 	}
-	// the write rule (params.h, write_param): NaN ignored, steps rounded, the engine clamps
+	// the write rule (params.h, write_param, in the engine's set_param): NaN ignored, clamped, then
+	// steps rounded (rounded first, a value beyond int's range, or an infinity, was undefined)
 	static int32_t set_param(void* state, int32_t i, float v) {
 		if (i == NP && !std::isnan(v)) {
 			st(state).output = v < 0.0f ? 0.0f : (v > 2.0f ? 2.0f : v);
 			return 1;
 		}
 		if (i < 0 || i >= NP || std::isnan(v)) return 0;
-		const dsp::ParamDesc* d = E::param_desc(i);
-		if (d->kind != dsp::ParamKind::continuous) v = static_cast<float>(static_cast<int>(v + (v >= 0 ? 0.5f : -0.5f)));
 		return st(state).engine.set_param(i, v) ? 1 : 0;
 	}
 	// a preset by name (awva/preset.h resolve): clamped, skipped, missing (the defaults) counted;

@@ -13,6 +13,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -410,6 +411,29 @@ TEST_CASE("declared defaults: every parameter's default is its value after init(
 			INFO(e->info->name << " " << d.params[i].name);
 			const float v = dll.c().param(dll.in.state, i);
 			CHECK(std::bit_cast<uint32_t>(v) == std::bit_cast<uint32_t>(d.params[i].def)); // bit for bit
+		}
+	}
+}
+
+TEST_CASE("the write rule through the ABI is params.h's write_param at any value, out of range and infinite too") {
+	const float big = 1e10f, inf = std::numeric_limits<float>::infinity();
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		Loaded dll(e->info->name);
+		dll.c().init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
+		const nsc_desc& d = *dll.c().desc;
+		for (int i = 0; i < d.num_params; i++) {
+			const nsc_param& p = d.params[i];
+			const float span = p.max - p.min;
+			const float values[] = {p.min, p.max, p.min - 0.4f, p.max + 0.4f, p.min + 0.5f, p.min + 0.25f * span, p.min + 0.5f * span,
+			    -big, big, -inf, inf, -3e9f, 3e9f};
+			for (float v : values) {
+				const awva::ParamDesc pd{p.name, p.group, p.min, p.max, static_cast<awva::ParamKind>(p.kind), p.label, p.hover, p.icon};
+				float want = 0.0f;
+				REQUIRE(awva::write_param(&pd, &want, v));
+				INFO(e->info->name << " " << p.name << " = " << v);
+				CHECK(dll.c().set_param(dll.in.state, i, v) == 1);
+				CHECK(std::bit_cast<uint32_t>(dll.c().param(dll.in.state, i)) == std::bit_cast<uint32_t>(want));
+			}
 		}
 	}
 }
