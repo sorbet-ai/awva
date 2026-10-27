@@ -18,8 +18,8 @@
 
 #include "nsc/nsc.h"
 
-/* written for ABI 6: nsc_event.note_id and ended() (2), short_name (3), max_events (4), nsc_config and process() at any frame count (5), nsc_param.label, hover and icon (6) */
-_Static_assert(NSC_ABI == 6, "c_host follows ABI 6");
+/* written for ABI 7: nsc_event.note_id and ended() (2), short_name (3), max_events (4), nsc_config and process() at any frame count (5), nsc_param.label, hover and icon (6), nsc_desc.mono (7) */
+_Static_assert(NSC_ABI == 7, "c_host follows ABI 7");
 
 #if defined(_WIN32)
 #include <windows.h>

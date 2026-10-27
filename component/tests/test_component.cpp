@@ -130,6 +130,7 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 		INFO(e->info->name);
 		CHECK(d.magic == NSC_MAGIC);
 		CHECK(d.abi == NSC_ABI);
+		CHECK(d.mono == static_cast<int32_t>(e->info->mono)); // (its mono family: glide, finger, struck)
 		CHECK(std::strcmp(d.id, e->info->name) == 0);
 		CHECK(std::string(d.uid) == std::string("com.sorbet-ai.awva.") + e->info->name);
 		CHECK(d.num_params == e->info->num_params + 1); // (the engine's, then the output level)
