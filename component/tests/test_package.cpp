@@ -8,12 +8,30 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
 #include <iterator>
 #include <string>
 #include <vector>
 
 #include "doctest/doctest.h"
 #include "nsc/package.h"
+
+TEST_CASE("package: a relocation must hold a whole word inside the image, near 4 GB too") {
+	const auto ok = [](std::initializer_list<uint32_t> offsets, uint32_t image_size) {
+		std::vector<uint8_t> b;
+		for (uint32_t o : offsets)
+			for (int k = 0; k < 4; k++) b.push_back(static_cast<uint8_t>(o >> (8 * k)));
+		nscpkg::Reason why;
+		return nscpkg::check_relocs(b.data(), static_cast<uint32_t>(offsets.size()), image_size, why);
+	};
+	CHECK(ok({0, 60}, 64));
+	CHECK_FALSE(ok({64}, 64));
+	CHECK_FALSE(ok({0}, 2));
+	CHECK_FALSE(ok({0, 2}, 64));
+	CHECK_FALSE(ok({8, 4}, 64));
+	CHECK_FALSE(ok({0xfffffffcu}, 64)); // (o + 4 wraps to 0: was taken, and never applied)
+	CHECK_FALSE(ok({0, 0xfffffffcu}, 64));
+}
 
 #ifdef NSC_TEST_PACKAGES // (the packages are written by tools/nsc_pack.py: a build with Python)
 

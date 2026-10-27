@@ -372,8 +372,13 @@ def cmd_package(a):
             pj = json.loads(text)
         except ValueError:
             die(f"{f}: not JSON")
-        if pj.get("format") not in (None, "awva-preset/1"):
+        # what every host's reader (awva/preset.h) refuses is refused here: no "format" (no_format),
+        # another engine's (resolve refuses it)
+        if not isinstance(pj, dict) or pj.get("format") != "awva-preset/1":
             die(f"{f}: not an awva-preset/1 file")
+        eng = pj.get("engine")
+        if not isinstance(eng, dict) or eng.get("id") != first["id"]:
+            die(f"{f}: a preset of {eng.get('id') if isinstance(eng, dict) else None}, the package is {first['id']}")
         sections.append((KIND_PRESET, stem, text))
     if len(sections) > 32:
         die("more than 32 sections")
