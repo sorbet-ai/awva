@@ -39,6 +39,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/va.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 
@@ -664,67 +665,67 @@ struct ParamEntry {
 
 static constexpr ParamEntry param_table[] = {
     // level: pressure to loudness
-    {{"gain", "level", 0.5f, 5.0f, awva::ParamKind::continuous}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
-    {{"pres_sq", "level", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pc_b},
-    {{"pres_hz", "level", 1.0f, 200.0f, awva::ParamKind::continuous}, &Params::lv_hz},      // pressure smoothing: low = slow swell
-    {{"hold_decay", "level", 0.005f, 1.0f, awva::ParamKind::continuous}, &Params::held_tc}, // fastest fall while held (s)
+    {{"gain", "level", 0.5f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(va, gain)}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, pres_lin)}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
+    {{"pres_sq", "level", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(va, pres_sq)}, &Params::pc_b},
+    {{"pres_hz", "level", 1.0f, 200.0f, awva::ParamKind::continuous, AWVA_TEXT(va, pres_hz)}, &Params::lv_hz},         // pressure smoothing: low = slow swell
+    {{"hold_decay", "level", 0.005f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, hold_decay)}, &Params::held_tc}, // fastest fall while held (s)
     // release
-    {{"release", "release", 0.02f, 4.0f, awva::ParamKind::continuous}, &Params::rel_min},   // tail time constant (s)
-    {{"rel_pedal", "release", 0.0f, 6.0f, awva::ParamKind::continuous}, &Params::rel_ped},  // + rel_pedal * pedal^2
-    {{"rel_speed", "release", 0.0f, 8.0f, awva::ParamKind::continuous}, &Params::rel_vneg}, // fast lift shortens the tail
+    {{"release", "release", 0.02f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(va, release)}, &Params::rel_min},     // tail time constant (s)
+    {{"rel_pedal", "release", 0.0f, 6.0f, awva::ParamKind::continuous, AWVA_TEXT(va, rel_pedal)}, &Params::rel_ped},  // + rel_pedal * pedal^2
+    {{"rel_speed", "release", 0.0f, 8.0f, awva::ParamKind::continuous, AWVA_TEXT(va, rel_speed)}, &Params::rel_vneg}, // fast lift shortens the tail
     // accent (strike)
-    {{"acc_level", "accent", 0.0f, 2.5f, awva::ParamKind::continuous}, &Params::acc_amp},
-    {{"acc_decay", "accent", 0.005f, 0.4f, awva::ParamKind::continuous}, &Params::acc_t0},  // s at the top note
-    {{"acc_key", "accent", 0.0f, 0.06f, awva::ParamKind::continuous}, &Params::acc_key},    // longer decay low: 2^((132-note)*acc_key)
-    {{"acc_cutoff", "accent", 0.0f, 48.0f, awva::ParamKind::continuous}, &Params::acc_cut}, // semitones
-    {{"acc_drive", "accent", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::acc_drive},
-    {{"acc_sync", "accent", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::acc_sync},   // semitones (with timbre above 0)
-    {{"acc_pitch", "accent", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::acc_pitch}, // semitones, decays with the accent
+    {{"acc_level", "accent", 0.0f, 2.5f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_level)}, &Params::acc_amp},
+    {{"acc_decay", "accent", 0.005f, 0.4f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_decay)}, &Params::acc_t0},   // s at the top note
+    {{"acc_key", "accent", 0.0f, 0.06f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_key)}, &Params::acc_key},       // longer decay low: 2^((132-note)*acc_key)
+    {{"acc_cutoff", "accent", 0.0f, 48.0f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_cutoff)}, &Params::acc_cut}, // semitones
+    {{"acc_drive", "accent", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_drive)}, &Params::acc_drive},
+    {{"acc_sync", "accent", 0.0f, 24.0f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_sync)}, &Params::acc_sync},    // semitones (with timbre above 0)
+    {{"acc_pitch", "accent", -1.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, acc_pitch)}, &Params::acc_pitch}, // semitones, decays with the accent
     // filter
-    {{"cut_base", "filter", -20.0f, 80.0f, awva::ParamKind::continuous}, &Params::cut_base}, // closed cutoff, note number
-    {{"cut_key", "filter", 0.0f, 1.2f, awva::ParamKind::continuous}, &Params::cut_key},      // keytracking
-    {{"cut_env", "filter", 0.0f, 80.0f, awva::ParamKind::continuous}, &Params::cut_env},     // opening by pressure (semitones)
-    {{"cut_back", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yn},   // lowered by timbre below 0
-    {{"cut_fwd", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yp},    // raised by timbre above 0
-    {{"res", "filter", 0.0f, 0.98f, awva::ParamKind::continuous}, &Params::res_base},        // 0.98 ~ self-oscillation
-    {{"res_back", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yn},
-    {{"res_fwd", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yp}, // subtracted with timbre above 0
-    {{"bass_comp", "filter", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::bass_comp},
-    {{"drive", "filter", 0.1f, 3.0f, awva::ParamKind::continuous}, &Params::dr_base},
-    {{"drive_env", "filter", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::dr_env},
+    {{"cut_base", "filter", -20.0f, 80.0f, awva::ParamKind::continuous, AWVA_TEXT(va, cut_base)}, &Params::cut_base}, // closed cutoff, note number
+    {{"cut_key", "filter", 0.0f, 1.2f, awva::ParamKind::continuous, AWVA_TEXT(va, cut_key)}, &Params::cut_key},       // keytracking
+    {{"cut_env", "filter", 0.0f, 80.0f, awva::ParamKind::continuous, AWVA_TEXT(va, cut_env)}, &Params::cut_env},      // opening by pressure (semitones)
+    {{"cut_back", "filter", -24.0f, 24.0f, awva::ParamKind::continuous, AWVA_TEXT(va, cut_back)}, &Params::cut_yn},   // lowered by timbre below 0
+    {{"cut_fwd", "filter", -24.0f, 24.0f, awva::ParamKind::continuous, AWVA_TEXT(va, cut_fwd)}, &Params::cut_yp},     // raised by timbre above 0
+    {{"res", "filter", 0.0f, 0.98f, awva::ParamKind::continuous, AWVA_TEXT(va, res)}, &Params::res_base},             // 0.98 ~ self-oscillation
+    {{"res_back", "filter", -0.5f, 0.98f, awva::ParamKind::continuous, AWVA_TEXT(va, res_back)}, &Params::res_yn},
+    {{"res_fwd", "filter", -0.5f, 0.98f, awva::ParamKind::continuous, AWVA_TEXT(va, res_fwd)}, &Params::res_yp}, // subtracted with timbre above 0
+    {{"bass_comp", "filter", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, bass_comp)}, &Params::bass_comp},
+    {{"drive", "filter", 0.1f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(va, drive)}, &Params::dr_base},
+    {{"drive_env", "filter", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(va, drive_env)}, &Params::dr_env},
     // oscillators (back/fwd: how much timbre below/above 0 reduces or adds)
-    {{"saw", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw},
-    {{"saw_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw_yn},
-    {{"saw_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw_yp},
-    {{"saw2", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::c_lvl},
-    {{"saw2_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::c_yn},
-    {{"saw2_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::c_yp},
-    {{"saw2_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::c_det}, // semitones
-    {{"pulse", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pul0},
-    {{"pulse_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pul_yn},
-    {{"pwm", "osc", 0.0f, 0.4f, awva::ParamKind::continuous}, &Params::pwm_depth},
-    {{"pwm_hz", "osc", 0.05f, 8.0f, awva::ParamKind::continuous}, &Params::pwm_hz},
-    {{"sub", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub},
-    {{"sub_base", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub0},
-    {{"sub_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub_yn},
-    {{"sub_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::sub_yp},
-    {{"b_sync", "osc", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::b_sync}, // B synced to A, or free detuned saw
-    {{"b_level", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::b_lvl0},
-    {{"b_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::b_yp},
-    {{"b_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::b_det}, // semitones down (free mode)
-    {{"sync", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync0},     // sync ratio, semitones (x timbre above 0)
-    {{"sync_fwd", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync_yp},
-    {{"sync_env", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync_env}, // sync sweep by pressure
-    {{"tilt_home", "osc", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::y_off},   // rest position on the timbre morph
+    {{"saw", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, saw)}, &Params::saw},
+    {{"saw_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, saw_back)}, &Params::saw_yn},
+    {{"saw_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, saw_fwd)}, &Params::saw_yp},
+    {{"saw2", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, saw2)}, &Params::c_lvl},
+    {{"saw2_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, saw2_back)}, &Params::c_yn},
+    {{"saw2_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, saw2_fwd)}, &Params::c_yp},
+    {{"saw2_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(va, saw2_detune)}, &Params::c_det}, // semitones
+    {{"pulse", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, pulse)}, &Params::pul0},
+    {{"pulse_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, pulse_back)}, &Params::pul_yn},
+    {{"pwm", "osc", 0.0f, 0.4f, awva::ParamKind::continuous, AWVA_TEXT(va, pwm)}, &Params::pwm_depth},
+    {{"pwm_hz", "osc", 0.05f, 8.0f, awva::ParamKind::continuous, AWVA_TEXT(va, pwm_hz)}, &Params::pwm_hz},
+    {{"sub", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sub)}, &Params::sub},
+    {{"sub_base", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sub_base)}, &Params::sub0},
+    {{"sub_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sub_back)}, &Params::sub_yn},
+    {{"sub_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sub_fwd)}, &Params::sub_yp},
+    {{"b_sync", "osc", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_TEXT(va, b_sync)}, &Params::b_sync}, // B synced to A, or free detuned saw
+    {{"b_level", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, b_level)}, &Params::b_lvl0},
+    {{"b_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, b_fwd)}, &Params::b_yp},
+    {{"b_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(va, b_detune)}, &Params::b_det}, // semitones down (free mode)
+    {{"sync", "osc", 0.0f, 24.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sync)}, &Params::sync0},         // sync ratio, semitones (x timbre above 0)
+    {{"sync_fwd", "osc", 0.0f, 24.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sync_fwd)}, &Params::sync_yp},
+    {{"sync_env", "osc", 0.0f, 24.0f, awva::ParamKind::continuous, AWVA_TEXT(va, sync_env)}, &Params::sync_env}, // sync sweep by pressure
+    {{"tilt_home", "osc", -1.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, tilt_home)}, &Params::y_off},  // rest position on the timbre morph
     // modulation
-    {{"drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::drift_a}, // semitones
-    {{"saw2_drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::c_drift},
-    {{"cut_drift", "mod", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::cut_drift},
-    {{"gyro_chorus", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::gyro_det}, // detune from rotation
-    {{"vibrato", "mod", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::vib_depth},    // shake vibrato, semitones
-    {{"vib_hz", "mod", 1.0f, 9.0f, awva::ParamKind::continuous}, &Params::vib_hz},
-    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life}, // micro-randomness
+    {{"drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous, AWVA_TEXT(va, drift)}, &Params::drift_a}, // semitones
+    {{"saw2_drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous, AWVA_TEXT(va, saw2_drift)}, &Params::c_drift},
+    {{"cut_drift", "mod", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(va, cut_drift)}, &Params::cut_drift},
+    {{"gyro_chorus", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, gyro_chorus)}, &Params::gyro_det}, // detune from rotation
+    {{"vibrato", "mod", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(va, vibrato)}, &Params::vib_depth},        // shake vibrato, semitones
+    {{"vib_hz", "mod", 1.0f, 9.0f, awva::ParamKind::continuous, AWVA_TEXT(va, vib_hz)}, &Params::vib_hz},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(va, life)}, &Params::life}, // micro-randomness
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

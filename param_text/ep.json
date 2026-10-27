@@ -1,0 +1,135 @@
+{
+  "engine": "ep",
+  "params": {
+    "hard": {
+      "label": "Hammer hardness",
+      "icon": "mallet",
+      "hover": "How hard the hammer tip is: harder is brighter with more bell and tick. Range 0.3 to 3."
+    },
+    "vsens": {
+      "label": "Strike sensitivity",
+      "icon": "strike",
+      "hover": "How much the strike speed counts: higher turns a modest hit into a hard one. Range 0.5 to 4."
+    },
+    "dyn": {
+      "label": "Dynamic range",
+      "icon": "dynamics",
+      "hover": "How much louder a hard strike is than a soft one: 0 flat, 1 the full range. Range 0 to 1."
+    },
+    "decay": {
+      "label": "Decay",
+      "icon": "decay",
+      "hover": "How long the tine rings, measured on middle C. Range 0.2 to 30 s."
+    },
+    "dkey": {
+      "label": "Decay by register",
+      "icon": "decay+register",
+      "hover": "How much shorter the high notes ring than the low ones. Range 0 to 1.5."
+    },
+    "prompt": {
+      "label": "Prompt decay",
+      "icon": "decay+early",
+      "hover": "How much the note drops in its first moment before the long sustain: 0 none, 1 a strong initial fall. Range 0 to 1."
+    },
+    "bell": {
+      "label": "Bell",
+      "icon": "overtone",
+      "hover": "The level of the tine's bell-like second mode. Range 0 to 2."
+    },
+    "bratio": {
+      "label": "Bell pitch",
+      "icon": "overtone+pitch",
+      "hover": "Where the bell mode sits, as a multiple of the fundamental. Range 2 to 16."
+    },
+    "bdecay": {
+      "label": "Bell decay",
+      "icon": "overtone+decay",
+      "hover": "How long the bell mode rings, measured on middle C. Range 0.05 to 5 s."
+    },
+    "tick": {
+      "label": "Tick",
+      "icon": "overtone+strike",
+      "hover": "The level of the short attack tick. Range 0 to 1.5."
+    },
+    "tratio": {
+      "label": "Tick pitch",
+      "icon": "overtone+rate",
+      "hover": "Where the tick sits, as a multiple of the fundamental. Range 6 to 30."
+    },
+    "beat": {
+      "label": "Tonebar beat",
+      "icon": "beat",
+      "hover": "The level of the tonebar's partner mode, which blooms and wavers against the tine. Range 0 to 0.5."
+    },
+    "bcents": {
+      "label": "Tonebar detune",
+      "icon": "beat+pitch",
+      "hover": "How far the tonebar partner is detuned: the speed of the bloom. Range 0 to 25 cents."
+    },
+    "align": {
+      "label": "Pickup alignment",
+      "icon": "pickup",
+      "hover": "Where the tine sits over the pickup: about 0.58 is sweet, above 0.8 barks, below 0.5 sounds hollow. Range 0.3 to 1.6."
+    },
+    "tilt": {
+      "label": "Alignment by timbre",
+      "icon": "pickup+timbre",
+      "hover": "How far timbre moves the tine over the pickup. Range 0 to 0.6."
+    },
+    "drive": {
+      "label": "Pickup drive",
+      "icon": "pickup+amount",
+      "hover": "How far the tine swings into the pickup: more bark at the same strike. Range 0.2 to 4."
+    },
+    "dig": {
+      "label": "Dig",
+      "icon": "pickup+press",
+      "hover": "How much pressing into a held key drives the pickup harder. Range 0 to 1."
+    },
+    "wurli": {
+      "label": "Pickup type",
+      "icon": "pickup+timbre",
+      "hover": "The pickup's character: 0 a magnetic Rhodes, 1 an electrostatic Wurlitzer. Range 0 to 1."
+    },
+    "damper": {
+      "label": "Damper",
+      "icon": "damper",
+      "hover": "How firmly the damper stops the note on release: 0 no dampers. Range 0 to 3."
+    },
+    "gain": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0 to 8."
+    },
+    "grit": {
+      "label": "Amp grit",
+      "icon": "drive",
+      "hover": "How hard the amp is driven. Range 0 to 1."
+    },
+    "tone": {
+      "label": "Amp tone",
+      "icon": "tone",
+      "hover": "The amp and speaker's brightness: the frequency above which they roll off. Range 800 to 16000 Hz."
+    },
+    "bodyhz": {
+      "label": "Body EQ frequency",
+      "icon": "resonance+rate",
+      "hover": "Where the body EQ band sits. Range 60 to 4000 Hz."
+    },
+    "body": {
+      "label": "Body EQ",
+      "icon": "resonance+level",
+      "hover": "How much the body EQ band is cut (below 0) or boosted. Range -0.9 to 2."
+    },
+    "wobble": {
+      "label": "Wobble",
+      "icon": "drift",
+      "hover": "A tape-like wow and flutter of the pitch. Range 0 to 40 cents."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    }
+  }
+}

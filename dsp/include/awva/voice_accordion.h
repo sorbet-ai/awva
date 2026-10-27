@@ -80,6 +80,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/accordion.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 
@@ -788,49 +789,49 @@ struct ParamEntry {
 };
 
 static constexpr ParamEntry param_table[] = {
-    {{"level", "register", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::level},
-    {{"r16", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r16},      // 16' bassoon
-    {{"r8", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r8a},       // 8' clarinet
-    {{"r8_sharp", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r8b}, // 8' sharp (violin, musette)
-    {{"r8_flat", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r8c},  // 8' flat (musette)
-    {{"r4", "register", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::r4},        // 4' piccolo
-    {{"beat", "musette", 0.0f, 12.0f, awva::ParamKind::continuous}, &Params::beat},    // Hz at A4
-    {{"beat_flat", "musette", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::beat_flat},
-    {{"beat_track", "musette", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::beat_track}, // 0 Hz .. 1 cents
-    {{"cassotto", "register", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::cassotto},
-    {{"bellows", "bellows", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::bellows}, // 0 per note .. 1 one bellows
-    {{"curve", "bellows", 0.3f, 1.5f, awva::ParamKind::continuous}, &Params::curve},     // pressure curve exponent
-    {{"bel_ms", "bellows", 5.0f, 300.0f, awva::ParamKind::continuous}, &Params::bel_ms},
-    {{"valve", "bellows", 0.05f, 1.0f, awva::ParamKind::continuous}, &Params::valve}, // pressure for a full pallet
-    {{"throttle", "bellows", 0.05f, 1.5f, awva::ParamKind::continuous}, &Params::throttle},
-    {{"chamber_ms", "bellows", 1.0f, 100.0f, awva::ParamKind::continuous}, &Params::chamber_ms},
-    {{"release_ms", "bellows", 3.0f, 200.0f, awva::ParamKind::continuous}, &Params::release_ms},
-    {{"speak_ms", "reed", 5.0f, 300.0f, awva::ParamKind::continuous}, &Params::speak_ms},
-    {{"low_slow", "reed", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::low_slow},
-    {{"thresh", "reed", 0.005f, 0.3f, awva::ParamKind::continuous}, &Params::thresh},
-    {{"amp", "reed", 0.5f, 5.0f, awva::ParamKind::continuous}, &Params::amp},
-    {{"rest", "reed", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::rest},
-    {{"push", "reed", 0.0f, 1.2f, awva::ParamKind::continuous}, &Params::push},
-    {{"gap", "reed", 0.02f, 0.6f, awva::ParamKind::continuous}, &Params::gap},
-    {{"exit", "reed", 0.05f, 1.5f, awva::ParamKind::continuous}, &Params::exit},
-    {{"down", "reed", 0.0f, 2.5f, awva::ParamKind::continuous}, &Params::down},
-    {{"constrict", "reed", 0.3f, 4.0f, awva::ParamKind::continuous}, &Params::constrict},
-    {{"pump", "reed", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pump},
-    {{"flat", "reed", 0.0f, 30.0f, awva::ParamKind::continuous}, &Params::flat},      // cents at full pressure
-    {{"bend", "reed", 0.0f, 100.0f, awva::ParamKind::continuous}, &Params::bend},     // pallet bend, cents
-    {{"spread", "reed", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::spread},   // tuning tolerance, cents
-    {{"voicing", "reed", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::voicing}, // level across the compass
-    {{"ch_hz", "tone", 500.0f, 5000.0f, awva::ParamKind::continuous}, &Params::ch_hz},
-    {{"ch_db", "tone", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::ch_db},
-    {{"ch_q", "tone", 0.4f, 5.0f, awva::ParamKind::continuous}, &Params::ch_q},
-    {{"cas_hz", "tone", 400.0f, 4000.0f, awva::ParamKind::continuous}, &Params::cas_hz},
-    {{"cas_leak", "tone", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::cas_leak},
-    {{"grille_hz", "tone", 2000.0f, 12000.0f, awva::ParamKind::continuous}, &Params::grille_hz},
-    {{"tilt", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tilt},
-    {{"rev_pedal", "expr", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::rev_pedal},
-    {{"rev_shake", "expr", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::rev_shake},
-    {{"rev_ms", "expr", 20.0f, 300.0f, awva::ParamKind::continuous}, &Params::rev_ms},
-    {{"life", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life}, // micro-randomness
+    {{"level", "register", 0.0f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, level)}, &Params::level},
+    {{"r16", "register", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, r16)}, &Params::r16},           // 16' bassoon
+    {{"r8", "register", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, r8)}, &Params::r8a},             // 8' clarinet
+    {{"r8_sharp", "register", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, r8_sharp)}, &Params::r8b}, // 8' sharp (violin, musette)
+    {{"r8_flat", "register", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, r8_flat)}, &Params::r8c},   // 8' flat (musette)
+    {{"r4", "register", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, r4)}, &Params::r4},              // 4' piccolo
+    {{"beat", "musette", 0.0f, 12.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, beat)}, &Params::beat},        // Hz at A4
+    {{"beat_flat", "musette", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, beat_flat)}, &Params::beat_flat},
+    {{"beat_track", "musette", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, beat_track)}, &Params::beat_track}, // 0 Hz .. 1 cents
+    {{"cassotto", "register", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_TEXT(accordion, cassotto)}, &Params::cassotto},
+    {{"bellows", "bellows", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, bellows)}, &Params::bellows}, // 0 per note .. 1 one bellows
+    {{"curve", "bellows", 0.3f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, curve)}, &Params::curve},       // pressure curve exponent
+    {{"bel_ms", "bellows", 5.0f, 300.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, bel_ms)}, &Params::bel_ms},
+    {{"valve", "bellows", 0.05f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, valve)}, &Params::valve}, // pressure for a full pallet
+    {{"throttle", "bellows", 0.05f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, throttle)}, &Params::throttle},
+    {{"chamber_ms", "bellows", 1.0f, 100.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, chamber_ms)}, &Params::chamber_ms},
+    {{"release_ms", "bellows", 3.0f, 200.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, release_ms)}, &Params::release_ms},
+    {{"speak_ms", "reed", 5.0f, 300.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, speak_ms)}, &Params::speak_ms},
+    {{"low_slow", "reed", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, low_slow)}, &Params::low_slow},
+    {{"thresh", "reed", 0.005f, 0.3f, awva::ParamKind::continuous, AWVA_TEXT(accordion, thresh)}, &Params::thresh},
+    {{"amp", "reed", 0.5f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, amp)}, &Params::amp},
+    {{"rest", "reed", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, rest)}, &Params::rest},
+    {{"push", "reed", 0.0f, 1.2f, awva::ParamKind::continuous, AWVA_TEXT(accordion, push)}, &Params::push},
+    {{"gap", "reed", 0.02f, 0.6f, awva::ParamKind::continuous, AWVA_TEXT(accordion, gap)}, &Params::gap},
+    {{"exit", "reed", 0.05f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, exit)}, &Params::exit},
+    {{"down", "reed", 0.0f, 2.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, down)}, &Params::down},
+    {{"constrict", "reed", 0.3f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, constrict)}, &Params::constrict},
+    {{"pump", "reed", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(accordion, pump)}, &Params::pump},
+    {{"flat", "reed", 0.0f, 30.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, flat)}, &Params::flat},         // cents at full pressure
+    {{"bend", "reed", 0.0f, 100.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, bend)}, &Params::bend},        // pallet bend, cents
+    {{"spread", "reed", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, spread)}, &Params::spread},    // tuning tolerance, cents
+    {{"voicing", "reed", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, voicing)}, &Params::voicing}, // level across the compass
+    {{"ch_hz", "tone", 500.0f, 5000.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, ch_hz)}, &Params::ch_hz},
+    {{"ch_db", "tone", 0.0f, 20.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, ch_db)}, &Params::ch_db},
+    {{"ch_q", "tone", 0.4f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, ch_q)}, &Params::ch_q},
+    {{"cas_hz", "tone", 400.0f, 4000.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, cas_hz)}, &Params::cas_hz},
+    {{"cas_leak", "tone", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, cas_leak)}, &Params::cas_leak},
+    {{"grille_hz", "tone", 2000.0f, 12000.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, grille_hz)}, &Params::grille_hz},
+    {{"tilt", "expr", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, tilt)}, &Params::tilt},
+    {{"rev_pedal", "expr", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_TEXT(accordion, rev_pedal)}, &Params::rev_pedal},
+    {{"rev_shake", "expr", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_TEXT(accordion, rev_shake)}, &Params::rev_shake},
+    {{"rev_ms", "expr", 20.0f, 300.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, rev_ms)}, &Params::rev_ms},
+    {{"life", "expr", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(accordion, life)}, &Params::life}, // micro-randomness
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

@@ -1,0 +1,527 @@
+{
+  "concepts": [
+    {
+      "name": "level",
+      "label": "Level",
+      "meaning": "How loud the sound comes out."
+    },
+    {
+      "name": "dynamics",
+      "label": "Dynamics",
+      "meaning": "How pressure turns into loudness: the curve from a light touch to a full press."
+    },
+    {
+      "name": "breath",
+      "label": "Breath",
+      "meaning": "The blowing pressure: how hard the player blows at a light and at a full touch."
+    },
+    {
+      "name": "air",
+      "label": "Air noise",
+      "meaning": "The audible air in the tone: breath hiss and turbulence."
+    },
+    {
+      "name": "response",
+      "label": "Response",
+      "meaning": "How quickly the sound follows the hand: smoothing and onset time."
+    },
+    {
+      "name": "threshold",
+      "label": "Threshold",
+      "meaning": "The pressure where a note starts."
+    },
+    {
+      "name": "release",
+      "label": "Release",
+      "meaning": "How long the sound rings after the key is released."
+    },
+    {
+      "name": "decay",
+      "label": "Decay",
+      "meaning": "How fast a struck or plucked sound dies away while held."
+    },
+    {
+      "name": "damper",
+      "label": "Damper",
+      "meaning": "The felt that stops the ringing."
+    },
+    {
+      "name": "strike",
+      "label": "Strike",
+      "meaning": "How hard the key is hit: the strike (velocity) and what it does to the start."
+    },
+    {
+      "name": "pressure",
+      "label": "Pressure",
+      "meaning": "How hard the key is pressed."
+    },
+    {
+      "name": "accent",
+      "label": "Accent",
+      "meaning": "The extra push at the start of a struck note, and how it settles."
+    },
+    {
+      "name": "tongue",
+      "label": "Tongue",
+      "meaning": "The \"t\" of a tongued start: the short noise burst before the tone."
+    },
+    {
+      "name": "slur",
+      "label": "Slur",
+      "meaning": "What happens when one note changes into the next without a new strike."
+    },
+    {
+      "name": "scoop",
+      "label": "Scoop",
+      "meaning": "The pitch sliding up into a note from below."
+    },
+    {
+      "name": "settle",
+      "label": "Pitch settling",
+      "meaning": "How fast the pitch finds its centre after a start or a change (the player's ear)."
+    },
+    {
+      "name": "tuning",
+      "label": "Tuning",
+      "meaning": "The tuning: offsets in cents and the tuning system."
+    },
+    {
+      "name": "pitch",
+      "label": "Pitch",
+      "meaning": "A pitch offset or movement, up or down."
+    },
+    {
+      "name": "bend",
+      "label": "Bend",
+      "meaning": "Pitch bend: how far the pitch bends (the channel's or the note's pitch bend)."
+    },
+    {
+      "name": "timbre",
+      "label": "Timbre",
+      "meaning": "The timbre control (MPE's CC 74, MIDI 2.0's per-note timbre), up or down from its centre: where the tone sits and how far it moves."
+    },
+    {
+      "name": "detune",
+      "label": "Detune",
+      "meaning": "Two voices slightly apart in pitch."
+    },
+    {
+      "name": "beat",
+      "label": "Beat",
+      "meaning": "Two reeds or modes a few cents apart, beating against each other."
+    },
+    {
+      "name": "vibrato",
+      "label": "Vibrato",
+      "meaning": "A regular wavering of the pitch."
+    },
+    {
+      "name": "tremolo",
+      "label": "Tremolo",
+      "meaning": "A regular wavering of the loudness."
+    },
+    {
+      "name": "flutter",
+      "label": "Flutter",
+      "meaning": "Flutter tongue: a fast rolled \"r\" in the air stream."
+    },
+    {
+      "name": "drift",
+      "label": "Drift",
+      "meaning": "A slow, irregular wander of pitch or tone, like a tape or an unsteady hand."
+    },
+    {
+      "name": "jitter",
+      "label": "Jitter",
+      "meaning": "A fast, fine roughness of the pitch."
+    },
+    {
+      "name": "life",
+      "label": "Life",
+      "meaning": "Micro-randomness: no two notes exactly alike."
+    },
+    {
+      "name": "shake",
+      "label": "Shake",
+      "meaning": "Motion: what a shake does (a host's motion input, its acceleration)."
+    },
+    {
+      "name": "spin",
+      "label": "Rotation",
+      "meaning": "Motion: what a turn does (a host's motion input, its rotation)."
+    },
+    {
+      "name": "growl",
+      "label": "Growl",
+      "meaning": "A throaty rasp when the note is pushed hard."
+    },
+    {
+      "name": "ensemble",
+      "label": "Ensemble",
+      "meaning": "More than one player on the note."
+    },
+    {
+      "name": "bow",
+      "label": "Bow",
+      "meaning": "The bow on the string: its force and speed."
+    },
+    {
+      "name": "bow-position",
+      "label": "Bow position",
+      "meaning": "Where the bow meets the string, from the fingerboard to the bridge."
+    },
+    {
+      "name": "pluck",
+      "label": "Pluck",
+      "meaning": "Pizzicato: the string plucked instead of bowed."
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "meaning": "The instrument's resonant body: its size and how much of it you hear."
+    },
+    {
+      "name": "pickup",
+      "label": "Pickup",
+      "meaning": "The electric pickup under the tine: its alignment and drive."
+    },
+    {
+      "name": "mallet",
+      "label": "Mallet",
+      "meaning": "The hammer or mallet: how hard its head is."
+    },
+    {
+      "name": "rub",
+      "label": "Rub",
+      "meaning": "A rubbed tone, like a finger on a wine glass."
+    },
+    {
+      "name": "tone",
+      "label": "Brightness",
+      "meaning": "How bright or dark the tone is."
+    },
+    {
+      "name": "resonance",
+      "label": "Resonance",
+      "meaning": "A resonant peak in the tone: where it sits, how strong and how narrow."
+    },
+    {
+      "name": "filter",
+      "label": "Filter",
+      "meaning": "The low-pass filter: its cutoff and how it opens."
+    },
+    {
+      "name": "drive",
+      "label": "Drive",
+      "meaning": "Saturation: the sound driven into a soft clip."
+    },
+    {
+      "name": "overtone",
+      "label": "Overtone",
+      "meaning": "The upper partials: the tone's harmonics and bell-like modes."
+    },
+    {
+      "name": "keytrack",
+      "label": "Across the range",
+      "meaning": "How something changes from the low notes to the high ones."
+    },
+    {
+      "name": "range",
+      "label": "Range",
+      "meaning": "The instrument's compass: its lowest note and where its registers lie."
+    },
+    {
+      "name": "instrument",
+      "label": "Instrument",
+      "meaning": "Which instrument the engine models."
+    },
+    {
+      "name": "saw",
+      "label": "Saw",
+      "meaning": "The sawtooth oscillator."
+    },
+    {
+      "name": "pulse",
+      "label": "Pulse",
+      "meaning": "The pulse oscillator and its width."
+    },
+    {
+      "name": "sub",
+      "label": "Sub",
+      "meaning": "The sub-oscillator an octave below."
+    },
+    {
+      "name": "sync",
+      "label": "Sync",
+      "meaning": "Oscillator sync: a second oscillator reset by the first."
+    },
+    {
+      "name": "reed",
+      "label": "Reed",
+      "meaning": "The reed: its opening, stiffness and resonance."
+    },
+    {
+      "name": "embouchure",
+      "label": "Embouchure",
+      "meaning": "The player's lips: how firm, how open, and how timbre moves them."
+    },
+    {
+      "name": "jet",
+      "label": "Air jet",
+      "meaning": "The flute's air jet meeting the edge of the embouchure hole."
+    },
+    {
+      "name": "bore",
+      "label": "Bore",
+      "meaning": "The instrument's tube: its size, losses and resonance."
+    },
+    {
+      "name": "tone-holes",
+      "label": "Tone holes",
+      "meaning": "The open tone holes: the cutoff that shapes the wind tone."
+    },
+    {
+      "name": "flare",
+      "label": "Bell",
+      "meaning": "The brass bell: its flare and reflection."
+    },
+    {
+      "name": "brassiness",
+      "label": "Brassiness",
+      "meaning": "The brassy blare: the wave steepening as the note gets loud."
+    },
+    {
+      "name": "mute",
+      "label": "Mute",
+      "meaning": "A mute in the bell: how deep, and its character."
+    },
+    {
+      "name": "mouthpiece",
+      "label": "Mouthpiece",
+      "meaning": "The mouthpiece cup and its resonance."
+    },
+    {
+      "name": "radiate",
+      "label": "Radiation",
+      "meaning": "How the sound leaves the instrument into the room."
+    },
+    {
+      "name": "bellows",
+      "label": "Bellows",
+      "meaning": "The accordion's bellows: shared air, its curve and reversals."
+    },
+    {
+      "name": "pallet",
+      "label": "Pallet",
+      "meaning": "The key's valve: how it opens, throttles and closes the air to the reed."
+    },
+    {
+      "name": "reed-bank",
+      "label": "Reed banks",
+      "meaning": "The registers: which reed banks sound (16', 8', 4')."
+    },
+    {
+      "name": "chamber",
+      "label": "Tone chamber",
+      "meaning": "The cassotto: a chamber that mellows the reeds routed through it."
+    },
+    {
+      "name": "midi",
+      "label": "MIDI",
+      "meaning": "MIDI out: mode, channel, controllers and timing."
+    },
+    {
+      "name": "voices",
+      "label": "Voices",
+      "meaning": "How many notes can sound at once."
+    },
+    {
+      "name": "mono",
+      "label": "Mono",
+      "meaning": "One voice: every held key plays the same voice, sliding or re-attacking."
+    },
+    {
+      "name": "engine",
+      "label": "Engine",
+      "meaning": "Which sound engine plays."
+    },
+    {
+      "name": "preset",
+      "label": "Preset",
+      "meaning": "A stored set of settings or a stored sound."
+    },
+    {
+      "name": "flip",
+      "label": "Flip",
+      "meaning": "The layout turned 180 degrees."
+    },
+    {
+      "name": "swap",
+      "label": "Swap",
+      "meaning": "Two keys change places."
+    },
+    {
+      "name": "keys",
+      "label": "Function keys",
+      "meaning": "A host's function keys."
+    },
+    {
+      "name": "led",
+      "label": "Colour",
+      "meaning": "A light's colour."
+    },
+    {
+      "name": "jack",
+      "label": "Pedal jack",
+      "meaning": "The pedal or MIDI jack: what is plugged in."
+    },
+    {
+      "name": "power",
+      "label": "Restart",
+      "meaning": "Restart."
+    },
+    {
+      "name": "tag",
+      "label": "Name",
+      "meaning": "A name for a preset or tuning."
+    }
+  ],
+  "modifiers": [
+    {
+      "name": "pedal",
+      "label": "with the pedal"
+    },
+    {
+      "name": "lift",
+      "label": "on a quick lift-off"
+    },
+    {
+      "name": "press",
+      "label": "by pressure"
+    },
+    {
+      "name": "soft",
+      "label": "at a light touch"
+    },
+    {
+      "name": "loud",
+      "label": "at a full press"
+    },
+    {
+      "name": "register",
+      "label": "across the range"
+    },
+    {
+      "name": "fwd",
+      "label": "with timbre up"
+    },
+    {
+      "name": "back",
+      "label": "with timbre down"
+    },
+    {
+      "name": "timbre",
+      "label": "with timbre"
+    },
+    {
+      "name": "rate",
+      "label": "its speed"
+    },
+    {
+      "name": "time",
+      "label": "its time"
+    },
+    {
+      "name": "bright",
+      "label": "its brightness"
+    },
+    {
+      "name": "noise",
+      "label": "its noise"
+    },
+    {
+      "name": "q",
+      "label": "its sharpness"
+    },
+    {
+      "name": "pitch",
+      "label": "its pitch"
+    },
+    {
+      "name": "key",
+      "label": "per key"
+    },
+    {
+      "name": "off",
+      "label": "off / stop"
+    },
+    {
+      "name": "shake",
+      "label": "from a shake"
+    },
+    {
+      "name": "strike",
+      "label": "at a strike"
+    },
+    {
+      "name": "hold",
+      "label": "while held"
+    },
+    {
+      "name": "size",
+      "label": "its size"
+    },
+    {
+      "name": "octave",
+      "label": "by octaves"
+    },
+    {
+      "name": "decay",
+      "label": "its decay"
+    },
+    {
+      "name": "send",
+      "label": "sent out"
+    },
+    {
+      "name": "range",
+      "label": "its range"
+    },
+    {
+      "name": "level",
+      "label": "its level"
+    },
+    {
+      "name": "gate",
+      "label": "gated"
+    },
+    {
+      "name": "speed",
+      "label": "how fast"
+    },
+    {
+      "name": "open",
+      "label": "how open"
+    },
+    {
+      "name": "depth",
+      "label": "how deep"
+    },
+    {
+      "name": "amount",
+      "label": "how much"
+    },
+    {
+      "name": "early",
+      "label": "at the start"
+    },
+    {
+      "name": "low",
+      "label": "the low end"
+    },
+    {
+      "name": "high",
+      "label": "the high end"
+    }
+  ]
+}

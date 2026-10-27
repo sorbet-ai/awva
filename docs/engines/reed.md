@@ -30,12 +30,12 @@ None: the parameters are the sound.
 
 ## Parameters
 
-Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/reed.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| `ef88e6bb` | `growl_from` | expr | 0.5 | 1.5 | 0.7 | continuous |
-| `e7c742df` | `life` | expr | 0 | 1 | 0 | continuous |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| `ef88e6bb` | `growl_from` | Growl from | `growl+press` | expr | 0.5 | 1.5 | 0.7 | continuous | The pressure where the growl sets in. Range 0.5 to 1.5. |
+| `e7c742df` | `life` | Life | `life` | expr | 0 | 1 | 0 | continuous | Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1. |
 
 ## Cost and memory
 

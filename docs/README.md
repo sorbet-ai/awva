@@ -35,4 +35,5 @@ Each page has a reference part generated from the engine's `EngineInfo` (inputs,
 
 <!-- awva_docs: end -->
 
-- [Writing a host](writing_a_host.md): a plugin or an embedded instrument, on the engine component (ABI 5).
+- [Writing a host](writing_a_host.md): a plugin or an embedded instrument, on the engine component (ABI 6).
+- [Parameter icons](icons.md): the icons and the words a host shows for each parameter (its label, hover text and icon).

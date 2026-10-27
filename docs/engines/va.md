@@ -43,66 +43,66 @@ After `init()` the engine plays preset 0 (classic).
 
 ## Parameters
 
-Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/va.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| `1b5426fe` | `gain` | level | 0.5 | 5 | 2.3 | continuous |
-| `75245e0b` | `pres_lin` | level | 0 | 1 | 0.3 | continuous |
-| `1b755ad8` | `pres_sq` | level | 0 | 1.5 | 0.7 | continuous |
-| `14a92b36` | `pres_hz` | level | 1 | 200 | 70 | continuous |
-| `35115ebd` | `hold_decay` | level | 0.005 | 1 | 0.045 | continuous |
-| `1036ae7e` | `release` | release | 0.02 | 4 | 0.1 | continuous |
-| `c7d91eff` | `rel_pedal` | release | 0 | 6 | 2.9 | continuous |
-| `fd9c824c` | `rel_speed` | release | 0 | 8 | 3 | continuous |
-| `6f1a0e5f` | `acc_level` | accent | 0 | 2.5 | 0.75 | continuous |
-| `6f9d5d57` | `acc_decay` | accent | 0.005 | 0.4 | 0.04 | continuous |
-| `28968fa6` | `acc_key` | accent | 0 | 0.06 | 0.0277778 | continuous |
-| `3fa8c62a` | `acc_cutoff` | accent | 0 | 48 | 28 | continuous |
-| `eb5316a5` | `acc_drive` | accent | 0 | 2 | 0.7 | continuous |
-| `cabfdbb8` | `acc_sync` | accent | 0 | 24 | 10 | continuous |
-| `e3b71f2b` | `acc_pitch` | accent | -1 | 1 | 0 | continuous |
-| `e9d7f461` | `cut_base` | filter | -20 | 80 | 26 | continuous |
-| `bc358333` | `cut_key` | filter | 0 | 1.2 | 0.75 | continuous |
-| `c6bbb493` | `cut_env` | filter | 0 | 80 | 46 | continuous |
-| `c4005aff` | `cut_back` | filter | -24 | 24 | 9 | continuous |
-| `4556ec55` | `cut_fwd` | filter | -24 | 24 | 5 | continuous |
-| `2ff46619` | `res` | filter | 0 | 0.98 | 0.2 | continuous |
-| `b16cea51` | `res_back` | filter | -0.5 | 0.98 | 0.72 | continuous |
-| `c1379e2f` | `res_fwd` | filter | -0.5 | 0.98 | 0.08 | continuous |
-| `b0b643fc` | `bass_comp` | filter | 0 | 1 | 0.45 | continuous |
-| `1faee677` | `drive` | filter | 0.1 | 3 | 0.6 | continuous |
-| `96732c27` | `drive_env` | filter | 0 | 3 | 0.9 | continuous |
-| `d71c946a` | `saw` | osc | 0 | 1 | 0.5 | continuous |
-| `ed652ba8` | `saw_back` | osc | 0 | 1 | 0.75 | continuous |
-| `6d08a810` | `saw_fwd` | osc | 0 | 1 | 0.65 | continuous |
-| `f9fd8688` | `saw2` | osc | 0 | 1 | 0.36 | continuous |
-| `35cc2d12` | `saw2_back` | osc | 0 | 1 | 0.5 | continuous |
-| `47ee967a` | `saw2_fwd` | osc | 0 | 1 | 0.6 | continuous |
-| `44a94f5c` | `saw2_detune` | osc | -0.5 | 0.5 | 0.07 | continuous |
-| `550bfe9e` | `pulse` | osc | 0 | 1 | 0 | continuous |
-| `77d0445c` | `pulse_back` | osc | 0 | 1 | 0.45 | continuous |
-| `4e6df23f` | `pwm` | osc | 0 | 0.4 | 0.13 | continuous |
-| `9751ed86` | `pwm_hz` | osc | 0.05 | 8 | 0.37 | continuous |
-| `dc4e3915` | `sub` | osc | 0 | 1 | 0.5 | continuous |
-| `cca841a3` | `sub_base` | osc | 0 | 1 | 0.2 | continuous |
-| `ba8115dd` | `sub_back` | osc | 0 | 1 | 0.25 | continuous |
-| `9001726b` | `sub_fwd` | osc | 0 | 1 | 0.6 | continuous |
-| `383a392d` | `b_sync` | osc | 0 | 1 | 1 | toggle |
-| `4837952c` | `b_level` | osc | 0 | 1 | 0 | continuous |
-| `c1c58dfb` | `b_fwd` | osc | 0 | 1 | 0.5 | continuous |
-| `ff6d6c5f` | `b_detune` | osc | -0.5 | 0.5 | 0 | continuous |
-| `097acf9a` | `sync` | osc | 0 | 24 | 5 | continuous |
-| `5e2c9e80` | `sync_fwd` | osc | 0 | 24 | 12 | continuous |
-| `def28d62` | `sync_env` | osc | 0 | 24 | 9 | continuous |
-| `2ee0e898` | `tilt_home` | osc | -1 | 1 | 0 | continuous |
-| `2e87eea4` | `drift` | mod | 0 | 0.3 | 0.03 | continuous |
-| `55c89874` | `saw2_drift` | mod | 0 | 0.3 | 0.025 | continuous |
-| `a5b424ef` | `cut_drift` | mod | 0 | 2 | 0.3 | continuous |
-| `f15d1b51` | `gyro_chorus` | mod | 0 | 1 | 0.22 | continuous |
-| `e4d88d72` | `vibrato` | mod | 0 | 1.5 | 0.35 | continuous |
-| `9e2c50e9` | `vib_hz` | mod | 1 | 9 | 5.3 | continuous |
-| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| `1b5426fe` | `gain` | Level | `level` | level | 0.5 | 5 | 2.3 | continuous | The overall loudness of the sound. Range 0.5 to 5. |
+| `75245e0b` | `pres_lin` | Dynamics (even) | `dynamics+soft` | level | 0 | 1 | 0.3 | continuous | The even part of how pressure becomes loudness: more here and a light touch already speaks. Range 0 to 1. |
+| `1b755ad8` | `pres_sq` | Dynamics (curved) | `dynamics+loud` | level | 0 | 1.5 | 0.7 | continuous | The curved part of how pressure becomes loudness: more here and the loud end opens up faster than the soft end. Range 0 to 1.5. |
+| `14a92b36` | `pres_hz` | Response | `response` | level | 1 | 200 | 70 | continuous | How quickly the sound follows a change of pressure: low is a slow swell, high is immediate. Range 1 to 200 Hz. |
+| `35115ebd` | `hold_decay` | Fall while held | `decay+hold` | level | 0.005 | 1 | 0.045 | continuous | The fastest the level can fall while the key stays down, so a quick lift still leaves a tail. Range 0.005 to 1 s. |
+| `1036ae7e` | `release` | Release | `release` | release | 0.02 | 4 | 0.1 | continuous | How long the sound takes to die away after the key is released. Range 0.02 to 4 s. |
+| `c7d91eff` | `rel_pedal` | Release with pedal | `release+pedal` | release | 0 | 6 | 2.9 | continuous | How much longer the release gets with the sustain pedal down. Range 0 to 6 s. |
+| `fd9c824c` | `rel_speed` | Release by lift speed | `release+lift` | release | 0 | 8 | 3 | continuous | How much a quick lift-off shortens the tail: 0 no effect, higher cuts it short. Range 0 to 8. |
+| `6f1a0e5f` | `acc_level` | Accent | `accent` | accent | 0 | 2.5 | 0.75 | continuous | The extra push at the start of a struck note: 0 none, higher is a sharper attack. Range 0 to 2.5. |
+| `6f9d5d57` | `acc_decay` | Accent length | `accent+time` | accent | 0.005 | 0.4 | 0.04 | continuous | How long the accent lasts before the note settles. Range 0.005 to 0.4 s. |
+| `28968fa6` | `acc_key` | Accent by register | `accent+register` | accent | 0 | 0.06 | 0.0277778 | continuous | How much longer the accent lasts on low notes than on high ones. Range 0 to 0.06. |
+| `3fa8c62a` | `acc_cutoff` | Accent cutoff | `accent+bright` | accent | 0 | 48 | 28 | continuous | How far the filter opens at a strike, in semitones. Range 0 to 48 semitones. |
+| `eb5316a5` | `acc_drive` | Accent drive | `accent+amount` | accent | 0 | 2 | 0.7 | continuous | The extra saturation at a strike. Range 0 to 2. |
+| `cabfdbb8` | `acc_sync` | Accent sync | `accent+rate` | accent | 0 | 24 | 10 | continuous | The extra sync sweep at a strike, in semitones, when timbre is up. Range 0 to 24 semitones. |
+| `e3b71f2b` | `acc_pitch` | Accent pitch | `accent+pitch` | accent | -1 | 1 | 0 | continuous | A pitch offset at the strike that fades with the accent: below 0 the note scoops up, above 0 it drops in. Range -1 to 1 semitones. |
+| `e9d7f461` | `cut_base` | Cutoff | `filter` | filter | -20 | 80 | 26 | continuous | Where the filter sits when closed, as a note number. Range -20 to 80 note. |
+| `bc358333` | `cut_key` | Cutoff tracking | `filter+register` | filter | 0 | 1.2 | 0.75 | continuous | How much the cutoff follows the note: 1 keeps the tone the same up the keyboard. Range 0 to 1.2. |
+| `c6bbb493` | `cut_env` | Cutoff by pressure | `filter+press` | filter | 0 | 80 | 46 | continuous | How far pressure opens the filter. Range 0 to 80 semitones. |
+| `c4005aff` | `cut_back` | Cutoff, timbre down | `filter+back` | filter | -24 | 24 | 9 | continuous | How far the filter closes with timbre down. Range -24 to 24 semitones. |
+| `4556ec55` | `cut_fwd` | Cutoff, timbre up | `filter+fwd` | filter | -24 | 24 | 5 | continuous | How far the filter opens with timbre up. Range -24 to 24 semitones. |
+| `2ff46619` | `res` | Resonance | `resonance` | filter | 0 | 0.98 | 0.2 | continuous | The filter's resonance: near 0.98 it rings on its own. Range 0 to 0.98. |
+| `b16cea51` | `res_back` | Resonance, timbre down | `resonance+back` | filter | -0.5 | 0.98 | 0.72 | continuous | How much timbre down adds to the resonance. Range -0.5 to 0.98. |
+| `c1379e2f` | `res_fwd` | Resonance, timbre up | `resonance+fwd` | filter | -0.5 | 0.98 | 0.08 | continuous | How much timbre up takes from the resonance. Range -0.5 to 0.98. |
+| `b0b643fc` | `bass_comp` | Bass compensation | `filter+low` | filter | 0 | 1 | 0.45 | continuous | How much the bass is brought back as the resonance rises. Range 0 to 1. |
+| `1faee677` | `drive` | Drive | `drive` | filter | 0.1 | 3 | 0.6 | continuous | The saturation after the filter. Range 0.1 to 3. |
+| `96732c27` | `drive_env` | Drive by pressure | `drive+press` | filter | 0 | 3 | 0.9 | continuous | How much more saturation pressure adds. Range 0 to 3. |
+| `d71c946a` | `saw` | Saw | `saw` | osc | 0 | 1 | 0.5 | continuous | The level of the main sawtooth. Range 0 to 1. |
+| `ed652ba8` | `saw_back` | Saw, timbre down | `saw+back` | osc | 0 | 1 | 0.75 | continuous | How much timbre down reduces the saw. Range 0 to 1. |
+| `6d08a810` | `saw_fwd` | Saw, timbre up | `saw+fwd` | osc | 0 | 1 | 0.65 | continuous | How much timbre up reduces the saw. Range 0 to 1. |
+| `f9fd8688` | `saw2` | Second saw | `saw+pitch` | osc | 0 | 1 | 0.36 | continuous | The level of the detuned second sawtooth. Range 0 to 1. |
+| `35cc2d12` | `saw2_back` | Second saw, timbre down | `saw+back` | osc | 0 | 1 | 0.5 | continuous | How much timbre down reduces the second saw. Range 0 to 1. |
+| `47ee967a` | `saw2_fwd` | Second saw, timbre up | `saw+fwd` | osc | 0 | 1 | 0.6 | continuous | How much timbre up reduces the second saw. Range 0 to 1. |
+| `44a94f5c` | `saw2_detune` | Second saw detune | `detune` | osc | -0.5 | 0.5 | 0.07 | continuous | How far the second saw is detuned. Range -0.5 to 0.5 semitones. |
+| `550bfe9e` | `pulse` | Pulse | `pulse` | osc | 0 | 1 | 0 | continuous | The level of the pulse wave. Range 0 to 1. |
+| `77d0445c` | `pulse_back` | Pulse, timbre down | `pulse+back` | osc | 0 | 1 | 0.45 | continuous | How much timbre down adds pulse. Range 0 to 1. |
+| `4e6df23f` | `pwm` | Pulse width sweep | `pulse+depth` | osc | 0 | 0.4 | 0.13 | continuous | How far the pulse width sweeps. Range 0 to 0.4. |
+| `9751ed86` | `pwm_hz` | Pulse width rate | `pulse+rate` | osc | 0.05 | 8 | 0.37 | continuous | How fast the pulse width sweeps. Range 0.05 to 8 Hz. |
+| `dc4e3915` | `sub` | Sub | `sub` | osc | 0 | 1 | 0.5 | continuous | The level of the sub-oscillator an octave down. Range 0 to 1. |
+| `cca841a3` | `sub_base` | Sub at rest | `sub+amount` | osc | 0 | 1 | 0.2 | continuous | How much of the sub sounds with the timbre at rest. Range 0 to 1. |
+| `ba8115dd` | `sub_back` | Sub, timbre down | `sub+back` | osc | 0 | 1 | 0.25 | continuous | How much timbre down adds sub. Range 0 to 1. |
+| `9001726b` | `sub_fwd` | Sub, timbre up | `sub+fwd` | osc | 0 | 1 | 0.6 | continuous | How much timbre up takes from the sub. Range 0 to 1. |
+| `383a392d` | `b_sync` | B synced | `sync` | osc | 0 | 1 | 1 | toggle | Whether the second oscillator is hard-synced to the first (on) or runs free and detuned (off). Range off or on. |
+| `4837952c` | `b_level` | B level | `sync+level` | osc | 0 | 1 | 0 | continuous | The level of the second oscillator. Range 0 to 1. |
+| `c1c58dfb` | `b_fwd` | B, timbre up | `sync+fwd` | osc | 0 | 1 | 0.5 | continuous | How much timbre up adds of the second oscillator. Range 0 to 1. |
+| `ff6d6c5f` | `b_detune` | B detune | `sync+pitch` | osc | -0.5 | 0.5 | 0 | continuous | How far down the second oscillator is detuned when it runs free. Range -0.5 to 0.5 semitones. |
+| `097acf9a` | `sync` | Sync ratio | `sync+rate` | osc | 0 | 24 | 5 | continuous | How far above the note the synced oscillator runs, with timbre up. Range 0 to 24 semitones. |
+| `5e2c9e80` | `sync_fwd` | Sync, timbre up | `sync+fwd` | osc | 0 | 24 | 12 | continuous | How much further timbre up sweeps the sync. Range 0 to 24 semitones. |
+| `def28d62` | `sync_env` | Sync by pressure | `sync+press` | osc | 0 | 24 | 9 | continuous | How far pressure sweeps the sync. Range 0 to 24 semitones. |
+| `2ee0e898` | `tilt_home` | Timbre home | `timbre` | osc | -1 | 1 | 0 | continuous | Where the timbre sits while the timbre control is centred: below 0 down, above 0 up. Range -1 to 1. |
+| `2e87eea4` | `drift` | Pitch drift | `drift` | mod | 0 | 0.3 | 0.03 | continuous | A slow wander of the main oscillator's pitch. Range 0 to 0.3 semitones. |
+| `55c89874` | `saw2_drift` | Second saw drift | `drift+pitch` | mod | 0 | 0.3 | 0.025 | continuous | A slow wander of the second saw's pitch. Range 0 to 0.3 semitones. |
+| `a5b424ef` | `cut_drift` | Cutoff drift | `drift+bright` | mod | 0 | 2 | 0.3 | continuous | A slow wander of the filter cutoff. Range 0 to 2 semitones. |
+| `f15d1b51` | `gyro_chorus` | Chorus by rotation | `spin+pitch` | mod | 0 | 1 | 0.22 | continuous | How much rotation (the motion input) detunes the second saw. Range 0 to 1. |
+| `e4d88d72` | `vibrato` | Vibrato by shake | `vibrato+shake` | mod | 0 | 1.5 | 0.35 | continuous | How much vibrato a shake (the motion input) adds, in semitones at a full shake. Range 0 to 1.5 semitones. |
+| `9e2c50e9` | `vib_hz` | Vibrato rate | `vibrato+rate` | mod | 1 | 9 | 5.3 | continuous | How fast the vibrato wavers. Range 1 to 9 Hz. |
+| `e7c742df` | `life` | Life | `life` | mod | 0 | 1 | 0 | continuous | Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1. |
 
 ## Cost and memory
 

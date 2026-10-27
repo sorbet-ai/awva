@@ -54,6 +54,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/ep.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 
@@ -747,32 +748,32 @@ static inline void process(Engine& e, real* __restrict__ output) {
 
 // the live parameters (awva::EngineParams below), in their order
 static constexpr awva::ParamDesc param_desc[NUM_PARAMS] = {
-    {"hard", "hammer", 0.3f, 3.0f, awva::ParamKind::continuous},
-    {"vsens", "hammer", 0.5f, 4.0f, awva::ParamKind::continuous},
-    {"dyn", "hammer", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"decay", "tine", 0.2f, 30.0f, awva::ParamKind::continuous},
-    {"dkey", "tine", 0.0f, 1.5f, awva::ParamKind::continuous},
-    {"prompt", "tine", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"bell", "tine", 0.0f, 2.0f, awva::ParamKind::continuous},
-    {"bratio", "tine", 2.0f, 16.0f, awva::ParamKind::continuous},
-    {"bdecay", "tine", 0.05f, 5.0f, awva::ParamKind::continuous},
-    {"tick", "tine", 0.0f, 1.5f, awva::ParamKind::continuous},
-    {"tratio", "tine", 6.0f, 30.0f, awva::ParamKind::continuous},
-    {"beat", "tonebar", 0.0f, 0.5f, awva::ParamKind::continuous},
-    {"bcents", "tonebar", 0.0f, 25.0f, awva::ParamKind::continuous},
-    {"align", "pickup", 0.3f, 1.6f, awva::ParamKind::continuous},
-    {"tilt", "pickup", 0.0f, 0.6f, awva::ParamKind::continuous},
-    {"drive", "pickup", 0.2f, 4.0f, awva::ParamKind::continuous},
-    {"dig", "pickup", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"wurli", "pickup", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"damper", "damper", 0.0f, 3.0f, awva::ParamKind::continuous},
-    {"gain", "amp", 0.0f, 8.0f, awva::ParamKind::continuous},
-    {"grit", "amp", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"tone", "amp", 800.0f, 16000.0f, awva::ParamKind::continuous},
-    {"bodyhz", "amp", 60.0f, 4000.0f, awva::ParamKind::continuous},
-    {"body", "amp", -0.9f, 2.0f, awva::ParamKind::continuous},
-    {"wobble", "mod", 0.0f, 40.0f, awva::ParamKind::continuous},
-    {"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous},
+    {"hard", "hammer", 0.3f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, hard)},
+    {"vsens", "hammer", 0.5f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, vsens)},
+    {"dyn", "hammer", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, dyn)},
+    {"decay", "tine", 0.2f, 30.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, decay)},
+    {"dkey", "tine", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(ep, dkey)},
+    {"prompt", "tine", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, prompt)},
+    {"bell", "tine", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, bell)},
+    {"bratio", "tine", 2.0f, 16.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, bratio)},
+    {"bdecay", "tine", 0.05f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, bdecay)},
+    {"tick", "tine", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(ep, tick)},
+    {"tratio", "tine", 6.0f, 30.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, tratio)},
+    {"beat", "tonebar", 0.0f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(ep, beat)},
+    {"bcents", "tonebar", 0.0f, 25.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, bcents)},
+    {"align", "pickup", 0.3f, 1.6f, awva::ParamKind::continuous, AWVA_TEXT(ep, align)},
+    {"tilt", "pickup", 0.0f, 0.6f, awva::ParamKind::continuous, AWVA_TEXT(ep, tilt)},
+    {"drive", "pickup", 0.2f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, drive)},
+    {"dig", "pickup", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, dig)},
+    {"wurli", "pickup", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, wurli)},
+    {"damper", "damper", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, damper)},
+    {"gain", "amp", 0.0f, 8.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, gain)},
+    {"grit", "amp", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, grit)},
+    {"tone", "amp", 800.0f, 16000.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, tone)},
+    {"bodyhz", "amp", 60.0f, 4000.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, bodyhz)},
+    {"body", "amp", -0.9f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, body)},
+    {"wobble", "mod", 0.0f, 40.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, wobble)},
+    {"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(ep, life)},
 };
 static constexpr real Params::*const param_members[NUM_PARAMS] = {
     &Params::hard,

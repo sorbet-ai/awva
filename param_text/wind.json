@@ -1,0 +1,195 @@
+{
+  "engine": "wind",
+  "params": {
+    "level": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0.1 to 4."
+    },
+    "speak": {
+      "label": "Speaks at",
+      "icon": "breath+soft",
+      "hover": "The pressure where the tone starts to speak. Range 0.03 to 0.5."
+    },
+    "dyn": {
+      "label": "Dynamics",
+      "icon": "dynamics",
+      "hover": "How hard the breath drives the tone at a full press: higher is louder and rougher. Range 0.4 to 1.5."
+    },
+    "attack": {
+      "label": "Breath response",
+      "icon": "response",
+      "hover": "How quickly the breath follows the key: higher is slower and smoother. Range 0.5 to 60 ms."
+    },
+    "dyn_gain": {
+      "label": "Loudness by breath",
+      "icon": "dynamics+level",
+      "hover": "How much the loudness follows the breath on top of the tone itself: 0 only the tone changes, 1 the level too. Range 0 to 1."
+    },
+    "tongue": {
+      "label": "Strike",
+      "icon": "strike",
+      "hover": "How much a fast strike kicks the breath at the start of the note. Range 0 to 1."
+    },
+    "tongue_noise": {
+      "label": "Tongue noise",
+      "icon": "tongue",
+      "hover": "How much \"t\" a hard strike adds at the start of the note. Range 0 to 2."
+    },
+    "reed_open": {
+      "label": "Reed opening",
+      "icon": "reed+open",
+      "hover": "How open the reed rests: looser is louder and freer. Range 0.08 to 0.7."
+    },
+    "reed_freq": {
+      "label": "Reed resonance",
+      "icon": "reed+rate",
+      "hover": "Where the reed's own resonance sits. Range 1500 to 8000 Hz."
+    },
+    "reed_damp": {
+      "label": "Reed damping",
+      "icon": "reed+q",
+      "hover": "How much the lips damp the reed. Range 0.2 to 1.5."
+    },
+    "loss": {
+      "label": "Bore loss",
+      "icon": "bore+decay",
+      "hover": "How much of the wave the tube reflects: lower is more damped. Range 0.9 to 0.995."
+    },
+    "lattice": {
+      "label": "Tone-hole cutoff",
+      "icon": "tone-holes",
+      "hover": "The frequency above which the open tone holes stop reflecting: the wind tone's brightness. Range 300 to 6000 Hz."
+    },
+    "lat_breath": {
+      "label": "Cutoff by breath",
+      "icon": "tone-holes+press",
+      "hover": "How many octaves brighter the tone-hole cutoff gets with pressure. Range 0 to 1.5 octaves."
+    },
+    "apex": {
+      "label": "Cone apex",
+      "icon": "bore+size",
+      "hover": "The cone's apex as a share of the period at the lowest note. Range 0.15 to 0.5."
+    },
+    "apex_lp": {
+      "label": "Apex tone",
+      "icon": "bore+bright",
+      "hover": "How dark the cone's apex reflection is, in multiples of the fundamental. Range 1.5 to 20."
+    },
+    "jet": {
+      "label": "Jet timing",
+      "icon": "jet+rate",
+      "hover": "The flute jet's travel time as a fraction of the period. Range 0.4 to 0.6."
+    },
+    "jet_off": {
+      "label": "Jet offset",
+      "icon": "jet+amount",
+      "hover": "How far the flute jet aims off the edge: adds even harmonics. Range 0 to 0.8."
+    },
+    "body": {
+      "label": "Body",
+      "icon": "body",
+      "hover": "How much of the wave inside the tube is mixed into the radiated sound. Range 0 to 3."
+    },
+    "rad_hp": {
+      "label": "Radiation low cut",
+      "icon": "radiate+low",
+      "hover": "The frequency below which the instrument radiates less. Range 20 to 2000 Hz."
+    },
+    "bright": {
+      "label": "Brightness",
+      "icon": "tone",
+      "hover": "The brightness of the tone: the frequency above which it rolls off. Range 500 to 16000 Hz."
+    },
+    "br_breath": {
+      "label": "Brightness by breath",
+      "icon": "tone+press",
+      "hover": "How much brighter the tone gets with pressure. Range 0 to 8."
+    },
+    "f1_hz": {
+      "label": "Formant 1 frequency",
+      "icon": "resonance+rate",
+      "hover": "Where the first formant sits. Range 150 to 5000 Hz."
+    },
+    "f1_db": {
+      "label": "Formant 1 level",
+      "icon": "resonance+level",
+      "hover": "How much the first formant is boosted or cut. Range -12 to 15 dB."
+    },
+    "f2_hz": {
+      "label": "Formant 2 frequency",
+      "icon": "resonance+rate",
+      "hover": "Where the second formant sits. Range 300 to 8000 Hz."
+    },
+    "f2_db": {
+      "label": "Formant 2 level",
+      "icon": "resonance+level",
+      "hover": "How much the second formant is boosted or cut. Range -12 to 15 dB."
+    },
+    "f_q": {
+      "label": "Formant sharpness",
+      "icon": "resonance+q",
+      "hover": "How narrow the formants are. Range 0.5 to 6."
+    },
+    "breath": {
+      "label": "Breath noise",
+      "icon": "air",
+      "hover": "The audible breath in the tone. Range 0 to 3."
+    },
+    "turb": {
+      "label": "Turbulence",
+      "icon": "air+noise",
+      "hover": "The turbulence in the air stream. Range 0 to 0.15."
+    },
+    "noise_hz": {
+      "label": "Breath noise centre",
+      "icon": "air+rate",
+      "hover": "Where the breath noise sits. Range 300 to 8000 Hz."
+    },
+    "tilt_bright": {
+      "label": "Brightness by timbre",
+      "icon": "tone+timbre",
+      "hover": "How much timbre brightens the embouchure. Range 0 to 1."
+    },
+    "tilt_breath": {
+      "label": "Breathiness by timbre",
+      "icon": "air+back",
+      "hover": "How much breathiness and subtone timbre below its centre adds. Range 0 to 1."
+    },
+    "growl": {
+      "label": "Growl",
+      "icon": "growl",
+      "hover": "The depth of the throaty growl when the note is pushed hard: 0 off. Range 0 to 0.8."
+    },
+    "growl_from": {
+      "label": "Growl from",
+      "icon": "growl+press",
+      "hover": "The pressure where the growl sets in. Range 0.5 to 1.5."
+    },
+    "vib": {
+      "label": "Vibrato",
+      "icon": "vibrato",
+      "hover": "The depth of the automatic vibrato. Range 0 to 0.6 semitones."
+    },
+    "vib_hz": {
+      "label": "Vibrato rate",
+      "icon": "vibrato+rate",
+      "hover": "How fast the vibrato wavers. Range 2 to 8 Hz."
+    },
+    "vib_breath": {
+      "label": "Breath vibrato",
+      "icon": "vibrato+level",
+      "hover": "How much the loudness wavers with the vibrato. Range 0 to 0.3."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    },
+    "instrument": {
+      "label": "Instrument",
+      "icon": "instrument",
+      "hover": "Which instrument: clarinet, bass clarinet, soprano, alto, tenor or baritone sax, oboe, bassoon or flute. Range steps 0 to 8."
+    }
+  }
+}

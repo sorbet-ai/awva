@@ -42,48 +42,48 @@ After `init()` the engine plays preset 0 (clarinet).
 
 ## Parameters
 
-Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/wind.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| `9b99e7dd` | `level` | breath | 0.1 | 4 | 2.05 | continuous |
-| `a2780a89` | `speak` | breath | 0.03 | 0.5 | 0.12 | continuous |
-| `ed3ba870` | `dyn` | breath | 0.4 | 1.5 | 0.75 | continuous |
-| `4595b8fd` | `attack` | breath | 0.5 | 60 | 3 | continuous |
-| `b8de5976` | `dyn_gain` | breath | 0 | 1 | 0.6 | continuous |
-| `25a7329d` | `tongue` | artic | 0 | 1 | 0.35 | continuous |
-| `9a6d88a0` | `tongue_noise` | artic | 0 | 2 | 0.5 | continuous |
-| `afd734f2` | `reed_open` | reed | 0.08 | 0.7 | 0.3 | continuous |
-| `f492e4fc` | `reed_freq` | reed | 1500 | 8000 | 4000 | continuous |
-| `f439540c` | `reed_damp` | reed | 0.2 | 1.5 | 0.5 | continuous |
-| `e7347b1a` | `loss` | bore | 0.9 | 0.995 | 0.985 | continuous |
-| `5aae6265` | `lattice` | bore | 300 | 6000 | 1100 | continuous |
-| `41a065fd` | `lat_breath` | bore | 0 | 1.5 | 0.4 | continuous |
-| `c6cd0dc1` | `apex` | bore | 0.15 | 0.5 | 0.5 | continuous |
-| `f6d15cd6` | `apex_lp` | bore | 1.5 | 20 | 6 | continuous |
-| `d7e330f4` | `jet` | bore | 0.4 | 0.6 | 0.5 | continuous |
-| `841975f6` | `jet_off` | bore | 0 | 0.8 | 0.3 | continuous |
-| `dbaa7975` | `body` | tone | 0 | 3 | 0.4 | continuous |
-| `11979395` | `rad_hp` | tone | 20 | 2000 | 250 | continuous |
-| `25094f85` | `bright` | tone | 500 | 16000 | 5000 | continuous |
-| `23672d90` | `br_breath` | tone | 0 | 8 | 1.5 | continuous |
-| `00978477` | `f1_hz` | tone | 150 | 5000 | 800 | continuous |
-| `007b0263` | `f1_db` | tone | -12 | 15 | 0 | continuous |
-| `96297594` | `f2_hz` | tone | 300 | 8000 | 2500 | continuous |
-| `86477178` | `f2_db` | tone | -12 | 15 | 0 | continuous |
-| `af7cc6f9` | `f_q` | tone | 0.5 | 6 | 1.5 | continuous |
-| `235d9fc7` | `breath` | noise | 0 | 3 | 0.3 | continuous |
-| `854bbf96` | `turb` | noise | 0 | 0.15 | 0.02 | continuous |
-| `8e25e9f4` | `noise_hz` | noise | 300 | 8000 | 2000 | continuous |
-| `492d7c4f` | `tilt_bright` | expr | 0 | 1 | 0.5 | continuous |
-| `e98585d5` | `tilt_breath` | expr | 0 | 1 | 0.5 | continuous |
-| `77bdc182` | `growl` | expr | 0 | 0.8 | 0 | continuous |
-| `ef88e6bb` | `growl_from` | expr | 0.5 | 1.5 | 0.7 | continuous |
-| `6a122da6` | `vib` | mod | 0 | 0.6 | 0 | continuous |
-| `9e2c50e9` | `vib_hz` | mod | 2 | 8 | 5 | continuous |
-| `2819a4b5` | `vib_breath` | mod | 0 | 0.3 | 0 | continuous |
-| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
-| `9a67fb30` | `instrument` | bore | 0 | 8 | 0 | steps |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| `9b99e7dd` | `level` | Level | `level` | breath | 0.1 | 4 | 2.05 | continuous | The overall loudness of the sound. Range 0.1 to 4. |
+| `a2780a89` | `speak` | Speaks at | `breath+soft` | breath | 0.03 | 0.5 | 0.12 | continuous | The pressure where the tone starts to speak. Range 0.03 to 0.5. |
+| `ed3ba870` | `dyn` | Dynamics | `dynamics` | breath | 0.4 | 1.5 | 0.75 | continuous | How hard the breath drives the tone at a full press: higher is louder and rougher. Range 0.4 to 1.5. |
+| `4595b8fd` | `attack` | Breath response | `response` | breath | 0.5 | 60 | 3 | continuous | How quickly the breath follows the key: higher is slower and smoother. Range 0.5 to 60 ms. |
+| `b8de5976` | `dyn_gain` | Loudness by breath | `dynamics+level` | breath | 0 | 1 | 0.6 | continuous | How much the loudness follows the breath on top of the tone itself: 0 only the tone changes, 1 the level too. Range 0 to 1. |
+| `25a7329d` | `tongue` | Strike | `strike` | artic | 0 | 1 | 0.35 | continuous | How much a fast strike kicks the breath at the start of the note. Range 0 to 1. |
+| `9a6d88a0` | `tongue_noise` | Tongue noise | `tongue` | artic | 0 | 2 | 0.5 | continuous | How much "t" a hard strike adds at the start of the note. Range 0 to 2. |
+| `afd734f2` | `reed_open` | Reed opening | `reed+open` | reed | 0.08 | 0.7 | 0.3 | continuous | How open the reed rests: looser is louder and freer. Range 0.08 to 0.7. |
+| `f492e4fc` | `reed_freq` | Reed resonance | `reed+rate` | reed | 1500 | 8000 | 4000 | continuous | Where the reed's own resonance sits. Range 1500 to 8000 Hz. |
+| `f439540c` | `reed_damp` | Reed damping | `reed+q` | reed | 0.2 | 1.5 | 0.5 | continuous | How much the lips damp the reed. Range 0.2 to 1.5. |
+| `e7347b1a` | `loss` | Bore loss | `bore+decay` | bore | 0.9 | 0.995 | 0.985 | continuous | How much of the wave the tube reflects: lower is more damped. Range 0.9 to 0.995. |
+| `5aae6265` | `lattice` | Tone-hole cutoff | `tone-holes` | bore | 300 | 6000 | 1100 | continuous | The frequency above which the open tone holes stop reflecting: the wind tone's brightness. Range 300 to 6000 Hz. |
+| `41a065fd` | `lat_breath` | Cutoff by breath | `tone-holes+press` | bore | 0 | 1.5 | 0.4 | continuous | How many octaves brighter the tone-hole cutoff gets with pressure. Range 0 to 1.5 octaves. |
+| `c6cd0dc1` | `apex` | Cone apex | `bore+size` | bore | 0.15 | 0.5 | 0.5 | continuous | The cone's apex as a share of the period at the lowest note. Range 0.15 to 0.5. |
+| `f6d15cd6` | `apex_lp` | Apex tone | `bore+bright` | bore | 1.5 | 20 | 6 | continuous | How dark the cone's apex reflection is, in multiples of the fundamental. Range 1.5 to 20. |
+| `d7e330f4` | `jet` | Jet timing | `jet+rate` | bore | 0.4 | 0.6 | 0.5 | continuous | The flute jet's travel time as a fraction of the period. Range 0.4 to 0.6. |
+| `841975f6` | `jet_off` | Jet offset | `jet+amount` | bore | 0 | 0.8 | 0.3 | continuous | How far the flute jet aims off the edge: adds even harmonics. Range 0 to 0.8. |
+| `dbaa7975` | `body` | Body | `body` | tone | 0 | 3 | 0.4 | continuous | How much of the wave inside the tube is mixed into the radiated sound. Range 0 to 3. |
+| `11979395` | `rad_hp` | Radiation low cut | `radiate+low` | tone | 20 | 2000 | 250 | continuous | The frequency below which the instrument radiates less. Range 20 to 2000 Hz. |
+| `25094f85` | `bright` | Brightness | `tone` | tone | 500 | 16000 | 5000 | continuous | The brightness of the tone: the frequency above which it rolls off. Range 500 to 16000 Hz. |
+| `23672d90` | `br_breath` | Brightness by breath | `tone+press` | tone | 0 | 8 | 1.5 | continuous | How much brighter the tone gets with pressure. Range 0 to 8. |
+| `00978477` | `f1_hz` | Formant 1 frequency | `resonance+rate` | tone | 150 | 5000 | 800 | continuous | Where the first formant sits. Range 150 to 5000 Hz. |
+| `007b0263` | `f1_db` | Formant 1 level | `resonance+level` | tone | -12 | 15 | 0 | continuous | How much the first formant is boosted or cut. Range -12 to 15 dB. |
+| `96297594` | `f2_hz` | Formant 2 frequency | `resonance+rate` | tone | 300 | 8000 | 2500 | continuous | Where the second formant sits. Range 300 to 8000 Hz. |
+| `86477178` | `f2_db` | Formant 2 level | `resonance+level` | tone | -12 | 15 | 0 | continuous | How much the second formant is boosted or cut. Range -12 to 15 dB. |
+| `af7cc6f9` | `f_q` | Formant sharpness | `resonance+q` | tone | 0.5 | 6 | 1.5 | continuous | How narrow the formants are. Range 0.5 to 6. |
+| `235d9fc7` | `breath` | Breath noise | `air` | noise | 0 | 3 | 0.3 | continuous | The audible breath in the tone. Range 0 to 3. |
+| `854bbf96` | `turb` | Turbulence | `air+noise` | noise | 0 | 0.15 | 0.02 | continuous | The turbulence in the air stream. Range 0 to 0.15. |
+| `8e25e9f4` | `noise_hz` | Breath noise centre | `air+rate` | noise | 300 | 8000 | 2000 | continuous | Where the breath noise sits. Range 300 to 8000 Hz. |
+| `492d7c4f` | `tilt_bright` | Brightness by timbre | `tone+timbre` | expr | 0 | 1 | 0.5 | continuous | How much timbre brightens the embouchure. Range 0 to 1. |
+| `e98585d5` | `tilt_breath` | Breathiness by timbre | `air+back` | expr | 0 | 1 | 0.5 | continuous | How much breathiness and subtone timbre below its centre adds. Range 0 to 1. |
+| `77bdc182` | `growl` | Growl | `growl` | expr | 0 | 0.8 | 0 | continuous | The depth of the throaty growl when the note is pushed hard: 0 off. Range 0 to 0.8. |
+| `ef88e6bb` | `growl_from` | Growl from | `growl+press` | expr | 0.5 | 1.5 | 0.7 | continuous | The pressure where the growl sets in. Range 0.5 to 1.5. |
+| `6a122da6` | `vib` | Vibrato | `vibrato` | mod | 0 | 0.6 | 0 | continuous | The depth of the automatic vibrato. Range 0 to 0.6 semitones. |
+| `9e2c50e9` | `vib_hz` | Vibrato rate | `vibrato+rate` | mod | 2 | 8 | 5 | continuous | How fast the vibrato wavers. Range 2 to 8 Hz. |
+| `2819a4b5` | `vib_breath` | Breath vibrato | `vibrato+level` | mod | 0 | 0.3 | 0 | continuous | How much the loudness wavers with the vibrato. Range 0 to 0.3. |
+| `e7c742df` | `life` | Life | `life` | mod | 0 | 1 | 0 | continuous | Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1. |
+| `9a67fb30` | `instrument` | Instrument | `instrument` | bore | 0 | 8 | 0 | steps | Which instrument: clarinet, bass clarinet, soprano, alto, tenor or baritone sax, oboe, bassoon or flute. Range steps 0 to 8. |
 
 ## Cost and memory
 

@@ -77,6 +77,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/brass.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 #ifdef BRASS_TEST_HOOK
@@ -1070,61 +1071,61 @@ struct ParamEntry {
 
 static constexpr ParamEntry param_table[] = {
     // level
-    {{"gain", "level", 0.1f, 6.0f, awva::ParamKind::continuous}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
-    {{"pres_sq", "level", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pc_b},
-    {{"pres_hz", "level", 2.0f, 200.0f, awva::ParamKind::continuous}, &Params::lv_hz},   // breath response speed
-    {{"release", "level", 0.005f, 1.0f, awva::ParamKind::continuous}, &Params::rel},     // lip stop time constant (s)
-    {{"rel_pedal", "level", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::rel_ped}, // + rel_pedal * pedal^2
+    {{"gain", "level", 0.1f, 6.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, gain)}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, pres_lin)}, &Params::pc_a}, // level = pres*(pres_lin + pres_sq*pres)
+    {{"pres_sq", "level", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, pres_sq)}, &Params::pc_b},
+    {{"pres_hz", "level", 2.0f, 200.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, pres_hz)}, &Params::lv_hz},     // breath response speed
+    {{"release", "level", 0.005f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, release)}, &Params::rel},       // lip stop time constant (s)
+    {{"rel_pedal", "level", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, rel_pedal)}, &Params::rel_ped}, // + rel_pedal * pedal^2
     // lips
-    {{"lip_soft", "lips", -2.0f, 0.8f, awva::ParamKind::continuous}, &Params::lip_soft},  // lip closure when soft (-2 = pure)
-    {{"lip_loud", "lips", -2.0f, 0.85f, awva::ParamKind::continuous}, &Params::lip_loud}, // lip closure when loud (0.85 = buzzy)
-    {{"lip_tilt", "lips", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::lip_tilt},  // timbre above 0 brightens the lips
-    {{"jitter", "lips", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::jitter},      // cents
-    {{"breath", "lips", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::breath},       // breath turbulence
+    {{"lip_soft", "lips", -2.0f, 0.8f, awva::ParamKind::continuous, AWVA_TEXT(brass, lip_soft)}, &Params::lip_soft},  // lip closure when soft (-2 = pure)
+    {{"lip_loud", "lips", -2.0f, 0.85f, awva::ParamKind::continuous, AWVA_TEXT(brass, lip_loud)}, &Params::lip_loud}, // lip closure when loud (0.85 = buzzy)
+    {{"lip_tilt", "lips", -0.5f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, lip_tilt)}, &Params::lip_tilt},  // timbre above 0 brightens the lips
+    {{"jitter", "lips", 0.0f, 20.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, jitter)}, &Params::jitter},        // cents
+    {{"breath", "lips", 0.0f, 0.8f, awva::ParamKind::continuous, AWVA_TEXT(brass, breath)}, &Params::breath},         // breath turbulence
     // bore
-    {{"brassiness", "bore", 0.0f, 60.0f, awva::ParamKind::continuous}, &Params::brass},    // wave steepening (samples at ff)
-    {{"bore_decay", "bore", 0.005f, 0.2f, awva::ParamKind::continuous}, &Params::bore_t},  // resonance decay (s): bloom, tail
-    {{"bell_hz", "bore", 150.0f, 4000.0f, awva::ParamKind::continuous}, &Params::bell_hz}, // bell reflection cutoff
+    {{"brassiness", "bore", 0.0f, 60.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, brassiness)}, &Params::brass},   // wave steepening (samples at ff)
+    {{"bore_decay", "bore", 0.005f, 0.2f, awva::ParamKind::continuous, AWVA_TEXT(brass, bore_decay)}, &Params::bore_t}, // resonance decay (s): bloom, tail
+    {{"bell_hz", "bore", 150.0f, 4000.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, bell_hz)}, &Params::bell_hz},   // bell reflection cutoff
     // body
-    {{"rad_hz", "body", 20.0f, 2000.0f, awva::ParamKind::continuous}, &Params::rad_hz},  // radiation high-pass
-    {{"cup_hz", "body", 150.0f, 3000.0f, awva::ParamKind::continuous}, &Params::cup_hz}, // mouthpiece formant
-    {{"cup_q", "body", 0.5f, 5.0f, awva::ParamKind::continuous}, &Params::cup_q},
-    {{"cup_gain", "body", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::cup_g},
-    {{"tone_hz", "body", 500.0f, 12000.0f, awva::ParamKind::continuous}, &Params::tone_hz}, // bell low-pass at ff
-    {{"tone_q", "body", 0.5f, 2.0f, awva::ParamKind::continuous}, &Params::tone_q},
-    {{"tone_dyn", "body", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::tone_dyn},    // octaves darker when soft
-    {{"tilt_tone", "body", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::tilt_tone}, // timbre: octaves (below 0 = darker/closed)
+    {{"rad_hz", "body", 20.0f, 2000.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, rad_hz)}, &Params::rad_hz},  // radiation high-pass
+    {{"cup_hz", "body", 150.0f, 3000.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, cup_hz)}, &Params::cup_hz}, // mouthpiece formant
+    {{"cup_q", "body", 0.5f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, cup_q)}, &Params::cup_q},
+    {{"cup_gain", "body", 0.0f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, cup_gain)}, &Params::cup_g},
+    {{"tone_hz", "body", 500.0f, 12000.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, tone_hz)}, &Params::tone_hz}, // bell low-pass at ff
+    {{"tone_q", "body", 0.5f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, tone_q)}, &Params::tone_q},
+    {{"tone_dyn", "body", 0.0f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, tone_dyn)}, &Params::tone_dyn},     // octaves darker when soft
+    {{"tilt_tone", "body", -2.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, tilt_tone)}, &Params::tilt_tone}, // timbre: octaves (below 0 = darker/closed)
     // mute
-    {{"mute", "mute", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::mute}, // depth
-    {{"mute_hz", "mute", 300.0f, 5000.0f, awva::ParamKind::continuous}, &Params::mute_hz},
-    {{"mute_q", "mute", 0.5f, 10.0f, awva::ParamKind::continuous}, &Params::mute_q},
-    {{"mute_hp", "mute", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::mute_hp}, // straight-mute character
-    {{"mute_bp", "mute", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::mute_bp}, // harmon character
-    {{"mute_lp", "mute", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::mute_lp},
-    {{"wah", "mute", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::wah}, // timbre: mute resonance octaves
+    {{"mute", "mute", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, mute)}, &Params::mute}, // depth
+    {{"mute_hz", "mute", 300.0f, 5000.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, mute_hz)}, &Params::mute_hz},
+    {{"mute_q", "mute", 0.5f, 10.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, mute_q)}, &Params::mute_q},
+    {{"mute_hp", "mute", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, mute_hp)}, &Params::mute_hp}, // straight-mute character
+    {{"mute_bp", "mute", 0.0f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, mute_bp)}, &Params::mute_bp}, // harmon character
+    {{"mute_lp", "mute", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, mute_lp)}, &Params::mute_lp},
+    {{"wah", "mute", -2.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, wah)}, &Params::wah}, // timbre: mute resonance octaves
     // attack
-    {{"tongue", "attack", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::tongue},     // strike sensitivity
-    {{"acc_level", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::acc_amp}, // accent overshoot
-    {{"acc_decay", "attack", 0.01f, 0.3f, awva::ParamKind::continuous}, &Params::acc_t},
-    {{"acc_bright", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::acc_bright},
-    {{"scoop", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::scoop},     // semitones from below
-    {{"blat", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::blat},       // attack buzz (semitones)
-    {{"t_noise", "attack", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::t_noise}, // tongue "t" noise
-    {{"slur", "attack", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::slur},       // articulation on legato changes
+    {{"tongue", "attack", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, tongue)}, &Params::tongue},        // strike sensitivity
+    {{"acc_level", "attack", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, acc_level)}, &Params::acc_amp}, // accent overshoot
+    {{"acc_decay", "attack", 0.01f, 0.3f, awva::ParamKind::continuous, AWVA_TEXT(brass, acc_decay)}, &Params::acc_t},
+    {{"acc_bright", "attack", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, acc_bright)}, &Params::acc_bright},
+    {{"scoop", "attack", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, scoop)}, &Params::scoop},       // semitones from below
+    {{"blat", "attack", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, blat)}, &Params::blat},          // attack buzz (semitones)
+    {{"t_noise", "attack", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, t_noise)}, &Params::t_noise}, // tongue "t" noise
+    {{"slur", "attack", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, slur)}, &Params::slur},          // articulation on legato changes
     // modulation
-    {{"vibrato", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::vib}, // delayed lip vibrato (semitones)
-    {{"vib_hz", "mod", 2.0f, 9.0f, awva::ParamKind::continuous}, &Params::vib_hz},
-    {{"flutter", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::flutter}, // shake -> flutter tongue
-    {{"flut_hz", "mod", 8.0f, 40.0f, awva::ParamKind::continuous}, &Params::flut_hz},
-    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life}, // micro-randomness
+    {{"vibrato", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, vibrato)}, &Params::vib}, // delayed lip vibrato (semitones)
+    {{"vib_hz", "mod", 2.0f, 9.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, vib_hz)}, &Params::vib_hz},
+    {{"flutter", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, flutter)}, &Params::flutter}, // shake -> flutter tongue
+    {{"flut_hz", "mod", 8.0f, 40.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, flut_hz)}, &Params::flut_hz},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, life)}, &Params::life}, // micro-randomness
     // growl
-    {{"growl", "growl", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::growl},           // depth (0 = off)
-    {{"growl_from", "growl", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::growl_from}, // pressure where it sets in
-    {{"growl_hz", "growl", 10.0f, 80.0f, awva::ParamKind::continuous}, &Params::growl_hz},   // throat flutter rate
+    {{"growl", "growl", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, growl)}, &Params::growl},                // depth (0 = off)
+    {{"growl_from", "growl", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(brass, growl_from)}, &Params::growl_from}, // pressure where it sets in
+    {{"growl_hz", "growl", 10.0f, 80.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, growl_hz)}, &Params::growl_hz},     // throat flutter rate
     // section
-    {{"pair", "section", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pair},      // second player level
-    {{"detune", "section", 0.0f, 30.0f, awva::ParamKind::continuous}, &Params::detune}, // cents
+    {{"pair", "section", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, pair)}, &Params::pair},        // second player level
+    {{"detune", "section", 0.0f, 30.0f, awva::ParamKind::continuous, AWVA_TEXT(brass, detune)}, &Params::detune}, // cents
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

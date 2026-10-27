@@ -1,0 +1,230 @@
+{
+  "engine": "clarinet",
+  "params": {
+    "gain": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0.1 to 100."
+    },
+    "pres_lin": {
+      "label": "Dynamics (even)",
+      "icon": "dynamics+soft",
+      "hover": "The even part of how pressure becomes loudness: more here and a light touch already speaks. Range 0 to 1."
+    },
+    "pres_sq": {
+      "label": "Dynamics (curved)",
+      "icon": "dynamics+loud",
+      "hover": "The curved part of how pressure becomes loudness: more here and the loud end opens up faster than the soft end. Range 0 to 1.5."
+    },
+    "pres_hz": {
+      "label": "Response",
+      "icon": "response",
+      "hover": "How quickly the sound follows a change of pressure: low is a slow swell, high is immediate. Range 2 to 200 Hz."
+    },
+    "release": {
+      "label": "Release",
+      "icon": "release",
+      "hover": "How long the sound takes to die away after the key is released. Range 0.005 to 1 s."
+    },
+    "rel_pedal": {
+      "label": "Release with pedal",
+      "icon": "release+pedal",
+      "hover": "How much longer the release gets with the sustain pedal down. Range 0 to 3 s."
+    },
+    "p_soft": {
+      "label": "Breath, soft",
+      "icon": "breath+soft",
+      "hover": "The blowing pressure at the lightest touch, relative to where the tone just speaks: above 1 it always speaks, below 1 a light touch is only air. Range 0.8 to 2."
+    },
+    "g_loud": {
+      "label": "Breath, loud",
+      "icon": "breath+loud",
+      "hover": "The blowing pressure at a full press, relative to the reed's closing pressure: higher is louder and more driven. Range 0.3 to 1.4."
+    },
+    "g_reg": {
+      "label": "Breath by register",
+      "icon": "breath+register",
+      "hover": "How the full-press blowing pressure changes per octave up: above 0 the high notes get more air. Range -0.5 to 0.5."
+    },
+    "p_curve": {
+      "label": "Breath curve",
+      "icon": "dynamics",
+      "hover": "The shape of the curve from key pressure to blowing pressure: below 1 soft playing is easier, above 1 the loud end comes later. Range 0.3 to 3."
+    },
+    "zeta": {
+      "label": "Reed opening",
+      "icon": "reed+open",
+      "hover": "How open the reed is: higher is louder and freer, lower is tighter. Range 0.05 to 1.2."
+    },
+    "zeta_reg": {
+      "label": "Opening by register",
+      "icon": "reed+register",
+      "hover": "How the reed opening changes per octave up. Range -1 to 1 octaves."
+    },
+    "reed_hz": {
+      "label": "Reed resonance",
+      "icon": "reed+rate",
+      "hover": "Where the reed's own resonance sits. Range 500 to 6000 Hz."
+    },
+    "reed_q": {
+      "label": "Reed damping",
+      "icon": "reed+q",
+      "hover": "How much the lips damp the reed: low is damped and smooth, high is free and edgy. Range 0.05 to 1.2."
+    },
+    "lay": {
+      "label": "Lay",
+      "icon": "reed+q",
+      "hover": "How stiff the reed is against the mouthpiece when shut. Range 0 to 12."
+    },
+    "emb": {
+      "label": "Embouchure by timbre",
+      "icon": "embouchure+timbre",
+      "hover": "How much timbre firms the embouchure: up tightens the reed. Range -1.5 to 1.5 octaves."
+    },
+    "emb_bend": {
+      "label": "Pitch by timbre",
+      "icon": "embouchure+pitch",
+      "hover": "How far the embouchure pulls the pitch as timbre moves. Range -100 to 100 cents."
+    },
+    "bore_r": {
+      "label": "Bore radius",
+      "icon": "bore+size",
+      "hover": "How wide the tube is: the wall losses. Range 3 to 20 mm."
+    },
+    "wall": {
+      "label": "Wall losses",
+      "icon": "bore+amount",
+      "hover": "How much the tube's walls soak up: higher is darker and softer. Range 0 to 5."
+    },
+    "lat_hz": {
+      "label": "Tone-hole cutoff",
+      "icon": "tone-holes",
+      "hover": "The frequency above which the open tone holes stop reflecting: the wind tone's brightness. Range 300 to 5000 Hz."
+    },
+    "lat_q": {
+      "label": "Cutoff sharpness",
+      "icon": "tone-holes+q",
+      "hover": "How sharp the tone-hole cutoff is. Range 0.3 to 0.7."
+    },
+    "reg_pos": {
+      "label": "Register hole position",
+      "icon": "tone-holes+register",
+      "hover": "How far the register hole sits from the reed. Range 0.03 to 0.42 m."
+    },
+    "reg_tau": {
+      "label": "Register hole inertance",
+      "icon": "tone-holes+register",
+      "hover": "How sluggish the register hole is: its effect on the upper register's tone. Range 0.1 to 10 ms."
+    },
+    "reg_r": {
+      "label": "Register hole resistance",
+      "icon": "tone-holes+register",
+      "hover": "How much the register hole resists the air. Range 0 to 2."
+    },
+    "alt_rel": {
+      "label": "Altissimo from",
+      "icon": "tone-holes+high",
+      "hover": "How many semitones above the lowest note the altissimo register starts. Range 19 to 40 semitones."
+    },
+    "tone_hz": {
+      "label": "Tone",
+      "icon": "tone",
+      "hover": "The brightness of the radiated tone: the frequency above which it rolls off. Range 1000 to 20000 Hz."
+    },
+    "tone_q": {
+      "label": "Tone sharpness",
+      "icon": "tone+q",
+      "hover": "How sharp the tone roll-off is. Range 0.5 to 2."
+    },
+    "breath": {
+      "label": "Breath noise",
+      "icon": "air",
+      "hover": "The audible breath in the tone. Range 0 to 1."
+    },
+    "breath_mod": {
+      "label": "Breath pulsing",
+      "icon": "air+rate",
+      "hover": "Whether the breath noise follows the pulses of the tone (1) or the steady flow (0). Range 0 to 1."
+    },
+    "breath_hp": {
+      "label": "Breath colour",
+      "icon": "air+bright",
+      "hover": "The frequency below which the breath noise is cut: 0 none. Range 0 to 4000 Hz."
+    },
+    "wander": {
+      "label": "Breath wander",
+      "icon": "drift",
+      "hover": "How unsteady the breath is: the slow and fast fluctuation of a sustained tone. Range 0 to 0.2."
+    },
+    "t_noise": {
+      "label": "Tongue \"t\"",
+      "icon": "tongue",
+      "hover": "The short noise burst of a tongued start. Range 0 to 1."
+    },
+    "t_len": {
+      "label": "Tongue \"t\" length",
+      "icon": "tongue+time",
+      "hover": "How long the \"t\" burst lasts. Range 0.001 to 0.05 s."
+    },
+    "t_gate": {
+      "label": "Tongue \"t\" gate",
+      "icon": "tongue+gate",
+      "hover": "How much the reed speaking silences the \"t\": 0 not at all, 1 the \"t\" sounds only before the tone. Range 0 to 1."
+    },
+    "breath_pre": {
+      "label": "Air before the tone",
+      "icon": "air+early",
+      "hover": "The hiss before the reed speaks, relative to the breath noise: an air attack. Range 0 to 4."
+    },
+    "tongue": {
+      "label": "Strike",
+      "icon": "strike",
+      "hover": "How much a hard strike sharpens the start: the tongue's hold and release, the accent and the \"t\". Range 0 to 2."
+    },
+    "tongue_noise": {
+      "label": "Tongue noise",
+      "icon": "tongue",
+      "hover": "How much \"t\" a hard strike adds at the start of the note. Range 0 to 2."
+    },
+    "acc_level": {
+      "label": "Accent",
+      "icon": "accent",
+      "hover": "The extra push at the start of a struck note: 0 none, higher is a sharper attack. Range 0 to 1."
+    },
+    "acc_decay": {
+      "label": "Accent length",
+      "icon": "accent+time",
+      "hover": "How long the accent lasts before the note settles. Range 0.01 to 0.3 s."
+    },
+    "tongue_t": {
+      "label": "Tongue release",
+      "icon": "strike+speed",
+      "hover": "How long the tongue takes to let the note go on a soft start; a hard strike is many times faster. Range 0.001 to 0.05 s."
+    },
+    "tongue_f": {
+      "label": "Tongue on the reed",
+      "icon": "strike+open",
+      "hover": "How hard the tongue pushes the reed shut on a tongued start. Range 0 to 4."
+    },
+    "slur": {
+      "label": "Slur",
+      "icon": "slur",
+      "hover": "How much articulation a legato note change gets: 0 seamless, 1 each new note is re-tongued. Range 0 to 1."
+    },
+    "tune": {
+      "label": "Tune",
+      "icon": "tuning",
+      "hover": "A fine tuning offset. Range -100 to 100 cents."
+    },
+    "pitch_t": {
+      "label": "Pitch settling",
+      "icon": "settle",
+      "hover": "How fast the player's ear pulls the pitch to its centre after a start or a change. Range 0.003 to 0.3 s."
+    },
+    "instrument": {
+      "label": "Instrument",
+      "icon": "instrument",
+      "hover": "Which instrument the engine plays; its lowest note sets where the registers lie. Range steps 0 to 1."
+    }
+  }
+}

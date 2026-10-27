@@ -65,6 +65,7 @@
 #include "note_glide.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/wind.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 
@@ -836,44 +837,44 @@ struct ParamEntry {
 };
 
 static constexpr ParamEntry param_table[] = {
-    {{"level", "breath", 0.1f, 4.0f, awva::ParamKind::continuous}, &Params::level},
-    {{"speak", "breath", 0.03f, 0.5f, awva::ParamKind::continuous}, &Params::speak},      // pressure where the tone speaks
-    {{"dyn", "breath", 0.4f, 1.5f, awva::ParamKind::continuous}, &Params::dyn},           // drive at full pressure (reeds <= 0.94)
-    {{"attack", "breath", 0.5f, 60.0f, awva::ParamKind::continuous}, &Params::attack},    // breath smoothing (ms)
-    {{"dyn_gain", "breath", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::dyn_gain}, // loudness also scaled by breath
-    {{"tongue", "artic", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tongue},      // pressure kick of a fast strike
-    {{"tongue_noise", "artic", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::tongue_noise},
-    {{"reed_open", "reed", 0.08f, 0.7f, awva::ParamKind::continuous}, &Params::reed_open}, // embouchure looseness
-    {{"reed_freq", "reed", 1500.0f, 8000.0f, awva::ParamKind::continuous}, &Params::reed_freq},
-    {{"reed_damp", "reed", 0.2f, 1.5f, awva::ParamKind::continuous}, &Params::reed_damp},
-    {{"loss", "bore", 0.9f, 0.995f, awva::ParamKind::continuous}, &Params::loss},
-    {{"lattice", "bore", 300.0f, 6000.0f, awva::ParamKind::continuous}, &Params::lattice},  // tone-hole cutoff (Hz)
-    {{"lat_breath", "bore", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::lat_breath}, // octaves brighter per pressure
-    {{"apex", "bore", 0.15f, 0.5f, awva::ParamKind::continuous}, &Params::apex},            // cone apex share (lowest note; the default 0.5, the DSP clamps to 0.5)
-    {{"apex_lp", "bore", 1.5f, 20.0f, awva::ParamKind::continuous}, &Params::apex_lp},
-    {{"jet", "bore", 0.4f, 0.6f, awva::ParamKind::continuous}, &Params::jet},         // flute jet delay (of period)
-    {{"jet_off", "bore", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::jet_off}, // flute jet offset
-    {{"body", "tone", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::body},       // (the flute: 3)
-    {{"rad_hp", "tone", 20.0f, 2000.0f, awva::ParamKind::continuous}, &Params::rad_hp},
-    {{"bright", "tone", 500.0f, 16000.0f, awva::ParamKind::continuous}, &Params::bright},
-    {{"br_breath", "tone", 0.0f, 8.0f, awva::ParamKind::continuous}, &Params::br_breath},
-    {{"f1_hz", "tone", 150.0f, 5000.0f, awva::ParamKind::continuous}, &Params::f1_hz},
-    {{"f1_db", "tone", -12.0f, 15.0f, awva::ParamKind::continuous}, &Params::f1_db},
-    {{"f2_hz", "tone", 300.0f, 8000.0f, awva::ParamKind::continuous}, &Params::f2_hz},
-    {{"f2_db", "tone", -12.0f, 15.0f, awva::ParamKind::continuous}, &Params::f2_db},
-    {{"f_q", "tone", 0.5f, 6.0f, awva::ParamKind::continuous}, &Params::f_q},
-    {{"breath", "noise", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::breath}, // audible breath
-    {{"turb", "noise", 0.0f, 0.15f, awva::ParamKind::continuous}, &Params::turb},    // turbulence on the drive
-    {{"noise_hz", "noise", 300.0f, 8000.0f, awva::ParamKind::continuous}, &Params::noise_hz},
-    {{"tilt_bright", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tilt_bright},
-    {{"tilt_breath", "expr", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::tilt_breath},
-    {{"growl", "expr", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::growl},
-    {{"growl_from", "expr", 0.5f, 1.5f, awva::ParamKind::continuous}, &Params::growl_from},
-    {{"vib", "mod", 0.0f, 0.6f, awva::ParamKind::continuous}, &Params::vib}, // automatic vibrato, semitones
-    {{"vib_hz", "mod", 2.0f, 8.0f, awva::ParamKind::continuous}, &Params::vib_hz},
-    {{"vib_breath", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::vib_breath},
-    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life},         // micro-randomness
-    {{"instrument", "bore", 0.0f, 8.0f, awva::ParamKind::steps}, &Params::instrument}, // instruments[]: kind, lowest note, tuning
+    {{"level", "breath", 0.1f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, level)}, &Params::level},
+    {{"speak", "breath", 0.03f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(wind, speak)}, &Params::speak},         // pressure where the tone speaks
+    {{"dyn", "breath", 0.4f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(wind, dyn)}, &Params::dyn},                // drive at full pressure (reeds <= 0.94)
+    {{"attack", "breath", 0.5f, 60.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, attack)}, &Params::attack},      // breath smoothing (ms)
+    {{"dyn_gain", "breath", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, dyn_gain)}, &Params::dyn_gain}, // loudness also scaled by breath
+    {{"tongue", "artic", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, tongue)}, &Params::tongue},        // pressure kick of a fast strike
+    {{"tongue_noise", "artic", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, tongue_noise)}, &Params::tongue_noise},
+    {{"reed_open", "reed", 0.08f, 0.7f, awva::ParamKind::continuous, AWVA_TEXT(wind, reed_open)}, &Params::reed_open}, // embouchure looseness
+    {{"reed_freq", "reed", 1500.0f, 8000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, reed_freq)}, &Params::reed_freq},
+    {{"reed_damp", "reed", 0.2f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(wind, reed_damp)}, &Params::reed_damp},
+    {{"loss", "bore", 0.9f, 0.995f, awva::ParamKind::continuous, AWVA_TEXT(wind, loss)}, &Params::loss},
+    {{"lattice", "bore", 300.0f, 6000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, lattice)}, &Params::lattice},     // tone-hole cutoff (Hz)
+    {{"lat_breath", "bore", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(wind, lat_breath)}, &Params::lat_breath}, // octaves brighter per pressure
+    {{"apex", "bore", 0.15f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(wind, apex)}, &Params::apex},                  // cone apex share (lowest note; the default 0.5, the DSP clamps to 0.5)
+    {{"apex_lp", "bore", 1.5f, 20.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, apex_lp)}, &Params::apex_lp},
+    {{"jet", "bore", 0.4f, 0.6f, awva::ParamKind::continuous, AWVA_TEXT(wind, jet)}, &Params::jet},             // flute jet delay (of period)
+    {{"jet_off", "bore", 0.0f, 0.8f, awva::ParamKind::continuous, AWVA_TEXT(wind, jet_off)}, &Params::jet_off}, // flute jet offset
+    {{"body", "tone", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, body)}, &Params::body},          // (the flute: 3)
+    {{"rad_hp", "tone", 20.0f, 2000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, rad_hp)}, &Params::rad_hp},
+    {{"bright", "tone", 500.0f, 16000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, bright)}, &Params::bright},
+    {{"br_breath", "tone", 0.0f, 8.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, br_breath)}, &Params::br_breath},
+    {{"f1_hz", "tone", 150.0f, 5000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, f1_hz)}, &Params::f1_hz},
+    {{"f1_db", "tone", -12.0f, 15.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, f1_db)}, &Params::f1_db},
+    {{"f2_hz", "tone", 300.0f, 8000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, f2_hz)}, &Params::f2_hz},
+    {{"f2_db", "tone", -12.0f, 15.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, f2_db)}, &Params::f2_db},
+    {{"f_q", "tone", 0.5f, 6.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, f_q)}, &Params::f_q},
+    {{"breath", "noise", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, breath)}, &Params::breath}, // audible breath
+    {{"turb", "noise", 0.0f, 0.15f, awva::ParamKind::continuous, AWVA_TEXT(wind, turb)}, &Params::turb},      // turbulence on the drive
+    {{"noise_hz", "noise", 300.0f, 8000.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, noise_hz)}, &Params::noise_hz},
+    {{"tilt_bright", "expr", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, tilt_bright)}, &Params::tilt_bright},
+    {{"tilt_breath", "expr", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, tilt_breath)}, &Params::tilt_breath},
+    {{"growl", "expr", 0.0f, 0.8f, awva::ParamKind::continuous, AWVA_TEXT(wind, growl)}, &Params::growl},
+    {{"growl_from", "expr", 0.5f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(wind, growl_from)}, &Params::growl_from},
+    {{"vib", "mod", 0.0f, 0.6f, awva::ParamKind::continuous, AWVA_TEXT(wind, vib)}, &Params::vib}, // automatic vibrato, semitones
+    {{"vib_hz", "mod", 2.0f, 8.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, vib_hz)}, &Params::vib_hz},
+    {{"vib_breath", "mod", 0.0f, 0.3f, awva::ParamKind::continuous, AWVA_TEXT(wind, vib_breath)}, &Params::vib_breath},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(wind, life)}, &Params::life},               // micro-randomness
+    {{"instrument", "bore", 0.0f, 8.0f, awva::ParamKind::steps, AWVA_TEXT(wind, instrument)}, &Params::instrument}, // instruments[]: kind, lowest note, tuning
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

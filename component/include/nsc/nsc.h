@@ -1,7 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Sorbet AI
  * SPDX-License-Identifier: Apache-2.0
  *
- * The engine component (ABI 5): one sound engine as a C ABI, for a plugin or any host that loads
+ * The engine component (ABI 6): one sound engine as a C ABI, for a plugin or any host that loads
  * it from a DLL / dylib / .so (and later an embedded host, from a module). UMP in, audio
  * out, parameters by stable id and name, factory presets, and what the host needs to know first:
  * a title, a colour, the heroes, the sample rates, its cost and its memory.
@@ -39,7 +39,10 @@
  *
  * Parameters: the engine's own, then "output" (the output level, 0 .. 2, default 1: at 1 the
  * engine's samples bit for bit). Each has a stable id (FNV-1a of its name) and a declared default
- * (its value after init()). After set_preset() every parameter may have changed.
+ * (its value after init()), and for people a label, a hover text (what it does, for a tooltip) and
+ * an icon: a concept of the engines repository's assets/icons, or concept+modifier (docs/icons.md);
+ * the three are NULL in a component built with AWVA_PARAM_TEXT 0 (an embedded host's: a host then
+ * shows the name). After set_preset() every parameter may have changed.
  *
  * process_voices() is the other way in, an embedded host's: it allocates the voices itself and
  * gives each its controls (an instrument with its own sensors), one block of NSC_BLOCK frames a
@@ -71,7 +74,7 @@
 extern "C" {
 #endif
 
-#define NSC_ABI 5
+#define NSC_ABI 6
 #define NSC_MAGIC 0x3143534eu /* "NSC1" */
 #define NSC_BLOCK 32          /* the engines' block: frames per process_voices() */
 #define NSC_MAX_HEROES 8
@@ -101,17 +104,17 @@ typedef struct nsc_globals {
 } nsc_globals;
 
 /* The layout of what a host and a component pass each other is the ABI: these sizes and offsets
- * are NSC_ABI 5's (nsc_voice and nsc_globals since #36 and #41; nsc_config; nsc_desc's colour,
+ * are NSC_ABI 6's (nsc_voice and nsc_globals since #36 and #41; nsc_config; nsc_desc's colour,
  * cost and region sizes in the slots of ABI 4's led, instr_per_block and state, fast and large
- * bytes, stack_bytes gone, max_notes at its end). A layout change fails to compile here until
- * NSC_ABI goes up with it and these are written again. */
+ * bytes, stack_bytes gone, max_notes at its end; nsc_param's label, hover and icon at its end, ABI 6).
+ * A layout change fails to compile here until NSC_ABI goes up with it and these are written again. */
 #ifdef __cplusplus
 #define NSC_LAYOUT_ASSERT(c, m) static_assert(c, m)
 #else
 #define NSC_LAYOUT_ASSERT(c, m) _Static_assert(c, m)
 #endif
 #define NSC_LAYOUT_MSG "nsc.h: a layout change of the ABI needs a new NSC_ABI (and these checks written for it)"
-NSC_LAYOUT_ASSERT(NSC_ABI == 5 && sizeof(nsc_voice) == 28 && offsetof(nsc_voice, pressure) == 4 && offsetof(nsc_voice, pressure_rate) == 8 &&
+NSC_LAYOUT_ASSERT(NSC_ABI == 6 && sizeof(nsc_voice) == 28 && offsetof(nsc_voice, pressure) == 4 && offsetof(nsc_voice, pressure_rate) == 8 &&
         offsetof(nsc_voice, timbre) == 12 && offsetof(nsc_voice, velocity) == 16 && offsetof(nsc_voice, release) == 20 &&
         offsetof(nsc_voice, gate) == 24,
     NSC_LAYOUT_MSG);
@@ -143,9 +146,17 @@ typedef struct nsc_param {
 	const char* name;  /* short id, e.g. "cutoff" */
 	const char* group; /* UI group */
 	float min, max;
-	int32_t kind; /* nsc_param_kind */
-	float def;    /* its default: the value after init() */
+	int32_t kind;      /* nsc_param_kind */
+	float def;         /* its default: the value after init() */
+	const char* label; /* for people, e.g. "Cutoff" (NULL: none, show the name) */
+	const char* hover; /* what it does, one or two sentences, for a tooltip (NULL: none) */
+	const char* icon;  /* "concept" or "concept+modifier", assets/icons (NULL: none) */
 } nsc_param;
+/* 40 bytes with 32-bit pointers (the embedded hosts'), 64 with 64-bit ones */
+NSC_LAYOUT_ASSERT(offsetof(nsc_param, name) == sizeof(const char*) && offsetof(nsc_param, def) == offsetof(nsc_param, name) + 2 * sizeof(const char*) + 12 &&
+        offsetof(nsc_param, label) == offsetof(nsc_param, def) + 4 && offsetof(nsc_param, hover) == offsetof(nsc_param, label) + sizeof(const char*) &&
+        offsetof(nsc_param, icon) == offsetof(nsc_param, hover) + sizeof(const char*) && sizeof(nsc_param) == offsetof(nsc_param, icon) + sizeof(const char*),
+    NSC_LAYOUT_MSG);
 
 typedef struct nsc_preset {
 	const char* name;

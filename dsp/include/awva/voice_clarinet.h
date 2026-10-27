@@ -68,6 +68,7 @@
 #include "note_glide.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/clarinet.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 #ifdef CLARINET_TEST_HOOK
@@ -1009,51 +1010,51 @@ struct ParamEntry {
 static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 
 static constexpr ParamEntry param_table[] = {
-    {{"gain", "level", 0.1f, 100.0f, C_}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, C_}, &Params::pc_a},
-    {{"pres_sq", "level", 0.0f, 1.5f, C_}, &Params::pc_b},
-    {{"pres_hz", "level", 2.0f, 200.0f, C_}, &Params::lv_hz},
-    {{"release", "level", 0.005f, 1.0f, C_}, &Params::rel},
-    {{"rel_pedal", "level", 0.0f, 3.0f, C_}, &Params::rel_ped},
-    {{"p_soft", "breath", 0.8f, 2.0f, C_}, &Params::p_soft}, // lightest touch re the threshold
-    {{"g_loud", "breath", 0.3f, 1.4f, C_}, &Params::g_loud}, // ff mouth pressure (gamma)
-    {{"g_reg", "breath", -0.5f, 0.5f, C_}, &Params::g_reg},
-    {{"p_curve", "breath", 0.3f, 3.0f, C_}, &Params::p_curve},
-    {{"zeta", "reed", 0.05f, 1.2f, C_}, &Params::zeta},
-    {{"zeta_reg", "reed", -1.0f, 1.0f, C_}, &Params::zeta_reg},
-    {{"reed_hz", "reed", 500.0f, 6000.0f, C_}, &Params::reed_hz},
-    {{"reed_q", "reed", 0.05f, 1.2f, C_}, &Params::reed_q},
-    {{"lay", "reed", 0.0f, 12.0f, C_}, &Params::lay},
-    {{"emb", "reed", -1.5f, 1.5f, C_}, &Params::emb},
-    {{"emb_bend", "reed", -100.0f, 100.0f, C_}, &Params::emb_bend},
-    {{"bore_r", "bore", 3.0f, 20.0f, C_}, &Params::bore_r},
-    {{"wall", "bore", 0.0f, 5.0f, C_}, &Params::wall},
-    {{"lat_hz", "bore", 300.0f, 5000.0f, C_}, &Params::lat_hz},
-    {{"lat_q", "bore", 0.3f, 0.7f, C_}, &Params::lat_q}, // (passive: |R| <= 1)
-    {{"reg_pos", "bore", 0.03f, 0.42f, C_}, &Params::reg_pos},
-    {{"reg_tau", "bore", 0.1f, 10.0f, C_}, &Params::reg_tau},
-    {{"reg_r", "bore", 0.0f, 2.0f, C_}, &Params::reg_r},
-    {{"alt_rel", "bore", 19.0f, 40.0f, C_}, &Params::alt_rel},
-    {{"tone_hz", "radiation", 1000.0f, 20000.0f, C_}, &Params::tone_hz},
-    {{"tone_q", "radiation", 0.5f, 2.0f, C_}, &Params::tone_q},
-    {{"breath", "air", 0.0f, 1.0f, C_}, &Params::breath},
-    {{"breath_mod", "air", 0.0f, 1.0f, C_}, &Params::breath_mod},
-    {{"breath_hp", "air", 0.0f, 4000.0f, C_}, &Params::breath_hp},
-    {{"wander", "air", 0.0f, 0.2f, C_}, &Params::wander},
-    {{"t_noise", "air", 0.0f, 1.0f, C_}, &Params::t_noise},
-    {{"t_len", "air", 0.001f, 0.05f, C_}, &Params::t_len},
-    {{"t_gate", "air", 0.0f, 1.0f, C_}, &Params::t_gate},
-    {{"breath_pre", "air", 0.0f, 4.0f, C_}, &Params::breath_pre},
-    {{"tongue", "attack", 0.0f, 2.0f, C_}, &Params::tongue},
-    {{"tongue_noise", "attack", 0.0f, 2.0f, C_}, &Params::tongue_noise},
-    {{"acc_level", "attack", 0.0f, 1.0f, C_}, &Params::acc_amp},
-    {{"acc_decay", "attack", 0.01f, 0.3f, C_}, &Params::acc_t},
-    {{"tongue_t", "attack", 0.001f, 0.05f, C_}, &Params::tongue_t},
-    {{"tongue_f", "attack", 0.0f, 4.0f, C_}, &Params::tongue_f},
-    {{"slur", "attack", 0.0f, 1.0f, C_}, &Params::slur},
-    {{"tune", "attack", -100.0f, 100.0f, C_}, &Params::tune},
-    {{"pitch_t", "attack", 0.003f, 0.3f, C_}, &Params::pitch_t},
-    {{"instrument", "bore", 0.0f, 1.0f, awva::ParamKind::steps}, &Params::instrument}, // instruments[]: the lowest note
+    {{"gain", "level", 0.1f, 100.0f, C_, AWVA_TEXT(clarinet, gain)}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, pres_lin)}, &Params::pc_a},
+    {{"pres_sq", "level", 0.0f, 1.5f, C_, AWVA_TEXT(clarinet, pres_sq)}, &Params::pc_b},
+    {{"pres_hz", "level", 2.0f, 200.0f, C_, AWVA_TEXT(clarinet, pres_hz)}, &Params::lv_hz},
+    {{"release", "level", 0.005f, 1.0f, C_, AWVA_TEXT(clarinet, release)}, &Params::rel},
+    {{"rel_pedal", "level", 0.0f, 3.0f, C_, AWVA_TEXT(clarinet, rel_pedal)}, &Params::rel_ped},
+    {{"p_soft", "breath", 0.8f, 2.0f, C_, AWVA_TEXT(clarinet, p_soft)}, &Params::p_soft}, // lightest touch re the threshold
+    {{"g_loud", "breath", 0.3f, 1.4f, C_, AWVA_TEXT(clarinet, g_loud)}, &Params::g_loud}, // ff mouth pressure (gamma)
+    {{"g_reg", "breath", -0.5f, 0.5f, C_, AWVA_TEXT(clarinet, g_reg)}, &Params::g_reg},
+    {{"p_curve", "breath", 0.3f, 3.0f, C_, AWVA_TEXT(clarinet, p_curve)}, &Params::p_curve},
+    {{"zeta", "reed", 0.05f, 1.2f, C_, AWVA_TEXT(clarinet, zeta)}, &Params::zeta},
+    {{"zeta_reg", "reed", -1.0f, 1.0f, C_, AWVA_TEXT(clarinet, zeta_reg)}, &Params::zeta_reg},
+    {{"reed_hz", "reed", 500.0f, 6000.0f, C_, AWVA_TEXT(clarinet, reed_hz)}, &Params::reed_hz},
+    {{"reed_q", "reed", 0.05f, 1.2f, C_, AWVA_TEXT(clarinet, reed_q)}, &Params::reed_q},
+    {{"lay", "reed", 0.0f, 12.0f, C_, AWVA_TEXT(clarinet, lay)}, &Params::lay},
+    {{"emb", "reed", -1.5f, 1.5f, C_, AWVA_TEXT(clarinet, emb)}, &Params::emb},
+    {{"emb_bend", "reed", -100.0f, 100.0f, C_, AWVA_TEXT(clarinet, emb_bend)}, &Params::emb_bend},
+    {{"bore_r", "bore", 3.0f, 20.0f, C_, AWVA_TEXT(clarinet, bore_r)}, &Params::bore_r},
+    {{"wall", "bore", 0.0f, 5.0f, C_, AWVA_TEXT(clarinet, wall)}, &Params::wall},
+    {{"lat_hz", "bore", 300.0f, 5000.0f, C_, AWVA_TEXT(clarinet, lat_hz)}, &Params::lat_hz},
+    {{"lat_q", "bore", 0.3f, 0.7f, C_, AWVA_TEXT(clarinet, lat_q)}, &Params::lat_q}, // (passive: |R| <= 1)
+    {{"reg_pos", "bore", 0.03f, 0.42f, C_, AWVA_TEXT(clarinet, reg_pos)}, &Params::reg_pos},
+    {{"reg_tau", "bore", 0.1f, 10.0f, C_, AWVA_TEXT(clarinet, reg_tau)}, &Params::reg_tau},
+    {{"reg_r", "bore", 0.0f, 2.0f, C_, AWVA_TEXT(clarinet, reg_r)}, &Params::reg_r},
+    {{"alt_rel", "bore", 19.0f, 40.0f, C_, AWVA_TEXT(clarinet, alt_rel)}, &Params::alt_rel},
+    {{"tone_hz", "radiation", 1000.0f, 20000.0f, C_, AWVA_TEXT(clarinet, tone_hz)}, &Params::tone_hz},
+    {{"tone_q", "radiation", 0.5f, 2.0f, C_, AWVA_TEXT(clarinet, tone_q)}, &Params::tone_q},
+    {{"breath", "air", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, breath)}, &Params::breath},
+    {{"breath_mod", "air", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, breath_mod)}, &Params::breath_mod},
+    {{"breath_hp", "air", 0.0f, 4000.0f, C_, AWVA_TEXT(clarinet, breath_hp)}, &Params::breath_hp},
+    {{"wander", "air", 0.0f, 0.2f, C_, AWVA_TEXT(clarinet, wander)}, &Params::wander},
+    {{"t_noise", "air", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, t_noise)}, &Params::t_noise},
+    {{"t_len", "air", 0.001f, 0.05f, C_, AWVA_TEXT(clarinet, t_len)}, &Params::t_len},
+    {{"t_gate", "air", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, t_gate)}, &Params::t_gate},
+    {{"breath_pre", "air", 0.0f, 4.0f, C_, AWVA_TEXT(clarinet, breath_pre)}, &Params::breath_pre},
+    {{"tongue", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(clarinet, tongue)}, &Params::tongue},
+    {{"tongue_noise", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(clarinet, tongue_noise)}, &Params::tongue_noise},
+    {{"acc_level", "attack", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, acc_level)}, &Params::acc_amp},
+    {{"acc_decay", "attack", 0.01f, 0.3f, C_, AWVA_TEXT(clarinet, acc_decay)}, &Params::acc_t},
+    {{"tongue_t", "attack", 0.001f, 0.05f, C_, AWVA_TEXT(clarinet, tongue_t)}, &Params::tongue_t},
+    {{"tongue_f", "attack", 0.0f, 4.0f, C_, AWVA_TEXT(clarinet, tongue_f)}, &Params::tongue_f},
+    {{"slur", "attack", 0.0f, 1.0f, C_, AWVA_TEXT(clarinet, slur)}, &Params::slur},
+    {{"tune", "attack", -100.0f, 100.0f, C_, AWVA_TEXT(clarinet, tune)}, &Params::tune},
+    {{"pitch_t", "attack", 0.003f, 0.3f, C_, AWVA_TEXT(clarinet, pitch_t)}, &Params::pitch_t},
+    {{"instrument", "bore", 0.0f, 1.0f, awva::ParamKind::steps, AWVA_TEXT(clarinet, instrument)}, &Params::instrument}, // instruments[]: the lowest note
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

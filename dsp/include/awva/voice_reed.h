@@ -57,6 +57,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/reed.inc" // the parameters' text (AWVA_TEXT)
 #include "svf.h"
 
 namespace reed {
@@ -636,8 +637,8 @@ static inline void process(Engine& e, real* __restrict__ output) {
 }
 
 // the live parameters: the growl's onset pressure, life
-inline constexpr awva::ParamDesc growl_from_desc = {"growl_from", "expr", 0.5f, 1.5f, awva::ParamKind::continuous};
-inline constexpr awva::ParamDesc life_desc = {"life", "expr", 0.0f, 1.0f, awva::ParamKind::continuous};
+inline constexpr awva::ParamDesc growl_from_desc = {"growl_from", "expr", 0.5f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(reed, growl_from)};
+inline constexpr awva::ParamDesc life_desc = {"life", "expr", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(reed, life)};
 
 } // namespace reed
 

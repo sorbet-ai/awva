@@ -37,9 +37,10 @@ jobs:
         run: ctest --test-dir build/sdk --output-on-failure -L example -V # (-V: the hashes in the log, to compare across OSes)
       - name: generated files as committed
         shell: bash
-        run: | # the factory presets' .inc files written again on this OS: the same bytes as in the repository
+        run: | # the factory presets' and the parameters' text .inc files (and docs/icons.md) written again on this OS: the same bytes as in the repository
           cmake -P tools/presets_inc.cmake
-          git diff --exit-code -- dsp/include/awva/presets
+          cmake -P tools/param_text.cmake
+          git diff --exit-code -- dsp/include/awva/presets dsp/include/awva/param_text docs/icons.md
   sanitizers:
     runs-on: ubuntu-22.04
     steps:

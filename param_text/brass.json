@@ -1,0 +1,240 @@
+{
+  "engine": "brass",
+  "params": {
+    "gain": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0.1 to 6."
+    },
+    "pres_lin": {
+      "label": "Dynamics (even)",
+      "icon": "dynamics+soft",
+      "hover": "The even part of how pressure becomes loudness: more here and a light touch already speaks. Range 0 to 1."
+    },
+    "pres_sq": {
+      "label": "Dynamics (curved)",
+      "icon": "dynamics+loud",
+      "hover": "The curved part of how pressure becomes loudness: more here and the loud end opens up faster than the soft end. Range 0 to 1.5."
+    },
+    "pres_hz": {
+      "label": "Response",
+      "icon": "response",
+      "hover": "How quickly the sound follows a change of pressure: low is a slow swell, high is immediate. Range 2 to 200 Hz."
+    },
+    "release": {
+      "label": "Release",
+      "icon": "release",
+      "hover": "How long the sound takes to die away after the key is released. Range 0.005 to 1 s."
+    },
+    "rel_pedal": {
+      "label": "Release with pedal",
+      "icon": "release+pedal",
+      "hover": "How much longer the release gets with the sustain pedal down. Range 0 to 3 s."
+    },
+    "lip_soft": {
+      "label": "Lips, soft",
+      "icon": "embouchure+soft",
+      "hover": "How closed the lips play when soft: -2 pure and round, towards 0.8 buzzy. Range -2 to 0.8."
+    },
+    "lip_loud": {
+      "label": "Lips, loud",
+      "icon": "embouchure+loud",
+      "hover": "How closed the lips play when loud: -2 pure and round, 0.85 buzzy. Range -2 to 0.85."
+    },
+    "lip_tilt": {
+      "label": "Lips by timbre",
+      "icon": "embouchure+timbre",
+      "hover": "How much timbre firms the lips: up brightens. Range -0.5 to 0.5."
+    },
+    "jitter": {
+      "label": "Jitter",
+      "icon": "jitter",
+      "hover": "A fine, fast roughness of the pitch, like a living lip. Range 0 to 20 cents."
+    },
+    "breath": {
+      "label": "Breath noise",
+      "icon": "air",
+      "hover": "The audible breath in the tone. Range 0 to 0.8."
+    },
+    "brassiness": {
+      "label": "Brassiness",
+      "icon": "brassiness",
+      "hover": "How much the tone blares and steepens as it gets loud. Range 0 to 60."
+    },
+    "bore_decay": {
+      "label": "Bore decay",
+      "icon": "bore+decay",
+      "hover": "How long the tube's resonance rings: the bloom and the tail. Range 0.005 to 0.2 s."
+    },
+    "bell_hz": {
+      "label": "Bell cutoff",
+      "icon": "flare",
+      "hover": "The frequency above which the bell stops reflecting: the resonances above it fade. Range 150 to 4000 Hz."
+    },
+    "rad_hz": {
+      "label": "Radiation low cut",
+      "icon": "radiate+low",
+      "hover": "The frequency below which the instrument radiates less. Range 20 to 2000 Hz."
+    },
+    "cup_hz": {
+      "label": "Cup formant",
+      "icon": "mouthpiece+rate",
+      "hover": "Where the mouthpiece cup's formant sits. Range 150 to 3000 Hz."
+    },
+    "cup_q": {
+      "label": "Cup sharpness",
+      "icon": "mouthpiece+q",
+      "hover": "How narrow the cup formant is. Range 0.5 to 5."
+    },
+    "cup_gain": {
+      "label": "Cup boost",
+      "icon": "mouthpiece+level",
+      "hover": "How much the cup formant is boosted. Range 0 to 4."
+    },
+    "tone_hz": {
+      "label": "Tone",
+      "icon": "tone",
+      "hover": "The brightness of the radiated tone: the frequency above which it rolls off. Range 500 to 12000 Hz."
+    },
+    "tone_q": {
+      "label": "Tone sharpness",
+      "icon": "tone+q",
+      "hover": "How sharp the tone roll-off is. Range 0.5 to 2."
+    },
+    "tone_dyn": {
+      "label": "Tone by dynamics",
+      "icon": "tone+soft",
+      "hover": "How many octaves darker the tone gets when soft. Range 0 to 4 octaves."
+    },
+    "tilt_tone": {
+      "label": "Tone by timbre",
+      "icon": "tone+timbre",
+      "hover": "How far timbre moves the tone: down is darker and more closed. Range -2 to 2 octaves."
+    },
+    "mute": {
+      "label": "Mute",
+      "icon": "mute",
+      "hover": "How deep the mute sits in the bell: 0 open. Range 0 to 1."
+    },
+    "mute_hz": {
+      "label": "Mute resonance",
+      "icon": "mute+rate",
+      "hover": "Where the mute's resonance sits. Range 300 to 5000 Hz."
+    },
+    "mute_q": {
+      "label": "Mute sharpness",
+      "icon": "mute+q",
+      "hover": "How sharp the mute's resonance is. Range 0.5 to 10."
+    },
+    "mute_hp": {
+      "label": "Straight mute",
+      "icon": "mute+high",
+      "hover": "The straight-mute character: how much of the highs pass. Range 0 to 3."
+    },
+    "mute_bp": {
+      "label": "Harmon mute",
+      "icon": "mute+q",
+      "hover": "The harmon-mute character: how much of the resonant middle passes. Range 0 to 4."
+    },
+    "mute_lp": {
+      "label": "Mute lows",
+      "icon": "mute+low",
+      "hover": "How much of the lows pass the mute. Range 0 to 2."
+    },
+    "wah": {
+      "label": "Wah",
+      "icon": "mute+timbre",
+      "hover": "How far timbre moves the mute's resonance: up opens it. Range -2 to 2 octaves."
+    },
+    "tongue": {
+      "label": "Strike",
+      "icon": "strike",
+      "hover": "How much a hard strike sharpens the start: the tongue's hold and release, the accent and the \"t\". Range 0 to 2."
+    },
+    "acc_level": {
+      "label": "Accent",
+      "icon": "accent",
+      "hover": "The extra push at the start of a struck note: 0 none, higher is a sharper attack. Range 0 to 1.5."
+    },
+    "acc_decay": {
+      "label": "Accent length",
+      "icon": "accent+time",
+      "hover": "How long the accent lasts before the note settles. Range 0.01 to 0.3 s."
+    },
+    "acc_bright": {
+      "label": "Accent brightness",
+      "icon": "accent+bright",
+      "hover": "How much brighter the start of a struck note is than the sustain. Range 0 to 1.5."
+    },
+    "scoop": {
+      "label": "Scoop",
+      "icon": "scoop",
+      "hover": "How far the pitch scoops up from below at a strike. Range 0 to 1.5 semitones."
+    },
+    "blat": {
+      "label": "Blat",
+      "icon": "jitter+strike",
+      "hover": "The buzzy pitch flutter during a hard attack. Range 0 to 1.5 semitones."
+    },
+    "t_noise": {
+      "label": "Tongue \"t\"",
+      "icon": "tongue",
+      "hover": "The short noise burst of a tongued start. Range 0 to 1."
+    },
+    "slur": {
+      "label": "Slur",
+      "icon": "slur",
+      "hover": "How much articulation a legato note change gets: 0 seamless, 1 each new note is re-tongued. Range 0 to 1."
+    },
+    "vibrato": {
+      "label": "Vibrato",
+      "icon": "vibrato",
+      "hover": "The depth of the automatic vibrato that sets in after the note starts. Range 0 to 1."
+    },
+    "vib_hz": {
+      "label": "Vibrato rate",
+      "icon": "vibrato+rate",
+      "hover": "How fast the vibrato wavers. Range 2 to 9 Hz."
+    },
+    "flutter": {
+      "label": "Flutter by shake",
+      "icon": "flutter",
+      "hover": "How much flutter tongue a shake (the motion input) adds. Range 0 to 1."
+    },
+    "flut_hz": {
+      "label": "Flutter rate",
+      "icon": "flutter+rate",
+      "hover": "How fast the flutter tongue rolls. Range 8 to 40 Hz."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    },
+    "growl": {
+      "label": "Growl",
+      "icon": "growl",
+      "hover": "The depth of the throaty growl when the note is pushed hard: 0 off. Range 0 to 1."
+    },
+    "growl_from": {
+      "label": "Growl from",
+      "icon": "growl+press",
+      "hover": "The pressure where the growl sets in. Range 0 to 1.5."
+    },
+    "growl_hz": {
+      "label": "Growl rate",
+      "icon": "growl+rate",
+      "hover": "How fast the throat flutters in the growl. Range 10 to 80 Hz."
+    },
+    "pair": {
+      "label": "Second player",
+      "icon": "ensemble",
+      "hover": "The level of a second, slightly detuned player: 0 solo. Range 0 to 1."
+    },
+    "detune": {
+      "label": "Detune",
+      "icon": "detune",
+      "hover": "How far the second player is detuned. Range 0 to 30 cents."
+    }
+  }
+}

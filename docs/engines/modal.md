@@ -40,31 +40,31 @@ After `init()` the engine plays preset 0 (vibraphone).
 
 ## Parameters
 
-Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/modal.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| `9b99e7dd` | `level` | level | 0.1 | 3 | 0.87 | continuous |
-| `99dfc797` | `thresh` | mallet | 0.005 | 0.2 | 0.03 | continuous |
-| `290182c1` | `span` | mallet | 0.2 | 1.5 | 0.7 | continuous |
-| `e4c35bdc` | `hard` | mallet | 0.2 | 1.2 | 0.6 | continuous |
-| `1ff67637` | `hardvel` | mallet | 0 | 1 | 0.4 | continuous |
-| `603a6206` | `tilt` | mallet | 0 | 0.5 | 0.2 | continuous |
-| `d6069f54` | `mute` | mallet | 0 | 1 | 0.3 | continuous |
-| `0a8c6a47` | `upper` | tone | 0 | 2 | 1 | continuous |
-| `d315e55d` | `decay` | decay | 0.1 | 4 | 1 | continuous |
-| `6677a083` | `keytrack` | decay | 0 | 1.5 | 0.8 | continuous |
-| `73432219` | `hfdamp` | decay | 0 | 1 | 0 | continuous |
-| `a0f39ce0` | `damper` | damper | 0 | 2 | 1 | continuous |
-| `f6c75a7c` | `lift` | damper | 0.02 | 0.5 | 0.15 | continuous |
-| `a1b490a3` | `pedal` | damper | 0 | 1 | 1 | continuous |
-| `758b416d` | `trem` | trem | 0 | 1 | 1 | toggle |
-| `45abe62f` | `tremrate` | trem | 1 | 10 | 5 | continuous |
-| `f26aa452` | `tremdepth` | trem | 0 | 1 | 0.6 | continuous |
-| `5a6356e1` | `tremthr` | trem | 0.2 | 1.2 | 0.7 | continuous |
-| `1ecd3be6` | `rub` | rub | 0 | 1 | 0 | continuous |
-| `2f656620` | `rubnoise` | rub | 0 | 0.3 | 0.05 | continuous |
-| `b08b665a` | `model` | model | 0 | 5 | 0 | steps |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| `9b99e7dd` | `level` | Level | `level` | level | 0.1 | 3 | 0.87 | continuous | The overall loudness of the sound. Range 0.1 to 3. |
+| `99dfc797` | `thresh` | Strike threshold | `strike+soft` | mallet | 0.005 | 0.2 | 0.03 | continuous | How fast the key must be pressed for a strike to count as a hit. Range 0.005 to 0.2. |
+| `290182c1` | `span` | Strike range | `strike+range` | mallet | 0.2 | 1.5 | 0.7 | continuous | How much faster than the threshold a strike must be to count as a full-strength hit: lower is more sensitive. Range 0.2 to 1.5. |
+| `e4c35bdc` | `hard` | Mallet hardness | `mallet` | mallet | 0.2 | 1.2 | 0.6 | continuous | How hard the mallet is at the softest strike. Range 0.2 to 1.2. |
+| `1ff67637` | `hardvel` | Hardness by strike | `mallet+strike` | mallet | 0 | 1 | 0.4 | continuous | How much harder the mallet gets with a stronger strike. Range 0 to 1. |
+| `603a6206` | `tilt` | Hardness by timbre | `mallet+timbre` | mallet | 0 | 0.5 | 0.2 | continuous | How much timbre changes the mallet's hardness at the strike. Range 0 to 0.5. |
+| `d6069f54` | `mute` | Strike mute | `damper+strike` | mallet | 0 | 1 | 0.3 | continuous | How much of the ringing a full strike stops, like a hand on the bar. Range 0 to 1. |
+| `0a8c6a47` | `upper` | Upper partials | `overtone` | tone | 0 | 2 | 1 | continuous | The level of all partials but the first, relative to the instrument's own. Range 0 to 2. |
+| `d315e55d` | `decay` | Decay | `decay` | decay | 0.1 | 4 | 1 | continuous | How long the bar rings, as a scale on the instrument's own. Range 0.1 to 4. |
+| `6677a083` | `keytrack` | Decay by register | `decay+register` | decay | 0 | 1.5 | 0.8 | continuous | How much shorter the high notes ring than the low ones. Range 0 to 1.5. |
+| `73432219` | `hfdamp` | Upper damping | `decay+bright` | decay | 0 | 1 | 0 | continuous | How much faster the upper partials die than the fundamental. Range 0 to 1. |
+| `a0f39ce0` | `damper` | Damper | `damper` | damper | 0 | 2 | 1 | continuous | How firmly the damper stops the note on release: 0 no dampers. Range 0 to 2. |
+| `f6c75a7c` | `lift` | Damper lift | `damper+press` | damper | 0.02 | 0.5 | 0.15 | continuous | The key pressure above which the damper is fully lifted. Range 0.02 to 0.5. |
+| `a1b490a3` | `pedal` | Damper by pedal | `damper+pedal` | damper | 0 | 1 | 1 | continuous | How far the pedal lifts the damper: 1 fully. Range 0 to 1. |
+| `758b416d` | `trem` | Motor tremolo | `tremolo` | trem | 0 | 1 | 1 | toggle | The vibraphone's motor tremolo: on or off. Range off or on. |
+| `45abe62f` | `tremrate` | Tremolo speed | `tremolo+rate` | trem | 1 | 10 | 5 | continuous | How fast the motor turns. Range 1 to 10 Hz. |
+| `f26aa452` | `tremdepth` | Tremolo depth | `tremolo+depth` | trem | 0 | 1 | 0.6 | continuous | How deep the tremolo pulses the loudness. Range 0 to 1. |
+| `5a6356e1` | `tremthr` | Tremolo by pressure | `tremolo+press` | trem | 0.2 | 1.2 | 0.7 | continuous | The key pressure above which pressing harder adds tremolo. Range 0.2 to 1.2. |
+| `1ecd3be6` | `rub` | Rub | `rub` | rub | 0 | 1 | 0 | continuous | The level of the rubbed tone per unit of pressure, like a finger on a glass: 0 off. Range 0 to 1. |
+| `2f656620` | `rubnoise` | Rub noise | `rub+noise` | rub | 0 | 0.3 | 0.05 | continuous | How much of the rubbed tone is noise. Range 0 to 0.3. |
+| `b08b665a` | `model` | Instrument | `instrument` | model | 0 | 5 | 0 | steps | Which instrument: vibraphone, marimba, glockenspiel, church bell, kalimba or wine glass. Range steps 0 to 5. |
 
 ## Cost and memory
 

@@ -1,0 +1,285 @@
+{
+  "engine": "va",
+  "params": {
+    "gain": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0.5 to 5."
+    },
+    "pres_lin": {
+      "label": "Dynamics (even)",
+      "icon": "dynamics+soft",
+      "hover": "The even part of how pressure becomes loudness: more here and a light touch already speaks. Range 0 to 1."
+    },
+    "pres_sq": {
+      "label": "Dynamics (curved)",
+      "icon": "dynamics+loud",
+      "hover": "The curved part of how pressure becomes loudness: more here and the loud end opens up faster than the soft end. Range 0 to 1.5."
+    },
+    "pres_hz": {
+      "label": "Response",
+      "icon": "response",
+      "hover": "How quickly the sound follows a change of pressure: low is a slow swell, high is immediate. Range 1 to 200 Hz."
+    },
+    "hold_decay": {
+      "label": "Fall while held",
+      "icon": "decay+hold",
+      "hover": "The fastest the level can fall while the key stays down, so a quick lift still leaves a tail. Range 0.005 to 1 s."
+    },
+    "release": {
+      "label": "Release",
+      "icon": "release",
+      "hover": "How long the sound takes to die away after the key is released. Range 0.02 to 4 s."
+    },
+    "rel_pedal": {
+      "label": "Release with pedal",
+      "icon": "release+pedal",
+      "hover": "How much longer the release gets with the sustain pedal down. Range 0 to 6 s."
+    },
+    "rel_speed": {
+      "label": "Release by lift speed",
+      "icon": "release+lift",
+      "hover": "How much a quick lift-off shortens the tail: 0 no effect, higher cuts it short. Range 0 to 8."
+    },
+    "acc_level": {
+      "label": "Accent",
+      "icon": "accent",
+      "hover": "The extra push at the start of a struck note: 0 none, higher is a sharper attack. Range 0 to 2.5."
+    },
+    "acc_decay": {
+      "label": "Accent length",
+      "icon": "accent+time",
+      "hover": "How long the accent lasts before the note settles. Range 0.005 to 0.4 s."
+    },
+    "acc_key": {
+      "label": "Accent by register",
+      "icon": "accent+register",
+      "hover": "How much longer the accent lasts on low notes than on high ones. Range 0 to 0.06."
+    },
+    "acc_cutoff": {
+      "label": "Accent cutoff",
+      "icon": "accent+bright",
+      "hover": "How far the filter opens at a strike, in semitones. Range 0 to 48 semitones."
+    },
+    "acc_drive": {
+      "label": "Accent drive",
+      "icon": "accent+amount",
+      "hover": "The extra saturation at a strike. Range 0 to 2."
+    },
+    "acc_sync": {
+      "label": "Accent sync",
+      "icon": "accent+rate",
+      "hover": "The extra sync sweep at a strike, in semitones, when timbre is up. Range 0 to 24 semitones."
+    },
+    "acc_pitch": {
+      "label": "Accent pitch",
+      "icon": "accent+pitch",
+      "hover": "A pitch offset at the strike that fades with the accent: below 0 the note scoops up, above 0 it drops in. Range -1 to 1 semitones."
+    },
+    "cut_base": {
+      "label": "Cutoff",
+      "icon": "filter",
+      "hover": "Where the filter sits when closed, as a note number. Range -20 to 80 note."
+    },
+    "cut_key": {
+      "label": "Cutoff tracking",
+      "icon": "filter+register",
+      "hover": "How much the cutoff follows the note: 1 keeps the tone the same up the keyboard. Range 0 to 1.2."
+    },
+    "cut_env": {
+      "label": "Cutoff by pressure",
+      "icon": "filter+press",
+      "hover": "How far pressure opens the filter. Range 0 to 80 semitones."
+    },
+    "cut_back": {
+      "label": "Cutoff, timbre down",
+      "icon": "filter+back",
+      "hover": "How far the filter closes with timbre down. Range -24 to 24 semitones."
+    },
+    "cut_fwd": {
+      "label": "Cutoff, timbre up",
+      "icon": "filter+fwd",
+      "hover": "How far the filter opens with timbre up. Range -24 to 24 semitones."
+    },
+    "res": {
+      "label": "Resonance",
+      "icon": "resonance",
+      "hover": "The filter's resonance: near 0.98 it rings on its own. Range 0 to 0.98."
+    },
+    "res_back": {
+      "label": "Resonance, timbre down",
+      "icon": "resonance+back",
+      "hover": "How much timbre down adds to the resonance. Range -0.5 to 0.98."
+    },
+    "res_fwd": {
+      "label": "Resonance, timbre up",
+      "icon": "resonance+fwd",
+      "hover": "How much timbre up takes from the resonance. Range -0.5 to 0.98."
+    },
+    "bass_comp": {
+      "label": "Bass compensation",
+      "icon": "filter+low",
+      "hover": "How much the bass is brought back as the resonance rises. Range 0 to 1."
+    },
+    "drive": {
+      "label": "Drive",
+      "icon": "drive",
+      "hover": "The saturation after the filter. Range 0.1 to 3."
+    },
+    "drive_env": {
+      "label": "Drive by pressure",
+      "icon": "drive+press",
+      "hover": "How much more saturation pressure adds. Range 0 to 3."
+    },
+    "saw": {
+      "label": "Saw",
+      "icon": "saw",
+      "hover": "The level of the main sawtooth. Range 0 to 1."
+    },
+    "saw_back": {
+      "label": "Saw, timbre down",
+      "icon": "saw+back",
+      "hover": "How much timbre down reduces the saw. Range 0 to 1."
+    },
+    "saw_fwd": {
+      "label": "Saw, timbre up",
+      "icon": "saw+fwd",
+      "hover": "How much timbre up reduces the saw. Range 0 to 1."
+    },
+    "saw2": {
+      "label": "Second saw",
+      "icon": "saw+pitch",
+      "hover": "The level of the detuned second sawtooth. Range 0 to 1."
+    },
+    "saw2_back": {
+      "label": "Second saw, timbre down",
+      "icon": "saw+back",
+      "hover": "How much timbre down reduces the second saw. Range 0 to 1."
+    },
+    "saw2_fwd": {
+      "label": "Second saw, timbre up",
+      "icon": "saw+fwd",
+      "hover": "How much timbre up reduces the second saw. Range 0 to 1."
+    },
+    "saw2_detune": {
+      "label": "Second saw detune",
+      "icon": "detune",
+      "hover": "How far the second saw is detuned. Range -0.5 to 0.5 semitones."
+    },
+    "pulse": {
+      "label": "Pulse",
+      "icon": "pulse",
+      "hover": "The level of the pulse wave. Range 0 to 1."
+    },
+    "pulse_back": {
+      "label": "Pulse, timbre down",
+      "icon": "pulse+back",
+      "hover": "How much timbre down adds pulse. Range 0 to 1."
+    },
+    "pwm": {
+      "label": "Pulse width sweep",
+      "icon": "pulse+depth",
+      "hover": "How far the pulse width sweeps. Range 0 to 0.4."
+    },
+    "pwm_hz": {
+      "label": "Pulse width rate",
+      "icon": "pulse+rate",
+      "hover": "How fast the pulse width sweeps. Range 0.05 to 8 Hz."
+    },
+    "sub": {
+      "label": "Sub",
+      "icon": "sub",
+      "hover": "The level of the sub-oscillator an octave down. Range 0 to 1."
+    },
+    "sub_base": {
+      "label": "Sub at rest",
+      "icon": "sub+amount",
+      "hover": "How much of the sub sounds with the timbre at rest. Range 0 to 1."
+    },
+    "sub_back": {
+      "label": "Sub, timbre down",
+      "icon": "sub+back",
+      "hover": "How much timbre down adds sub. Range 0 to 1."
+    },
+    "sub_fwd": {
+      "label": "Sub, timbre up",
+      "icon": "sub+fwd",
+      "hover": "How much timbre up takes from the sub. Range 0 to 1."
+    },
+    "b_sync": {
+      "label": "B synced",
+      "icon": "sync",
+      "hover": "Whether the second oscillator is hard-synced to the first (on) or runs free and detuned (off). Range off or on."
+    },
+    "b_level": {
+      "label": "B level",
+      "icon": "sync+level",
+      "hover": "The level of the second oscillator. Range 0 to 1."
+    },
+    "b_fwd": {
+      "label": "B, timbre up",
+      "icon": "sync+fwd",
+      "hover": "How much timbre up adds of the second oscillator. Range 0 to 1."
+    },
+    "b_detune": {
+      "label": "B detune",
+      "icon": "sync+pitch",
+      "hover": "How far down the second oscillator is detuned when it runs free. Range -0.5 to 0.5 semitones."
+    },
+    "sync": {
+      "label": "Sync ratio",
+      "icon": "sync+rate",
+      "hover": "How far above the note the synced oscillator runs, with timbre up. Range 0 to 24 semitones."
+    },
+    "sync_fwd": {
+      "label": "Sync, timbre up",
+      "icon": "sync+fwd",
+      "hover": "How much further timbre up sweeps the sync. Range 0 to 24 semitones."
+    },
+    "sync_env": {
+      "label": "Sync by pressure",
+      "icon": "sync+press",
+      "hover": "How far pressure sweeps the sync. Range 0 to 24 semitones."
+    },
+    "tilt_home": {
+      "label": "Timbre home",
+      "icon": "timbre",
+      "hover": "Where the timbre sits while the timbre control is centred: below 0 down, above 0 up. Range -1 to 1."
+    },
+    "drift": {
+      "label": "Pitch drift",
+      "icon": "drift",
+      "hover": "A slow wander of the main oscillator's pitch. Range 0 to 0.3 semitones."
+    },
+    "saw2_drift": {
+      "label": "Second saw drift",
+      "icon": "drift+pitch",
+      "hover": "A slow wander of the second saw's pitch. Range 0 to 0.3 semitones."
+    },
+    "cut_drift": {
+      "label": "Cutoff drift",
+      "icon": "drift+bright",
+      "hover": "A slow wander of the filter cutoff. Range 0 to 2 semitones."
+    },
+    "gyro_chorus": {
+      "label": "Chorus by rotation",
+      "icon": "spin+pitch",
+      "hover": "How much rotation (the motion input) detunes the second saw. Range 0 to 1."
+    },
+    "vibrato": {
+      "label": "Vibrato by shake",
+      "icon": "vibrato+shake",
+      "hover": "How much vibrato a shake (the motion input) adds, in semitones at a full shake. Range 0 to 1.5 semitones."
+    },
+    "vib_hz": {
+      "label": "Vibrato rate",
+      "icon": "vibrato+rate",
+      "hover": "How fast the vibrato wavers. Range 1 to 9 Hz."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    }
+  }
+}

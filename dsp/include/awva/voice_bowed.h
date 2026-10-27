@@ -59,6 +59,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/bowed.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 
 namespace bowed {
@@ -999,44 +1000,44 @@ struct ParamEntry {
 	real Params::*m;
 };
 static constexpr ParamEntry param_table[] = {
-    {{"gain", "level", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::gain},
-    {{"force_lo", "bow", 0.3f, 1.6f, awva::ParamKind::continuous}, &Params::force_lo},        // force/speed at light pressure
-    {{"force_hi", "bow", 0.3f, 1.6f, awva::ParamKind::continuous}, &Params::force_hi},        // at full pressure (> 1.1: raucous)
-    {{"force_over", "bow", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::force_over},    // grit beyond pressure 1 (0: none)
-    {{"speed_curve", "bow", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::speed_curve},  // 0 linear .. 1 quadratic dynamics
-    {{"rosin", "bow", 0.0f, 0.2f, awva::ParamKind::continuous}, &Params::rosin},              // bow noise texture
-    {{"pos", "position", 0.05f, 0.2f, awva::ParamKind::continuous}, &Params::pos},            // bow position (fraction of string)
-    {{"pos_tilt", "position", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pos_tilt},   // timbre range (octaves)
-    {{"pos_press", "position", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pos_press}, // light bow drifts to the fingerboard
-    {{"damp", "string", 0.5f, 10.0f, awva::ParamKind::continuous}, &Params::damp},            // ring time (s) at note 40
-    {{"bright", "string", 0.3f, 3.0f, awva::ParamKind::continuous}, &Params::bright},         // corner sharpness
-    {{"tone_lo", "string", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::tone_lo},       // treble at light pressure
-    {{"tone_hi", "string", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::tone_hi},       // treble at full pressure
-    {{"body_size", "body", 0.2f, 1.5f, awva::ParamKind::continuous}, &Params::body_size},     // violin 1, viola .8, cello .45, bass .3
-    {{"body_track", "body", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::body_track},   // body follows the register
-    {{"body_amt", "body", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::body_amt},
-    {{"body_q", "body", 0.3f, 3.0f, awva::ParamKind::continuous}, &Params::body_q},
-    {{"hill", "body", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::hill}, // bridge hill brilliance
-    {{"direct", "body", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::direct},
-    {{"acc_force", "accent", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::acc_force}, // strike: bite / scratch
-    {{"acc_time", "accent", 0.002f, 0.2f, awva::ParamKind::continuous}, &Params::acc_time},
-    {{"acc_noise", "accent", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::acc_noise},
-    {{"acc_bright", "accent", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::acc_bright},
-    {{"rel", "release", 0.02f, 3.0f, awva::ParamKind::continuous}, &Params::rel},           // ring after a slow release (s)
-    {{"rel_ped", "release", 0.0f, 10.0f, awva::ParamKind::continuous}, &Params::rel_ped},   // + pedal
-    {{"rel_lift", "release", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::rel_lift}, // x after a quick lift-off
-    {{"vibrato", "mod", 0.0f, 60.0f, awva::ParamKind::continuous}, &Params::vib},           // automatic vibrato (cents)
-    {{"vib_hz", "mod", 2.0f, 9.0f, awva::ParamKind::continuous}, &Params::vib_hz},
-    {{"vib_delay", "mod", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::vib_delay},
-    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::life},          // micro-randomness
-    {{"tremolo", "mod", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::trem},       // shake -> bow
-    {{"body_rot", "mod", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::body_rot}, // rotation -> body (octaves)
-    {{"ensemble", "section", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::ens},   // two more players
-    {{"ens_detune", "section", 0.0f, 25.0f, awva::ParamKind::continuous}, &Params::ens_detune},
-    {{"ens_spread", "section", 2.0f, 25.0f, awva::ParamKind::continuous}, &Params::ens_spread}, // timing spread (ms)
-    {{"pizz", "pizz", 0.0f, 1.0f, awva::ParamKind::toggle}, &Params::pizz},                     // plucked instead of bowed
-    {{"pizz_decay", "pizz", 0.1f, 5.0f, awva::ParamKind::continuous}, &Params::pizz_decay},     // ring (s) at note 60
-    {{"pizz_bright", "pizz", 0.2f, 5.0f, awva::ParamKind::continuous}, &Params::pizz_bright},
+    {{"gain", "level", 0.0f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, gain)}, &Params::gain},
+    {{"force_lo", "bow", 0.3f, 1.6f, awva::ParamKind::continuous, AWVA_TEXT(bowed, force_lo)}, &Params::force_lo},          // force/speed at light pressure
+    {{"force_hi", "bow", 0.3f, 1.6f, awva::ParamKind::continuous, AWVA_TEXT(bowed, force_hi)}, &Params::force_hi},          // at full pressure (> 1.1: raucous)
+    {{"force_over", "bow", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, force_over)}, &Params::force_over},    // grit beyond pressure 1 (0: none)
+    {{"speed_curve", "bow", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, speed_curve)}, &Params::speed_curve}, // 0 linear .. 1 quadratic dynamics
+    {{"rosin", "bow", 0.0f, 0.2f, awva::ParamKind::continuous, AWVA_TEXT(bowed, rosin)}, &Params::rosin},                   // bow noise texture
+    {{"pos", "position", 0.05f, 0.2f, awva::ParamKind::continuous, AWVA_TEXT(bowed, pos)}, &Params::pos},                   // bow position (fraction of string)
+    {{"pos_tilt", "position", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(bowed, pos_tilt)}, &Params::pos_tilt},     // timbre range (octaves)
+    {{"pos_press", "position", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, pos_press)}, &Params::pos_press},  // light bow drifts to the fingerboard
+    {{"damp", "string", 0.5f, 10.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, damp)}, &Params::damp},                  // ring time (s) at note 40
+    {{"bright", "string", 0.3f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, bright)}, &Params::bright},             // corner sharpness
+    {{"tone_lo", "string", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, tone_lo)}, &Params::tone_lo},          // treble at light pressure
+    {{"tone_hi", "string", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, tone_hi)}, &Params::tone_hi},          // treble at full pressure
+    {{"body_size", "body", 0.2f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(bowed, body_size)}, &Params::body_size},      // violin 1, viola .8, cello .45, bass .3
+    {{"body_track", "body", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, body_track)}, &Params::body_track},   // body follows the register
+    {{"body_amt", "body", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, body_amt)}, &Params::body_amt},
+    {{"body_q", "body", 0.3f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, body_q)}, &Params::body_q},
+    {{"hill", "body", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, hill)}, &Params::hill}, // bridge hill brilliance
+    {{"direct", "body", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, direct)}, &Params::direct},
+    {{"acc_force", "accent", 0.0f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, acc_force)}, &Params::acc_force}, // strike: bite / scratch
+    {{"acc_time", "accent", 0.002f, 0.2f, awva::ParamKind::continuous, AWVA_TEXT(bowed, acc_time)}, &Params::acc_time},
+    {{"acc_noise", "accent", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, acc_noise)}, &Params::acc_noise},
+    {{"acc_bright", "accent", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, acc_bright)}, &Params::acc_bright},
+    {{"rel", "release", 0.02f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, rel)}, &Params::rel},                // ring after a slow release (s)
+    {{"rel_ped", "release", 0.0f, 10.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, rel_ped)}, &Params::rel_ped},    // + pedal
+    {{"rel_lift", "release", 0.0f, 20.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, rel_lift)}, &Params::rel_lift}, // x after a quick lift-off
+    {{"vibrato", "mod", 0.0f, 60.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, vibrato)}, &Params::vib},            // automatic vibrato (cents)
+    {{"vib_hz", "mod", 2.0f, 9.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, vib_hz)}, &Params::vib_hz},
+    {{"vib_delay", "mod", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, vib_delay)}, &Params::vib_delay},
+    {{"life", "mod", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, life)}, &Params::life},              // micro-randomness
+    {{"tremolo", "mod", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, tremolo)}, &Params::trem},        // shake -> bow
+    {{"body_rot", "mod", -2.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, body_rot)}, &Params::body_rot}, // rotation -> body (octaves)
+    {{"ensemble", "section", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(bowed, ensemble)}, &Params::ens},   // two more players
+    {{"ens_detune", "section", 0.0f, 25.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, ens_detune)}, &Params::ens_detune},
+    {{"ens_spread", "section", 2.0f, 25.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, ens_spread)}, &Params::ens_spread}, // timing spread (ms)
+    {{"pizz", "pizz", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_TEXT(bowed, pizz)}, &Params::pizz},                           // plucked instead of bowed
+    {{"pizz_decay", "pizz", 0.1f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, pizz_decay)}, &Params::pizz_decay},     // ring (s) at note 60
+    {{"pizz_bright", "pizz", 0.2f, 5.0f, awva::ParamKind::continuous, AWVA_TEXT(bowed, pizz_bright)}, &Params::pizz_bright},
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

@@ -21,11 +21,31 @@ enum class ParamKind : uint8_t {
 	toggle = 2,     // on/off: min or max
 };
 
+// A parameter for people: its label ("Cutoff"), its hover text (a sentence: what it does, for a
+// MIDI 2.0 or MPE host's tooltip) and its icon (a concept of assets/icons, optionally with a
+// modifier: "release+pedal", docs/icons.md). The source is param_text/<engine>.json; an engine's
+// table writes AWVA_TEXT(engine, name) for them (dsp/include/awva/param_text/<engine>.inc, written
+// from it by tools/param_text.cmake). A build with AWVA_PARAM_TEXT 0 (an embedded host that shows
+// no text) has none of the strings: the three are NULL, the layout is the same. The text is never
+// part of a preset or the schema: rewording it changes no stored value.
+#ifndef AWVA_PARAM_TEXT
+#define AWVA_PARAM_TEXT 1
+#endif
+#if AWVA_PARAM_TEXT
+#define AWVA_TEXT(engine, name) AWVA_TEXT_##engine##_##name
+#else
+#define AWVA_TEXT(engine, name) nullptr, nullptr, nullptr
+#endif
+#define AWVA_NO_TEXT nullptr, nullptr, nullptr // (a parameter without text yet: the effects')
+
 struct ParamDesc {
 	const char* name;  // short id, e.g. "cutoff"
 	const char* group; // UI group, e.g. "filter"
 	float min, max;
 	ParamKind kind;
+	const char* label; // for people, e.g. "Cutoff" (NULL with AWVA_PARAM_TEXT 0)
+	const char* hover; // what it does, one or two sentences (NULL with AWVA_PARAM_TEXT 0)
+	const char* icon;  // "concept" or "concept+modifier" (NULL with AWVA_PARAM_TEXT 0)
 };
 
 template <class E> struct EngineParams {

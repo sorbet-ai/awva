@@ -1,0 +1,10 @@
+{
+  "engine": "component",
+  "params": {
+    "output": {
+      "label": "Output",
+      "icon": "level",
+      "hover": "The output level after the engine: at 1 the engine's own level, 0 silent. Range 0 to 2."
+    }
+  }
+}

@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Writing a host
 
-A host loads an engine component (`component/include/nsc/nsc.h`, ABI 5), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
+A host loads an engine component (`component/include/nsc/nsc.h`, ABI 6), gives it memory, sends it MIDI 2.0 and reads its audio. There are two kinds:
 - **a plugin**, which plays from a DAW's notes;
 - **an embedded instrument**, which reads its own sensors and allocates voices itself.
 
@@ -45,6 +45,7 @@ They share everything below except the way in: a plugin uses `process()` and an 
 - Parameters are by index, each with a stable id (`nsc_param.id`, FNV-1a of its name). Store values by id, under `schema_hash`; a host can look an id up with `param_index()`.
 - Each has `min`, `max`, `kind` (continuous, steps, toggle) and a declared default `def`: its value after `init()`.
 - The last parameter is `output`, the output level: 0 .. 2, default 1. At 1 the samples are the engine's, bit for bit.
+- For people, each has a `label` ("Cutoff"), a `hover` text (what it does, for a tooltip, worded for MIDI 2.0 and MPE) and an `icon`: a concept, or `concept+modifier`, whose drawings are `assets/icons/*.svg` ([Parameter icons](icons.md)). Show the icon before the label and the hover text as its tooltip. A component built with `AWVA_PARAM_TEXT 0` (an embedded host that shows no text) has NULL there: show the name.
 - `set_param()` takes the engines' write rule: NaN is ignored, steps are rounded, and the engine clamps. `set_preset(i)` loads a factory preset; afterwards, rescan every parameter.
 
 ## 5. Threads, level, denormals

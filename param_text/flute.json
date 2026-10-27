@@ -1,0 +1,315 @@
+{
+  "engine": "flute",
+  "params": {
+    "gain": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0 to 100."
+    },
+    "pres_lin": {
+      "label": "Dynamics (even)",
+      "icon": "dynamics+soft",
+      "hover": "The even part of how pressure becomes loudness: more here and a light touch already speaks. Range 0 to 1."
+    },
+    "pres_sq": {
+      "label": "Dynamics (curved)",
+      "icon": "dynamics+loud",
+      "hover": "The curved part of how pressure becomes loudness: more here and the loud end opens up faster than the soft end. Range 0 to 1.5."
+    },
+    "pres_hz": {
+      "label": "Response",
+      "icon": "response",
+      "hover": "How quickly the sound follows a change of pressure: low is a slow swell, high is immediate. Range 2 to 200 Hz."
+    },
+    "release": {
+      "label": "Release",
+      "icon": "release",
+      "hover": "How long the sound takes to die away after the key is released. Range 0.005 to 1 s."
+    },
+    "rel_pedal": {
+      "label": "Release with pedal",
+      "icon": "release+pedal",
+      "hover": "How much longer the release gets with the sustain pedal down. Range 0 to 3 s."
+    },
+    "p_soft": {
+      "label": "Breath, soft",
+      "icon": "breath+soft",
+      "hover": "The blowing pressure at the lightest touch, relative to where the tone just speaks: above 1 it always speaks, below 1 a light touch is only air. Range 10 to 3000."
+    },
+    "p_loud": {
+      "label": "Breath, loud",
+      "icon": "breath+loud",
+      "hover": "The blowing pressure at a full press: higher is louder and brighter, and pushes the tone harder. Range 20 to 6000."
+    },
+    "p_reg": {
+      "label": "Breath by register",
+      "icon": "breath+register",
+      "hover": "How the blowing pressure changes going up the range: above 0 the high notes get more air. Range -0.5 to 2."
+    },
+    "p_curve": {
+      "label": "Breath curve",
+      "icon": "dynamics",
+      "hover": "The shape of the curve from key pressure to blowing pressure: below 1 soft playing is easier, above 1 the loud end comes later. Range 0.3 to 3."
+    },
+    "theta": {
+      "label": "Jet timing",
+      "icon": "jet+rate",
+      "hover": "The jet's timing at the edge, relative to the note's period: 0.5 is the sweet spot. Range 0.03 to 2."
+    },
+    "theta_reg": {
+      "label": "Jet timing by register",
+      "icon": "jet+register",
+      "hover": "How the jet timing changes per octave up. Range -1 to 1 octaves."
+    },
+    "w_track": {
+      "label": "Lips follow breath",
+      "icon": "jet+press",
+      "hover": "How much the player shortens the lip distance with the breath: 1 keeps the jet timing. Range 0 to 1."
+    },
+    "jet_h": {
+      "label": "Lip opening",
+      "icon": "jet+open",
+      "hover": "How thick the jet is: the lip opening. Range 0.2 to 3 mm."
+    },
+    "h_loud": {
+      "label": "Opening when loud",
+      "icon": "jet+loud",
+      "hover": "How much the lips open with the breath. Range -1 to 2 octaves."
+    },
+    "jet_w": {
+      "label": "Jet width",
+      "icon": "jet+size",
+      "hover": "How wide the jet is. Range 2 to 20 mm."
+    },
+    "g_soft": {
+      "label": "Jet gain, soft",
+      "icon": "jet+soft",
+      "hover": "How much the jet feeds the tone at the lightest touch: 1 just speaks, more is surer. Range 0.3 to 20."
+    },
+    "amp_loud": {
+      "label": "Jet gain, loud",
+      "icon": "jet+loud",
+      "hover": "How much more the jet feeds the tone at a full breath. Range -3 to 3 octaves."
+    },
+    "y0": {
+      "label": "Edge offset",
+      "icon": "jet+amount",
+      "hover": "Where the jet aims at the edge, relative to its thickness: off-centre adds even harmonics. Range -5 to 5."
+    },
+    "y_tilt": {
+      "label": "Aim by timbre",
+      "icon": "jet+timbre",
+      "hover": "How far timbre moves the jet's aim. Range -3 to 3."
+    },
+    "jet_st": {
+      "label": "Jet bandwidth",
+      "icon": "jet+bright",
+      "hover": "How high the jet responds: lower is smoother. Range 0.01 to 1."
+    },
+    "vortex": {
+      "label": "Edge losses",
+      "icon": "jet+amount",
+      "hover": "The losses at the edge: larger is less loss and a freer tone. Range 0.1 to 5."
+    },
+    "bore_mm": {
+      "label": "Bore radius",
+      "icon": "bore+size",
+      "hover": "How wide the tube is. Range 2 to 20 mm."
+    },
+    "bore_decay": {
+      "label": "Bore decay",
+      "icon": "bore+decay",
+      "hover": "How long the tube's resonance rings: the bloom and the tail. Range 0.002 to 0.5 s."
+    },
+    "bore_reg": {
+      "label": "Bore by register",
+      "icon": "bore+register",
+      "hover": "How much shorter the tube's ring gets per octave up. Range -1 to 2 octaves."
+    },
+    "cut_hz": {
+      "label": "Tone-hole cutoff",
+      "icon": "tone-holes",
+      "hover": "The frequency above which the open tone holes stop reflecting: the flute tone's brightness. Range 200 to 12000 Hz."
+    },
+    "wall": {
+      "label": "Wall losses",
+      "icon": "bore+amount",
+      "hover": "How much the tube's walls soak up: higher is darker and softer. Range 0.5 to 50."
+    },
+    "disp": {
+      "label": "End correction",
+      "icon": "bore+pitch",
+      "hover": "A tuning correction of the tube's open end: 0 none. Range -0.9 to 0.9."
+    },
+    "cover": {
+      "label": "Cover pitch",
+      "icon": "embouchure+pitch",
+      "hover": "How far covering the embouchure hole (timbre up) flattens the pitch. Range -200 to 200 cents."
+    },
+    "cover_hz": {
+      "label": "Cover darkness",
+      "icon": "embouchure+bright",
+      "hover": "How much covering the embouchure hole darkens the tone. Range -2 to 2 octaves."
+    },
+    "low_note": {
+      "label": "Lowest note",
+      "icon": "range+low",
+      "hover": "The instrument's lowest note: the first register starts here. Range 24 to 96 MIDI note."
+    },
+    "overblow": {
+      "label": "Overblow",
+      "icon": "overtone+register",
+      "hover": "Whether the second and third octaves are overblown (on) or every note plays on the fundamental (off). Range off or on."
+    },
+    "range_lo": {
+      "label": "Range, low",
+      "icon": "range+low",
+      "hover": "The bottom of the fitted range; notes below keep the lowest note's playing. Range 24 to 96 MIDI note."
+    },
+    "range_hi": {
+      "label": "Range, high",
+      "icon": "range+high",
+      "hover": "The top of the fitted range; notes above play on a short pipe's fundamental. Range 48 to 120 MIDI note."
+    },
+    "g_out": {
+      "label": "Gain out of range",
+      "icon": "range+soft",
+      "hover": "How surely notes above the range speak at the lightest touch. Range 1 to 6."
+    },
+    "out_db": {
+      "label": "Level out of range",
+      "icon": "range+level",
+      "hover": "The level of notes above the range, relative to the fitted ones. Range -24 to 6 dB."
+    },
+    "ob_amt": {
+      "label": "Overblow drive",
+      "icon": "jet+register",
+      "hover": "How much a hard breath pushes the note into the next register: 0 never. Range 0 to 1."
+    },
+    "ob_thr": {
+      "label": "Overblow from",
+      "icon": "jet+press",
+      "hover": "The breath where overblowing starts. Range 0 to 1.5."
+    },
+    "mouth": {
+      "label": "Embouchure radiation",
+      "icon": "radiate+open",
+      "hover": "How much sound comes from the embouchure hole. Range 0 to 4."
+    },
+    "end": {
+      "label": "End radiation",
+      "icon": "radiate",
+      "hover": "How much sound comes from the open end and tone holes. Range 0 to 4."
+    },
+    "dipole": {
+      "label": "Edge tone",
+      "icon": "radiate+noise",
+      "hover": "How much of the jet's own edge tone you hear directly. Range 0 to 4."
+    },
+    "tone_hz": {
+      "label": "Tone",
+      "icon": "tone",
+      "hover": "The brightness of the radiated tone: the frequency above which it rolls off. Range 500 to 16000 Hz."
+    },
+    "tone_q": {
+      "label": "Tone sharpness",
+      "icon": "tone+q",
+      "hover": "How sharp the tone roll-off is. Range 0.5 to 2."
+    },
+    "turb": {
+      "label": "Turbulence",
+      "icon": "air+noise",
+      "hover": "The turbulence in the air stream. Range 0 to 2."
+    },
+    "turb_hz": {
+      "label": "Turbulence bandwidth",
+      "icon": "air+rate",
+      "hover": "How high the turbulence reaches. Range 100 to 12000 Hz."
+    },
+    "hiss": {
+      "label": "Hiss",
+      "icon": "air",
+      "hover": "The steady hiss of the air. Range 0 to 1."
+    },
+    "hiss_st": {
+      "label": "Hiss pitch",
+      "icon": "air+rate",
+      "hover": "Where the hiss sits, as a Strouhal number of the jet. Range 0.02 to 1."
+    },
+    "t_noise": {
+      "label": "Tongue \"t\"",
+      "icon": "tongue",
+      "hover": "The short noise burst of a tongued start. Range 0 to 3."
+    },
+    "tongue": {
+      "label": "Strike",
+      "icon": "strike",
+      "hover": "How much a hard strike sharpens the start: the tongue's hold and release, the accent and the \"t\". Range 0 to 2."
+    },
+    "acc_level": {
+      "label": "Accent",
+      "icon": "accent",
+      "hover": "The extra push at the start of a struck note: 0 none, higher is a sharper attack. Range 0 to 1.5."
+    },
+    "acc_decay": {
+      "label": "Accent length",
+      "icon": "accent+time",
+      "hover": "How long the accent lasts before the note settles. Range 0.005 to 0.3 s."
+    },
+    "tongue_t": {
+      "label": "Tongue release",
+      "icon": "strike+speed",
+      "hover": "How long the tongue takes to let the note go on a soft start; a hard strike is many times faster. Range 0.0005 to 0.1 s."
+    },
+    "att_gain": {
+      "label": "Attack jet",
+      "icon": "strike+level",
+      "hover": "How much faster and thinner the jet starts after the tongue's release. Range 0 to 40."
+    },
+    "att_t": {
+      "label": "Attack jet length",
+      "icon": "strike+time",
+      "hover": "How long the fast, thin starting jet lasts. Range 0.005 to 0.15 s."
+    },
+    "att_soft": {
+      "label": "Attack without a strike",
+      "icon": "strike+soft",
+      "hover": "How much of the fast start a breath attack or a slur still gets. Range 0 to 1."
+    },
+    "slur": {
+      "label": "Slur",
+      "icon": "slur",
+      "hover": "How much articulation a legato note change gets: 0 seamless, 1 each new note is re-tongued. Range 0 to 1."
+    },
+    "pitch_t": {
+      "label": "Pitch settling",
+      "icon": "settle",
+      "hover": "How fast the player's ear pulls the pitch to its centre after a start or a change. Range 0.002 to 1 s."
+    },
+    "vib": {
+      "label": "Vibrato by shake",
+      "icon": "vibrato+shake",
+      "hover": "How much breath vibrato a shake (the motion input) adds. Range 0 to 2."
+    },
+    "vib_hz": {
+      "label": "Vibrato rate",
+      "icon": "vibrato+rate",
+      "hover": "How fast the vibrato wavers. Range 2 to 9 Hz."
+    },
+    "tongue_nz": {
+      "label": "Tongue noise by strike",
+      "icon": "tongue",
+      "hover": "How much of the strike goes into the \"t\" noise at the start. Range 0 to 2."
+    },
+    "tongue_rt": {
+      "label": "Tongue speed by strike",
+      "icon": "strike+speed",
+      "hover": "How much a hard strike quickens the tongue's release. Range 0 to 2."
+    },
+    "tongue_sus": {
+      "label": "Swell accent",
+      "icon": "accent+hold",
+      "hover": "How much accent and noise a swell within a held note gets: the texture of the sustain. Range 0 to 2."
+    }
+  }
+}

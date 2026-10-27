@@ -72,6 +72,7 @@
 #include "note_glide.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/trumpet.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 #ifdef TRUMPET_TEST_HOOK
@@ -1047,51 +1048,51 @@ struct ParamEntry {
 static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 
 static constexpr ParamEntry param_table[] = {
-    {{"gain", "level", 0.05f, 20.0f, C_}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, C_}, &Params::pc_a},
-    {{"pres_sq", "level", 0.0f, 1.5f, C_}, &Params::pc_b},
-    {{"pres_hz", "level", 2.0f, 200.0f, C_}, &Params::lv_hz},
-    {{"release", "level", 0.005f, 1.0f, C_}, &Params::rel},
-    {{"rel_pedal", "level", 0.0f, 3.0f, C_}, &Params::rel_ped},
-    {{"p_soft", "breath", 0.5f, 3.0f, C_}, &Params::p_soft},  // lightest touch re the threshold
-    {{"p_loud", "breath", 1.1f, 20.0f, C_}, &Params::p_loud}, // ff mouth pressure re the threshold
-    {{"p_reg", "breath", -0.5f, 1.5f, C_}, &Params::p_reg},
-    {{"p_curve", "breath", 0.3f, 3.0f, C_}, &Params::p_curve},
-    {{"lip_tune", "lips", -600.0f, 300.0f, C_}, &Params::lip_tune}, // cents re the note
-    {{"lip_treg", "lips", -300.0f, 300.0f, C_}, &Params::lip_treg},
-    {{"lip_q", "lips", 0.5f, 60.0f, C_}, &Params::lip_q},
-    {{"lip_mass", "lips", 0.2f, 30.0f, C_}, &Params::lip_mass}, // kg/m^2
-    {{"mass_reg", "lips", -0.5f, 2.0f, C_}, &Params::mass_reg},
-    {{"lip_open", "lips", 0.0f, 1.5f, C_}, &Params::lip_open}, // mm
-    {{"open_reg", "lips", -1.0f, 2.0f, C_}, &Params::open_reg},
-    {{"lip_width", "lips", 3.0f, 15.0f, C_}, &Params::lip_width},
-    {{"contact", "lips", 0.0f, 20.0f, C_}, &Params::contact},
-    {{"lip_nl", "lips", 0.0f, 100.0f, C_}, &Params::lip_nl},
-    {{"embouch", "lips", 0.0f, 1.5f, C_}, &Params::embouch},
-    {{"lip_tilt", "lips", -1.5f, 1.5f, C_}, &Params::lip_tilt},
-    {{"jitter", "lips", 0.0f, 40.0f, C_}, &Params::jitter},
-    {{"cup", "mouthpiece", 0.2f, 2.5f, C_}, &Params::cup},
-    {{"pop_hz", "mouthpiece", 300.0f, 3000.0f, C_}, &Params::pop_hz},
-    {{"pop_q", "mouthpiece", 0.5f, 10.0f, C_}, &Params::pop_q},
-    {{"bore_decay", "bore", 0.005f, 0.2f, C_}, &Params::bore_t},
-    {{"bore_reg", "bore", -1.0f, 2.0f, C_}, &Params::bore_reg},
-    {{"bell_hz", "bore", 150.0f, 4000.0f, C_}, &Params::bell_hz},
-    {{"brassiness", "bore", 0.0f, 1500.0f, C_}, &Params::brass}, // shift (samples) per 10 kPa of wave
-    {{"rad_hz", "radiation", 20.0f, 2000.0f, C_}, &Params::rad_hz},
-    {{"tone_hz", "radiation", 500.0f, 16000.0f, C_}, &Params::tone_hz},
-    {{"tone_q", "radiation", 0.5f, 2.0f, C_}, &Params::tone_q},
-    {{"low_comp", "radiation", 0.0f, 2.0f, C_}, &Params::low_comp},
-    {{"breath", "air", 0.0f, 0.8f, C_}, &Params::breath},
-    {{"t_noise", "air", 0.0f, 1.0f, C_}, &Params::t_noise},
-    {{"tongue", "attack", 0.0f, 2.0f, C_}, &Params::tongue},
-    {{"acc_level", "attack", 0.0f, 1.5f, C_}, &Params::acc_amp},
-    {{"acc_decay", "attack", 0.01f, 0.3f, C_}, &Params::acc_t},
-    {{"tongue_t", "attack", 0.001f, 0.05f, C_}, &Params::tongue_t},
-    {{"tongue_lip", "attack", 0.0f, 2.0f, C_}, &Params::tongue_lip},
-    {{"slur", "attack", 0.0f, 1.0f, C_}, &Params::slur},
-    {{"pitch_t", "attack", 0.003f, 0.3f, C_}, &Params::pitch_t},
-    {{"flutter", "mod", 0.0f, 1.0f, C_}, &Params::flutter},
-    {{"flut_hz", "mod", 8.0f, 40.0f, C_}, &Params::flut_hz},
+    {{"gain", "level", 0.05f, 20.0f, C_, AWVA_TEXT(trumpet, gain)}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, C_, AWVA_TEXT(trumpet, pres_lin)}, &Params::pc_a},
+    {{"pres_sq", "level", 0.0f, 1.5f, C_, AWVA_TEXT(trumpet, pres_sq)}, &Params::pc_b},
+    {{"pres_hz", "level", 2.0f, 200.0f, C_, AWVA_TEXT(trumpet, pres_hz)}, &Params::lv_hz},
+    {{"release", "level", 0.005f, 1.0f, C_, AWVA_TEXT(trumpet, release)}, &Params::rel},
+    {{"rel_pedal", "level", 0.0f, 3.0f, C_, AWVA_TEXT(trumpet, rel_pedal)}, &Params::rel_ped},
+    {{"p_soft", "breath", 0.5f, 3.0f, C_, AWVA_TEXT(trumpet, p_soft)}, &Params::p_soft},  // lightest touch re the threshold
+    {{"p_loud", "breath", 1.1f, 20.0f, C_, AWVA_TEXT(trumpet, p_loud)}, &Params::p_loud}, // ff mouth pressure re the threshold
+    {{"p_reg", "breath", -0.5f, 1.5f, C_, AWVA_TEXT(trumpet, p_reg)}, &Params::p_reg},
+    {{"p_curve", "breath", 0.3f, 3.0f, C_, AWVA_TEXT(trumpet, p_curve)}, &Params::p_curve},
+    {{"lip_tune", "lips", -600.0f, 300.0f, C_, AWVA_TEXT(trumpet, lip_tune)}, &Params::lip_tune}, // cents re the note
+    {{"lip_treg", "lips", -300.0f, 300.0f, C_, AWVA_TEXT(trumpet, lip_treg)}, &Params::lip_treg},
+    {{"lip_q", "lips", 0.5f, 60.0f, C_, AWVA_TEXT(trumpet, lip_q)}, &Params::lip_q},
+    {{"lip_mass", "lips", 0.2f, 30.0f, C_, AWVA_TEXT(trumpet, lip_mass)}, &Params::lip_mass}, // kg/m^2
+    {{"mass_reg", "lips", -0.5f, 2.0f, C_, AWVA_TEXT(trumpet, mass_reg)}, &Params::mass_reg},
+    {{"lip_open", "lips", 0.0f, 1.5f, C_, AWVA_TEXT(trumpet, lip_open)}, &Params::lip_open}, // mm
+    {{"open_reg", "lips", -1.0f, 2.0f, C_, AWVA_TEXT(trumpet, open_reg)}, &Params::open_reg},
+    {{"lip_width", "lips", 3.0f, 15.0f, C_, AWVA_TEXT(trumpet, lip_width)}, &Params::lip_width},
+    {{"contact", "lips", 0.0f, 20.0f, C_, AWVA_TEXT(trumpet, contact)}, &Params::contact},
+    {{"lip_nl", "lips", 0.0f, 100.0f, C_, AWVA_TEXT(trumpet, lip_nl)}, &Params::lip_nl},
+    {{"embouch", "lips", 0.0f, 1.5f, C_, AWVA_TEXT(trumpet, embouch)}, &Params::embouch},
+    {{"lip_tilt", "lips", -1.5f, 1.5f, C_, AWVA_TEXT(trumpet, lip_tilt)}, &Params::lip_tilt},
+    {{"jitter", "lips", 0.0f, 40.0f, C_, AWVA_TEXT(trumpet, jitter)}, &Params::jitter},
+    {{"cup", "mouthpiece", 0.2f, 2.5f, C_, AWVA_TEXT(trumpet, cup)}, &Params::cup},
+    {{"pop_hz", "mouthpiece", 300.0f, 3000.0f, C_, AWVA_TEXT(trumpet, pop_hz)}, &Params::pop_hz},
+    {{"pop_q", "mouthpiece", 0.5f, 10.0f, C_, AWVA_TEXT(trumpet, pop_q)}, &Params::pop_q},
+    {{"bore_decay", "bore", 0.005f, 0.2f, C_, AWVA_TEXT(trumpet, bore_decay)}, &Params::bore_t},
+    {{"bore_reg", "bore", -1.0f, 2.0f, C_, AWVA_TEXT(trumpet, bore_reg)}, &Params::bore_reg},
+    {{"bell_hz", "bore", 150.0f, 4000.0f, C_, AWVA_TEXT(trumpet, bell_hz)}, &Params::bell_hz},
+    {{"brassiness", "bore", 0.0f, 1500.0f, C_, AWVA_TEXT(trumpet, brassiness)}, &Params::brass}, // shift (samples) per 10 kPa of wave
+    {{"rad_hz", "radiation", 20.0f, 2000.0f, C_, AWVA_TEXT(trumpet, rad_hz)}, &Params::rad_hz},
+    {{"tone_hz", "radiation", 500.0f, 16000.0f, C_, AWVA_TEXT(trumpet, tone_hz)}, &Params::tone_hz},
+    {{"tone_q", "radiation", 0.5f, 2.0f, C_, AWVA_TEXT(trumpet, tone_q)}, &Params::tone_q},
+    {{"low_comp", "radiation", 0.0f, 2.0f, C_, AWVA_TEXT(trumpet, low_comp)}, &Params::low_comp},
+    {{"breath", "air", 0.0f, 0.8f, C_, AWVA_TEXT(trumpet, breath)}, &Params::breath},
+    {{"t_noise", "air", 0.0f, 1.0f, C_, AWVA_TEXT(trumpet, t_noise)}, &Params::t_noise},
+    {{"tongue", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(trumpet, tongue)}, &Params::tongue},
+    {{"acc_level", "attack", 0.0f, 1.5f, C_, AWVA_TEXT(trumpet, acc_level)}, &Params::acc_amp},
+    {{"acc_decay", "attack", 0.01f, 0.3f, C_, AWVA_TEXT(trumpet, acc_decay)}, &Params::acc_t},
+    {{"tongue_t", "attack", 0.001f, 0.05f, C_, AWVA_TEXT(trumpet, tongue_t)}, &Params::tongue_t},
+    {{"tongue_lip", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(trumpet, tongue_lip)}, &Params::tongue_lip},
+    {{"slur", "attack", 0.0f, 1.0f, C_, AWVA_TEXT(trumpet, slur)}, &Params::slur},
+    {{"pitch_t", "attack", 0.003f, 0.3f, C_, AWVA_TEXT(trumpet, pitch_t)}, &Params::pitch_t},
+    {{"flutter", "mod", 0.0f, 1.0f, C_, AWVA_TEXT(trumpet, flutter)}, &Params::flutter},
+    {{"flut_hz", "mod", 8.0f, 40.0f, C_, AWVA_TEXT(trumpet, flut_hz)}, &Params::flut_hz},
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

@@ -132,34 +132,34 @@ struct ParamInfo {
 static constexpr float NO_OFF = -1e9f;
 
 static constexpr ParamInfo PARAMS[NPARAM] = {
-    {{"drive", "drive", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},            // saturation amount
-    {{"tilt", "drive", -1.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},            // tilt EQ around 700 Hz, +-6 dB
-    {{"phmix", "phaser", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},           // 1 = classic 50/50 (deepest notches)
-    {{"phrate", "phaser", 0.05f, 8.0f, awva::ParamKind::continuous}, 0.5f, NO_OFF, 0},       // Hz
-    {{"phdepth", "phaser", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.7f, NO_OFF, 1},       // sweep +-1.5 octaves at 1
-    {{"phfb", "phaser", 0.0f, 0.85f, awva::ParamKind::continuous}, 0.3f, NO_OFF, 1},         // feedback (resonance)
-    {{"phfreq", "phaser", 100.0f, 4000.0f, awva::ParamKind::continuous}, 600.0f, NO_OFF, 1}, // sweep centre, Hz
-    {{"chmix", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.25f, 0.0f, 1},          // wet amount
-    {{"chrate", "chorus", 0.05f, 5.0f, awva::ParamKind::continuous}, 0.3f, NO_OFF, 0},       // Hz
-    {{"chdepth", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.25f, NO_OFF, 1},      // 0..3 ms modulation
-    {{"chens", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, NO_OFF, 1},         // fast 6 Hz ensemble shimmer
-    {{"trdepth", "trem", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},
-    {{"trrate", "trem", 0.5f, 12.0f, awva::ParamKind::continuous}, 4.5f, NO_OFF, 0},         // Hz
-    {{"trstereo", "trem", 0.0f, 1.0f, awva::ParamKind::continuous}, 1.0f, NO_OFF, 1},        // 0 tremolo, 1 auto-pan
-    {{"dlmix", "delay", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.0f, 0.0f, 1},            // echo level
-    {{"dltime", "delay", 20.0f, 650.0f, awva::ParamKind::continuous}, 330.0f, NO_OFF, 0},    // ms per repeat
-    {{"dlfb", "delay", 0.0f, 0.95f, awva::ParamKind::continuous}, 0.35f, NO_OFF, 1},         // feedback per repeat
-    {{"dltone", "delay", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.5f, NO_OFF, 1},         // feedback low-pass 1..12 kHz
-    {{"dlpp", "delay", 0.0f, 1.0f, awva::ParamKind::continuous}, 1.0f, NO_OFF, 1},           // 0 mono echo, 1 ping-pong
-    {{"rvmix", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.15f, 0.0f, 1},          // reverb level
-    {{"rvpre", "reverb", 0.0f, 150.0f, awva::ParamKind::continuous}, 12.0f, NO_OFF, 0},      // pre-delay, ms
-    {{"rvdecay", "reverb", 0.2f, 15.0f, awva::ParamKind::continuous}, 2.0f, NO_OFF, 1},      // RT60, s
-    {{"rvdamp", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.45f, NO_OFF, 1},       // tank damping 12 kHz..375 Hz
-    {{"rvlowcut", "reverb", 20.0f, 600.0f, awva::ParamKind::continuous}, 150.0f, NO_OFF, 1}, // input low cut, Hz
-    {{"rvmod", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous}, 0.5f, NO_OFF, 1},         // tank modulation
-    {{"level", "out", 0.0f, 2.0f, awva::ParamKind::continuous}, 1.0f, 1.0f, 1},              // output gain
-    {{"width", "out", 0.0f, 2.0f, awva::ParamKind::continuous}, 1.0f, 1.0f, 1},              // stereo width
-    {{"bypass", "out", 0.0f, 1.0f, awva::ParamKind::toggle}, 0.0f, NO_OFF, 0},
+    {{"drive", "drive", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.0f, 0.0f, 1},            // saturation amount
+    {{"tilt", "drive", -1.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.0f, 0.0f, 1},            // tilt EQ around 700 Hz, +-6 dB
+    {{"phmix", "phaser", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.0f, 0.0f, 1},           // 1 = classic 50/50 (deepest notches)
+    {{"phrate", "phaser", 0.05f, 8.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.5f, NO_OFF, 0},       // Hz
+    {{"phdepth", "phaser", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.7f, NO_OFF, 1},       // sweep +-1.5 octaves at 1
+    {{"phfb", "phaser", 0.0f, 0.85f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.3f, NO_OFF, 1},         // feedback (resonance)
+    {{"phfreq", "phaser", 100.0f, 4000.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 600.0f, NO_OFF, 1}, // sweep centre, Hz
+    {{"chmix", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.25f, 0.0f, 1},          // wet amount
+    {{"chrate", "chorus", 0.05f, 5.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.3f, NO_OFF, 0},       // Hz
+    {{"chdepth", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.25f, NO_OFF, 1},      // 0..3 ms modulation
+    {{"chens", "chorus", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.0f, NO_OFF, 1},         // fast 6 Hz ensemble shimmer
+    {{"trdepth", "trem", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.0f, 0.0f, 1},
+    {{"trrate", "trem", 0.5f, 12.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 4.5f, NO_OFF, 0},         // Hz
+    {{"trstereo", "trem", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 1.0f, NO_OFF, 1},        // 0 tremolo, 1 auto-pan
+    {{"dlmix", "delay", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.0f, 0.0f, 1},            // echo level
+    {{"dltime", "delay", 20.0f, 650.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 330.0f, NO_OFF, 0},    // ms per repeat
+    {{"dlfb", "delay", 0.0f, 0.95f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.35f, NO_OFF, 1},         // feedback per repeat
+    {{"dltone", "delay", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.5f, NO_OFF, 1},         // feedback low-pass 1..12 kHz
+    {{"dlpp", "delay", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 1.0f, NO_OFF, 1},           // 0 mono echo, 1 ping-pong
+    {{"rvmix", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.15f, 0.0f, 1},          // reverb level
+    {{"rvpre", "reverb", 0.0f, 150.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 12.0f, NO_OFF, 0},      // pre-delay, ms
+    {{"rvdecay", "reverb", 0.2f, 15.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 2.0f, NO_OFF, 1},      // RT60, s
+    {{"rvdamp", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.45f, NO_OFF, 1},       // tank damping 12 kHz..375 Hz
+    {{"rvlowcut", "reverb", 20.0f, 600.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 150.0f, NO_OFF, 1}, // input low cut, Hz
+    {{"rvmod", "reverb", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 0.5f, NO_OFF, 1},         // tank modulation
+    {{"level", "out", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 1.0f, 1.0f, 1},              // output gain
+    {{"width", "out", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_NO_TEXT}, 1.0f, 1.0f, 1},              // stereo width
+    {{"bypass", "out", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_NO_TEXT}, 0.0f, NO_OFF, 0},
 };
 
 // ---------------------------------------------------------------------------------------------

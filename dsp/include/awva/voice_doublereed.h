@@ -90,6 +90,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/doublereed.inc" // the parameters' text (AWVA_TEXT)
 #include "note_glide.h"
 #include "preset.h"
 #include "svf.h"
@@ -914,58 +915,58 @@ struct ParamEntry {
 static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 
 static constexpr ParamEntry param_table[] = {
-    {{"gain", "level", 0.05f, 100.0f, C_}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, C_}, &Params::pc_a},
-    {{"pres_sq", "level", 0.0f, 1.5f, C_}, &Params::pc_b},
-    {{"pres_hz", "level", 2.0f, 200.0f, C_}, &Params::lv_hz},
-    {{"release", "level", 0.005f, 1.0f, C_}, &Params::rel},
-    {{"rel_pedal", "level", 0.0f, 3.0f, C_}, &Params::rel_ped},
-    {{"p_soft", "breath", 0.5f, 3.0f, C_}, &Params::p_soft}, // lightest touch re the threshold
-    {{"p_loud", "breath", 0.1f, 3.0f, C_}, &Params::p_loud}, // ff mouth pressure re the closing pressure
-    {{"p_reg", "breath", -1.0f, 1.0f, C_}, &Params::p_reg},
-    {{"p_curve", "breath", 0.3f, 3.0f, C_}, &Params::p_curve},
-    {{"reed_hz", "reed", 200.0f, 8000.0f, C_}, &Params::reed_hz},
-    {{"reed_reg", "reed", -1.0f, 1.5f, C_}, &Params::reed_reg},
-    {{"reed_q", "reed", 0.3f, 30.0f, C_}, &Params::reed_q},
-    {{"reed_open", "reed", 0.05f, 2.5f, C_}, &Params::reed_open}, // mm
-    {{"open_reg", "reed", -1.0f, 1.5f, C_}, &Params::open_reg},
-    {{"reed_w", "reed", 2.0f, 25.0f, C_}, &Params::reed_w},   // mm
-    {{"p_close", "reed", 1.0f, 40.0f, C_}, &Params::p_close}, // kPa
-    {{"contact", "reed", 0.0f, 50.0f, C_}, &Params::contact},
-    {{"duct", "reed", 0.05f, 5.0f, C_}, &Params::duct}, // mm
-    {{"emb_tilt", "reed", -1.0f, 1.0f, C_}, &Params::emb_tilt},
-    {{"emb_soft", "reed", 0.1f, 1.0f, C_}, &Params::emb_soft},
-    {{"bite", "reed", -100.0f, 100.0f, C_}, &Params::bite},
-    {{"jitter", "reed", 0.0f, 40.0f, C_}, &Params::jitter},
-    {{"wander", "player", 0.0f, 0.3f, C_}, &Params::wander},
-    {{"lip_wander", "player", 0.0f, 0.3f, C_}, &Params::lip_wander},
-    {{"wander_hz", "player", 0.3f, 30.0f, C_}, &Params::wander_hz},
-    {{"ref_note", "bore", 24.0f, 96.0f, C_}, &Params::ref_note}, // MIDI
-    {{"apex", "bore", 0.5f, 80.0f, C_}, &Params::apex},          // cm
-    {{"cavity", "bore", 0.0f, 4.0f, C_}, &Params::cavity},       // re the missing cone's volume
-    {{"bore_d", "bore", 1.5f, 15.0f, C_}, &Params::bore_d},      // mm
-    {{"bore_decay", "bore", 0.003f, 0.3f, C_}, &Params::bore_t},
-    {{"bore_reg", "bore", -1.0f, 2.0f, C_}, &Params::bore_reg},
-    {{"lattice_hz", "holes", 100.0f, 6000.0f, C_}, &Params::lat_hz},
-    {{"lattice_q", "holes", 0.4f, 4.0f, C_}, &Params::lat_q},
-    {{"lattice_reg", "holes", -1.0f, 1.5f, C_}, &Params::lat_reg},
-    {{"rad_hz", "radiation", 10.0f, 3000.0f, C_}, &Params::rad_hz},
-    {{"tone_hz", "radiation", 300.0f, 16000.0f, C_}, &Params::tone_hz},
-    {{"tone_q", "radiation", 0.5f, 3.0f, C_}, &Params::tone_q},
-    {{"breath", "air", 0.0f, 1.0f, C_}, &Params::breath},
-    {{"hiss", "air", 0.0f, 0.5f, C_}, &Params::hiss},
-    {{"t_noise", "air", 0.0f, 1.0f, C_}, &Params::t_noise},
-    {{"tongue", "attack", 0.0f, 2.0f, C_}, &Params::tongue},
-    {{"att_rate", "attack", 0.0f, 2.0f, C_}, &Params::att_rate},
-    {{"att_noise", "attack", 0.0f, 2.0f, C_}, &Params::att_noise},
-    {{"acc_level", "attack", 0.0f, 1.5f, C_}, &Params::acc_amp},
-    {{"acc_decay", "attack", 0.005f, 0.3f, C_}, &Params::acc_t},
-    {{"tongue_t", "attack", 0.0005f, 0.05f, C_}, &Params::tongue_t},
-    {{"tongue_shut", "attack", 0.0f, 1.2f, C_}, &Params::tongue_shut},
-    {{"slur", "attack", 0.0f, 1.0f, C_}, &Params::slur},
-    {{"pitch_t", "attack", 0.002f, 0.5f, C_}, &Params::pitch_t},
-    {{"flutter", "mod", 0.0f, 1.0f, C_}, &Params::flutter},
-    {{"flut_hz", "mod", 8.0f, 40.0f, C_}, &Params::flut_hz},
+    {{"gain", "level", 0.05f, 100.0f, C_, AWVA_TEXT(doublereed, gain)}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, C_, AWVA_TEXT(doublereed, pres_lin)}, &Params::pc_a},
+    {{"pres_sq", "level", 0.0f, 1.5f, C_, AWVA_TEXT(doublereed, pres_sq)}, &Params::pc_b},
+    {{"pres_hz", "level", 2.0f, 200.0f, C_, AWVA_TEXT(doublereed, pres_hz)}, &Params::lv_hz},
+    {{"release", "level", 0.005f, 1.0f, C_, AWVA_TEXT(doublereed, release)}, &Params::rel},
+    {{"rel_pedal", "level", 0.0f, 3.0f, C_, AWVA_TEXT(doublereed, rel_pedal)}, &Params::rel_ped},
+    {{"p_soft", "breath", 0.5f, 3.0f, C_, AWVA_TEXT(doublereed, p_soft)}, &Params::p_soft}, // lightest touch re the threshold
+    {{"p_loud", "breath", 0.1f, 3.0f, C_, AWVA_TEXT(doublereed, p_loud)}, &Params::p_loud}, // ff mouth pressure re the closing pressure
+    {{"p_reg", "breath", -1.0f, 1.0f, C_, AWVA_TEXT(doublereed, p_reg)}, &Params::p_reg},
+    {{"p_curve", "breath", 0.3f, 3.0f, C_, AWVA_TEXT(doublereed, p_curve)}, &Params::p_curve},
+    {{"reed_hz", "reed", 200.0f, 8000.0f, C_, AWVA_TEXT(doublereed, reed_hz)}, &Params::reed_hz},
+    {{"reed_reg", "reed", -1.0f, 1.5f, C_, AWVA_TEXT(doublereed, reed_reg)}, &Params::reed_reg},
+    {{"reed_q", "reed", 0.3f, 30.0f, C_, AWVA_TEXT(doublereed, reed_q)}, &Params::reed_q},
+    {{"reed_open", "reed", 0.05f, 2.5f, C_, AWVA_TEXT(doublereed, reed_open)}, &Params::reed_open}, // mm
+    {{"open_reg", "reed", -1.0f, 1.5f, C_, AWVA_TEXT(doublereed, open_reg)}, &Params::open_reg},
+    {{"reed_w", "reed", 2.0f, 25.0f, C_, AWVA_TEXT(doublereed, reed_w)}, &Params::reed_w},    // mm
+    {{"p_close", "reed", 1.0f, 40.0f, C_, AWVA_TEXT(doublereed, p_close)}, &Params::p_close}, // kPa
+    {{"contact", "reed", 0.0f, 50.0f, C_, AWVA_TEXT(doublereed, contact)}, &Params::contact},
+    {{"duct", "reed", 0.05f, 5.0f, C_, AWVA_TEXT(doublereed, duct)}, &Params::duct}, // mm
+    {{"emb_tilt", "reed", -1.0f, 1.0f, C_, AWVA_TEXT(doublereed, emb_tilt)}, &Params::emb_tilt},
+    {{"emb_soft", "reed", 0.1f, 1.0f, C_, AWVA_TEXT(doublereed, emb_soft)}, &Params::emb_soft},
+    {{"bite", "reed", -100.0f, 100.0f, C_, AWVA_TEXT(doublereed, bite)}, &Params::bite},
+    {{"jitter", "reed", 0.0f, 40.0f, C_, AWVA_TEXT(doublereed, jitter)}, &Params::jitter},
+    {{"wander", "player", 0.0f, 0.3f, C_, AWVA_TEXT(doublereed, wander)}, &Params::wander},
+    {{"lip_wander", "player", 0.0f, 0.3f, C_, AWVA_TEXT(doublereed, lip_wander)}, &Params::lip_wander},
+    {{"wander_hz", "player", 0.3f, 30.0f, C_, AWVA_TEXT(doublereed, wander_hz)}, &Params::wander_hz},
+    {{"ref_note", "bore", 24.0f, 96.0f, C_, AWVA_TEXT(doublereed, ref_note)}, &Params::ref_note}, // MIDI
+    {{"apex", "bore", 0.5f, 80.0f, C_, AWVA_TEXT(doublereed, apex)}, &Params::apex},              // cm
+    {{"cavity", "bore", 0.0f, 4.0f, C_, AWVA_TEXT(doublereed, cavity)}, &Params::cavity},         // re the missing cone's volume
+    {{"bore_d", "bore", 1.5f, 15.0f, C_, AWVA_TEXT(doublereed, bore_d)}, &Params::bore_d},        // mm
+    {{"bore_decay", "bore", 0.003f, 0.3f, C_, AWVA_TEXT(doublereed, bore_decay)}, &Params::bore_t},
+    {{"bore_reg", "bore", -1.0f, 2.0f, C_, AWVA_TEXT(doublereed, bore_reg)}, &Params::bore_reg},
+    {{"lattice_hz", "holes", 100.0f, 6000.0f, C_, AWVA_TEXT(doublereed, lattice_hz)}, &Params::lat_hz},
+    {{"lattice_q", "holes", 0.4f, 4.0f, C_, AWVA_TEXT(doublereed, lattice_q)}, &Params::lat_q},
+    {{"lattice_reg", "holes", -1.0f, 1.5f, C_, AWVA_TEXT(doublereed, lattice_reg)}, &Params::lat_reg},
+    {{"rad_hz", "radiation", 10.0f, 3000.0f, C_, AWVA_TEXT(doublereed, rad_hz)}, &Params::rad_hz},
+    {{"tone_hz", "radiation", 300.0f, 16000.0f, C_, AWVA_TEXT(doublereed, tone_hz)}, &Params::tone_hz},
+    {{"tone_q", "radiation", 0.5f, 3.0f, C_, AWVA_TEXT(doublereed, tone_q)}, &Params::tone_q},
+    {{"breath", "air", 0.0f, 1.0f, C_, AWVA_TEXT(doublereed, breath)}, &Params::breath},
+    {{"hiss", "air", 0.0f, 0.5f, C_, AWVA_TEXT(doublereed, hiss)}, &Params::hiss},
+    {{"t_noise", "air", 0.0f, 1.0f, C_, AWVA_TEXT(doublereed, t_noise)}, &Params::t_noise},
+    {{"tongue", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(doublereed, tongue)}, &Params::tongue},
+    {{"att_rate", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(doublereed, att_rate)}, &Params::att_rate},
+    {{"att_noise", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(doublereed, att_noise)}, &Params::att_noise},
+    {{"acc_level", "attack", 0.0f, 1.5f, C_, AWVA_TEXT(doublereed, acc_level)}, &Params::acc_amp},
+    {{"acc_decay", "attack", 0.005f, 0.3f, C_, AWVA_TEXT(doublereed, acc_decay)}, &Params::acc_t},
+    {{"tongue_t", "attack", 0.0005f, 0.05f, C_, AWVA_TEXT(doublereed, tongue_t)}, &Params::tongue_t},
+    {{"tongue_shut", "attack", 0.0f, 1.2f, C_, AWVA_TEXT(doublereed, tongue_shut)}, &Params::tongue_shut},
+    {{"slur", "attack", 0.0f, 1.0f, C_, AWVA_TEXT(doublereed, slur)}, &Params::slur},
+    {{"pitch_t", "attack", 0.002f, 0.5f, C_, AWVA_TEXT(doublereed, pitch_t)}, &Params::pitch_t},
+    {{"flutter", "mod", 0.0f, 1.0f, C_, AWVA_TEXT(doublereed, flutter)}, &Params::flutter},
+    {{"flut_hz", "mod", 8.0f, 40.0f, C_, AWVA_TEXT(doublereed, flut_hz)}, &Params::flut_hz},
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

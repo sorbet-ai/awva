@@ -331,6 +331,16 @@ doctest_discover_tests(awva_sdk_tests TEST_PREFIX "sdk." PROPERTIES LABELS unit)
 add_test(NAME sdk.names_without_semicolons COMMAND awva_sdk_tests --list-test-cases) # (a ';' splits a name in ctest)
 set_tests_properties(sdk.names_without_semicolons PROPERTIES LABELS unit FAIL_REGULAR_EXPRESSION "\;")
 
+# the parameters' text compiled in is the files: dsp/include/awva/param_text/*.inc and docs/icons.md
+# up to date (tools/param_text.cmake: every parameter's text and icon checked), and a build without
+# the text (AWVA_PARAM_TEXT 0) has the same tables, their text NULL
+add_test(NAME param_text COMMAND "${CMAKE_COMMAND}" -DCHECK=ON -P "${CMAKE_CURRENT_SOURCE_DIR}/../tools/param_text.cmake")
+set_tests_properties(param_text PROPERTIES LABELS unit)
+add_executable(awva_param_text_off tests/test_param_text_off.cpp)
+target_include_directories(awva_param_text_off PRIVATE "${AWVA_DOCTEST_DIR}")
+target_link_libraries(awva_param_text_off PRIVATE awva_dsp)
+doctest_discover_tests(awva_param_text_off TEST_PREFIX "param_text_off." PROPERTIES LABELS unit)
+
 # the factory presets compiled in are the files: dsp/include/awva/presets/*.inc up to date
 add_test(NAME presets_inc COMMAND "${CMAKE_COMMAND}" -DCHECK=ON -P "${CMAKE_CURRENT_SOURCE_DIR}/../tools/presets_inc.cmake")
 set_tests_properties(presets_inc PROPERTIES LABELS unit)

@@ -143,7 +143,20 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 		for (int i = 0; i < e->info->num_params; i++) {
 			CHECK(std::strcmp(d.params[i].name, e->param_desc(i)->name) == 0);
 			CHECK(dll.c().param_index(d.params[i].id) == i);
+			// the text for people, the engine's (awva/params.h AWVA_TEXT)
+			REQUIRE(d.params[i].label != nullptr);
+			REQUIRE(d.params[i].hover != nullptr);
+			REQUIRE(d.params[i].icon != nullptr);
+			CHECK(std::strcmp(d.params[i].label, e->param_desc(i)->label) == 0);
+			CHECK(std::strcmp(d.params[i].hover, e->param_desc(i)->hover) == 0);
+			CHECK(std::strcmp(d.params[i].icon, e->param_desc(i)->icon) == 0);
 		}
+		const nsc_param& out = d.params[d.num_params - 1];
+		REQUIRE(out.label != nullptr);
+		CHECK(std::strcmp(out.label, "Output") == 0);
+		REQUIRE(out.icon != nullptr);
+		CHECK(std::strcmp(out.icon, "level") == 0);
+		CHECK(out.hover != nullptr);
 		CHECK(dll.c().param_index(0x12345678u) == -1);
 		for (int i = 0; i < d.num_presets; i++) CHECK(std::strcmp(d.presets[i].name, e->preset_name(i)) == 0);
 		CHECK(std::filesystem::exists(std::string(NSC_COMPONENT_DIR) + "/" + d.id + ".json"));

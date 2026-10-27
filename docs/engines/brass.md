@@ -43,57 +43,57 @@ After `init()` the engine plays preset 0 (trumpet).
 
 ## Parameters
 
-Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/brass.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| `1b5426fe` | `gain` | level | 0.1 | 6 | 0.328 | continuous |
-| `75245e0b` | `pres_lin` | level | 0 | 1 | 0.3 | continuous |
-| `1b755ad8` | `pres_sq` | level | 0 | 1.5 | 0.7 | continuous |
-| `14a92b36` | `pres_hz` | level | 2 | 200 | 40 | continuous |
-| `1036ae7e` | `release` | level | 0.005 | 1 | 0.03 | continuous |
-| `c7d91eff` | `rel_pedal` | level | 0 | 3 | 0.4 | continuous |
-| `aa7e184b` | `lip_soft` | lips | -2 | 0.8 | -1.5 | continuous |
-| `c6217e1b` | `lip_loud` | lips | -2 | 0.85 | 0.65 | continuous |
-| `e03cb8d0` | `lip_tilt` | lips | -0.5 | 0.5 | 0.15 | continuous |
-| `02049853` | `jitter` | lips | 0 | 20 | 3 | continuous |
-| `235d9fc7` | `breath` | lips | 0 | 0.8 | 0.08 | continuous |
-| `239b9a3e` | `brassiness` | bore | 0 | 60 | 16 | continuous |
-| `5b83d2e2` | `bore_decay` | bore | 0.005 | 0.2 | 0.025 | continuous |
-| `48d7d837` | `bell_hz` | bore | 150 | 4000 | 1400 | continuous |
-| `17979d07` | `rad_hz` | body | 20 | 2000 | 350 | continuous |
-| `d6db0cb6` | `cup_hz` | body | 150 | 3000 | 1200 | continuous |
-| `9be8e613` | `cup_q` | body | 0.5 | 5 | 1.4 | continuous |
-| `df277df3` | `cup_gain` | body | 0 | 4 | 1.5 | continuous |
-| `53c95844` | `tone_hz` | body | 500 | 12000 | 5500 | continuous |
-| `0cca7651` | `tone_q` | body | 0.5 | 2 | 0.8 | continuous |
-| `4d442335` | `tone_dyn` | body | 0 | 4 | 1.5 | continuous |
-| `a5324c77` | `tilt_tone` | body | -2 | 2 | 0.6 | continuous |
-| `d6069f54` | `mute` | mute | 0 | 1 | 0 | continuous |
-| `58cbd8d3` | `mute_hz` | mute | 300 | 5000 | 1700 | continuous |
-| `9f982c60` | `mute_q` | mute | 0.5 | 10 | 4 | continuous |
-| `62cbe891` | `mute_hp` | mute | 0 | 3 | 0.3 | continuous |
-| `5ebcd7bb` | `mute_bp` | mute | 0 | 4 | 2.5 | continuous |
-| `5ad66955` | `mute_lp` | mute | 0 | 2 | 0 | continuous |
-| `2de2e627` | `wah` | mute | -2 | 2 | 0 | continuous |
-| `25a7329d` | `tongue` | attack | 0 | 2 | 1 | continuous |
-| `6f1a0e5f` | `acc_level` | attack | 0 | 1.5 | 0.35 | continuous |
-| `6f9d5d57` | `acc_decay` | attack | 0.01 | 0.3 | 0.05 | continuous |
-| `0ffdea03` | `acc_bright` | attack | 0 | 1.5 | 0.5 | continuous |
-| `bb6347c3` | `scoop` | attack | 0 | 1.5 | 0.25 | continuous |
-| `71ca3e3e` | `blat` | attack | 0 | 1.5 | 0.25 | continuous |
-| `09ceaf46` | `t_noise` | attack | 0 | 1 | 0.15 | continuous |
-| `72d5f1ed` | `slur` | attack | 0 | 1 | 0.25 | continuous |
-| `e4d88d72` | `vibrato` | mod | 0 | 1 | 0 | continuous |
-| `9e2c50e9` | `vib_hz` | mod | 2 | 9 | 5.5 | continuous |
-| `175c54d9` | `flutter` | mod | 0 | 1 | 0.6 | continuous |
-| `e6f3c1b1` | `flut_hz` | mod | 8 | 40 | 24 | continuous |
-| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
-| `77bdc182` | `growl` | growl | 0 | 1 | 0 | continuous |
-| `ef88e6bb` | `growl_from` | growl | 0 | 1.5 | 0.7 | continuous |
-| `aed9b325` | `growl_hz` | growl | 10 | 80 | 15 | continuous |
-| `7c445ab1` | `pair` | section | 0 | 1 | 0 | continuous |
-| `bb5fdd2c` | `detune` | section | 0 | 30 | 8 | continuous |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| `1b5426fe` | `gain` | Level | `level` | level | 0.1 | 6 | 0.328 | continuous | The overall loudness of the sound. Range 0.1 to 6. |
+| `75245e0b` | `pres_lin` | Dynamics (even) | `dynamics+soft` | level | 0 | 1 | 0.3 | continuous | The even part of how pressure becomes loudness: more here and a light touch already speaks. Range 0 to 1. |
+| `1b755ad8` | `pres_sq` | Dynamics (curved) | `dynamics+loud` | level | 0 | 1.5 | 0.7 | continuous | The curved part of how pressure becomes loudness: more here and the loud end opens up faster than the soft end. Range 0 to 1.5. |
+| `14a92b36` | `pres_hz` | Response | `response` | level | 2 | 200 | 40 | continuous | How quickly the sound follows a change of pressure: low is a slow swell, high is immediate. Range 2 to 200 Hz. |
+| `1036ae7e` | `release` | Release | `release` | level | 0.005 | 1 | 0.03 | continuous | How long the sound takes to die away after the key is released. Range 0.005 to 1 s. |
+| `c7d91eff` | `rel_pedal` | Release with pedal | `release+pedal` | level | 0 | 3 | 0.4 | continuous | How much longer the release gets with the sustain pedal down. Range 0 to 3 s. |
+| `aa7e184b` | `lip_soft` | Lips, soft | `embouchure+soft` | lips | -2 | 0.8 | -1.5 | continuous | How closed the lips play when soft: -2 pure and round, towards 0.8 buzzy. Range -2 to 0.8. |
+| `c6217e1b` | `lip_loud` | Lips, loud | `embouchure+loud` | lips | -2 | 0.85 | 0.65 | continuous | How closed the lips play when loud: -2 pure and round, 0.85 buzzy. Range -2 to 0.85. |
+| `e03cb8d0` | `lip_tilt` | Lips by timbre | `embouchure+timbre` | lips | -0.5 | 0.5 | 0.15 | continuous | How much timbre firms the lips: up brightens. Range -0.5 to 0.5. |
+| `02049853` | `jitter` | Jitter | `jitter` | lips | 0 | 20 | 3 | continuous | A fine, fast roughness of the pitch, like a living lip. Range 0 to 20 cents. |
+| `235d9fc7` | `breath` | Breath noise | `air` | lips | 0 | 0.8 | 0.08 | continuous | The audible breath in the tone. Range 0 to 0.8. |
+| `239b9a3e` | `brassiness` | Brassiness | `brassiness` | bore | 0 | 60 | 16 | continuous | How much the tone blares and steepens as it gets loud. Range 0 to 60. |
+| `5b83d2e2` | `bore_decay` | Bore decay | `bore+decay` | bore | 0.005 | 0.2 | 0.025 | continuous | How long the tube's resonance rings: the bloom and the tail. Range 0.005 to 0.2 s. |
+| `48d7d837` | `bell_hz` | Bell cutoff | `flare` | bore | 150 | 4000 | 1400 | continuous | The frequency above which the bell stops reflecting: the resonances above it fade. Range 150 to 4000 Hz. |
+| `17979d07` | `rad_hz` | Radiation low cut | `radiate+low` | body | 20 | 2000 | 350 | continuous | The frequency below which the instrument radiates less. Range 20 to 2000 Hz. |
+| `d6db0cb6` | `cup_hz` | Cup formant | `mouthpiece+rate` | body | 150 | 3000 | 1200 | continuous | Where the mouthpiece cup's formant sits. Range 150 to 3000 Hz. |
+| `9be8e613` | `cup_q` | Cup sharpness | `mouthpiece+q` | body | 0.5 | 5 | 1.4 | continuous | How narrow the cup formant is. Range 0.5 to 5. |
+| `df277df3` | `cup_gain` | Cup boost | `mouthpiece+level` | body | 0 | 4 | 1.5 | continuous | How much the cup formant is boosted. Range 0 to 4. |
+| `53c95844` | `tone_hz` | Tone | `tone` | body | 500 | 12000 | 5500 | continuous | The brightness of the radiated tone: the frequency above which it rolls off. Range 500 to 12000 Hz. |
+| `0cca7651` | `tone_q` | Tone sharpness | `tone+q` | body | 0.5 | 2 | 0.8 | continuous | How sharp the tone roll-off is. Range 0.5 to 2. |
+| `4d442335` | `tone_dyn` | Tone by dynamics | `tone+soft` | body | 0 | 4 | 1.5 | continuous | How many octaves darker the tone gets when soft. Range 0 to 4 octaves. |
+| `a5324c77` | `tilt_tone` | Tone by timbre | `tone+timbre` | body | -2 | 2 | 0.6 | continuous | How far timbre moves the tone: down is darker and more closed. Range -2 to 2 octaves. |
+| `d6069f54` | `mute` | Mute | `mute` | mute | 0 | 1 | 0 | continuous | How deep the mute sits in the bell: 0 open. Range 0 to 1. |
+| `58cbd8d3` | `mute_hz` | Mute resonance | `mute+rate` | mute | 300 | 5000 | 1700 | continuous | Where the mute's resonance sits. Range 300 to 5000 Hz. |
+| `9f982c60` | `mute_q` | Mute sharpness | `mute+q` | mute | 0.5 | 10 | 4 | continuous | How sharp the mute's resonance is. Range 0.5 to 10. |
+| `62cbe891` | `mute_hp` | Straight mute | `mute+high` | mute | 0 | 3 | 0.3 | continuous | The straight-mute character: how much of the highs pass. Range 0 to 3. |
+| `5ebcd7bb` | `mute_bp` | Harmon mute | `mute+q` | mute | 0 | 4 | 2.5 | continuous | The harmon-mute character: how much of the resonant middle passes. Range 0 to 4. |
+| `5ad66955` | `mute_lp` | Mute lows | `mute+low` | mute | 0 | 2 | 0 | continuous | How much of the lows pass the mute. Range 0 to 2. |
+| `2de2e627` | `wah` | Wah | `mute+timbre` | mute | -2 | 2 | 0 | continuous | How far timbre moves the mute's resonance: up opens it. Range -2 to 2 octaves. |
+| `25a7329d` | `tongue` | Strike | `strike` | attack | 0 | 2 | 1 | continuous | How much a hard strike sharpens the start: the tongue's hold and release, the accent and the "t". Range 0 to 2. |
+| `6f1a0e5f` | `acc_level` | Accent | `accent` | attack | 0 | 1.5 | 0.35 | continuous | The extra push at the start of a struck note: 0 none, higher is a sharper attack. Range 0 to 1.5. |
+| `6f9d5d57` | `acc_decay` | Accent length | `accent+time` | attack | 0.01 | 0.3 | 0.05 | continuous | How long the accent lasts before the note settles. Range 0.01 to 0.3 s. |
+| `0ffdea03` | `acc_bright` | Accent brightness | `accent+bright` | attack | 0 | 1.5 | 0.5 | continuous | How much brighter the start of a struck note is than the sustain. Range 0 to 1.5. |
+| `bb6347c3` | `scoop` | Scoop | `scoop` | attack | 0 | 1.5 | 0.25 | continuous | How far the pitch scoops up from below at a strike. Range 0 to 1.5 semitones. |
+| `71ca3e3e` | `blat` | Blat | `jitter+strike` | attack | 0 | 1.5 | 0.25 | continuous | The buzzy pitch flutter during a hard attack. Range 0 to 1.5 semitones. |
+| `09ceaf46` | `t_noise` | Tongue "t" | `tongue` | attack | 0 | 1 | 0.15 | continuous | The short noise burst of a tongued start. Range 0 to 1. |
+| `72d5f1ed` | `slur` | Slur | `slur` | attack | 0 | 1 | 0.25 | continuous | How much articulation a legato note change gets: 0 seamless, 1 each new note is re-tongued. Range 0 to 1. |
+| `e4d88d72` | `vibrato` | Vibrato | `vibrato` | mod | 0 | 1 | 0 | continuous | The depth of the automatic vibrato that sets in after the note starts. Range 0 to 1. |
+| `9e2c50e9` | `vib_hz` | Vibrato rate | `vibrato+rate` | mod | 2 | 9 | 5.5 | continuous | How fast the vibrato wavers. Range 2 to 9 Hz. |
+| `175c54d9` | `flutter` | Flutter by shake | `flutter` | mod | 0 | 1 | 0.6 | continuous | How much flutter tongue a shake (the motion input) adds. Range 0 to 1. |
+| `e6f3c1b1` | `flut_hz` | Flutter rate | `flutter+rate` | mod | 8 | 40 | 24 | continuous | How fast the flutter tongue rolls. Range 8 to 40 Hz. |
+| `e7c742df` | `life` | Life | `life` | mod | 0 | 1 | 0 | continuous | Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1. |
+| `77bdc182` | `growl` | Growl | `growl` | growl | 0 | 1 | 0 | continuous | The depth of the throaty growl when the note is pushed hard: 0 off. Range 0 to 1. |
+| `ef88e6bb` | `growl_from` | Growl from | `growl+press` | growl | 0 | 1.5 | 0.7 | continuous | The pressure where the growl sets in. Range 0 to 1.5. |
+| `aed9b325` | `growl_hz` | Growl rate | `growl+rate` | growl | 10 | 80 | 15 | continuous | How fast the throat flutters in the growl. Range 10 to 80 Hz. |
+| `7c445ab1` | `pair` | Second player | `ensemble` | section | 0 | 1 | 0 | continuous | The level of a second, slightly detuned player: 0 solo. Range 0 to 1. |
+| `bb5fdd2c` | `detune` | Detune | `detune` | section | 0 | 30 | 8 | continuous | How far the second player is detuned. Range 0 to 30 cents. |
 
 ## Cost and memory
 

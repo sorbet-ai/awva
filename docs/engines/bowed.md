@@ -44,48 +44,48 @@ After `init()` the engine plays preset 0 (violin).
 
 ## Parameters
 
-Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()` (preset 0). The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/bowed.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| `1b5426fe` | `gain` | level | 0 | 4 | 1 | continuous |
-| `16ec7828` | `force_lo` | bow | 0.3 | 1.6 | 0.75 | continuous |
-| `f4e34846` | `force_hi` | bow | 0.3 | 1.6 | 0.95 | continuous |
-| `3947a3c3` | `force_over` | bow | 0 | 2 | 1 | continuous |
-| `d9a20dec` | `speed_curve` | bow | 0 | 1 | 0.7 | continuous |
-| `0028edcc` | `rosin` | bow | 0 | 0.2 | 0.01 | continuous |
-| `54336489` | `pos` | position | 0.05 | 0.2 | 0.11 | continuous |
-| `ea92abc9` | `pos_tilt` | position | 0 | 1.5 | 1 | continuous |
-| `a2bf5ae1` | `pos_press` | position | 0 | 1 | 0.5 | continuous |
-| `ddafc043` | `damp` | string | 0.5 | 10 | 4 | continuous |
-| `25094f85` | `bright` | string | 0.3 | 3 | 1 | continuous |
-| `40d3c7b7` | `tone_lo` | string | 0 | 3 | 0.3 | continuous |
-| `66c9762d` | `tone_hi` | string | 0 | 3 | 1.2 | continuous |
-| `35c43f5f` | `body_size` | body | 0.2 | 1.5 | 1 | continuous |
-| `a306632d` | `body_track` | body | 0 | 1 | 0 | continuous |
-| `97b7e91c` | `body_amt` | body | 0 | 2 | 1 | continuous |
-| `d5fe35bd` | `body_q` | body | 0.3 | 3 | 1 | continuous |
-| `37cc676a` | `hill` | body | 0 | 3 | 0.75 | continuous |
-| `5fe7049c` | `direct` | body | 0 | 2 | 0.3 | continuous |
-| `dabb186a` | `acc_force` | accent | 0 | 3 | 0 | continuous |
-| `e147bd2e` | `acc_time` | accent | 0.002 | 0.2 | 0.02 | continuous |
-| `1af6738b` | `acc_noise` | accent | 0 | 1 | 0.04 | continuous |
-| `0ffdea03` | `acc_bright` | accent | 0 | 2 | 0.4 | continuous |
-| `48f48d74` | `rel` | release | 0.02 | 3 | 0.1 | continuous |
-| `be82e912` | `rel_ped` | release | 0 | 10 | 3 | continuous |
-| `20d57cd0` | `rel_lift` | release | 0 | 20 | 0 | continuous |
-| `e4d88d72` | `vibrato` | mod | 0 | 60 | 0 | continuous |
-| `9e2c50e9` | `vib_hz` | mod | 2 | 9 | 5.5 | continuous |
-| `a52aeefa` | `vib_delay` | mod | 0 | 2 | 0.35 | continuous |
-| `e7c742df` | `life` | mod | 0 | 1 | 0 | continuous |
-| `9d64fcc3` | `tremolo` | mod | 0 | 2 | 1.3 | continuous |
-| `86a498df` | `body_rot` | mod | -2 | 2 | 0.7 | continuous |
-| `cf9f7e5a` | `ensemble` | section | 0 | 1.5 | 0 | continuous |
-| `7b02ff91` | `ens_detune` | section | 0 | 25 | 7 | continuous |
-| `7c15eb4b` | `ens_spread` | section | 2 | 25 | 18 | continuous |
-| `092c3f46` | `pizz` | pizz | 0 | 1 | 0 | toggle |
-| `d88458fb` | `pizz_decay` | pizz | 0.1 | 5 | 1 | continuous |
-| `2a09f08f` | `pizz_bright` | pizz | 0.2 | 5 | 1 | continuous |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| `1b5426fe` | `gain` | Level | `level` | level | 0 | 4 | 1 | continuous | The overall loudness of the sound. Range 0 to 4. |
+| `16ec7828` | `force_lo` | Bow force, light | `bow+soft` | bow | 0.3 | 1.6 | 0.75 | continuous | The bow's force against its speed at a light touch: low is airy, high bites. Range 0.3 to 1.6. |
+| `f4e34846` | `force_hi` | Bow force, full | `bow+loud` | bow | 0.3 | 1.6 | 0.95 | continuous | The bow's force against its speed at a full press: above about 1.1 it turns raucous. Range 0.3 to 1.6. |
+| `3947a3c3` | `force_over` | Bow grit | `bow+press` | bow | 0 | 2 | 1 | continuous | The grit added when pressing beyond a full press: 0 none. Range 0 to 2. |
+| `d9a20dec` | `speed_curve` | Bow speed curve | `dynamics` | bow | 0 | 1 | 0.7 | continuous | How the bow speed follows pressure: 0 even, 1 the loud end opens up faster. Range 0 to 1. |
+| `0028edcc` | `rosin` | Rosin | `bow+noise` | bow | 0 | 0.2 | 0.01 | continuous | The bow's grainy noise texture. Range 0 to 0.2. |
+| `54336489` | `pos` | Bow position | `bow-position` | position | 0.05 | 0.2 | 0.11 | continuous | Where the bow sits on the string, as a fraction of its length from the bridge: small is bright and glassy, large is soft and dark. Range 0.05 to 0.2. |
+| `ea92abc9` | `pos_tilt` | Position by timbre | `bow-position+timbre` | position | 0 | 1.5 | 1 | continuous | How far timbre moves the bow: up towards the bridge, down towards the fingerboard. Range 0 to 1.5 octaves. |
+| `a2bf5ae1` | `pos_press` | Position by pressure | `bow-position+press` | position | 0 | 1 | 0.5 | continuous | How far a light bow drifts towards the fingerboard. Range 0 to 1 octaves. |
+| `ddafc043` | `damp` | String ring | `decay` | string | 0.5 | 10 | 4 | continuous | How long the string rings on its own, measured on a low note. Range 0.5 to 10 s. |
+| `25094f85` | `bright` | Brightness | `tone` | string | 0.3 | 3 | 1 | continuous | How sharp the string's corners are: above 1 brighter, below 1 rounder. Range 0.3 to 3. |
+| `40d3c7b7` | `tone_lo` | Treble, light | `tone+soft` | string | 0 | 3 | 0.3 | continuous | The treble at a light touch. Range 0 to 3. |
+| `66c9762d` | `tone_hi` | Treble, full | `tone+loud` | string | 0 | 3 | 1.2 | continuous | The treble at a full press. Range 0 to 3. |
+| `35c43f5f` | `body_size` | Body size | `body+size` | body | 0.2 | 1.5 | 1 | continuous | The size of the body: 1 a violin, 0.8 a viola, 0.45 a cello, 0.3 a bass. Range 0.2 to 1.5. |
+| `a306632d` | `body_track` | Body follows register | `body+register` | body | 0 | 1 | 0 | continuous | Whether the body shrinks for low notes: 0 a fixed body, 1 it follows the note. Range 0 to 1. |
+| `97b7e91c` | `body_amt` | Body | `body` | body | 0 | 2 | 1 | continuous | How much of the resonant body you hear. Range 0 to 2. |
+| `d5fe35bd` | `body_q` | Body sharpness | `body+q` | body | 0.3 | 3 | 1 | continuous | How sharp the body's resonances are. Range 0.3 to 3. |
+| `37cc676a` | `hill` | Bridge hill | `body+bright` | body | 0 | 3 | 0.75 | continuous | The brilliance of the bridge hill, a violin body's 2 to 3 kHz glow. Range 0 to 3. |
+| `5fe7049c` | `direct` | Direct string | `body+off` | body | 0 | 2 | 0.3 | continuous | How much of the string you hear without the body. Range 0 to 2. |
+| `dabb186a` | `acc_force` | Accent | `accent` | accent | 0 | 3 | 0 | continuous | How much firmer the bow bites at a strike: the start's scratch and bite. Range 0 to 3. |
+| `e147bd2e` | `acc_time` | Accent length | `accent+time` | accent | 0.002 | 0.2 | 0.02 | continuous | How long the accent lasts before the note settles. Range 0.002 to 0.2 s. |
+| `1af6738b` | `acc_noise` | Accent noise | `accent+noise` | accent | 0 | 1 | 0.04 | continuous | The extra bow noise at a strike. Range 0 to 1. |
+| `0ffdea03` | `acc_bright` | Accent brightness | `accent+bright` | accent | 0 | 2 | 0.4 | continuous | How much brighter the start of a struck note is than the sustain. Range 0 to 2. |
+| `48f48d74` | `rel` | Release | `release` | release | 0.02 | 3 | 0.1 | continuous | How long the string rings after a slow release, when the bow stops on the string. Range 0.02 to 3 s. |
+| `be82e912` | `rel_ped` | Release with pedal | `release+pedal` | release | 0 | 10 | 3 | continuous | How much longer the release gets with the sustain pedal down. Range 0 to 10 s. |
+| `20d57cd0` | `rel_lift` | Release on a lift | `release+lift` | release | 0 | 20 | 0 | continuous | How much longer the string rings after a quick lift-off, as a multiplier on the release. Range 0 to 20. |
+| `e4d88d72` | `vibrato` | Vibrato | `vibrato` | mod | 0 | 60 | 0 | continuous | The depth of the automatic vibrato that sets in after the note starts. Range 0 to 60. |
+| `9e2c50e9` | `vib_hz` | Vibrato rate | `vibrato+rate` | mod | 2 | 9 | 5.5 | continuous | How fast the vibrato wavers. Range 2 to 9 Hz. |
+| `a52aeefa` | `vib_delay` | Vibrato delay | `vibrato+time` | mod | 0 | 2 | 0.35 | continuous | How long after the start the vibrato reaches its full depth. Range 0 to 2 s. |
+| `e7c742df` | `life` | Life | `life` | mod | 0 | 1 | 0 | continuous | Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1. |
+| `9d64fcc3` | `tremolo` | Tremolo by shake | `bow+shake` | mod | 0 | 2 | 1.3 | continuous | How much a shake (the motion input) moves the bow; a strong shake reverses it into a tremolo. Range 0 to 2. |
+| `86a498df` | `body_rot` | Body by rotation | `spin` | mod | -2 | 2 | 0.7 | continuous | How far rotation (the motion input) shifts the body resonances, in octaves. Range -2 to 2 octaves. |
+| `cf9f7e5a` | `ensemble` | Section | `ensemble` | section | 0 | 1.5 | 0 | continuous | The level of two more players on the note: 0 solo. Range 0 to 1.5. |
+| `7b02ff91` | `ens_detune` | Section detune | `ensemble+pitch` | section | 0 | 25 | 7 | continuous | How far the extra players wander from the pitch. Range 0 to 25 cents. |
+| `7c15eb4b` | `ens_spread` | Section spread | `ensemble+time` | section | 2 | 25 | 18 | continuous | How far apart in time the extra players play. Range 2 to 25 ms. |
+| `092c3f46` | `pizz` | Pizzicato | `pluck` | pizz | 0 | 1 | 0 | toggle | Plucked instead of bowed: on or off. Range off or on. |
+| `d88458fb` | `pizz_decay` | Pluck ring | `pluck+decay` | pizz | 0.1 | 5 | 1 | continuous | How long a plucked note rings while held, measured on middle C. Range 0.1 to 5 s. |
+| `2a09f08f` | `pizz_bright` | Pluck sharpness | `pluck+bright` | pizz | 0.2 | 5 | 1 | continuous | How sharp the pluck is: higher is brighter. Range 0.2 to 5. |
 
 ## Cost and memory
 

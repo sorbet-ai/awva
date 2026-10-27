@@ -38,6 +38,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/modal.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 
 namespace modal {
@@ -160,27 +161,27 @@ static constexpr int NUM_PARAMS = (int)(sizeof(Params) / sizeof(float));
 [[nodiscard]] static inline Params preset_params(int i);
 
 static constexpr awva::ParamDesc param_desc[NUM_PARAMS] = {
-    {"level", "level", 0.1f, 3.0f, awva::ParamKind::continuous},
-    {"thresh", "mallet", 0.005f, 0.2f, awva::ParamKind::continuous},
-    {"span", "mallet", 0.2f, 1.5f, awva::ParamKind::continuous},
-    {"hard", "mallet", 0.2f, 1.2f, awva::ParamKind::continuous},
-    {"hardvel", "mallet", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"tilt", "mallet", 0.0f, 0.5f, awva::ParamKind::continuous},
-    {"mute", "mallet", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"upper", "tone", 0.0f, 2.0f, awva::ParamKind::continuous},
-    {"decay", "decay", 0.1f, 4.0f, awva::ParamKind::continuous},
-    {"keytrack", "decay", 0.0f, 1.5f, awva::ParamKind::continuous},
-    {"hfdamp", "decay", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"damper", "damper", 0.0f, 2.0f, awva::ParamKind::continuous},
-    {"lift", "damper", 0.02f, 0.5f, awva::ParamKind::continuous},
-    {"pedal", "damper", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"trem", "trem", 0.0f, 1.0f, awva::ParamKind::toggle},
-    {"tremrate", "trem", 1.0f, 10.0f, awva::ParamKind::continuous},
-    {"tremdepth", "trem", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"tremthr", "trem", 0.2f, 1.2f, awva::ParamKind::continuous},
-    {"rub", "rub", 0.0f, 1.0f, awva::ParamKind::continuous},
-    {"rubnoise", "rub", 0.0f, 0.3f, awva::ParamKind::continuous},
-    {"model", "model", 0.0f, 5.0f, awva::ParamKind::steps},
+    {"level", "level", 0.1f, 3.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, level)},
+    {"thresh", "mallet", 0.005f, 0.2f, awva::ParamKind::continuous, AWVA_TEXT(modal, thresh)},
+    {"span", "mallet", 0.2f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(modal, span)},
+    {"hard", "mallet", 0.2f, 1.2f, awva::ParamKind::continuous, AWVA_TEXT(modal, hard)},
+    {"hardvel", "mallet", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, hardvel)},
+    {"tilt", "mallet", 0.0f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(modal, tilt)},
+    {"mute", "mallet", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, mute)},
+    {"upper", "tone", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, upper)},
+    {"decay", "decay", 0.1f, 4.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, decay)},
+    {"keytrack", "decay", 0.0f, 1.5f, awva::ParamKind::continuous, AWVA_TEXT(modal, keytrack)},
+    {"hfdamp", "decay", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, hfdamp)},
+    {"damper", "damper", 0.0f, 2.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, damper)},
+    {"lift", "damper", 0.02f, 0.5f, awva::ParamKind::continuous, AWVA_TEXT(modal, lift)},
+    {"pedal", "damper", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, pedal)},
+    {"trem", "trem", 0.0f, 1.0f, awva::ParamKind::toggle, AWVA_TEXT(modal, trem)},
+    {"tremrate", "trem", 1.0f, 10.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, tremrate)},
+    {"tremdepth", "trem", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, tremdepth)},
+    {"tremthr", "trem", 0.2f, 1.2f, awva::ParamKind::continuous, AWVA_TEXT(modal, tremthr)},
+    {"rub", "rub", 0.0f, 1.0f, awva::ParamKind::continuous, AWVA_TEXT(modal, rub)},
+    {"rubnoise", "rub", 0.0f, 0.3f, awva::ParamKind::continuous, AWVA_TEXT(modal, rubnoise)},
+    {"model", "model", 0.0f, 5.0f, awva::ParamKind::steps, AWVA_TEXT(modal, model)},
 };
 
 struct VoiceState {

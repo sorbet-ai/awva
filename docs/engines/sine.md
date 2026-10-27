@@ -27,11 +27,11 @@ None: the parameters are the sound.
 
 ## Parameters
 
-Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of the name).
+Default: the value after `init()`. The id is the component ABI's (FNV-1a 32 of the name). Label, icon and what it does: the parameter's text for people (`param_text/sine.json`; the icons: [Parameter icons](../icons.md)).
 
-| id | name | group | min | max | default | kind |
-|---|---|---|---|---|---|---|
-| | (none) | | | | | |
+| id | name | label | icon | group | min | max | default | kind | what it does |
+|---|---|---|---|---|---|---|---|---|---|
+| | (none) | | | | | | | | |
 
 ## Cost and memory
 

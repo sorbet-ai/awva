@@ -14,6 +14,8 @@
 //   fuzz              random playing and parameter writes, every preset: finite and bounded
 //   parameters        the table is sane; writes are clamped, rounded, NaN ignored
 //   heroes            every hero parameter is one of the engine's, every preset override a preset
+//   text              every parameter has a label, a hover text and an icon (param_text/<engine>.json);
+//                     a range the hover text states is the parameter's
 //   presets           names, numbering; switching while notes sound stays finite and bounded
 //   voice stealing    note jumps on held voices, instant re-strikes, every voice at once
 //   inputs            an input it doesn't declare makes no difference to its output
@@ -29,6 +31,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -485,6 +488,51 @@ TEST_CASE("heroes: every hero is a live parameter of the engine, overrides name 
 		CHECK(&f.heroes() == &dsp::heroes_of(info(), p >= 0 ? f.preset_name(p) : nullptr));
 	}
 }
+
+#if AWVA_PARAM_TEXT
+// the range a hover text ends with ("... Range 0 to 4 Hz.", "Range steps 0 to 5.", "Range off or on.")
+// as the parameter has it; true when it has none
+[[nodiscard]] static bool range_stated_is(const dsp::ParamDesc& d) {
+	const std::string h = d.hover;
+	const size_t at = h.rfind(" Range ");
+	if (at == std::string::npos) return true;
+	const char* s = h.c_str() + at + 7;
+	if (std::strncmp(s, "off or on", 9) == 0) return d.kind == dsp::ParamKind::toggle && d.min == 0.0f && d.max == 1.0f;
+	if (std::strncmp(s, "steps ", 6) == 0) {
+		if (d.kind != dsp::ParamKind::steps) return false;
+		s += 6;
+	}
+	char* end = nullptr;
+	const float lo = std::strtof(s, &end);
+	if (end == s || std::strncmp(end, " to ", 4) != 0) return false;
+	s = end + 4;
+	const float hi = std::strtof(s, &end);
+	return end != s && lo == d.min && hi == d.max;
+}
+
+TEST_CASE("text: every parameter has a label, a hover text and an icon, and the range it states") {
+	CAPTURE(std::string(info().name));
+	sdk::Engine e = fresh(-1);
+	for (int i = 0; i < e.num_params(); i++) {
+		const dsp::ParamDesc* d = e.param_desc(i);
+		CAPTURE(std::string(d->name));
+		REQUIRE(d->label != nullptr);
+		REQUIRE(d->hover != nullptr);
+		REQUIRE(d->icon != nullptr);
+		CHECK(std::strlen(d->label) > 0);
+		CHECK(std::strlen(d->hover) > 0);
+		// a concept, or concept+modifier: lower case, digits and '-' (assets/icons, docs/icons.md)
+		const std::string icon = d->icon;
+		CHECK(!icon.empty());
+		CHECK(icon.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789-+") == std::string::npos);
+		CHECK(std::count(icon.begin(), icon.end(), '+') <= 1);
+		CHECK(icon.front() != '+');
+		CHECK(icon.back() != '+');
+		CAPTURE(std::string(d->hover));
+		CHECK(range_stated_is(*d));
+	}
+}
+#endif
 
 TEST_CASE("presets: names and numbering, switching while notes sound") {
 	const int np = info().num_presets;

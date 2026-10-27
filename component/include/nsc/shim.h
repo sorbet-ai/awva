@@ -22,6 +22,7 @@
 #include "nsc/no_denormals.h"
 #include "awva/engine.h"
 #include "awva/preset.h"
+#include "awva/param_text/component.inc" // "output"'s text (AWVA_TEXT)
 #include "awva_sdk/timed_midi.h"
 
 #ifndef NSC_VERSION
@@ -89,11 +90,12 @@ template <dsp::VoiceEngine E> struct Shim {
 	};
 	static constexpr Params make_params() {
 		Params r{};
-		r.p[NP] = {fnv1a("output"), "output", "output", 0.0f, 2.0f, NSC_PARAM_CONTINUOUS, 1.0f};
 		for (int i = 0; i < NP; i++) {
 			const dsp::ParamDesc* d = E::param_desc(i);
-			r.p[i] = {fnv1a(d->name), d->name, d->group, d->min, d->max, static_cast<int32_t>(d->kind), defaults_v<E>[i]};
+			const float def = defaults_v<E>[i];
+			r.p[i] = {fnv1a(d->name), d->name, d->group, d->min, d->max, static_cast<int32_t>(d->kind), def, d->label, d->hover, d->icon};
 		}
+		r.p[NP] = {fnv1a("output"), "output", "output", 0.0f, 2.0f, NSC_PARAM_CONTINUOUS, 1.0f, AWVA_TEXT(component, output)};
 		return r;
 	}
 	static constexpr Params params_ = make_params();

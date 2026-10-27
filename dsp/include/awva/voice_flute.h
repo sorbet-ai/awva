@@ -96,6 +96,7 @@
 #include "controls.h"
 #include "dspmath.h"
 #include "params.h"
+#include "param_text/flute.inc" // the parameters' text (AWVA_TEXT)
 #include "preset.h"
 #include "svf.h"
 #ifdef FLUTE_TEST_HOOK
@@ -976,68 +977,68 @@ static constexpr awva::ParamKind C_ = awva::ParamKind::continuous;
 static constexpr awva::ParamKind T_ = awva::ParamKind::toggle;
 
 static constexpr ParamEntry param_table[] = {
-    {{"gain", "level", 0.0f, 100.0f, C_}, &Params::gain},
-    {{"pres_lin", "level", 0.0f, 1.0f, C_}, &Params::pc_a},
-    {{"pres_sq", "level", 0.0f, 1.5f, C_}, &Params::pc_b},
-    {{"pres_hz", "level", 2.0f, 200.0f, C_}, &Params::lv_hz},
-    {{"release", "level", 0.005f, 1.0f, C_}, &Params::rel},
-    {{"rel_pedal", "level", 0.0f, 3.0f, C_}, &Params::rel_ped},
-    {{"p_soft", "breath", 10.0f, 3000.0f, C_}, &Params::p_soft}, // Pa at C5
-    {{"p_loud", "breath", 20.0f, 6000.0f, C_}, &Params::p_loud},
-    {{"p_reg", "breath", -0.5f, 2.0f, C_}, &Params::p_reg},
-    {{"p_curve", "breath", 0.3f, 3.0f, C_}, &Params::p_curve},
-    {{"theta", "jet", 0.03f, 2.0f, C_}, &Params::theta},
-    {{"theta_reg", "jet", -1.0f, 1.0f, C_}, &Params::theta_reg},
-    {{"w_track", "jet", 0.0f, 1.0f, C_}, &Params::w_track},
-    {{"jet_h", "jet", 0.2f, 3.0f, C_}, &Params::jet_h}, // mm
-    {{"h_loud", "jet", -1.0f, 2.0f, C_}, &Params::h_loud},
-    {{"jet_w", "jet", 2.0f, 20.0f, C_}, &Params::jet_w}, // mm
-    {{"g_soft", "jet", 0.3f, 20.0f, C_}, &Params::g_soft},
-    {{"amp_loud", "jet", -3.0f, 3.0f, C_}, &Params::amp_loud},
-    {{"y0", "jet", -5.0f, 5.0f, C_}, &Params::y0},
-    {{"y_tilt", "jet", -3.0f, 3.0f, C_}, &Params::y_tilt},
-    {{"jet_st", "jet", 0.01f, 1.0f, C_}, &Params::jet_st},
-    {{"vortex", "jet", 0.1f, 5.0f, C_}, &Params::vortex},
-    {{"bore_mm", "bore", 2.0f, 20.0f, C_}, &Params::bore_mm},
-    {{"bore_decay", "bore", 0.002f, 0.5f, C_}, &Params::bore_t},
-    {{"bore_reg", "bore", -1.0f, 2.0f, C_}, &Params::bore_reg},
-    {{"cut_hz", "bore", 200.0f, 12000.0f, C_}, &Params::cut_hz},
-    {{"wall", "bore", 0.5f, 50.0f, C_}, &Params::wall},
-    {{"disp", "bore", -0.9f, 0.9f, C_}, &Params::disp},
-    {{"cover", "bore", -200.0f, 200.0f, C_}, &Params::cover},
-    {{"cover_hz", "bore", -2.0f, 2.0f, C_}, &Params::cover_hz},
-    {{"low_note", "fingering", 24.0f, 96.0f, C_}, &Params::low_note},
-    {{"overblow", "fingering", 0.0f, 1.0f, T_}, &Params::overblow},
-    {{"range_lo", "fingering", 24.0f, 96.0f, C_}, &Params::range_lo},
-    {{"range_hi", "fingering", 48.0f, 120.0f, C_}, &Params::range_hi},
-    {{"g_out", "fingering", 1.0f, 6.0f, C_}, &Params::g_out},
-    {{"out_db", "fingering", -24.0f, 6.0f, C_}, &Params::out_db},
-    {{"ob_amt", "jet", 0.0f, 1.0f, C_}, &Params::ob_amt},
-    {{"ob_thr", "jet", 0.0f, 1.5f, C_}, &Params::ob_thr},
-    {{"mouth", "radiation", 0.0f, 4.0f, C_}, &Params::mouth},
-    {{"end", "radiation", 0.0f, 4.0f, C_}, &Params::end},
-    {{"dipole", "radiation", 0.0f, 4.0f, C_}, &Params::dipole},
-    {{"tone_hz", "radiation", 500.0f, 16000.0f, C_}, &Params::tone_hz},
-    {{"tone_q", "radiation", 0.5f, 2.0f, C_}, &Params::tone_q},
-    {{"turb", "air", 0.0f, 2.0f, C_}, &Params::turb},
-    {{"turb_hz", "air", 100.0f, 12000.0f, C_}, &Params::turb_hz},
-    {{"hiss", "air", 0.0f, 1.0f, C_}, &Params::hiss},
-    {{"hiss_st", "air", 0.02f, 1.0f, C_}, &Params::hiss_st},
-    {{"t_noise", "air", 0.0f, 3.0f, C_}, &Params::t_noise},
-    {{"tongue", "attack", 0.0f, 2.0f, C_}, &Params::tongue},
-    {{"acc_level", "attack", 0.0f, 1.5f, C_}, &Params::acc_amp},
-    {{"acc_decay", "attack", 0.005f, 0.3f, C_}, &Params::acc_t},
-    {{"tongue_t", "attack", 0.0005f, 0.1f, C_}, &Params::tongue_t},
-    {{"att_gain", "attack", 0.0f, 40.0f, C_}, &Params::att_gain},
-    {{"att_t", "attack", 0.005f, 0.15f, C_}, &Params::att_t},
-    {{"att_soft", "attack", 0.0f, 1.0f, C_}, &Params::att_soft},
-    {{"slur", "attack", 0.0f, 1.0f, C_}, &Params::slur},
-    {{"pitch_t", "attack", 0.002f, 1.0f, C_}, &Params::pitch_t},
-    {{"vib", "mod", 0.0f, 2.0f, C_}, &Params::vib},
-    {{"vib_hz", "mod", 2.0f, 9.0f, C_}, &Params::vib_hz},
-    {{"tongue_nz", "attack", 0.0f, 2.0f, C_}, &Params::tongue_nz},   // the strike's attack noise
-    {{"tongue_rt", "attack", 0.0f, 2.0f, C_}, &Params::tongue_rt},   // the strike's tongue speed
-    {{"tongue_sus", "attack", 0.0f, 2.0f, C_}, &Params::tongue_sus}, // a swell's accent and noise
+    {{"gain", "level", 0.0f, 100.0f, C_, AWVA_TEXT(flute, gain)}, &Params::gain},
+    {{"pres_lin", "level", 0.0f, 1.0f, C_, AWVA_TEXT(flute, pres_lin)}, &Params::pc_a},
+    {{"pres_sq", "level", 0.0f, 1.5f, C_, AWVA_TEXT(flute, pres_sq)}, &Params::pc_b},
+    {{"pres_hz", "level", 2.0f, 200.0f, C_, AWVA_TEXT(flute, pres_hz)}, &Params::lv_hz},
+    {{"release", "level", 0.005f, 1.0f, C_, AWVA_TEXT(flute, release)}, &Params::rel},
+    {{"rel_pedal", "level", 0.0f, 3.0f, C_, AWVA_TEXT(flute, rel_pedal)}, &Params::rel_ped},
+    {{"p_soft", "breath", 10.0f, 3000.0f, C_, AWVA_TEXT(flute, p_soft)}, &Params::p_soft}, // Pa at C5
+    {{"p_loud", "breath", 20.0f, 6000.0f, C_, AWVA_TEXT(flute, p_loud)}, &Params::p_loud},
+    {{"p_reg", "breath", -0.5f, 2.0f, C_, AWVA_TEXT(flute, p_reg)}, &Params::p_reg},
+    {{"p_curve", "breath", 0.3f, 3.0f, C_, AWVA_TEXT(flute, p_curve)}, &Params::p_curve},
+    {{"theta", "jet", 0.03f, 2.0f, C_, AWVA_TEXT(flute, theta)}, &Params::theta},
+    {{"theta_reg", "jet", -1.0f, 1.0f, C_, AWVA_TEXT(flute, theta_reg)}, &Params::theta_reg},
+    {{"w_track", "jet", 0.0f, 1.0f, C_, AWVA_TEXT(flute, w_track)}, &Params::w_track},
+    {{"jet_h", "jet", 0.2f, 3.0f, C_, AWVA_TEXT(flute, jet_h)}, &Params::jet_h}, // mm
+    {{"h_loud", "jet", -1.0f, 2.0f, C_, AWVA_TEXT(flute, h_loud)}, &Params::h_loud},
+    {{"jet_w", "jet", 2.0f, 20.0f, C_, AWVA_TEXT(flute, jet_w)}, &Params::jet_w}, // mm
+    {{"g_soft", "jet", 0.3f, 20.0f, C_, AWVA_TEXT(flute, g_soft)}, &Params::g_soft},
+    {{"amp_loud", "jet", -3.0f, 3.0f, C_, AWVA_TEXT(flute, amp_loud)}, &Params::amp_loud},
+    {{"y0", "jet", -5.0f, 5.0f, C_, AWVA_TEXT(flute, y0)}, &Params::y0},
+    {{"y_tilt", "jet", -3.0f, 3.0f, C_, AWVA_TEXT(flute, y_tilt)}, &Params::y_tilt},
+    {{"jet_st", "jet", 0.01f, 1.0f, C_, AWVA_TEXT(flute, jet_st)}, &Params::jet_st},
+    {{"vortex", "jet", 0.1f, 5.0f, C_, AWVA_TEXT(flute, vortex)}, &Params::vortex},
+    {{"bore_mm", "bore", 2.0f, 20.0f, C_, AWVA_TEXT(flute, bore_mm)}, &Params::bore_mm},
+    {{"bore_decay", "bore", 0.002f, 0.5f, C_, AWVA_TEXT(flute, bore_decay)}, &Params::bore_t},
+    {{"bore_reg", "bore", -1.0f, 2.0f, C_, AWVA_TEXT(flute, bore_reg)}, &Params::bore_reg},
+    {{"cut_hz", "bore", 200.0f, 12000.0f, C_, AWVA_TEXT(flute, cut_hz)}, &Params::cut_hz},
+    {{"wall", "bore", 0.5f, 50.0f, C_, AWVA_TEXT(flute, wall)}, &Params::wall},
+    {{"disp", "bore", -0.9f, 0.9f, C_, AWVA_TEXT(flute, disp)}, &Params::disp},
+    {{"cover", "bore", -200.0f, 200.0f, C_, AWVA_TEXT(flute, cover)}, &Params::cover},
+    {{"cover_hz", "bore", -2.0f, 2.0f, C_, AWVA_TEXT(flute, cover_hz)}, &Params::cover_hz},
+    {{"low_note", "fingering", 24.0f, 96.0f, C_, AWVA_TEXT(flute, low_note)}, &Params::low_note},
+    {{"overblow", "fingering", 0.0f, 1.0f, T_, AWVA_TEXT(flute, overblow)}, &Params::overblow},
+    {{"range_lo", "fingering", 24.0f, 96.0f, C_, AWVA_TEXT(flute, range_lo)}, &Params::range_lo},
+    {{"range_hi", "fingering", 48.0f, 120.0f, C_, AWVA_TEXT(flute, range_hi)}, &Params::range_hi},
+    {{"g_out", "fingering", 1.0f, 6.0f, C_, AWVA_TEXT(flute, g_out)}, &Params::g_out},
+    {{"out_db", "fingering", -24.0f, 6.0f, C_, AWVA_TEXT(flute, out_db)}, &Params::out_db},
+    {{"ob_amt", "jet", 0.0f, 1.0f, C_, AWVA_TEXT(flute, ob_amt)}, &Params::ob_amt},
+    {{"ob_thr", "jet", 0.0f, 1.5f, C_, AWVA_TEXT(flute, ob_thr)}, &Params::ob_thr},
+    {{"mouth", "radiation", 0.0f, 4.0f, C_, AWVA_TEXT(flute, mouth)}, &Params::mouth},
+    {{"end", "radiation", 0.0f, 4.0f, C_, AWVA_TEXT(flute, end)}, &Params::end},
+    {{"dipole", "radiation", 0.0f, 4.0f, C_, AWVA_TEXT(flute, dipole)}, &Params::dipole},
+    {{"tone_hz", "radiation", 500.0f, 16000.0f, C_, AWVA_TEXT(flute, tone_hz)}, &Params::tone_hz},
+    {{"tone_q", "radiation", 0.5f, 2.0f, C_, AWVA_TEXT(flute, tone_q)}, &Params::tone_q},
+    {{"turb", "air", 0.0f, 2.0f, C_, AWVA_TEXT(flute, turb)}, &Params::turb},
+    {{"turb_hz", "air", 100.0f, 12000.0f, C_, AWVA_TEXT(flute, turb_hz)}, &Params::turb_hz},
+    {{"hiss", "air", 0.0f, 1.0f, C_, AWVA_TEXT(flute, hiss)}, &Params::hiss},
+    {{"hiss_st", "air", 0.02f, 1.0f, C_, AWVA_TEXT(flute, hiss_st)}, &Params::hiss_st},
+    {{"t_noise", "air", 0.0f, 3.0f, C_, AWVA_TEXT(flute, t_noise)}, &Params::t_noise},
+    {{"tongue", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(flute, tongue)}, &Params::tongue},
+    {{"acc_level", "attack", 0.0f, 1.5f, C_, AWVA_TEXT(flute, acc_level)}, &Params::acc_amp},
+    {{"acc_decay", "attack", 0.005f, 0.3f, C_, AWVA_TEXT(flute, acc_decay)}, &Params::acc_t},
+    {{"tongue_t", "attack", 0.0005f, 0.1f, C_, AWVA_TEXT(flute, tongue_t)}, &Params::tongue_t},
+    {{"att_gain", "attack", 0.0f, 40.0f, C_, AWVA_TEXT(flute, att_gain)}, &Params::att_gain},
+    {{"att_t", "attack", 0.005f, 0.15f, C_, AWVA_TEXT(flute, att_t)}, &Params::att_t},
+    {{"att_soft", "attack", 0.0f, 1.0f, C_, AWVA_TEXT(flute, att_soft)}, &Params::att_soft},
+    {{"slur", "attack", 0.0f, 1.0f, C_, AWVA_TEXT(flute, slur)}, &Params::slur},
+    {{"pitch_t", "attack", 0.002f, 1.0f, C_, AWVA_TEXT(flute, pitch_t)}, &Params::pitch_t},
+    {{"vib", "mod", 0.0f, 2.0f, C_, AWVA_TEXT(flute, vib)}, &Params::vib},
+    {{"vib_hz", "mod", 2.0f, 9.0f, C_, AWVA_TEXT(flute, vib_hz)}, &Params::vib_hz},
+    {{"tongue_nz", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(flute, tongue_nz)}, &Params::tongue_nz},    // the strike's attack noise
+    {{"tongue_rt", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(flute, tongue_rt)}, &Params::tongue_rt},    // the strike's tongue speed
+    {{"tongue_sus", "attack", 0.0f, 2.0f, C_, AWVA_TEXT(flute, tongue_sus)}, &Params::tongue_sus}, // a swell's accent and noise
 };
 static constexpr int NUM_LIVE_PARAMS = sizeof(param_table) / sizeof(param_table[0]);
 static_assert(NUM_LIVE_PARAMS == NPARAMS, "every Params field is exposed once");

@@ -1,0 +1,110 @@
+{
+  "engine": "modal",
+  "params": {
+    "level": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0.1 to 3."
+    },
+    "thresh": {
+      "label": "Strike threshold",
+      "icon": "strike+soft",
+      "hover": "How fast the key must be pressed for a strike to count as a hit. Range 0.005 to 0.2."
+    },
+    "span": {
+      "label": "Strike range",
+      "icon": "strike+range",
+      "hover": "How much faster than the threshold a strike must be to count as a full-strength hit: lower is more sensitive. Range 0.2 to 1.5."
+    },
+    "hard": {
+      "label": "Mallet hardness",
+      "icon": "mallet",
+      "hover": "How hard the mallet is at the softest strike. Range 0.2 to 1.2."
+    },
+    "hardvel": {
+      "label": "Hardness by strike",
+      "icon": "mallet+strike",
+      "hover": "How much harder the mallet gets with a stronger strike. Range 0 to 1."
+    },
+    "tilt": {
+      "label": "Hardness by timbre",
+      "icon": "mallet+timbre",
+      "hover": "How much timbre changes the mallet's hardness at the strike. Range 0 to 0.5."
+    },
+    "mute": {
+      "label": "Strike mute",
+      "icon": "damper+strike",
+      "hover": "How much of the ringing a full strike stops, like a hand on the bar. Range 0 to 1."
+    },
+    "upper": {
+      "label": "Upper partials",
+      "icon": "overtone",
+      "hover": "The level of all partials but the first, relative to the instrument's own. Range 0 to 2."
+    },
+    "decay": {
+      "label": "Decay",
+      "icon": "decay",
+      "hover": "How long the bar rings, as a scale on the instrument's own. Range 0.1 to 4."
+    },
+    "keytrack": {
+      "label": "Decay by register",
+      "icon": "decay+register",
+      "hover": "How much shorter the high notes ring than the low ones. Range 0 to 1.5."
+    },
+    "hfdamp": {
+      "label": "Upper damping",
+      "icon": "decay+bright",
+      "hover": "How much faster the upper partials die than the fundamental. Range 0 to 1."
+    },
+    "damper": {
+      "label": "Damper",
+      "icon": "damper",
+      "hover": "How firmly the damper stops the note on release: 0 no dampers. Range 0 to 2."
+    },
+    "lift": {
+      "label": "Damper lift",
+      "icon": "damper+press",
+      "hover": "The key pressure above which the damper is fully lifted. Range 0.02 to 0.5."
+    },
+    "pedal": {
+      "label": "Damper by pedal",
+      "icon": "damper+pedal",
+      "hover": "How far the pedal lifts the damper: 1 fully. Range 0 to 1."
+    },
+    "trem": {
+      "label": "Motor tremolo",
+      "icon": "tremolo",
+      "hover": "The vibraphone's motor tremolo: on or off. Range off or on."
+    },
+    "tremrate": {
+      "label": "Tremolo speed",
+      "icon": "tremolo+rate",
+      "hover": "How fast the motor turns. Range 1 to 10 Hz."
+    },
+    "tremdepth": {
+      "label": "Tremolo depth",
+      "icon": "tremolo+depth",
+      "hover": "How deep the tremolo pulses the loudness. Range 0 to 1."
+    },
+    "tremthr": {
+      "label": "Tremolo by pressure",
+      "icon": "tremolo+press",
+      "hover": "The key pressure above which pressing harder adds tremolo. Range 0.2 to 1.2."
+    },
+    "rub": {
+      "label": "Rub",
+      "icon": "rub",
+      "hover": "The level of the rubbed tone per unit of pressure, like a finger on a glass: 0 off. Range 0 to 1."
+    },
+    "rubnoise": {
+      "label": "Rub noise",
+      "icon": "rub+noise",
+      "hover": "How much of the rubbed tone is noise. Range 0 to 0.3."
+    },
+    "model": {
+      "label": "Instrument",
+      "icon": "instrument",
+      "hover": "Which instrument: vibraphone, marimba, glockenspiel, church bell, kalimba or wine glass. Range steps 0 to 5."
+    }
+  }
+}

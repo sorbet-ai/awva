@@ -1,0 +1,15 @@
+{
+  "engine": "reed",
+  "params": {
+    "growl_from": {
+      "label": "Growl from",
+      "icon": "growl+press",
+      "hover": "The pressure where the growl sets in. Range 0.5 to 1.5."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    }
+  }
+}

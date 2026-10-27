@@ -22,7 +22,7 @@ Three ways to host them:
 | `tools/trumpet/` | the trumpet's bore design, calibration and warm-start table generators |
 | `third_party/doctest` | the test framework |
 
-**The component (ABI 5).** `component/include/nsc/nsc.h` is a C ABI that loads one engine from its own shared library. It takes UMP in, at integer frames, in calls of any frame count. Parameters have stable ids and declared defaults, and an `output` level follows the engine's own. Notes carry host ids, handed back by `ended()`. The descriptor gives a title, a short name, a colour, the heroes, the presets and the sample rates (11025 .. 192000). `awva_add_component()` builds an engine as a component library inside another project. See `component/README.md`, and `docs/writing_a_host.md` for a host: a plugin or an embedded instrument.
+**The component (ABI 6).** `component/include/nsc/nsc.h` is a C ABI that loads one engine from its own shared library. It takes UMP in, at integer frames, in calls of any frame count. Parameters have stable ids, declared defaults and, for people, a label, a hover text and an icon (`docs/icons.md`); an `output` level follows the engine's own. Notes carry host ids, handed back by `ended()`. The descriptor gives a title, a short name, a colour, the heroes, the presets and the sample rates (11025 .. 192000). `awva_add_component()` builds an engine as a component library inside another project. See `component/README.md`, and `docs/writing_a_host.md` for a host: a plugin or an embedded instrument.
 
 Build and test on their own:
 

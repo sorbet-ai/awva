@@ -1,0 +1,220 @@
+{
+  "engine": "accordion",
+  "params": {
+    "level": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0 to 4."
+    },
+    "r16": {
+      "label": "16' reeds",
+      "icon": "reed-bank+low",
+      "hover": "The level of the 16' (bassoon) reed bank: 0 off. Range 0 to 1.5."
+    },
+    "r8": {
+      "label": "8' reeds",
+      "icon": "reed-bank",
+      "hover": "The level of the 8' (clarinet) reed bank: 0 off. Range 0 to 1.5."
+    },
+    "r8_sharp": {
+      "label": "8' sharp reeds",
+      "icon": "reed-bank+pitch",
+      "hover": "The level of the 8' reeds tuned sharp (violin, musette): 0 off. Range 0 to 1.5."
+    },
+    "r8_flat": {
+      "label": "8' flat reeds",
+      "icon": "reed-bank+pitch",
+      "hover": "The level of the 8' reeds tuned flat (musette): 0 off. Range 0 to 1.5."
+    },
+    "r4": {
+      "label": "4' reeds",
+      "icon": "reed-bank+high",
+      "hover": "The level of the 4' (piccolo) reed bank: 0 off. Range 0 to 1.5."
+    },
+    "beat": {
+      "label": "Musette beat",
+      "icon": "beat",
+      "hover": "How fast the musette reeds beat against each other on A4. Range 0 to 12 Hz."
+    },
+    "beat_flat": {
+      "label": "Flat reed beat",
+      "icon": "beat+low",
+      "hover": "How fast the flat reed beats, relative to the sharp one. Range 0 to 2."
+    },
+    "beat_track": {
+      "label": "Beat across the range",
+      "icon": "beat+register",
+      "hover": "Whether the beat stays the same in Hz (0) or in cents (1) across the range. Range 0 to 1."
+    },
+    "cassotto": {
+      "label": "Cassotto",
+      "icon": "chamber",
+      "hover": "Whether the 16' and first 8' reeds sound through the tone chamber: on or off. Range off or on."
+    },
+    "bellows": {
+      "label": "Shared bellows",
+      "icon": "bellows",
+      "hover": "Whether each note has its own air (0) or every note shares one bellows (1). Range 0 to 1."
+    },
+    "curve": {
+      "label": "Bellows curve",
+      "icon": "dynamics",
+      "hover": "The shape of the curve from key pressure to bellows pressure: below 1 normal playing sits at mezzo-forte, above 1 it stays soft until you push. Range 0.3 to 1.5."
+    },
+    "bel_ms": {
+      "label": "Bellows response",
+      "icon": "response",
+      "hover": "How quickly the bellows pressure follows the keys. Range 5 to 300 ms."
+    },
+    "valve": {
+      "label": "Pallet opening",
+      "icon": "pallet+open",
+      "hover": "The key pressure that opens the key's valve fully. Range 0.05 to 1."
+    },
+    "throttle": {
+      "label": "Pallet throttle",
+      "icon": "pallet+amount",
+      "hover": "How much a half-open valve chokes the reed. Range 0.05 to 1.5."
+    },
+    "chamber_ms": {
+      "label": "Pallet build-up",
+      "icon": "pallet+time",
+      "hover": "How long the pressure takes to build behind an opening valve. Range 1 to 100 ms."
+    },
+    "release_ms": {
+      "label": "Pallet closing",
+      "icon": "pallet+time",
+      "hover": "How long the key's valve takes to close when the key is released. Range 3 to 200 ms."
+    },
+    "speak_ms": {
+      "label": "Speaking time",
+      "icon": "reed+time",
+      "hover": "How long a reed takes to speak at a medium touch. Range 5 to 300 ms."
+    },
+    "low_slow": {
+      "label": "Slow low reeds",
+      "icon": "reed+register",
+      "hover": "How much slower the low reeds speak than the high ones. Range 0 to 1."
+    },
+    "thresh": {
+      "label": "Reed threshold",
+      "icon": "breath+soft",
+      "hover": "The pressure where the reed starts to sound. Range 0.005 to 0.3."
+    },
+    "amp": {
+      "label": "Reed swing",
+      "icon": "reed+amount",
+      "hover": "How far the reed tongue swings at a full press. Range 0.5 to 5."
+    },
+    "rest": {
+      "label": "Reed rest",
+      "icon": "reed+open",
+      "hover": "How high the reed tongue rests above the plate. Range 0 to 2."
+    },
+    "push": {
+      "label": "Reed push",
+      "icon": "reed+press",
+      "hover": "How far the tongue is pushed into the slot at a full press. Range 0 to 1.2."
+    },
+    "gap": {
+      "label": "Reed gap",
+      "icon": "reed+size",
+      "hover": "The reed's clearance gap: rounds off the cut-off of the air. Range 0.02 to 0.6."
+    },
+    "exit": {
+      "label": "Reed exit",
+      "icon": "reed+low",
+      "hover": "How the air leaves below the plate as the tongue swings through, tip first. Range 0.05 to 1.5."
+    },
+    "down": {
+      "label": "Reed downstroke",
+      "icon": "reed+low",
+      "hover": "How open the reed is below the plate relative to above. Range 0 to 2.5."
+    },
+    "constrict": {
+      "label": "Reed constriction",
+      "icon": "reed+q",
+      "hover": "The narrowing where the air flow saturates. Range 0.3 to 4."
+    },
+    "pump": {
+      "label": "Reed pumping",
+      "icon": "reed+rate",
+      "hover": "How much air the tongue itself pumps. Range 0 to 1.5."
+    },
+    "flat": {
+      "label": "Pitch drop",
+      "icon": "reed+pitch",
+      "hover": "How far the pitch drops at a full press. Range 0 to 30 cents."
+    },
+    "bend": {
+      "label": "Pallet bend",
+      "icon": "pallet+pitch",
+      "hover": "How far the pitch bends down at full bellows on a barely open valve. Range 0 to 100 cents."
+    },
+    "spread": {
+      "label": "Reed tolerance",
+      "icon": "detune",
+      "hover": "How far the reeds are allowed to be out of tune with each other. Range 0 to 3 cents."
+    },
+    "voicing": {
+      "label": "Voicing",
+      "icon": "keytrack+level",
+      "hover": "How the level changes across the compass: above 0 the low notes are louder. Range 0 to 2."
+    },
+    "ch_hz": {
+      "label": "Reed chamber frequency",
+      "icon": "resonance+rate",
+      "hover": "Where the reed chamber's resonance sits. Range 500 to 5000 Hz."
+    },
+    "ch_db": {
+      "label": "Reed chamber peak",
+      "icon": "resonance+level",
+      "hover": "How strong the reed chamber's resonance is. Range 0 to 20 dB."
+    },
+    "ch_q": {
+      "label": "Reed chamber sharpness",
+      "icon": "resonance+q",
+      "hover": "How narrow the reed chamber's resonance is. Range 0.4 to 5."
+    },
+    "cas_hz": {
+      "label": "Cassotto tone",
+      "icon": "chamber+bright",
+      "hover": "How dark the tone chamber makes its reeds: the frequency above which it rolls off. Range 400 to 4000 Hz."
+    },
+    "cas_leak": {
+      "label": "Cassotto leak",
+      "icon": "chamber+amount",
+      "hover": "How much of the highs still pass the tone chamber. Range 0 to 1."
+    },
+    "grille_hz": {
+      "label": "Grille",
+      "icon": "tone",
+      "hover": "The brightness of the grille and body: the frequency above which they roll off. Range 2000 to 12000 Hz."
+    },
+    "tilt": {
+      "label": "Voicing by timbre",
+      "icon": "timbre",
+      "hover": "How much timbre changes the reeds' voicing. Range 0 to 1."
+    },
+    "rev_pedal": {
+      "label": "Reverse on pedal",
+      "icon": "bellows+pedal",
+      "hover": "Whether pressing the pedal reverses the bellows: on or off. Range off or on."
+    },
+    "rev_shake": {
+      "label": "Reverse on shake",
+      "icon": "bellows+shake",
+      "hover": "Whether a shake (the motion input) reverses the bellows: on or off. Range off or on."
+    },
+    "rev_ms": {
+      "label": "Reversal gap",
+      "icon": "bellows+time",
+      "hover": "How long the gap in the sound lasts when the bellows reverse. Range 20 to 300 ms."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    }
+  }
+}

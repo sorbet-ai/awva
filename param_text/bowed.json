@@ -1,0 +1,195 @@
+{
+  "engine": "bowed",
+  "params": {
+    "gain": {
+      "label": "Level",
+      "icon": "level",
+      "hover": "The overall loudness of the sound. Range 0 to 4."
+    },
+    "force_lo": {
+      "label": "Bow force, light",
+      "icon": "bow+soft",
+      "hover": "The bow's force against its speed at a light touch: low is airy, high bites. Range 0.3 to 1.6."
+    },
+    "force_hi": {
+      "label": "Bow force, full",
+      "icon": "bow+loud",
+      "hover": "The bow's force against its speed at a full press: above about 1.1 it turns raucous. Range 0.3 to 1.6."
+    },
+    "force_over": {
+      "label": "Bow grit",
+      "icon": "bow+press",
+      "hover": "The grit added when pressing beyond a full press: 0 none. Range 0 to 2."
+    },
+    "speed_curve": {
+      "label": "Bow speed curve",
+      "icon": "dynamics",
+      "hover": "How the bow speed follows pressure: 0 even, 1 the loud end opens up faster. Range 0 to 1."
+    },
+    "rosin": {
+      "label": "Rosin",
+      "icon": "bow+noise",
+      "hover": "The bow's grainy noise texture. Range 0 to 0.2."
+    },
+    "pos": {
+      "label": "Bow position",
+      "icon": "bow-position",
+      "hover": "Where the bow sits on the string, as a fraction of its length from the bridge: small is bright and glassy, large is soft and dark. Range 0.05 to 0.2."
+    },
+    "pos_tilt": {
+      "label": "Position by timbre",
+      "icon": "bow-position+timbre",
+      "hover": "How far timbre moves the bow: up towards the bridge, down towards the fingerboard. Range 0 to 1.5 octaves."
+    },
+    "pos_press": {
+      "label": "Position by pressure",
+      "icon": "bow-position+press",
+      "hover": "How far a light bow drifts towards the fingerboard. Range 0 to 1 octaves."
+    },
+    "damp": {
+      "label": "String ring",
+      "icon": "decay",
+      "hover": "How long the string rings on its own, measured on a low note. Range 0.5 to 10 s."
+    },
+    "bright": {
+      "label": "Brightness",
+      "icon": "tone",
+      "hover": "How sharp the string's corners are: above 1 brighter, below 1 rounder. Range 0.3 to 3."
+    },
+    "tone_lo": {
+      "label": "Treble, light",
+      "icon": "tone+soft",
+      "hover": "The treble at a light touch. Range 0 to 3."
+    },
+    "tone_hi": {
+      "label": "Treble, full",
+      "icon": "tone+loud",
+      "hover": "The treble at a full press. Range 0 to 3."
+    },
+    "body_size": {
+      "label": "Body size",
+      "icon": "body+size",
+      "hover": "The size of the body: 1 a violin, 0.8 a viola, 0.45 a cello, 0.3 a bass. Range 0.2 to 1.5."
+    },
+    "body_track": {
+      "label": "Body follows register",
+      "icon": "body+register",
+      "hover": "Whether the body shrinks for low notes: 0 a fixed body, 1 it follows the note. Range 0 to 1."
+    },
+    "body_amt": {
+      "label": "Body",
+      "icon": "body",
+      "hover": "How much of the resonant body you hear. Range 0 to 2."
+    },
+    "body_q": {
+      "label": "Body sharpness",
+      "icon": "body+q",
+      "hover": "How sharp the body's resonances are. Range 0.3 to 3."
+    },
+    "hill": {
+      "label": "Bridge hill",
+      "icon": "body+bright",
+      "hover": "The brilliance of the bridge hill, a violin body's 2 to 3 kHz glow. Range 0 to 3."
+    },
+    "direct": {
+      "label": "Direct string",
+      "icon": "body+off",
+      "hover": "How much of the string you hear without the body. Range 0 to 2."
+    },
+    "acc_force": {
+      "label": "Accent",
+      "icon": "accent",
+      "hover": "How much firmer the bow bites at a strike: the start's scratch and bite. Range 0 to 3."
+    },
+    "acc_time": {
+      "label": "Accent length",
+      "icon": "accent+time",
+      "hover": "How long the accent lasts before the note settles. Range 0.002 to 0.2 s."
+    },
+    "acc_noise": {
+      "label": "Accent noise",
+      "icon": "accent+noise",
+      "hover": "The extra bow noise at a strike. Range 0 to 1."
+    },
+    "acc_bright": {
+      "label": "Accent brightness",
+      "icon": "accent+bright",
+      "hover": "How much brighter the start of a struck note is than the sustain. Range 0 to 2."
+    },
+    "rel": {
+      "label": "Release",
+      "icon": "release",
+      "hover": "How long the string rings after a slow release, when the bow stops on the string. Range 0.02 to 3 s."
+    },
+    "rel_ped": {
+      "label": "Release with pedal",
+      "icon": "release+pedal",
+      "hover": "How much longer the release gets with the sustain pedal down. Range 0 to 10 s."
+    },
+    "rel_lift": {
+      "label": "Release on a lift",
+      "icon": "release+lift",
+      "hover": "How much longer the string rings after a quick lift-off, as a multiplier on the release. Range 0 to 20."
+    },
+    "vibrato": {
+      "label": "Vibrato",
+      "icon": "vibrato",
+      "hover": "The depth of the automatic vibrato that sets in after the note starts. Range 0 to 60."
+    },
+    "vib_hz": {
+      "label": "Vibrato rate",
+      "icon": "vibrato+rate",
+      "hover": "How fast the vibrato wavers. Range 2 to 9 Hz."
+    },
+    "vib_delay": {
+      "label": "Vibrato delay",
+      "icon": "vibrato+time",
+      "hover": "How long after the start the vibrato reaches its full depth. Range 0 to 2 s."
+    },
+    "life": {
+      "label": "Life",
+      "icon": "life",
+      "hover": "Micro-randomness: 0 every note identical, 1 each one slightly different. Range 0 to 1."
+    },
+    "tremolo": {
+      "label": "Tremolo by shake",
+      "icon": "bow+shake",
+      "hover": "How much a shake (the motion input) moves the bow; a strong shake reverses it into a tremolo. Range 0 to 2."
+    },
+    "body_rot": {
+      "label": "Body by rotation",
+      "icon": "spin",
+      "hover": "How far rotation (the motion input) shifts the body resonances, in octaves. Range -2 to 2 octaves."
+    },
+    "ensemble": {
+      "label": "Section",
+      "icon": "ensemble",
+      "hover": "The level of two more players on the note: 0 solo. Range 0 to 1.5."
+    },
+    "ens_detune": {
+      "label": "Section detune",
+      "icon": "ensemble+pitch",
+      "hover": "How far the extra players wander from the pitch. Range 0 to 25 cents."
+    },
+    "ens_spread": {
+      "label": "Section spread",
+      "icon": "ensemble+time",
+      "hover": "How far apart in time the extra players play. Range 2 to 25 ms."
+    },
+    "pizz": {
+      "label": "Pizzicato",
+      "icon": "pluck",
+      "hover": "Plucked instead of bowed: on or off. Range off or on."
+    },
+    "pizz_decay": {
+      "label": "Pluck ring",
+      "icon": "pluck+decay",
+      "hover": "How long a plucked note rings while held, measured on middle C. Range 0.1 to 5 s."
+    },
+    "pizz_bright": {
+      "label": "Pluck sharpness",
+      "icon": "pluck+bright",
+      "hover": "How sharp the pluck is: higher is brighter. Range 0.2 to 5."
+    }
+  }
+}

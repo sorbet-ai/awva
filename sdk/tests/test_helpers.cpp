@@ -60,8 +60,8 @@ TEST_CASE("svf: unity gain at DC, -3 dB at the cutoff for Q = 0.707, Pade tan") 
 }
 
 TEST_CASE("params: write_param clamps, rounds unless continuous, ignores NaN") {
-	const awva::ParamDesc cont{"c", "g", -1.0f, 1.0f, awva::ParamKind::continuous};
-	const awva::ParamDesc steps{"s", "g", 0.0f, 8.0f, awva::ParamKind::steps};
+	const awva::ParamDesc cont{"c", "g", -1.0f, 1.0f, awva::ParamKind::continuous, AWVA_NO_TEXT};
+	const awva::ParamDesc steps{"s", "g", 0.0f, 8.0f, awva::ParamKind::steps, AWVA_NO_TEXT};
 	float v = 0.5f;
 	CHECK(!awva::write_param(&cont, &v, NAN));
 	CHECK(v == 0.5f);

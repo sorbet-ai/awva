@@ -31,6 +31,13 @@ uint32_t fnv1a(const char* s) {
 	return h;
 }
 
+// a text as a table cell ('|' escaped)
+std::string cell(const char* t) {
+	std::string r;
+	for (const char* c = t ? t : ""; *c; c++) r += *c == '|' ? std::string("\\|") : std::string(1, *c);
+	return r;
+}
+
 std::string num(double v) {
 	char b[32];
 	std::snprintf(b, sizeof b, "%g", v);
@@ -100,15 +107,16 @@ std::string engine_section(const sdk::EngineEntry& e) {
 	o << "## Hero parameters\n\n"
 	  << heroes_line(in.heroes) << "\n\n";
 	o << "## Parameters\n\n";
-	o << "Default: the value after `init()`" << (in.num_presets > 0 ? std::string(" (preset ") + std::to_string(eng.preset()) + ")" : std::string()) << ". The id is the component ABI's (FNV-1a 32 of the name).\n\n";
-	o << "| id | name | group | min | max | default | kind |\n|---|---|---|---|---|---|---|\n";
+	o << "Default: the value after `init()`" << (in.num_presets > 0 ? std::string(" (preset ") + std::to_string(eng.preset()) + ")" : std::string()) << ". The id is the component ABI's (FNV-1a 32 of the name). ";
+	o << "Label, icon and what it does: the parameter's text for people (`param_text/" << in.name << ".json`; the icons: [Parameter icons](../icons.md)).\n\n";
+	o << "| id | name | label | icon | group | min | max | default | kind | what it does |\n|---|---|---|---|---|---|---|---|---|---|\n";
 	for (int i = 0; i < eng.num_params(); i++) {
 		const dsp::ParamDesc* d = eng.param_desc(i);
 		char id[16];
 		std::snprintf(id, sizeof id, "%08x", fnv1a(d->name));
-		o << "| `" << id << "` | `" << d->name << "` | " << d->group << " | " << num(d->min) << " | " << num(d->max) << " | " << num(*eng.param(i)) << " | " << kind_name(d->kind) << " |\n";
+		o << "| `" << id << "` | `" << d->name << "` | " << cell(d->label) << " | `" << cell(d->icon) << "` | " << d->group << " | " << num(d->min) << " | " << num(d->max) << " | " << num(*eng.param(i)) << " | " << kind_name(d->kind) << " | " << cell(d->hover) << " |\n";
 	}
-	if (eng.num_params() == 0) o << "| | (none) | | | | | |\n";
+	if (eng.num_params() == 0) o << "| | (none) | | | | | | | | |\n";
 	o << "\n## Cost and memory\n\n| | |\n|---|---|\n";
 	o << "| voices | up to " << in.max_voices << " |\n";
 	o << "| channels | " << in.channels << (in.channels == 1 ? " (mono)" : " (stereo)") << " |\n";
