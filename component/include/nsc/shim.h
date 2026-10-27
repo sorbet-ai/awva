@@ -66,11 +66,12 @@ template <dsp::VoiceEngine E> struct Shim {
 		// the heroes of the preset file load_preset() read last (its own list, so save_preset() writes
 		// them back); a factory preset (set_preset) has its heroes from the descriptor instead
 		char heroes[NSC_MAX_HEROES][awva::preset::NAME];
-		int32_t num_heroes; // -1: none from a file
+		int32_t num_heroes;     // -1: none from a file
+		int32_t keep_denormals; // NSC_MODE_KEEP_DENORMALS
 		E engine;
 		State(int nv, int sr, int hz) :
 		    midi(awva::sdk::HostConfig{sr, hz, nv}), buf(), pos(NSC_BLOCK), played(0), g(), output(1.0f), frame(0), sample_rate(sr), voices(nv), defaults(), heroes(), num_heroes(-1),
-		    engine() {}
+		    keep_denormals(0), engine() {}
 	};
 	static_assert(alignof(State) <= 64, "the regions are 64-byte aligned");
 	static_assert(E::info.max_voices <= 16, "16 voices at most");
@@ -207,13 +208,17 @@ template <dsp::VoiceEngine E> struct Shim {
 			s.midi.midi().set_mono(value != 0);
 			return 1;
 		}
+		if (which == NSC_MODE_KEEP_DENORMALS) {
+			s.keep_denormals = value != 0 ? 1 : 0;
+			return 1;
+		}
 		return 0;
 	}
 	// frames of output: the events at their frames, the engine's blocks rendered as they are due (a
 	// block when its first frame is: what a call's size can't change)
 	static void process(void* state, int32_t frames, const nsc_event* ev, int32_t n, float* const* out) {
-		const ScopedNoDenormals no_denormals; // (no_denormals.h: the host's FPU mode, restored on return)
 		State& s = st(state);
+		const ScopedNoDenormals no_denormals(s.keep_denormals == 0); // (no_denormals.h: the host's FPU mode, restored on return)
 		if (frames < 0) frames = 0;
 		for (int i = 0; i < n; i++) {
 			// (a late event, before this call: at its own frame, whose step hasn't run yet)
@@ -240,7 +245,7 @@ template <dsp::VoiceEngine E> struct Shim {
 		}
 	}
 	static void process_voices(void* state, const nsc_voice* vc, const nsc_globals* g, float* const* out) {
-		const ScopedNoDenormals no_denormals;
+		const ScopedNoDenormals no_denormals(st(state).keep_denormals == 0);
 		st(state).engine.process(reinterpret_cast<const dsp::NoteControls*>(vc), *reinterpret_cast<const dsp::InstrumentControls*>(g), out);
 		level(st(state), out);
 	}

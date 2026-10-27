@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // nsc::ScopedNoDenormals: subnormal floats flushed to zero for a scope, the mode before restored
-// when it ends (as JUCE's ScopedNoDenormals). The component's process() and process_voices() run
+// when it ends (as JUCE's ScopedNoDenormals); ScopedNoDenormals(false) leaves the mode alone (a
+// component in NSC_MODE_KEEP_DENORMALS). The component's process() and process_voices() run
 // in one, so an engine's decaying states never reach the subnormal range on a PC, where each
 // operation on them costs tens of cycles (an engine left idle can otherwise spend 10-30x its
 // silent cost on a tail of subnormals that no one hears).
@@ -26,17 +27,22 @@ namespace nsc {
 class ScopedNoDenormals {
 public:
 #if defined(__x86_64__) || defined(_M_X64)
-	ScopedNoDenormals() :
-	    saved_(_mm_getcsr()) {
-		_mm_setcsr(saved_ | FTZ | DAZ);
+	explicit ScopedNoDenormals(bool flush = true) :
+	    flush_(flush), saved_(flush ? _mm_getcsr() : 0u) {
+		if (flush_) _mm_setcsr(saved_ | FTZ | DAZ);
 	}
-	~ScopedNoDenormals() { _mm_setcsr(saved_); }
+	~ScopedNoDenormals() {
+		if (flush_) _mm_setcsr(saved_);
+	}
 
 private:
 	static constexpr unsigned FTZ = 0x8000u, DAZ = 0x0040u;
+	bool flush_;
 	unsigned saved_;
 #elif defined(__aarch64__)
-	ScopedNoDenormals() {
+	explicit ScopedNoDenormals(bool flush = true) :
+	    flush_(flush) {
+		if (!flush_) return;
 		__asm__ __volatile__("mrs %0, fpcr"
 		                     : "=r"(saved_));
 		const uint64_t fz = saved_ | FZ;
@@ -44,15 +50,18 @@ private:
 		                     :
 		                     : "r"(fz));
 	}
-	~ScopedNoDenormals() { __asm__ __volatile__("msr fpcr, %0"
-		                                        :
-		                                        : "r"(saved_)); }
+	~ScopedNoDenormals() {
+		if (flush_) __asm__ __volatile__("msr fpcr, %0"
+			                             :
+			                             : "r"(saved_));
+	}
 
 private:
 	static constexpr uint64_t FZ = uint64_t{1} << 24;
+	bool flush_;
 	uint64_t saved_ = 0;
 #else
-	ScopedNoDenormals() = default;
+	explicit ScopedNoDenormals(bool /*flush*/ = true) {}
 #endif
 
 public:

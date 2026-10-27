@@ -279,10 +279,9 @@ def cmd_module(a):
     by_addr = {s["value"] & ~1: s["name"] for s in elf.syms if s["type"] == 2 and s["name"]}
     roots = sorted({by_addr[f] for f in fns if f in by_addr})
     deepest, per_fn = stack_of(a.elf, elf, roots, a.objdump, a.stackcheck) if a.objdump and a.stackcheck else (0, {})
-    # stack_bytes: what the host's audio thread runs (everything but the preset files' reader and
-    # writer, load_preset / save_preset: about 4.5 KB, more than a small audio stack; the host takes
-    # presets by index, set_preset). The deepest of all is printed with the rest.
-    audio = {k: v for k, v in per_fn.items() if k not in ("load_preset", "save_preset")}
+    # stack_bytes: what the host's audio thread runs (nsc.h: everything but save_preset, which runs
+    # on any thread; load_preset, about 5 KB, included). The deepest of all is printed with the rest.
+    audio = {k: v for k, v in per_fn.items() if k != "save_preset"}
     stack = max(audio.values()) if audio else deepest
     if a.limits:
         check_limits(a.limits, hot_b, stream_b, bulk_b, stack)
@@ -295,7 +294,7 @@ def cmd_module(a):
     other = ", ".join(f"{k} {v}" for k, v in sorted(kinds.items()))
     print(f"{f['id']}: image {size} bytes ({sum(s['size'] for s in image_secs if s['name'] == '.text')} text), "
           f"{len(relocs)} relocations (PC-relative, resolved: {other or 'none'}), entry 0x{entry['value']:x}, "
-          f"stack {stack} (with the preset files {deepest}), hot {hot_b} stream {stream_b} bulk {bulk_b}, {f['toolchain']}")
+          f"stack {stack} (with save_preset {deepest}), hot {hot_b} stream {stream_b} bulk {bulk_b}, {f['toolchain']}")
     if per_fn:
         print(f"{f['id']}: stack per function: " + ", ".join(f"{k} {v}" for k, v in sorted(per_fn.items(), key=lambda kv: -kv[1])))
 

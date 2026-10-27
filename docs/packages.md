@@ -18,7 +18,7 @@ All values are little-endian, and every offset counts from the start of the file
 | sections | | kind 1: the manifest (always the first). Kind 2: an image, its tag the target. Kind 3: a preset file, its tag the file's name. |
 
 **An image section** holds three things, in order:
-1. A 256-byte module header: magic `NSCM`, the ABI, the target's architecture, FPU and float ABI, the toolchain, the image's size, its relocations, `nsc_entry`'s offset, the stack, the regions, the voices, the channels, the colour, the schema, the id, uid and version, and the crcs.
+1. A 256-byte module header: magic `NSCM`, the ABI, the target's architecture, FPU and float ABI, the toolchain, the image's size, its relocations, `nsc_entry`'s offset, the stack (`stack_bytes`: the deepest of the calls an audio thread makes, `load_preset` included, `save_preset` not), the regions, the voices, the channels, the colour, the schema, the id, uid and version, and the crcs.
 2. The relocation list (Arm only): the offsets of the words that hold an address, ascending.
 3. The image itself.
 

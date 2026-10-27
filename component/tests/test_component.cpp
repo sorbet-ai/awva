@@ -74,14 +74,16 @@ bool same(const std::vector<float>& a, const std::vector<float>& b) {
 }
 
 // one engine through a player: linked in and from its library (process_voices), seconds long
-// (one player for both: the scripted performances keep state of their own between calls)
-void render_both(const char* id, int preset, sdk::Player& player, double seconds) {
+// (one player for both: the scripted performances keep state of their own between calls); keep:
+// the library in NSC_MODE_KEEP_DENORMALS, the engine linked in run without the flush
+void render_both(const char* id, int preset, sdk::Player& player, double seconds, bool keep = false) {
 	const sdk::EngineEntry* e = sdk::find_engine(id);
 	REQUIRE(e != nullptr);
 	sdk::Engine linked(*e);
 	linked.init(SR, NV);
 	Loaded dll(id);
 	dll.c().init(dll.in.state, dll.in.stream, dll.in.bulk, nsc_test::cfg(SR, NV));
+	if (keep) REQUIRE(dll.c().mode(dll.in.state, NSC_MODE_KEEP_DENORMALS, 1) == 1);
 	if (preset >= 0) {
 		linked.set_preset(preset);
 		dll.c().set_preset(dll.in.state, preset);
@@ -97,7 +99,7 @@ void render_both(const char* id, int preset, sdk::Player& player, double seconds
 		float* oa[1] = {&a[static_cast<size_t>(k) * NSC_BLOCK]};
 		float* ob[1] = {&b[static_cast<size_t>(k) * NSC_BLOCK]};
 		{
-			const nsc::ScopedNoDenormals nd; // (as the library runs it: no_denormals.h)
+			const nsc::ScopedNoDenormals nd(!keep); // (as the library runs it: no_denormals.h)
 			linked.process(va.data(), ga, oa);
 		}
 		dll.c().process_voices(dll.in.state, reinterpret_cast<const nsc_voice*>(vb.data()), reinterpret_cast<const nsc_globals*>(&gb), ob);
@@ -372,6 +374,17 @@ TEST_CASE("every engine's library renders bit for bit as linked in with the glob
 			}
 			if (np <= 1) break;
 		}
+	}
+}
+
+TEST_CASE("NSC_MODE_KEEP_DENORMALS: in the host's floating-point mode, every engine's library is bit for bit the engine linked in, its tail included") {
+	// (the default performance, then its tail decaying long past it: where a flush would show)
+	for (const sdk::EngineEntry* e : sdk::engines()) {
+		const char* id = e->info->name;
+		std::string err;
+		auto player = sdk::scripted_player("default", NV, SR, &err);
+		REQUIRE(player);
+		render_both(id, e->info->num_presets > 0 ? 0 : -1, *player, 40.0, true);
 	}
 }
 

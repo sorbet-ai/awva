@@ -36,6 +36,10 @@ They share everything below except the way in: a plugin uses `process()` and an 
 
 **An instrument: `process_voices(state, voices, globals, out)`.** The host allocates voices itself and gives each its controls (`nsc_voice`: pitch, pressure, pressure rate, timbre, the velocities and the gate, as `awva::NoteControls`). The component only renders, bit for bit as the same engine compiled in.
 
+**The floating-point mode.** On a PC, `process()` and `process_voices()` flush subnormals to zero (`no_denormals.h`), so a decaying tail costs nothing. A host whose samples must be bit for bit an embedded host's (a virtual device of an instrument; 32-bit Arm keeps its mode) sets `mode(state, NSC_MODE_KEEP_DENORMALS, 1)` after `init()`: the component then runs in the host's mode as it is.
+
+**The audio thread** runs `process()`, `process_voices()` and every call that changes the engine (`init`, `reset`, `mode`, `set_preset`, `set_param`, `load_preset`); `save_preset` runs on any thread. An embedded host gives that thread the module header's `stack_bytes`: the deepest of those calls, `load_preset`'s 5 KB included.
+
 ## 4. Parameters and presets
 
 - Parameters are by index, each with a stable id (`nsc_param.id`, FNV-1a of its name). Store values by id, under `schema_hash`; a host can look an id up with `param_index()`.

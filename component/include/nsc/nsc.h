@@ -45,6 +45,11 @@
  * gives each its controls (an instrument with its own sensors), one block of NSC_BLOCK frames a
  * call, and the component only renders. A host uses one way or the other.
  *
+ * The audio thread: process(), process_voices() and everything that changes the engine (init,
+ * reset, mode, set_preset, set_param, load_preset). An embedded host gives that thread the
+ * module's stack_bytes (the package's module header: the deepest of those, load_preset's about
+ * 5 KB included); save_preset runs on any thread.
+ *
  * Map to CLAP: desc->uid is the plugin id (com.sorbet-ai.awva.<id>), name (a title) / summary /
  * version its descriptor; process() is clap_plugin.process with its note and MIDI 2.0 events
  * (CLAP_EVENT_MIDI2), a late one at its negative frame; ended() gives CLAP_EVENT_NOTE_END with the
@@ -194,6 +199,11 @@ typedef struct nsc_preset_report {
 
 enum nsc_mode {
 	NSC_MODE_MONO = 1, /* value 1: mono (one voice played by every held key: the player slurs or re-articulates by the keys' pressures), 0: polyphonic (the default) */
+	/* value 1: process() and process_voices() run in the host's floating-point mode as it is, its
+	 * subnormals kept (an embedded host's own arithmetic, or a host on a PC whose samples must be
+	 * an embedded one's bit for bit); 0 (the default): subnormals flushed to zero on a PC
+	 * (no_denormals.h: x86-64 and AArch64; 32-bit Arm keeps its mode either way) */
+	NSC_MODE_KEEP_DENORMALS = 2,
 };
 
 typedef struct nsc_component {
