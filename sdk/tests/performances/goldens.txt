@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Sorbet AI
 # SPDX-License-Identifier: Apache-2.0
 # The musical test performances' golden hashes on main's engines (sdk/CMakeLists.txt: awva_render.musical.*).
-# <performance> <engine> <preset number> <hash of the dry render>. Update: tools/fit/regress/goldens.py
+# <performance> <engine> <preset number> <hash of the dry render>. After an intended change of the sound:
+# awva_render --engine <engine> --preset <n> --ump <performance> prints the new hash ("hash <hex>").
 brass/brass_legato.ump brass 0 67ac3a3d04d1bf58
 brass/brass_swell.ump brass 0 49d2e0dd897d7c32
 brass/brass_tongued.ump brass 0 142db2a84af16322

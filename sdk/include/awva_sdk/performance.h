@@ -3,8 +3,6 @@
 // What plays an engine: a Player gives the controls of every block. Three kinds:
 //   scripted   a performance compiled in from tools/harness (performance.h: "default",
 //              perf_<name>.h: "<name>"), deterministic
-//   keys       a recorded stream of per-note sensor values (CSV), replayed per voice
-//              (tools/harness/harness_util.h: load_recording)
 //   midi       a Standard MIDI File through the MIDI/MPE mapping (note_mapper.h)
 //   ump        a text file of timed Universal MIDI Packets (MIDI 2.0, and MIDI 1.0 in UMP) the same way
 // Each says what it is and where it came from (describe()), for the renderer's log.
@@ -49,8 +47,6 @@ public:
 
 // nullptr and a reason in *error if it can't play (unknown name, unreadable file, no events)
 [[nodiscard]] std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int sample_rate, std::string* error);
-// mono: the keys on one voice, played by every held key (awva/mono.h, this style); nullptr: a voice per key
-[[nodiscard]] std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error, const awva::voices::MonoStyle* mono = nullptr);
 // the MIDI players take MIDI at the host's control rate (host_config.h, timed_midi.h)
 [[nodiscard]] std::unique_ptr<Player> midi_player(const char* mid_path, const HostConfig& host, std::string* error, const awva::voices::MonoStyle* mono = nullptr);
 // a UMP file: one packet a line, "<frame> <word> [<word> ...]" (decimal frame, hex words), '#'

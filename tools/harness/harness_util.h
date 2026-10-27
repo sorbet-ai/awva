@@ -1,20 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // Shared helpers of the host renderers and tests: WAV output (at full scale 1), a
-// hash of a render (for golden checksums), parameter writes by the hosts' rule, and the replay of
-// recorded streams of per-note sensor values (CSV, below).
+// hash of a render (for golden checksums) and parameter writes by the hosts' rule.
 #ifndef AWVA_HARNESS_UTIL_H_
 #define AWVA_HARNESS_UTIL_H_
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
-#include <map>
 #include <span>
-#include <string>
 #include <vector>
 
 #include "awva/params.h"
@@ -76,102 +71,6 @@ template <class E> inline void param_write(E& e, int i, float value) {
 	if (d->kind != awva::ParamKind::continuous) v = static_cast<float>(static_cast<int>(v + (v >= 0 ? 0.5f : -0.5f)));
 	*p = v;
 	P::changed(e, i);
-}
-
-// --- recorded sensor streams ---------------------------------------------------------------------
-// CSV rows t,src,id,pres,velo,x,y (raw 14 bit values; sensor ids 0 .. 67 on a two-axis
-// isomorphic layout) to per-voice control events: note = 62 + 12*c0 + 7*c1 + bend*x^3 (bend 0.5),
-// voices by get_voice() (same sensor, else a free voice, else the earliest released one),
-// velo clipped at +-8191 in the stream reconstructed from the pressure slope.
-struct RecEvent {
-	double t;
-	int voice;
-	float note, pres, vpres, but_x, but_y;
-};
-
-[[nodiscard]] inline std::vector<RecEvent> load_recording(const char* path, int nvoices) {
-	static const int c0[68] = {6, 5, 5, 4, 4, 3, 2, 2, 1, 1, 0, 0, -1, -2, -2, -3, -3,
-	    5, 4, 4, 3, 3, 2, 1, 1, 0, 0, -1, -1, -2, -3, -3, -4, -4,
-	    4, 3, 3, 2, 2, 1, 0, 0, -1, -1, -2, -2, -3, -4, -4, -5, -5,
-	    3, 2, 2, 1, 1, 0, -1, -1, -2, -2, -3, -3, -4, -5, -5, -6, -6};
-	struct Row {
-		double t;
-		int id;
-		double pres, velo, x, y;
-	};
-	std::vector<Row> rows;
-	FILE* f = std::fopen(path, "r");
-	if (!f) return {};
-	char line[256];
-	while (std::fgets(line, sizeof line, f)) {
-		double t;
-		int src, id, p, v, x, y;
-		if (std::sscanf(line, "%lf,%d,%d,%d,%d,%d,%d", &t, &src, &id, &p, &v, &x, &y) == 7 && src == 0 && id >= 0 && id < 68)
-			rows.push_back({t, id, (double)p, (double)v, (double)x, (double)y});
-	}
-	std::fclose(f);
-	std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.t < b.t; });
-	if (rows.empty()) return {};
-	// pressure slope per sensor, fit velo = k * slope on unclipped rising samples
-	std::vector<double> slope(rows.size());
-	std::map<int, size_t> last;
-	for (size_t j = 0; j < rows.size(); j++) {
-		auto it = last.find(rows[j].id);
-		const double dp = it == last.end() ? rows[j].pres : rows[j].pres - rows[it->second].pres;
-		const double dt = it == last.end() ? 0.002 : std::max(rows[j].t - rows[it->second].t, 0.0);
-		slope[j] = dp / std::max(dt, 0.001);
-		last[rows[j].id] = j;
-	}
-	double num = 0, den = 0;
-	for (size_t j = 0; j < rows.size(); j++)
-		if (std::fabs(rows[j].velo) < 8000 && std::fabs(slope[j]) > 1e4 && rows[j].pres > 0) {
-			num += rows[j].velo * slope[j];
-			den += slope[j] * slope[j];
-		}
-	const double k = num / std::max(den, 1e-9);
-	std::vector<int> voices(static_cast<size_t>(nvoices), -1);
-	std::vector<double> rel_time(static_cast<size_t>(nvoices), -1e9);
-	std::map<int, int> state; // sensor -> voice while held
-	std::vector<RecEvent> out;
-	const double t0 = rows[0].t;
-	for (size_t j = 0; j < rows.size(); j++) {
-		const Row& r = rows[j];
-		double velo = r.velo;
-		if (std::fabs(velo) >= 8191) velo = (velo > 0 ? 1 : -1) * std::max(std::fabs(velo), std::fabs(k * slope[j]));
-		// (a released key's rate is never positive: a sensor's leftover strike doesn't reach the engine)
-		const double p = r.pres / 8191.0, vp = p > 0 ? velo / 8191.0 : std::min(velo / 8191.0, 0.0), bx = r.x / 8191.0;
-		const double by = std::max(-1.0, std::min(1.0, r.y / 8191.0));
-		const double note = 62 + 12 * c0[r.id] + 7 * ((r.id % 17) - 8) + 0.5 * bx * bx * bx;
-		if (p > 0 && !state.count(r.id)) {
-			int v = -1;
-			for (int n = 0; n < nvoices && v < 0; n++)
-				if (voices[n] == r.id) v = n;
-			for (int n = 0; n < nvoices && v < 0; n++)
-				if (voices[n] == -1) v = n;
-			if (v < 0) {
-				double best = 1e300;
-				for (int n = 0; n < nvoices; n++)
-					if (!state.count(voices[n]) && rel_time[n] < best) {
-						best = rel_time[n];
-						v = n;
-					}
-				if (v < 0) v = 0;
-				state.erase(voices[v]);
-			}
-			voices[v] = r.id;
-			state[r.id] = v;
-		}
-		auto it = state.find(r.id);
-		if (it != state.end()) {
-			const int v = it->second;
-			out.push_back({r.t - t0, v, (float)note, (float)p, (float)vp, (float)bx, (float)by});
-			if (p <= 0) {
-				state.erase(it);
-				rel_time[v] = r.t;
-			}
-		}
-	}
-	return out;
 }
 
 } // namespace harness

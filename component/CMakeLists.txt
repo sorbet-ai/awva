@@ -208,7 +208,7 @@ if(EXISTS "${AWVA_DOCTEST_DIR}/doctest/doctest.h")
   target_include_directories(nsc_component_tests PRIVATE "${AWVA_DOCTEST_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${AWVA_HARNESS_DIR}")
   target_link_libraries(nsc_component_tests PRIVATE awva_sdk awva_engines awva_performances ${CMAKE_DL_LIBS})
   target_compile_definitions(nsc_component_tests PRIVATE "NSC_COMPONENT_DIR=\"${AWVA_COMPONENT_DIR}\""
-    "AWVA_REC_DIR=\"${AWVA_HARNESS_DIR}/rec\"" "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
+    "AWVA_PHRASES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../sdk/tests/goldens\"" "AWVA_PRESETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../presets\"")
   add_dependencies(nsc_component_tests nsc_components)
   # the packages the tests read (tests/test_package.cpp): sine's, with its presets, and a
   # presets-only one for the bowed

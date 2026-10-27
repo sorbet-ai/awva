@@ -3,7 +3,7 @@
 //
 // The components from their libraries (component/CMakeLists.txt) against the engines linked in:
 // they load, their descriptor and manifest are the engine's, process_voices() renders bit for bit
-// what the engine renders (the scripted performances and the key recordings, through every
+// what the engine renders (the scripted performances and the golden MIDI phrases, through every
 // preset of accordion, trumpet, flute and clarinet), and process() with UMP renders bit for bit the SDK's MIDI
 // side (NoteMapper) driving the engine on the same integer-frame step grid (every block, and at
 // a control rate of 500 Hz).
@@ -109,10 +109,12 @@ void render_both(const char* id, int preset, sdk::Player& player, double seconds
 	CHECK(e2 > 0.0); // (it played)
 }
 
-std::vector<std::string> takes() {
+// the golden renders' MIDI phrases (sdk/tests/goldens/*.ump)
+std::vector<std::string> phrases() {
 	std::vector<std::string> t;
-	for (const auto& f : std::filesystem::directory_iterator(AWVA_REC_DIR))
-		if (f.path().extension() == ".csv") t.push_back(f.path().string());
+	for (const auto& f : std::filesystem::directory_iterator(AWVA_PHRASES_DIR))
+		if (f.path().extension() == ".ump") t.push_back(f.path().string());
+	std::sort(t.begin(), t.end());
 	return t;
 }
 
@@ -146,7 +148,7 @@ TEST_CASE("every engine's library loads, and its descriptor and manifest are the
 	}
 }
 
-TEST_CASE("accordion, trumpet and clarinet from their libraries render bit for bit as linked in (every preset, the performances, the takes)") {
+TEST_CASE("accordion, trumpet and clarinet from their libraries render bit for bit as linked in (every preset, the performances, the phrases)") {
 	for (const char* id : {"accordion", "trumpet", "clarinet"}) {
 		const sdk::EngineEntry* e = sdk::find_engine(id);
 		REQUIRE(e != nullptr);
@@ -159,9 +161,9 @@ TEST_CASE("accordion, trumpet and clarinet from their libraries render bit for b
 				render_both(id, e->info->num_presets > 0 ? p : -1, *pa, 6.0);
 			}
 		}
-		for (const std::string& t : takes()) {
+		for (const std::string& t : phrases()) {
 			std::string err;
-			auto pa = sdk::key_player(t.c_str(), NV, SR, &err);
+			auto pa = sdk::ump_player(t.c_str(), sdk::HostConfig{SR, 0, NV}, nullptr, &err);
 			REQUIRE(pa != nullptr);
 			render_both(id, -1, *pa, 8.0);
 		}
@@ -241,7 +243,7 @@ std::vector<float> render_ump(const char* id, bool mono, bool from_library, int 
 
 } // namespace
 
-TEST_CASE("flute from its library renders bit for bit as linked in (every preset, the performances, the takes, UMP in poly and mono)") {
+TEST_CASE("flute from its library renders bit for bit as linked in (every preset, the performances, the phrases, UMP in poly and mono)") {
 	const char* id = "flute";
 	const sdk::EngineEntry* e = sdk::find_engine(id);
 	REQUIRE(e != nullptr);
@@ -253,9 +255,9 @@ TEST_CASE("flute from its library renders bit for bit as linked in (every preset
 			render_both(id, p, *pa, 6.0);
 		}
 	}
-	for (const std::string& t : takes()) {
+	for (const std::string& t : phrases()) {
 		std::string err;
-		auto pa = sdk::key_player(t.c_str(), NV, SR, &err);
+		auto pa = sdk::ump_player(t.c_str(), sdk::HostConfig{SR, 0, NV}, nullptr, &err);
 		REQUIRE(pa != nullptr);
 		render_both(id, -1, *pa, 8.0);
 	}
@@ -308,8 +310,8 @@ TEST_CASE("parameters by index and id, the write rule, reset and sample rates") 
 
 namespace {
 
-// the default performance with the instrument moving: shaken (acc_abs, 6 Hz, 1-3 s), tilted and
-// turned (acc_x/y/z and rot_x/y/z, slow), and the pedal pressed and released (2-4 s)
+// the default performance with the instrument moving: shaken (motion.accel_g, 6 Hz, 1-3 s), turned
+// (motion.spin, slow), and the pedal pressed and released (2-4 s)
 class Moving final : public sdk::Player {
 public:
 	explicit Moving(std::unique_ptr<sdk::Player> p) :
@@ -326,7 +328,7 @@ public:
 		g.sustain = static_cast<float>(3.0 / 16 + (13.0 / 16) * pd);
 	}
 	[[nodiscard]] double seconds() const override { return p_->seconds(); }
-	[[nodiscard]] std::string describe() const override { return "moving (shake, tilt, turn, pedal) " + p_->describe(); }
+	[[nodiscard]] std::string describe() const override { return "moving (shake, spin, pedal) " + p_->describe(); }
 
 private:
 	std::unique_ptr<sdk::Player> p_;

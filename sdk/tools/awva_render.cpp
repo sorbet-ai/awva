@@ -1,28 +1,27 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
-// awva_render: any engine and preset, played by a scripted performance, a recorded key stream, a
-// MIDI file or captured engine controls, to a WAV (and raw float32). It says on stderr exactly which
+// awva_render: any engine and preset, played by a scripted performance, a MIDI file, a UMP file
+// or captured engine controls, to a WAV (and raw float32). It says on stderr exactly which
 // engine, preset and input it used (the input file's absolute path, size and checksum), and refuses
-// anything it can't find rather than falling back to something else. It is also the renderer of
-// the fitting tools (tools/fit): parameter overrides, a transposition, a note list, the controls
-// the engine got and a JSON manifest of the render.
+// anything it can't find rather than falling back to something else. For measuring and comparing
+// renders it has parameter overrides, a transposition, a note list, the controls the engine got
+// and a JSON manifest of the render.
 //
 // Usage: awva_render --engine NAME [--preset N|NAME] [input] [options]
 //   input (one of; default --perf default):
 //     --perf NAME       a scripted performance compiled in (--list shows them)
-//     --rec FILE.csv    a recorded key stream (CSV t,src,id,pres,velo,x,y), through the key path
 //     --midi FILE.mid   a Standard MIDI File, MIDI 1.0 or MPE, through the MIDI/MPE mapping
 //                       (awva/ump.h, as MIDI 1.0 in UMP)
 //     --ump FILE.ump    timed UMP packets, a text file (awva_sdk/performance.h: ump_player), the same way
 //     --ctl FILE.ctl    engine controls, float32 per block: 10 voices x (pitch, pressure, pressure_rate, timbre),
 //                       then the instrument's 5 (sustain, accel_g, spin x 3) (what --ctl-out writes, or an embedded host's capture)
-//   --seconds S       length (default: the input's: 17.5 s, a recording's length + 2 s, a MIDI
-//                     file's length + 2 s, a controls file's blocks), plus --tail
+//   --seconds S       length (default: the input's: 17.5 s, a MIDI or UMP file's length + 2 s,
+//                     a controls file's blocks), plus --tail
 //   --tail S          seconds after the input's own length (default 0)
 //   --settle S        seconds of silence rendered before the input and not written (default 0):
 //                     the parameter glide of --set has arrived when the input starts
-//   --mono            (--midi, --ump, --rec) mono: one voice, played by every held key (awva/mono.h,
-//                     the engine's family: the MIDI mapping's mode; for --rec, the keys the same way)
+//   --mono            (--midi, --ump) mono: one voice, played by every held note (awva/mono.h,
+//                     the engine's family: the MIDI mapping's mode)
 //   --nv N            voices (default 10)
 //   --control-hz H    (--midi, --ump) the control rate MIDI is taken at, Hz (default 0: every
 //                     engine block; an embedded host's scan, e.g. 500: awva_sdk/host_config.h)
@@ -356,7 +355,7 @@ struct Set {
 } // namespace
 
 int main(int argc, char** argv) {
-	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *rec = nullptr, *midi = nullptr, *ctl = nullptr, *ump = nullptr, *compare = nullptr;
+	const char *engine_name = nullptr, *preset_arg = nullptr, *perf = nullptr, *midi = nullptr, *ctl = nullptr, *ump = nullptr, *compare = nullptr;
 	const char *out_path = nullptr, *wav = nullptr, *expect = nullptr, *golden_name = nullptr, *ctl_out = nullptr, *manifest = nullptr;
 	double seconds = -1, max_peak = 2.0, silent_after = -1, tail = 0, settle = 0, target_lufs = -23.0, tp_ceiling = -1.0;
 	int nv = 10, rate = 0, control_hz = 0;
@@ -373,7 +372,6 @@ int main(int argc, char** argv) {
 		if (s == "--engine") engine_name = next();
 		else if (s == "--preset") preset_arg = next();
 		else if (s == "--perf") perf = next();
-		else if (s == "--rec") rec = next();
 		else if (s == "--midi") midi = next();
 		else if (s == "--ctl") ctl = next();
 		else if (s == "--ump") ump = next();
@@ -432,11 +430,11 @@ int main(int argc, char** argv) {
 	if (tail < 0 || settle < 0) fail("--tail and --settle are seconds, 0 or more");
 
 	// the input: exactly one
-	if ((perf != nullptr) + (rec != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --rec, --midi, --ctl or --ump");
-	if (mono && !midi && !ump && !rec) fail("--mono: mono for --midi, --ump or --rec");
+	if ((perf != nullptr) + (midi != nullptr) + (ctl != nullptr) + (ump != nullptr) > 1) fail("one input only: --perf, --midi, --ctl or --ump");
+	if (mono && !midi && !ump) fail("--mono: mono for --midi or --ump");
 	if (control_hz != 0 && !midi && !ump) fail("--control-hz: the control rate of --midi or --ump");
 	if (control_hz < 0) fail("--control-hz: 0 (every engine block) or a rate in Hz");
-	const bool default_input = !perf && !rec && !midi && !ctl && !ump;
+	const bool default_input = !perf && !midi && !ctl && !ump;
 	if (listen) use_fx = true; // a render for ears goes through the effects
 	if (default_input) perf = "default";
 	int sr = rate;
@@ -477,10 +475,9 @@ int main(int argc, char** argv) {
 	} else {
 		const awva::voices::MonoStyle style = awva::voices::MonoStyle::of(entry->info->mono); // (as its component)
 		const awva::voices::MonoStyle* ms = mono ? &style : nullptr;
-		player = rec ? sdk::key_player(rec, nv, sr, &error, ms) :
-		    midi     ? sdk::midi_player(midi, sdk::HostConfig{sr, control_hz, nv}, &error, ms) :
-		    ump      ? sdk::ump_player(ump, sdk::HostConfig{sr, control_hz, nv}, ms, &error) :
-		               sdk::scripted_player(perf, nv, sr, &error);
+		player = midi ? sdk::midi_player(midi, sdk::HostConfig{sr, control_hz, nv}, &error, ms) :
+		    ump       ? sdk::ump_player(ump, sdk::HostConfig{sr, control_hz, nv}, ms, &error) :
+		                sdk::scripted_player(perf, nv, sr, &error);
 	}
 	if (!player) fail(error);
 	const bool own_length = seconds < 0;
@@ -491,7 +488,7 @@ int main(int argc, char** argv) {
 	std::snprintf(head, sizeof head, "engine %s (%s), preset %s%d%s%s%s, %d voices, %d Hz%s%s", entry->info->name, entry->header,
 	    preset_arg ? "" : "(its default) ", engine.preset(), pname ? " \"" : "", pname ? pname : "", pname ? "\"" : "", nv, sr,
 	    use_fx ? ", master effects" : "", ftz ? ", subnormals flushed" : "");
-	std::string input = player->describe() + (default_input ? " [the default input: no --perf, --rec or --midi]" : "");
+	std::string input = player->describe() + (default_input ? " [the default input: no --perf, --midi, --ump or --ctl]" : "");
 	if (midi || ump) input += control_hz ? ", control " + std::to_string(control_hz) + " Hz" : ", control every block";
 	std::string shaping;
 	if (!sets_desc.empty()) shaping += ", set " + sets_desc;
@@ -671,10 +668,9 @@ int main(int argc, char** argv) {
 			field("true_peak_dbtp", json_number(tp_out));
 			field("true_peak_ceiling", json_number(tp_ceiling));
 		}
-		field("input_kind", json_string(ctl ? "ctl" : rec ? "rec" :
-		                            midi                  ? "midi" :
-		                            ump                   ? "ump" :
-		                                                    "perf"));
+		field("input_kind", json_string(ctl ? "ctl" : midi ? "midi" :
+		                            ump                    ? "ump" :
+		                                                     "perf"));
 		field("mono", mono ? "true" : "false");
 		field("sample_rate", std::to_string(sr));
 		field("control_hz", std::to_string(control_hz));

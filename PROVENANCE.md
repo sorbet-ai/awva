@@ -14,21 +14,18 @@ This records where each file of this repository comes from. The repository was s
 | `dsp/include/awva/engines/*.h`, `effects/fx.h` | the engines' and the effects' contract traits |
 | `dsp/include/awva/preset.h`, `presets/<engine>/*.preset.json`, `dsp/include/awva/presets/*.inc` (generated from them), `tools/presets_inc.cmake` | the preset format and the factory presets as files. JSON has no comments, so the preset files carry no SPDX line: they are Apache-2.0, copyright Sorbet AI, like the rest. |
 | `dsp/include/awva/fx.h` | the master effects (drive, phaser, chorus, tremolo, delay, Dattorro plate, limiter). |
-| `sdk/`, `tools/harness/` (performances, `harness_util.h`, `rec/` recorded performances) | the SDK, its tests, the renderer, the scripted performances |
-| `tools/trumpet/` | the trumpet's bore fits, calibration and warm-start table generators |
-| `tools/fit/`, `docs/fitting.md` | the fitting toolkit, consolidated from the instrument lanes' tools (all written for this project), and the distances tested against listener verdicts. `tools/fit/awvafit/sources.json` and `archives.json` list recordings by URL and hash; no recording, and nothing derived from one (the phrase sets' key streams included), is in the repository |
-| `tools/fit/`, `docs/fitting.md` | the fitting toolkit, consolidated from the instrument lanes' tools (all written for this project), and the distances tested against listener verdicts. `tools/fit/awvafit/sources.json` lists recordings by URL and hash; no recording is in the repository |
+| `sdk/`, `tools/harness/` (performances, `harness_util.h`), `tools/goldens/` | the SDK, its tests, the renderer, the scripted performances, the golden renders' MIDI phrases |
+| `sdk/tests/performances/` | the musical test performances: MIDI 2.0 phrases made from the note annotations of ChoraleBricks (CC BY 4.0; `sdk/tests/performances/LICENSES.md`); no audio |
+| `tools/trumpet/` | the trumpet's bore design, calibration and warm-start table generators |
 | `dsp/include/awva/voice_doublereed.h`, `engines/doublereed.h` | the physical double reeds (oboe, cor anglais, bassoon): a blown-closed reed with the duct's head loss (Fletcher; Vergez et al. 2003; Almeida et al. 2007), a truncated cone with its near field and the reed's cavity (Ayers et al. 1985; Scavone 1997; Benade), the tone-hole lattice (Benade 1960); the oboe's and the bassoon's players fitted to the University of Iowa MIS recordings (free for any project, without restrictions; not in this repository); the cor anglais is the oboe's player on its geometry |
-| `tools/doublereed/` | the double reed's fitting and diagnosis tools |
 | `docs/`, `sdk/tools/awva_docs.cpp` | the documentation: reference tables generated from the engines' EngineInfo, the engines' accounts written from their headers' own comments |
 | `examples/` | programs that use an engine: from plain C through the component ABI (`c_host`), and a MIDI file through the SDK's MIDI in (`mpe_file`) |
 | `dsp/include/awva/voice_flute.h`, `engines/flute.h` | the physical flute (flute, alto flute, piccolo): the jet-drive model after the published literature named in its header (Coltman; Verge, Fabre, Hirschberg; Auvray et al. 2014; Fletcher & Rossing); its parameters fitted to the University of Iowa MIS recordings (flute, alto flute; their terms: free for any project, without restrictions) and the piccolo's to the VSCO-2 Community Edition's (CC0 1.0); neither is in this repository |
-| `tools/flute/` | the flute's analysis and fitting tools |
-| `tools/clarinet/` | the clarinet's fit tools: note features, the objective, the CMA-ES fit, its renderers and probes. The presets were fitted to the University of Iowa Musical Instrument Samples (Lawrence Fritts; "freely available ... used for any projects, without restrictions"), the B-flat and bass clarinet pp/mf/ff scales; the recordings are not in this repository |
+| `dsp/include/awva/voice_clarinet.h`, `engines/clarinet.h` | the physical clarinets; the presets fitted to the University of Iowa Musical Instrument Samples (Lawrence Fritts; "freely available ... used for any projects, without restrictions"), the B-flat and bass clarinet pp/mf/ff scales; the recordings are not in this repository |
 
 The following records rules and behaviour that the originating firmware also implements: whether these are re-statements of MIDI/MPE practice or derivations is a question for a legal check.
 - `ump.h` and `voice_allocator.h` hold the MIDI-in mapping and the voice-stealing rule. They were extracted from that firmware, where they had been rewritten in this project.
-- `controls.h` describes the controls that firmware writes.
+- `controls.h` describes a note's and the instrument's controls; it began as the controls that firmware writes, and now names them in MIDI 2.0's terms.
 
 ## Rewritten for the split
 

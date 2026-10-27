@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # The sound engine SDK for the PC (docs/README.md): every engine as its own library, a generic
 # contract test suite that runs on each of them, the renderer and the host shell. It needs only
-# dsp/ (the engines), tools/harness/ (the scripted performances and the key-stream replay) and
+# dsp/ (the engines), tools/harness/ (the scripted performances and the renderers' helpers) and
 # third_party/doctest: no OS, no device. Built as part of an including project, or on its own:  cmake -S sdk -B build/sdk && cmake --build build/sdk && ctest --test-dir build/sdk
 #
 #   awva_engine_<name>       one engine (dsp/include/awva/engines/<name>.h): its EngineEntry,
@@ -336,24 +336,18 @@ add_test(NAME presets_inc COMMAND "${CMAKE_COMMAND}" -DCHECK=ON -P "${CMAKE_CURR
 set_tests_properties(presets_inc PROPERTIES LABELS unit)
 
 # the renderer says what it played, and refuses what it can't find
-set(_rec "${AWVA_HARNESS_DIR}/rec/play_2026-10-22_staccato.csv")
 add_test(NAME awva_render.log_names_engine_preset_performance
   COMMAND awva_render --engine va --preset pad --seconds 0.5)
 set_tests_properties(awva_render.log_names_engine_preset_performance PROPERTIES LABELS unit
   PASS_REGULAR_EXPRESSION "engine va \\(voice_va.h\\), preset [0-9]+ \"pad\".*input scripted performance \"default\" \\([^\n]*performance.h \\([0-9]+ bytes, fnv [0-9a-f]+\\)\\) \\[the default input")
 add_test(NAME awva_render.log_names_ftz COMMAND awva_render --engine accordion --ftz --seconds 0.5)
 set_tests_properties(awva_render.log_names_ftz PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "48000 Hz, subnormals flushed")
-if(EXISTS "${_rec}")
-  add_test(NAME awva_render.log_names_recording COMMAND awva_render --engine ep --rec "${_rec}" --seconds 0.5)
-  set_tests_properties(awva_render.log_names_recording PROPERTIES LABELS unit
-    PASS_REGULAR_EXPRESSION "engine ep \\(voice_ep.h\\), preset \\(its default\\) 0 .*input key recording [^\n]*play_2026-10-22_staccato.csv \\([0-9]+ bytes, fnv [0-9a-f]+\\): [0-9]+ key events")
-endif()
 foreach(t IN ITEMS "unknown_engine;--engine nosuch" "unknown_preset;--engine va --preset nosuch"
-                   "unknown_performance;--engine va --perf nosuch" "missing_recording;--engine va --rec /nonexistent.csv"
-                   "missing_midi;--engine va --midi /nonexistent.mid" "two_inputs;--engine va --perf default --rec x.csv"
+                   "unknown_performance;--engine va --perf nosuch"
+                   "missing_midi;--engine va --midi /nonexistent.mid" "two_inputs;--engine va --perf default --ump x.ump"
                    "too_many_voices;--engine trumpet --nv 64" "unknown_parameter;--engine va --set nosuch=1"
                    "bad_set;--engine va --set cut_base" "missing_controls;--engine va --ctl /nonexistent.ctl"
-                   "ctl_and_rec;--engine va --ctl x.ctl --rec x.csv" "bad_notes;--engine va --notes 60,x"
+                   "ctl_and_ump;--engine va --ctl x.ctl --ump x.ump" "bad_notes;--engine va --notes 60,x"
                    "missing_ump;--engine va --ump /nonexistent.ump"
                    "mono_without_midi;--engine va --mono" "two_inputs_ump;--engine va --ump x.ump --midi x.mid")
   list(GET t 0 name)
@@ -378,10 +372,11 @@ set_tests_properties(awva_render.compare_other PROPERTIES LABELS unit FIXTURES_R
 
 # (the docs are this repository's engines: a project that includes the SDK may
 # add engines of its own, so only a build of the SDK itself checks them)
-# the musical test performances (tools/fit/performances: MIDI 2.0, derived from recordings): each one's
+# the musical test performances (tests/performances: MIDI 2.0 phrases made from a CC BY 4.0 dataset's
+# note annotations, tests/performances/LICENSES.md): each one's
 # dry render against its golden hash, and listening renders that must meet their loudness and refuse
 # a level that would clip. (The scripted performances above are stress scripts, not for listening.)
-set(_perf_dir "${CMAKE_CURRENT_SOURCE_DIR}/../tools/fit/performances")
+set(_perf_dir "${CMAKE_CURRENT_SOURCE_DIR}/tests/performances")
 if(EXISTS "${_perf_dir}/goldens.txt")
   file(STRINGS "${_perf_dir}/goldens.txt" _goldens REGEX "^[^#]")
   foreach(_g IN LISTS _goldens)
@@ -403,14 +398,13 @@ if(EXISTS "${_perf_dir}/goldens.txt")
   set_tests_properties(awva_render.listen_refuses_a_clipping_level PROPERTIES LABELS unit WILL_FAIL TRUE)
 endif()
 
-# the fitting tools' options: the live parameters, and the controls round trip (tools/fit)
+# the measuring options: the live parameters, and the controls round trip
 add_test(NAME awva_render.params COMMAND awva_render --engine va --preset 0 --set cut_base=40.5 --params)
 set_tests_properties(awva_render.params PROPERTIES LABELS unit PASS_REGULAR_EXPRESSION "cut_base filter -20 80 40.5")
-if(EXISTS "${_rec}")
-  add_test(NAME awva_render.ctl_round_trip COMMAND "${CMAKE_COMMAND}" -DRENDER=$<TARGET_FILE:awva_render> -DREC=${_rec}
-    -DOUT=${CMAKE_CURRENT_BINARY_DIR}/render_ctl -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/render_ctl.cmake")
-  set_tests_properties(awva_render.ctl_round_trip PROPERTIES LABELS unit)
-endif()
+add_test(NAME awva_render.ctl_round_trip COMMAND "${CMAKE_COMMAND}" -DRENDER=$<TARGET_FILE:awva_render>
+  -DUMP=${CMAKE_CURRENT_SOURCE_DIR}/tests/goldens/midi2.ump -DOUT=${CMAKE_CURRENT_BINARY_DIR}/render_ctl
+  -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/render_ctl.cmake")
+set_tests_properties(awva_render.ctl_round_trip PROPERTIES LABELS unit)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../docs/README.md")
   add_test(NAME docs.up_to_date COMMAND awva_docs "${CMAKE_CURRENT_SOURCE_DIR}/../docs" --check)
@@ -418,8 +412,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${CMAKE_CURREN
 endif()
 
 # The golden renders (sdk/tests/goldens/renders.txt): every engine and preset on the scripted
-# performances and the recorded takes, and every engine on the MIDI phrases (MPE, MIDI 2.0, a
-# sensor's; also in mono; at the default control rate and at 500 Hz), each checked against its FNV-1a 64 hash: a change of any engine's output or of the
+# performances and on the MIDI phrases (MPE, MIDI 2.0, a controller's own sensors), and every
+# engine on the phrases in mono too, at the default control rate and at 500 Hz, each checked against its FNV-1a 64 hash: a change of any engine's output or of the
 # MIDI mapping fails here. Only a build of the SDK itself (a project that includes it may add engines
 # of its own). After an intended change: tools/goldens/update.sh <build dir> (and say so).
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -436,8 +430,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
       set("_golden_${CMAKE_MATCH_1}" "${CMAKE_MATCH_2}")
     endif()
   endforeach()
-  file(GLOB _takes "${AWVA_HARNESS_DIR}/rec/*.csv")
-  list(SORT _takes)
   function(_golden name)
     if(DEFINED "_golden_${name}")
       set(h "${_golden_${name}}")
@@ -466,11 +458,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         set(parg --preset ${p})
       endif()
       _golden(golden.${tag}.default --engine ${v} ${parg} --perf default)
-      foreach(take IN LISTS _takes)
-        get_filename_component(tn "${take}" NAME_WE)
-        string(REGEX REPLACE "^play_" "" tn "${tn}")
-        _golden(golden.${tag}.take_${tn} --engine ${v} ${parg} --rec "${take}")
-      endforeach()
+      if(np) # each preset on the MIDI phrases (the default preset's: golden.<engine>.<phrase>, below)
+        foreach(ph IN ITEMS mpe midi2 sensor)
+          _golden(golden.${tag}.${ph} --engine ${v} ${parg} --ump "${_golden_dir}/${ph}.ump")
+        endforeach()
+      endif()
     endforeach()
     if(v IN_LIST AWVA_PERFORMANCES) # its own performance, tools/harness/perf_<v>.h
       _golden(golden.${v}.perf --engine ${v} --perf ${v})

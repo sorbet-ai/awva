@@ -17,8 +17,9 @@ Three ways to host them:
 | `presets/` | the factory presets, one file each: `<engine>/NN-<name>.preset.json` (below) |
 | `docs/` | the engines' reference pages and how they work, and playing them with MIDI 2.0 and MPE: [docs/README.md](docs/README.md) |
 | `examples/` | using an engine in your own program: from plain C (`c_host`), and a MIDI file through the SDK (`mpe_file`) |
-| `tools/harness/` | the scripted performances, `harness_util.h`, recorded performances (`rec/`) |
-| `tools/fit/` | rendering engines and measuring them against recordings: the fits' shared toolkit ([docs/fitting.md](docs/fitting.md)) |
+| `tools/harness/` | the scripted performances, `harness_util.h` |
+| `tools/goldens/` | the golden renders' MIDI phrases (`make_phrases.py`) and their update (`update.sh`) |
+| `tools/trumpet/` | the trumpet's bore design, calibration and warm-start table generators |
 | `third_party/doctest` | the test framework |
 
 **The component (ABI 5).** `component/include/nsc/nsc.h` is a C ABI that loads one engine from its own shared library. It takes UMP in, at integer frames, in calls of any frame count. Parameters have stable ids and declared defaults, and an `output` level follows the engine's own. Notes carry host ids, handed back by `ended()`. The descriptor gives a title, a short name, a colour, the heroes, the presets and the sample rates (11025 .. 192000). `awva_add_component()` builds an engine as a component library inside another project. See `component/README.md`, and `docs/writing_a_host.md` for a host: a plugin or an embedded instrument.
@@ -55,6 +56,6 @@ A preset survives an engine's versions by name, with no migration code. A value 
 
 The factory presets are the files in `presets/`, and nothing else: each engine reads its files at compile time (`dsp/include/awva/presets/<engine>.inc`, their texts). A file that lacks a parameter or has one out of range doesn't compile. To change one, edit the file, then run `cmake -P tools/presets_inc.cmake`; the test `presets_inc` fails if that was forgotten. The contract proves that each file, loaded by name, plays bit for bit as the engine's preset.
 
-The golden renders (`sdk/tests/goldens/renders.txt`, the tests `golden.*`) hash every engine and preset on the scripted performances and the recorded takes, and every engine on an MPE and a MIDI 2.0 phrase (also in mono): a change of any engine's output, or of the MIDI mapping, fails them. After an intended change, `tools/goldens/update.sh <build dir>` rewrites the file, and `awva_render --compare <old.f32>` says by how much the sound moved.
+The golden renders (`sdk/tests/goldens/renders.txt`, the tests `golden.*`) hash every engine and preset on the scripted performances and on the MIDI phrases (`sdk/tests/goldens/*.ump`: MPE, MIDI 2.0 and a controller's own sensors), and every engine on the phrases in mono and at a control rate of 500 Hz too: a change of any engine's output, or of the MIDI mapping, fails them. After an intended change, `tools/goldens/update.sh <build dir>` rewrites the file, and `awva_render --compare <old.f32>` says by how much the sound moved.
 
 Licence: Apache-2.0 (`LICENSE`, `NOTICE`). `PROVENANCE.md` says where each file comes from. Apache-2.0 code can be included in GPL-3.0 projects (the FSF lists Apache-2.0 as GPLv3-compatible), not the other way round.

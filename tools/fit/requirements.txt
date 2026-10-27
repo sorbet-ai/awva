@@ -1,9 +1,0 @@
-# SPDX-FileCopyrightText: 2026 Sorbet AI
-# SPDX-License-Identifier: Apache-2.0
-# The fitting toolkit's Python dependencies (tools/fit/README.md), each under a permissive licence.
-# Install into a virtual environment, never system-wide:
-#   python -m venv .venv-fit && .venv-fit/bin/pip install -r tools/fit/requirements.txt
-numpy>=1.24        # BSD-3-Clause
-scipy>=1.10        # BSD-3-Clause
-cma>=3.3           # BSD-3-Clause (CMA-ES, N. Hansen)
-soundfile>=0.12    # BSD-3-Clause; its wheels bundle libsndfile (LGPL-2.1, loaded dynamically). Only for FLAC.

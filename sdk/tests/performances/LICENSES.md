@@ -15,5 +15,5 @@ from the note annotations and the level of recordings. They contain no audio.
 - **Licence:** Creative Commons Attribution 4.0 International (CC BY 4.0),
   https://creativecommons.org/licenses/by/4.0/
 - **Changes made:** the notes, pitches (the f0 annotation re the track's tuning) and levels of a phrase of
-  one track were turned into Note On/Off, Poly Pressure and Per-Note Pitch messages
-  (`awvafit.perform`); nothing of the audio is kept.
+  one track were turned into Note On/Off, Poly Pressure and Per-Note Pitch messages; nothing of the
+  audio is kept.

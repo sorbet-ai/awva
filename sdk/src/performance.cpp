@@ -4,12 +4,12 @@
 #include "awva_sdk/performance.h"
 #include "awva_sdk/timed_midi.h"
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <vector>
 
-#include "harness_util.h" // tools/harness: load_recording, the replay of a recorded stream
 #include "awva_sdk/note_mapper.h"
 #include "awva_sdk/smf.h"
 
@@ -53,52 +53,6 @@ public:
 private:
 	const ScriptedPerformance& p_;
 	int nv_;
-};
-
-class Keys final : public Player {
-public:
-	Keys(std::string path, std::vector<harness::RecEvent> ev, int sample_rate, const awva::voices::MonoStyle* mono) :
-	    path_(std::move(path)), ev_(std::move(ev)), sr_(sample_rate), mono_on_(mono != nullptr) {
-		if (mono) mono_.set_style(*mono);
-	}
-	void block(int b, NoteControls* vc, dsp::InstrumentControls&) override {
-		// the last event of each voice up to this block (the controls hold between messages)
-		const double t = static_cast<double>(b) * dsp::BLOCK / sr_;
-		for (; k_ < ev_.size() && ev_[k_].t <= t; k_++) {
-			const harness::RecEvent& x = ev_[k_];
-			if (mono_on_) {
-				// mono (mono.h): the keys are notes on one voice, every held key playing it, as a
-				// wind player's fingers do on one breath
-				mono_.note(x.voice, {x.note, x.pres, x.vpres, x.but_y, 0.0f, 0.0f, static_cast<uint8_t>(x.pres > 0.0f ? 1 : 0)});
-				if (mono_.empty()) vc[0] = mono_.voice(); // (the last key let go: the voice's release)
-				continue;
-			}
-			NoteControls& c = vc[x.voice];
-			c.pitch = x.note;
-			c.pressure = x.pres;
-			c.pressure_rate = x.vpres;
-			c.timbre = x.but_y;
-			c.gate = x.pres > 0.0f;
-		}
-		if (mono_on_ && !mono_.empty()) { // the player, this block
-			mono_.step(static_cast<float>(dsp::BLOCK) / static_cast<float>(sr_));
-			vc[0] = mono_.voice();
-		}
-	}
-	[[nodiscard]] double seconds() const override { return ev_.back().t + 2.0; }
-	[[nodiscard]] std::string describe() const override {
-		char tail[96];
-		std::snprintf(tail, sizeof tail, ": %zu key events, %.1f s", ev_.size(), ev_.back().t);
-		return "key recording " + file_identity(path_.c_str()) + tail + (mono_on_ ? ", mono" : "");
-	}
-
-private:
-	std::string path_;
-	std::vector<harness::RecEvent> ev_;
-	int sr_;
-	bool mono_on_;
-	awva::voices::Mono<16> mono_;
-	size_t k_ = 0;
 };
 
 class Midi final : public Player {
@@ -218,20 +172,6 @@ std::unique_ptr<Player> scripted_player(std::string_view name, int voices, int, 
 		return nullptr;
 	}
 	return std::make_unique<Scripted>(*p, voices);
-}
-
-std::unique_ptr<Player> key_player(const char* csv_path, int voices, int sample_rate, std::string* error, const awva::voices::MonoStyle* mono) {
-	if (FILE* f = std::fopen(csv_path, "rb")) std::fclose(f);
-	else {
-		*error = std::string("cannot read the key recording ") + csv_path;
-		return nullptr;
-	}
-	std::vector<harness::RecEvent> ev = harness::load_recording(csv_path, voices);
-	if (ev.empty()) {
-		*error = std::string("no key events in ") + csv_path;
-		return nullptr;
-	}
-	return std::make_unique<Keys>(csv_path, std::move(ev), sample_rate, mono);
 }
 
 std::unique_ptr<Player> midi_player(const char* mid_path, const HostConfig& host, std::string* error, const awva::voices::MonoStyle* mono) {
