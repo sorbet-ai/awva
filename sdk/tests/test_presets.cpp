@@ -148,6 +148,16 @@ TEST_CASE("preset reader: JSON's syntax, flat, and what it refuses") {
 	CHECK(read_err(R"({"format": "awva-preset/1", "engine": {"id": "modal"})") == preset::Error::syntax);
 }
 
+TEST_CASE("preset reader: \\u0000 reads as '?', never a NUL inside a name or a text (it was written back cut short)") {
+	const auto p = read_ok(HEAD + R"("title": "a\u0000b", "params": {"level\u0000x": 1.5}})");
+	CHECK(p->title == "a?b");
+	CHECK(p->param("level") == nullptr); // (was the parameter "level")
+	REQUIRE(p->param("level?x") != nullptr);
+	const auto q = read_ok(sdk::to_json(*p));
+	CHECK(sdk::to_json(*q) == sdk::to_json(*p));
+	CHECK(q->title == "a?b");
+}
+
 TEST_CASE("presets survive an engine's versions by name: clamped, skipped, missing, refused, exact") {
 	const sdk::EngineEntry* entry = sdk::find_engine("modal");
 	REQUIRE(entry != nullptr);
