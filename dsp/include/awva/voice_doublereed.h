@@ -54,9 +54,9 @@
  *   strike     tonguing: hard = a fast release from a closed reed, an accent and a "t"; soft = "d";
  *              none = a breath attack
  *   release    the breath stops, the bore rings out (pedal lengthens the release)
- *   tilt fwd/back  embouchure: forward bites (a smaller tip opening, more lip damping: thinner,
- *              brighter, a little sharp), back relaxes (darker, fuller, a little flat)
- *   tilt sideways  pitch bend (the host moves the note; the bore follows)
+ *   timbre     embouchure: above 0 it bites (a smaller tip opening, more lip damping: thinner,
+ *              brighter, a little sharp), below 0 it relaxes (darker, fuller, a little flat)
+ *   pitch      bends (the host moves the note; the bore follows)
  *   shake      flutter tongue
  *
  * The player (v2) is alive: the breath's and the lips' slow wander (wander, lip_wander, wander_hz:
@@ -69,14 +69,14 @@
  * Instrument Samples (pp/mf/ff chromatic scales; free for any project, without restrictions), the
  * Track B way: the sustain's harmonics, noise and level across notes and dynamics, the timbre's
  * response to the dynamic, the attack's spectra, the tone's rise from the key and its pitch excursion,
- * the tone's pitch and level wobble re the recordings', pitch and register; plus the recorded
- * takes' rise from the key, every in-range note speaking at four pressures, and a dynamic that keeps
- * growing to the firmest press (tools/doublereed). The cor anglais is the oboe's player on its
+ * the tone's pitch and level wobble re the recordings', pitch and register; plus the tone's
+ * rise from the key on played phrases, every in-range note speaking at four pressures, and a dynamic
+ * that keeps growing to the firmest press. The cor anglais is the oboe's player on its
  * geometry (not fitted: no permissively licensed recordings). The output gains put each preset's mf
  * level at v1's.
  *
- * Cost (QEMU Cortex-M7 instruction counts per block, 10 voices, the default performance;
- * tools/target_render/profile.sh): oboe 28.4k, cor anglais 28.2k, bassoon 27.8k. Per voice-sample:
+ * Cost (QEMU Cortex-M7 instruction counts per block, 10 voices, the default performance):
+ * oboe 28.4k, cor anglais 28.2k, bassoon 27.8k. Per voice-sample:
  * two square roots, two divisions, ~110 instructions; per block the loop delay's Newton step on the
  * small-signal loop gain.
  * Memory: the bore delay lines, 4 KB per voice (40 KB BulkMemory). Engine ~3 KB.
@@ -120,7 +120,7 @@ static constexpr real NOTE_HI = 100.0f;   // above: an octave down
 static constexpr real STRIKE_WIN = 0.05f; // s: a strike counts while the note starts
 static constexpr real GLIDE_S = 0.015f;   // a slur's fingering change (note_glide.h)
 
-// the bore delay lines, placed by the host (engine SDK): BulkMemory (on an embedded target, its slower SRAM)
+// the bore delay lines, placed by the host (engine SDK): BulkMemory (the bulk region: on an embedded target, its slower RAM)
 struct BulkMemory {
 	alignas(32) float bore[MAX_VOICES][BLEN];
 };
@@ -148,10 +148,10 @@ struct Params {
 	real p_close;    // closing pressure (kPa): the blades' stiffness x the opening
 	real contact;    // contact stiffness when the blades beat, re their stiffness
 	real duct;       // the duct's limit on the jet: the opening (mm) where the head loss halves the flow's growth
-	real emb_tilt;   // forward tilt bites: octaves of opening per unit tilt (and damping)
+	real emb_tilt;   // timbre above 0 bites: octaves of opening per unit (and damping)
 	real emb_soft;   // the embouchure follows the breath: the lips pinch the tip to this part of its opening at
 	                 // the lightest breath and relax to the full opening at full breath (soft playing)
-	real bite;       // and the pitch it pulls (cents per unit tilt)
+	real bite;       // and the pitch it pulls (cents per unit of timbre)
 	real jitter;     // embouchure jitter (cents of the reed's resonance)
 	real wander;     // the player is no machine: the breath's slow wander (the mouth pressure's relative
 	real lip_wander; // std) and the lips' (the reed's tip opening's), band-limited at wander_hz: the
@@ -192,7 +192,7 @@ static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
 // The factory presets: presets/doublereed/NN-<name>.preset.json, compiled in (the end of this file);
-// their values fitted by tools/doublereed. An instrument each; the bore follows the note (its
+// their values fitted to recordings (above). An instrument each; the bore follows the note (its
 // sounding length: the fingering's first open hole), every register on the bore's first mode; the
 // register's character comes from the parameters' keytracking about the reference note (ref_note):
 //   0 oboe         fitted to the University of Iowa MIS oboe (pp/mf/ff chromatic scales); ref_note 69
@@ -235,7 +235,7 @@ struct VoiceState {
 	real acc, tn;            // accent and tongue noise envelopes
 	real racc;               // the attack rate's strike envelope (as acc, of the rate's strike)
 	real accf;               // the accent's pressure
-	real ty1, ty2;           // tilt smoother
+	real ty1, ty2;           // timbre smoother
 	real pm_prev;            // mouth pressure at the end of the last block
 	real jn, dr;             // embouchure jitter, slow wander
 	real wb1, wb2, wl1, wl2; // the breath's and the lips' wander (2-pole low-passed noise)
@@ -516,14 +516,14 @@ static inline void process_voice(Engine& e, int vi) {
 		s.ty1 = 0.0f;
 		s.ty2 = by;
 	}
-	real tilt;
+	real tmb;
 	{
 		real ty1 = s.ty1, ty2 = s.ty2, t1;
-		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tilt);
+		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tmb);
 		s.ty1 = ty1;
 		s.ty2 = ty2;
 	}
-	tilt = clampr(tilt, -1.0f, 1.0f);
+	tmb = clampr(tmb, -1.0f, 1.0f);
 	// embouchure life: jitter (~35 Hz noise) and a slow wander
 	s.jn += 0.15f * (6.0f * block_noise(s.rng) - s.jn);
 	s.jn = clampr(s.jn, -4.0f, 4.0f);
@@ -543,12 +543,12 @@ static inline void process_voice(Engine& e, int vi) {
 	}
 
 	const real sr = e.sr, dt = e.dt;
-	const real ftgt = note_freq(note + clampr(P.bite, -100.0f, 100.0f) * tilt * (1.0f / 100));
+	const real ftgt = note_freq(note + clampr(P.bite, -100.0f, 100.0f) * tmb * (1.0f / 100));
 	const real f0 = rmin(ftgt, 0.4f * sr);
 	const real P0 = sr / f0;
 	const real oct = (note - P.ref_note) * (1.0f / 12); // octaves re the reference note
 	// reed: resonance, damping, opening, stiffness
-	const real bitef = clampr(P.emb_tilt, -1.0f, 1.0f) * tilt; // octaves of bite
+	const real bitef = clampr(P.emb_tilt, -1.0f, 1.0f) * tmb; // octaves of bite
 	const real rc = rmax(P.jitter, 0.0f) * (s.jn + 0.5f * s.dr);
 	const real fr = clampr(P.reed_hz * exp2s(P.reed_reg * oct + 0.5f * bitef + rc * (1.0f / 1200)), 100.0f, 0.4f * sr);
 	const real wr = 2.0f * PI * fr;

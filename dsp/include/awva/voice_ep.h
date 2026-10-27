@@ -31,7 +31,7 @@
  * Playing:
  *   strike (vpres at key-down)  velocity: soft = warm and round, hard = bright, barking
  *   pressure while holding      digging in adds a little pickup drive (bark), nothing else
- *   tilt (but_y)                pickup alignment: back = sweeter/rounder, forward = barkier
+ *   timbre                      pickup alignment: below 0 = sweeter/rounder, above 0 = barkier
  *   release / pedal             damper; pedal 0..1 is a sustain pedal (fully lifted at 0.8)
  *   repeated strikes            lifting a held key a little and striking again re-strikes
  *   life (a dial)               micro-randomness, never a vibrato or tremolo: every strike a little
@@ -43,7 +43,7 @@
  * registers; 49 for the Wurlitzer curve, 67 with 2 divisions while morphing between the two),
  * coefficients once per block (~1.5k cycles per voice). Estimate ~3.5k cycles per voice per block,
  * ~37k cycles per block for 10 voices + master (~14 % CPU). Silent voices are skipped.
- * Engine 2.2 KB (DTCM), no other buffers. No libm, no doubles. Per-voice NaN/energy guard,
+ * Engine 2.2 KB (hot), no other buffers. No libm, no doubles. Per-voice NaN/energy guard,
  * energy cap, slewed frequency-ratio parameters, master ceiling.
  */
 #ifndef VOICE_EP_H_
@@ -93,7 +93,7 @@ struct Params {
 	real bcents; // its detune (cents): bloom / waver speed
 	// pickup
 	real align; // tine offset from the pole piece (0.58 sweet, > 0.8 bark, < 0.5 hollow)
-	real tilt;  // forward/back tilt -> align depth
+	real tilt;  // timbre -> align depth
 	real drive; // tine displacement into the pickup (more = more bark at the same velocity)
 	real dig;   // pressure while holding -> extra drive
 	real wurli; // 0 magnetic (Rhodes) .. 1 electrostatic (Wurlitzer) pickup curve
@@ -149,7 +149,7 @@ struct VoiceState {
 	real a[NM];                    // smoothed per-sample decay of each mode
 	real pk;                       // prompt-stage envelope (1 at the strike)
 	real damp;                     // smoothed damper engagement 0..1
-	real ty, ps;                   // smoothed tilt and pressure
+	real ty, ps;                   // smoothed timbre and pressure
 	real pD, pA, pB, pP0, pNG, pW; // pickup values at the end of the last block
 	real vpk;                      // vpres peak while arming
 	real ppk;                      // pressure peak since the strike

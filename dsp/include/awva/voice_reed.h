@@ -15,7 +15,7 @@
  *
  *   bore: two waveguides meeting at the mouthpiece, like a string blown at a point
  *     main tube   (round trip D1) -> bell / tone holes: -g * 2-pole Butterworth lowpass; above its
- *                 cutoff (0.9-2.3 kHz by tilt/breath, >= 2 f0) the bore has no resonances, so the reed can't squeak
+ *                 cutoff (0.9-2.3 kHz by timbre/breath, >= 2 f0) the bore has no resonances, so the reed can't squeak
  *     short tube  (round trip D2) -> open end: -gs * one-pole lowpass (the missing apex of a cone)
  *   D1 + D2 = one period. With D2 = D1 (beta = 1/2) the pair is exactly a cylinder: clarinet, odd
  *   harmonics. A short D2 (beta = 0.28) behaves like a truncated cone: saxophone, all harmonics.
@@ -29,19 +29,19 @@
  * block with polynomial sin/cos/atan) minus a measured correction table (reed dynamics and the
  * inharmonicity of the lossy apex; tools/harness/out/reed_tune.h, within ~5 cents up to ~C7 at
  * normal pressures). The main delay is read with 3rd order Lagrange interpolation, the short one
- * linearly; both delay lengths are ramped per sample inside the block, so vibrato and tilt are
+ * linearly; both delay lengths are ramped per sample inside the block, so vibrato and timbre are
  * click free.
  *
  * Controls:
  *   pres   breath. Below ~0.12 (clarinet) .. 0.2 (sax) the reed doesn't speak: breath noise and a
  *          whispery bore resonance. Above it the tone blooms and gets louder and brighter;
  *          pushed hard (> growl_from, a live parameter: 0.7) a growl (hummed roughness) sets in. The register stays on the
- *          fundamental over the whole pressure/tilt range (tested on notes 36..91).
+ *          fundamental over the whole pressure/timbre range (tested on notes 36..91).
  *   vpres  tonguing: a fast strike gives a pressure kick and a short tongue/breath noise burst
- *   but_y  backward = clarinet (cylindrical, hollow, odd harmonics, tighter embouchure),
- *          forward = saxophone (conical, all harmonics, buzzier, more open embouchure).
+ *   timbre  below 0 = clarinet (cylindrical, hollow, odd harmonics, tighter embouchure),
+ *          above 0 = saxophone (conical, all harmonics, buzzier, more open embouchure).
  *          High notes (above ~E5) are pulled towards the middle of the morph.
- *   note   pitch, including vibrato/bends (sideways tilt)
+ *   note   pitch, including vibrato and bends
  *   shake  (acc_abs > ~1.15) adds growl
  *   life   (a live parameter, LIFE_DEFAULT after init) micro-randomness, never a vibrato:
  *          every note a little different (start pitch offset that settles, brightness, tongue kick,
@@ -79,7 +79,7 @@ static constexpr real NOTE_MAX = 122.0f;
 // ---------------------------------------------------------------------------------------------
 // Voice parameters (tuned on the host harness)
 
-static constexpr real BETA_CLAR = 0.5f; // apex/period ratio at full backward tilt (cylinder)
+static constexpr real BETA_CLAR = 0.5f; // apex/period ratio at timbre -1 (cylinder)
 // (host experiments: -DREED_BSAX=...)
 #ifdef REED_BSAX
 static constexpr real BSAX = REED_BSAX;
@@ -92,7 +92,7 @@ static constexpr real ZS = REED_ZS;
 #else
 static constexpr real ZS = 0.14f;
 #endif
-static constexpr real BETA_SAX = BSAX; // at full forward tilt (cone)
+static constexpr real BETA_SAX = BSAX; // at timbre 1 (cone)
 static constexpr real P_TH = 0.12f;    // pressure where gamma reaches G_TH (about where the reed speaks)
 static constexpr real G_TH = 0.36f;
 static constexpr real G_SLOPE = 0.46f; // gamma per unit pressure above P_TH
@@ -246,7 +246,7 @@ struct VoiceState {
 	real note_prev;
 	real pres_s;      // smoothed pressure
 	real gam;         // breath gamma at the end of the last block
-	real by_s;        // smoothed tilt
+	real by_s;        // smoothed timbre
 	real tongue;      // articulation envelope
 	real growl;       // smoothed growl amount
 	real d1, d2;      // delay lengths at the end of the last block
@@ -266,7 +266,7 @@ struct VoiceState {
 };
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
-// engines/reed.h; e.g. AXI SRAM, outside the DTCM Engine)
+// engines/reed.h; the bulk region, outside the hot Engine)
 struct BulkMemory {
 	float main[MAX_VOICES][MAIN_LEN];
 	float tube[MAX_VOICES][SHORT_LEN]; // the short tube

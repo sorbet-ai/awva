@@ -158,7 +158,7 @@ inline Stats play(sdk::Engine& e, Keys& k, int n, std::vector<float>* keep = nul
 	return s;
 }
 
-// a phrase: a three note chord with vibrato and tilt, a melody on top, all released at 1.5 s
+// a phrase: a three note chord with vibrato and timbre, a melody on top, all released at 1.5 s
 inline void phrase(Keys& k, int b, float transpose = 0.0f) {
 	const double t = static_cast<double>(b) * dsp::BLOCK / k.rate;
 	const int nv = static_cast<int>(k.vc.size());
@@ -188,7 +188,7 @@ struct Rng {
 	float range(float lo, float hi) { return lo + next() * (hi - lo); }
 };
 
-// random playing: presses and releases, glides, tilt, strikes, pedal and motion, extremes included
+// random playing: presses and releases, glides, timbre, strikes, pedal and motion, extremes included
 inline void fuzz_controls(Rng& r, Keys& k) {
 	for (size_t v = 0; v < k.vc.size(); v++) {
 		NoteControls& c = k.vc[v];
@@ -202,7 +202,7 @@ inline void fuzz_controls(Rng& r, Keys& k) {
 			c.pressure = k.target[v] = std::clamp(c.pressure + r.range(-0.05f, 0.05f), 0.01f, 1.5f);
 			c.pressure_rate = r.range(-0.2f, 0.2f);
 			c.pitch += r.range(-0.1f, 0.1f);
-			(void)r.range(-1.0f, 1.0f); // (the draw a second tilt took: the same phrases as before)
+			(void)r.range(-1.0f, 1.0f); // (the draw a second per-note controller took: the same phrases as before)
 			c.timbre = r.range(-1.0f, 1.0f);
 		} else {
 			c.pressure_rate = 0.0f;

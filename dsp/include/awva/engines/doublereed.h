@@ -20,16 +20,16 @@ struct doublereed {
 	static constexpr const char* name = "doublereed";
 	static constexpr const char* title = "Double Reed";
 	static constexpr const char* short_name = "dreed";
-	static constexpr uint32_t led = 0x004000; // the double reed voice key's colour in the firmware (the wind key's)
+	static constexpr uint32_t led = 0x004000;
 	static constexpr const char* summary = "physical double reeds: reed, conical bore and tone holes, a living player (oboe, cor anglais, bassoon)";
 	// pressure the breath, pressure_rate the tongue, timbre the embouchure; motion.accel_g (flutter) and the sustain (release)
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;
 	static constexpr int max_voices = ::doublereed::MAX_VOICES;
 	static constexpr float tail_seconds = 2.5f; // the soak: silent 2.1 s after the release (the oboe, the worst)
-	static constexpr Cost cost = {90.63f};      // 29000 a block / 320; measured 88.9 (profile.sh: oboe 28440, the worst preset)
+	static constexpr Cost cost = {90.63f};      // 29000 a block / 320; measured 88.9 (oboe 28440, the worst preset)
 	// the hero parameters: the reed's opening and stiffness (the embouchure), the lattice's cutoff
 	// (the instrument's colour), the loudest breath, the player's wander (the tone's life), the
-	// tongue, the embouchure under tilt, the release
+	// tongue, the embouchure under timbre, the release
 	static constexpr Heroes heroes = {{"reed_open", "p_close", "lattice_hz", "p_loud", "wander", "tongue", "emb_tilt", "release"}};
 	// the bassoon is checked on its own range (Bb1 to E5, as fitted: every note there speaks in its register);
 	// above it, past a bassoon's top, the notes are not its (at C6 a register below, 95 c flat)

@@ -113,9 +113,11 @@ A digital waveguide string driven by a friction bow, with a small modal body.
 
 ## Playing
 
-- **pressure:** the bow: loudness, and the bow force (a heavy bow drifts towards the bridge, a light one towards the fingerboard).
-- **strike:** an accented start; in pizzicato, the pluck.
-- **tilt forward/back:** the bow position: forward towards the bridge (sul ponticello), back towards the fingerboard (sul tasto). A dead zone keeps fast playing from drifting.
-- **shake:** moves the bow: speed modulation, and strong shakes reverse it (tremolo).
-- **rotation:** shifts the body resonances.
-- **pedal:** lengthens the release.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the bow: loudness, and the bow force (a heavy bow drifts towards the bridge, a light one towards the fingerboard).
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): an accented start; in pizzicato, the pluck.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the bow position: above 0 towards the bridge (sul ponticello), below 0 towards the fingerboard (sul tasto). A dead zone keeps fast playing from drifting.
+- **acceleration** (`motion.accel_g`, from a host's motion sensor): moves the bow: speed modulation, and strong shakes reverse it (tremolo).
+- **spin** (`motion.spin`, from a host's gyroscope): shifts the body resonances.
+- **sustain** (`sustain`, CC64): lengthens the release.

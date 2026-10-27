@@ -140,14 +140,16 @@ A physical model of the flute family: the concert flute, the alto flute and the 
 
 Every element is passive or bounded. The jet's flow is bounded, the pipe's loop gain is below 0.98, and the window flow is solved implicitly. A per-voice guard resets a voice whose state goes non-finite or absurd. The master has a DC blocker and a soft ceiling at 4.2.
 
-The presets were fitted (CMA-ES) to recordings. The flute and the alto flute were fitted to the University of Iowa MIS recordings (non-vibrato, pp/mf/ff, every note): the steady harmonics, the level across notes and dynamics, the noise, the attack and its rise, the timbre's change with the dynamic, the tuning and the register. The piccolo is the flute's player on the piccolo's geometry (an octave higher, a 5.4 mm bore). Its jet, bore losses, radiation, noise and attack were fitted to the VSCO-2 Community Edition piccolo (CC0). No recording is in this repository; `tools/flute/` and `tools/fit/` (`awvafit flute`) fetch the recordings and rerun the fits.
+The presets were fitted (CMA-ES) to recordings. The flute and the alto flute were fitted to the University of Iowa MIS recordings (non-vibrato, pp/mf/ff, every note): the steady harmonics, the level across notes and dynamics, the noise, the attack and its rise, the timbre's change with the dynamic, the tuning and the register. The piccolo is the flute's player on the piccolo's geometry (an octave higher, a 5.4 mm bore). Its jet, bore losses, radiation, noise and attack were fitted to the VSCO-2 Community Edition piccolo (CC0). No recording is in this repository.
 
 ## Playing
 
-- **pressure:** the breath. It sets the dynamics and the brightness (the edge saturates) and the breathiness. At the extremes the note overblows or falls back.
-- **strike:** tonguing. The tongue releases the breath, faster for a harder strike, with the pressure built up behind it (an accent) and a "t" of turbulence: the chiff. The attack's jet is released fast and thin, so the tone speaks in tens of milliseconds. No strike is a breath attack.
-- **release:** the breath stops and the pipe rings out. The pedal lengthens the release.
-- **tilt forward/back:** the jet angle and the cover of the embouchure hole. Forward rolls in (darker, a little flatter); back rolls out.
-- **sideways tilt:** a pitch bend (the host moves the note; the pipe follows).
-- **shake:** breath vibrato.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the breath. It sets the dynamics and the brightness (the edge saturates) and the breathiness. At the extremes the note overblows or falls back.
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): tonguing. The tongue releases the breath, faster for a harder strike, with the pressure built up behind it (an accent) and a "t" of turbulence: the chiff. The attack's jet is released fast and thin, so the tone speaks in tens of milliseconds. No strike is a breath attack.
+- **release** (the Note Off): the breath stops and the pipe rings out. `sustain` lengthens the release.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the jet angle and the cover of the embouchure hole. Above 0 rolls in (darker, a little flatter); below 0 rolls out.
+- **pitch bend** (`pitch`: MIDI 2.0's per-note pitch, MPE's member-channel bend): the host moves the note; the pipe follows.
+- **acceleration** (`motion.accel_g`, from a host's motion sensor): breath vibrato.
 - **`ob_amt`** (0 by default): overblowing. Above `ob_thr` of the breath, the player stops shortening the lip-to-edge distance as the jet speeds up. The jet's travel time falls, and the next mode of the pipe takes over, with the jet's hysteresis.

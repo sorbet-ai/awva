@@ -30,7 +30,7 @@ struct trumpet {
 	static constexpr Cost cost = {137.5f}; // measured 132.15 (42288 a block); silent 0.25 s after the release
 	// the hero parameters (the contract suite checks the names)
 	// the new model's: brassiness, the bell and the radiation's brightness, the tongue, the loudest
-	// breath, the breath noise, the lips under tilt, the release (no presets to override them)
+	// breath, the breath noise, the lips under timbre, the release (no presets to override them)
 	static constexpr Heroes heroes = {{"brassiness", "bell_hz", "tone_hz", "tongue", "p_loud", "breath", "lip_tilt", "release"}};
 	// every rate within the default 3 cents of 48 kHz (contract_rates.cpp): no rate tolerances
 };

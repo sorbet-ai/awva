@@ -6,9 +6,9 @@
  * and a couple of patterns that matter on the Cortex-M7:
  * - no sinf/expf/divisions per sample: block-rate coefficients, per-sample multiply-adds
  * - no libm at all (sinf, cosf, expf, powf, tanf...): newlib on this toolchain does parts of them
- *   in software double precision, which is slow and makes tools/build.sh reject the build. Use
+ *   in software double precision, which is slow (and an embedded build may refuse it). Use
  *   polynomial approximations (dspmath.h has fastpow2 and tan0; cos/sin below).
- * - per-voice state in locals during the sample loop, plain-data Engine (it lives in DTCM)
+ * - per-voice state in locals during the sample loop, plain-data Engine (it lives in the hot region)
  */
 #ifndef VOICE_SINE_H_
 #define VOICE_SINE_H_

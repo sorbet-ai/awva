@@ -156,7 +156,7 @@ template <class T> struct Adapter {
 	static constexpr bool has_presets = requires { T::num_presets; };
 	// the traits' init_writes_memory (engine.h), false if they don't say
 	static constexpr bool init_writes_memory = awva::init_writes_memory<T>;
-	static_assert(PlainData<Native>, "an engine is plain data (it lives in zero-filled DTCM, no constructors run)");
+	static_assert(PlainData<Native>, "an engine is plain data (it lives in zero-filled hot memory, no constructors run)");
 
 
 	Native e;

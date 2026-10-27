@@ -49,7 +49,7 @@
  *          broadband pitch, level, brightness and breath-noise flicker, each voice its own
  *   vpres  tonguing: a fast strike gives a crisp tongued attack (pressure kick + "t" noise); a
  *          slow press a breathy swell.
- *   but_y  embouchure, subtle: forward a little brighter / edgier, backward darker and breathier
+ *   timbre  embouchure, subtle: above 0 a little brighter / edgier, below 0 darker and breathier
  *          (subtone on the saxes, covered tone on the flute).
  *   note   pitch, vibrato and bends. Automatic vibrato is available as a parameter (off).
  *   pedal  unused.
@@ -79,7 +79,7 @@ static constexpr float GLIDE_S = 0.010f; // a slur's fingering change (note_glid
 #endif
 static constexpr int MAX_VOICES = AWVA_VOICES_WIND;
 
-// delay lines (AXI SRAM): main bore up to a period (cone, flute) or half a period (cylinder) of
+// delay lines (bulk memory): main bore up to a period (cone, flute) or half a period (cylinder) of
 // the lowest note (MIDI 20: 1881 samples), short line for the cone apex / the flute's jet
 static constexpr int MAIN_LEN = 2048;
 static constexpr int SHORT_LEN = 1024;
@@ -198,8 +198,8 @@ struct Params {
 	real turb;     // turbulence on the breath drive
 	real noise_hz; // breath noise band centre, Hz
 	// expression
-	real tilt_bright; // embouchure brightness from tilt
-	real tilt_breath; // breathiness / subtone with backward tilt
+	real tilt_bright; // embouchure brightness from timbre
+	real tilt_breath; // breathiness / subtone with timbre below 0
 	real growl;       // growl depth when pushed hard
 	real growl_from;  // pressure where the growl starts
 	real vib;         // automatic vibrato, semitones
@@ -256,7 +256,7 @@ struct VoiceState {
 	real note_prev;
 	awva::NoteGlide glide; // the fingering: a slur's step of the note over GLIDE_S
 	real ps;               // smoothed pressure
-	real ty;               // smoothed tilt
+	real ty;               // smoothed timbre
 	real tongue;           // articulation envelope
 	real growl;            // smoothed growl amount
 	real gph;              // growl: throat phase (turns)
@@ -282,7 +282,7 @@ struct VoiceState {
 };
 
 // the delay lines, 16 KB per voice: the host gives them to the engine (engine contract,
-// engines/wind.h; e.g. AXI SRAM)
+// engines/wind.h; the bulk region)
 struct BulkMemory {
 	float main[MAX_VOICES][MAIN_LEN];
 	float tube[MAX_VOICES][SHORT_LEN]; // the short tube
@@ -637,7 +637,7 @@ static inline void process_voice(Engine& e, int v) {
 		l_kp = 1.0f + life * (s.lkp - 1.0f);
 		l_tg = 1.0f + life * (s.ltg - 1.0f);
 	}
-	// breath smoothing (attack), tilt, tongue, growl
+	// breath smoothing (attack), timbre, tongue, growl
 	s.ps += (life_on ? rmin(e.kp * l_kp, 1.0f) : e.kp) * (pres - s.ps);
 	if (s.ps < 1e-6f) s.ps = 0.0f;
 	const real ps = s.ps;

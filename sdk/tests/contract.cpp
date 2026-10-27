@@ -657,7 +657,7 @@ namespace {
 
 // The host's FTZ guard (component/include/nsc/no_denormals.h: the component runs process() with
 // subnormals flushed): the same playing with and without it. Notes being played (strikes, slurs,
-// pressures to 1.5, tilts, shake, pedal, staccato) for 4 s, then everything released (8 s, or the
+// pressures to 1.5, timbre, shake, pedal, staccato) for 4 s, then everything released (8 s, or the
 // declared tail and a second), where decaying states reach the subnormal range.
 struct GuardRender {
 	std::vector<float> out;
@@ -695,7 +695,7 @@ GuardRender guard_render(int preset, bool guarded) {
 					rt = u() < 0.4f ? 10.0f : 0.002f + 0.2f * u(); // a strike in one block, or a slope
 				}
 				if (b > playing - blocks(0.6) && b % 8 == 0) tg = tg > 0.0f ? 0.0f : 1.0f; // staccato
-				(void)u();                                                                 // (the draw a second tilt took: the same phrase as before)
+				(void)u();                                                                 // (the draw a second per-note controller took: the same phrase as before)
 				c.timbre = std::clamp(c.timbre + 0.2f * (u() - 0.5f), -1.0f, 1.0f);
 			} else {
 				tg = 0.0f;

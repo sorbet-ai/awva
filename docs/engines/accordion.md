@@ -116,7 +116,9 @@ Physically modelled free reeds, with registers, musette tuning, reed chambers, a
 
 ## Playing
 
-- **pressure:** the bellows and pallet: below the threshold only air; then the reeds speak, louder, brighter and a little flatter. With `bellows` up, the strongest note sets the pressure for the whole chord.
-- **tilt forward/back:** the reed voicing: forward a little brighter, back softer.
-- **pedal:** a bellows reversal. **shake** (the instrument's motion, a global input): a bellows shake.
-- The strike isn't read: the attack follows the pressure rise itself.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the bellows and pallet: below the threshold only air; then the reeds speak, louder, brighter and a little flatter. With `bellows` up, the strongest note sets the pressure for the whole chord.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the reed voicing: above 0 a little brighter, below 0 softer.
+- **sustain** (`sustain`, CC64): a bellows reversal. **acceleration** (`motion.accel_g`, from a host's motion sensor): a bellows shake.
+- `pressure_rate` isn't read: the attack follows the pressure rise itself.

@@ -15,7 +15,7 @@
  *            (~3 cents), breath turbulence that is modulated by the lip opening (pulse-synchronous
  *            noise), and at a tongued attack a short "blat": a pitch scoop from below, a burst of
  *            irregular buzz (random FM), a brighter lip pulse, an overshoot and a tongue noise "t".
- *   bore     a waveguide loop one period long (two half-period delay lines in AXI SRAM: mouthpiece
+ *   bore     a waveguide loop one period long (two half-period delay lines in bulk memory: mouthpiece
  *            -> bell -> mouthpiece). At the bell the wave splits: the low frequencies reflect
  *            (one-pole lowpass at the bell cutoff, times the round-trip loss g, set from a decay time
  *            in seconds), the rest radiates. The loop delay is the period minus the bell filter's
@@ -37,7 +37,7 @@
  *   body     radiation high-pass, mouthpiece cup formant (peaking band-pass), bell/tone low-pass
  *            (its cutoff also rises with the level: a gentler second brightness mechanism), mutes:
  *            one state-variable filter whose high/band/low-pass mix makes a straight mute (high-pass
- *            with a resonance) or a harmon mute (narrow nasal resonance); forward/back tilt sweeps
+ *            with a resonance) or a harmon mute (narrow nasal resonance); timbre sweeps
  *            the mute resonance (wah, level compensated) and/or the tone low-pass (plunger / hand).
  *   section  optional second player: a second lip oscillator a few cents apart, own jitter.
  *
@@ -52,8 +52,8 @@
  *   strike     tonguing (positive vpres while held): a hard strike gives a bright blat, an accent,
  *              a slight scoop from below and a tongue "t"; re-striking a held key re-tongues
  *   release    the lips stop, the bore rings out briefly (pedal lengthens the tail a little)
- *   tilt fwd/back  open presets: brighter / darker (lips and bell; the horn's hand). Mute presets:
- *              wah (harmon: forward = open "wow", back = closed "wu"; plunger: back closes it)
+ *   timbre     open presets: brighter / darker (lips and bell; the horn's hand). Mute presets:
+ *              wah (harmon: above 0 = open "wow", below 0 = closed "wu"; plunger: below 0 closes it)
  *   shake      flutter tongue
  *   life       (a dial) micro-randomness, never a vibrato: every note a little different (a start
  *              pitch offset of a few cents that settles, brightness, accent and tongue noise), and
@@ -66,7 +66,7 @@
  * player), bore + steepening 93 (43 FP), body filters 47 (58 with a mute); no divisions. Control
  * rate (4 per block): pulse shape, level, tone coefficients (~4 divisions, 2 square roots); block
  * rate: pitch, loop and filter coefficients (~10 divisions). Worst case ~10.5k cycles per voice per
- * block. Memory: Engine 8.3 KB (DTCM), bore delay lines 80 KB (AXI SRAM). Silent voices are skipped.
+ * block. Memory: Engine 8.3 KB (hot), bore delay lines 80 KB (bulk). Silent voices are skipped.
  */
 #ifndef VOICE_BRASS_H_
 #define VOICE_BRASS_H_
@@ -132,7 +132,7 @@ using awva::rmax;
 using awva::rmin;
 
 // the bore delay lines, 8 KB per voice: the host gives them to the engine (engine contract,
-// engines/brass.h; e.g. AXI SRAM)
+// engines/brass.h; the bulk region)
 struct BulkMemory {
 	float bore[MAX_VOICES][2][BLEN];
 };
@@ -149,7 +149,7 @@ struct Params {
 	real rel, rel_ped; // release time constant (s): rel + rel_ped * pedal^2
 	// lips
 	real lip_soft, lip_loud; // lip closure c at lb = 0 and lb = 1 (-2 = sinusoidal .. 0.8 = narrow pulse)
-	real lip_tilt;           // closure added by forward tilt (subtle lip brightness)
+	real lip_tilt;           // closure added by timbre above 0 (subtle lip brightness)
 	real jitter;             // pitch jitter (cents, ~35 Hz band)
 	real breath;             // breath turbulence, modulated by the lip opening
 	// bore
@@ -161,12 +161,12 @@ struct Params {
 	real cup_hz, cup_q, cup_g; // mouthpiece cup formant: frequency, Q, peak boost (linear, +1)
 	real tone_hz, tone_q;      // bell/tone low-pass at full level
 	real tone_dyn;             // the tone low-pass closes by this many octaves from lb = 1 to lb = 0
-	real tilt_tone;            // tilt: tone low-pass octaves per unit tilt (back = darker / closed)
+	real tilt_tone;            // timbre: tone low-pass octaves per unit (below 0 = darker / closed)
 	// mute
 	real mute;                      // mute depth 0..1
 	real mute_hz, mute_q;           // mute resonance
 	real mute_hp, mute_bp, mute_lp; // output mix: high-pass (straight) / band-pass (harmon) / low-pass
-	real wah;                       // tilt: mute resonance octaves per unit tilt (forward = open)
+	real wah;                       // timbre: mute resonance octaves per unit (above 0 = open)
 	// attack / tonguing
 	real tongue;     // strike sensitivity
 	real acc_amp;    // accent: level overshoot
@@ -210,7 +210,7 @@ struct VoiceState {
 	real lv1, lv2;               // pressure smoother (control rate SVF)
 	real amp;                    // breath level after the release logic
 	real acc, tn, sc;            // accent, tongue noise and scoop envelopes
-	real ty1, ty2;               // tilt smoother (block rate SVF)
+	real ty1, ty2;               // timbre smoother (block rate SVF)
 	real d1;                     // stage 1 steepened read delay
 	real lps;                    // bell reflection lowpass state
 	real rs;                     // radiation high-pass state
@@ -1079,7 +1079,7 @@ static constexpr ParamEntry param_table[] = {
     // lips
     {{"lip_soft", "lips", -2.0f, 0.8f, awva::ParamKind::continuous}, &Params::lip_soft},  // lip closure when soft (-2 = pure)
     {{"lip_loud", "lips", -2.0f, 0.85f, awva::ParamKind::continuous}, &Params::lip_loud}, // lip closure when loud (0.85 = buzzy)
-    {{"lip_tilt", "lips", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::lip_tilt},  // forward tilt brightens the lips
+    {{"lip_tilt", "lips", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::lip_tilt},  // timbre above 0 brightens the lips
     {{"jitter", "lips", 0.0f, 20.0f, awva::ParamKind::continuous}, &Params::jitter},      // cents
     {{"breath", "lips", 0.0f, 0.8f, awva::ParamKind::continuous}, &Params::breath},       // breath turbulence
     // bore
@@ -1094,7 +1094,7 @@ static constexpr ParamEntry param_table[] = {
     {{"tone_hz", "body", 500.0f, 12000.0f, awva::ParamKind::continuous}, &Params::tone_hz}, // bell low-pass at ff
     {{"tone_q", "body", 0.5f, 2.0f, awva::ParamKind::continuous}, &Params::tone_q},
     {{"tone_dyn", "body", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::tone_dyn},    // octaves darker when soft
-    {{"tilt_tone", "body", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::tilt_tone}, // tilt: octaves (back = darker/closed)
+    {{"tilt_tone", "body", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::tilt_tone}, // timbre: octaves (below 0 = darker/closed)
     // mute
     {{"mute", "mute", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::mute}, // depth
     {{"mute_hz", "mute", 300.0f, 5000.0f, awva::ParamKind::continuous}, &Params::mute_hz},
@@ -1102,7 +1102,7 @@ static constexpr ParamEntry param_table[] = {
     {{"mute_hp", "mute", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::mute_hp}, // straight-mute character
     {{"mute_bp", "mute", 0.0f, 4.0f, awva::ParamKind::continuous}, &Params::mute_bp}, // harmon character
     {{"mute_lp", "mute", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::mute_lp},
-    {{"wah", "mute", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::wah}, // tilt: mute resonance octaves
+    {{"wah", "mute", -2.0f, 2.0f, awva::ParamKind::continuous}, &Params::wah}, // timbre: mute resonance octaves
     // attack
     {{"tongue", "attack", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::tongue},     // strike sensitivity
     {{"acc_level", "attack", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::acc_amp}, // accent overshoot

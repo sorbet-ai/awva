@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Stress performance for the reed voice (render_custom with -DAWVA_RENDER_PERF=perf_reed.h).
 // Same structure as performance.h. 17.5 s:
-//   A 0.0-3.0   breath swell 0 -> 1.4 -> 0 on one note while the tilt sweeps clarinet -> sax
+//   A 0.0-3.0   breath swell 0 -> 1.4 -> 0 on one note while the timbre sweeps clarinet -> sax
 //   B 3.0-5.5   fast tonguing: 10 strikes/s alternating notes, instant attacks
 //   C 5.5-8.0   legato note jumps on a held voice (1 to 19 semitones) with vibrato, 2nd voice glide
-//   D 8.0-11.5  all 6 voices, hard blowing (pressure up to 1.5), fast full-range tilt, shaking
-//   E 11.5-14.0 extremes: notes 20, 21, 113, 115 hard blown, glide 20 -> 115, fast tilt
+//   D 8.0-11.5  all 6 voices, hard blowing (pressure up to 1.5), fast full-range timbre, shaking
+//   E 11.5-14.0 extremes: notes 20, 21, 113, 115 hard blown, glide 20 -> 115, fast timbre
 //   F 14.0-16.5 chaos: 6 voices, pseudo-random notes, instant 0 <-> 1.5 pressure steps
 //   G 16.5-17.5 release tail (silence)
 #ifndef PERFORMANCE_H_

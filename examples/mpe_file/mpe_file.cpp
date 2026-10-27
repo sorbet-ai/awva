@@ -30,7 +30,7 @@ constexpr double PI = 3.14159265358979323846;
 
 // An MPE demo: the lower zone (an MCM: RPN 6 = 15 members on channel 1), a bend range of 48
 // semitones on the members, then a three-note chord, one note per member channel, each with its
-// own bend, pressure and CC74 (the tilt), released one by one.
+// own bend, pressure and CC74 (the timbre), released one by one.
 int write_demo(const char* path) {
 	std::vector<sdk::MidiEvent> ev;
 	auto add = [&ev](double t, uint8_t a, uint8_t b, uint8_t c) { ev.push_back({t, {a, b, c}, 3}); };

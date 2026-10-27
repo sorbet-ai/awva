@@ -35,7 +35,7 @@ struct Fit {
 }
 
 // An example: a 480 MHz Cortex-M7 (the reference core) running 10 voices at 48828 Hz, with
-// 128 KB of tightly coupled RAM for the hot region, 256 KB of fast SRAM and 512 KB of other RAM.
+// 128 KB of tightly coupled RAM for the hot region, 256 KB of fast RAM and 512 KB of other RAM.
 inline constexpr HostProfile example_profile = {"a 480 MHz Cortex-M7, 10 voices at 48828 Hz", 128 * 1024, 256 * 1024, 512 * 1024, 480e6, 48828, 10};
 
 } // namespace awva::sdk

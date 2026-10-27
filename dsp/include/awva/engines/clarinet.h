@@ -20,7 +20,7 @@ struct clarinet {
 	static constexpr const char* name = "clarinet";
 	static constexpr const char* title = "Clarinet";
 	static constexpr const char* short_name = "clar";
-	static constexpr uint32_t led = 0x003010; // the clarinet voice key's colour in the firmware
+	static constexpr uint32_t led = 0x003010;
 	static constexpr const char* summary = "physical clarinets: a single reed on a cylindrical bore with register hole and tone-hole lattice, fitted to recordings (2 presets)";
 	// pressure the breath, pressure_rate the tongue, timbre the embouchure; sustain lengthens the release
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_sustain;
@@ -29,7 +29,7 @@ struct clarinet {
 	static constexpr Cost cost = {131.25f};     // measured 127.2 (40688 a block: the B-flat; the bass clarinet 34728)
 	// (below 44.1 kHz the model runs at 2 to 4 times the rate, decimated: voice_clarinet.h OS_RATE)
 	// the hero parameters: the reed's opening and resonance, the breath at ff and at the lightest touch, the lattice
-	// cutoff, the tongue, the embouchure under tilt, the release
+	// cutoff, the tongue, the embouchure under timbre, the release
 	static constexpr Heroes heroes = {{"zeta", "reed_hz", "g_loud", "p_soft", "lat_hz", "tongue", "emb", "release"}};
 };
 } // namespace traits

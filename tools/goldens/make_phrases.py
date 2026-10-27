@@ -15,7 +15,7 @@
 #   sensor.ump  MIDI 2.0 from a controller with its own sensors: a sensor range of 4 (Assignable
 #               Controller 1), each note's measured pressure rate and timbre (Assignable Per-Note
 #               Controllers 1 and 2) and pitch (Registered Per-Note Controller 3) from a pressure,
-#               a slide and a tilt in 14-bit codes, pressures past MIDI's full scale, motion
+#               a slide and a timbre in 14-bit codes, pressures past MIDI's full scale, motion
 #               (Assignable Controllers 0x10, 0x14 .. 0x16) and the pedal
 # At most 12 notes are held at once (the MIDI mapping holds 16; past that the oldest is stolen).
 # Usage: tools/goldens/make_phrases.py  (writes the files; deterministic)
@@ -223,7 +223,7 @@ def sensor():
             bend = 0.5 * (0.6 * math.sin(2 * math.pi * 5.0 * u)) ** 3 if u > 0.5 else 0.0
             p.add(t, m2(0x1, 0, key, 1, bip_r(rate, R)), "measured pressure rate" if i == 0 else "")
             p.add(t, m2(0xa, 0, key, 0, u32_r(pr, R)), "pressure (up to 1.5)" if i == 0 else "")
-            p.add(t, m2(0x1, 0, key, 2, bip_r(y, R)), "timbre: a tilt" if i == 0 else "")
+            p.add(t, m2(0x1, 0, key, 2, bip_r(y, R)), "timbre: a per-note controller" if i == 0 else "")
             p.add(t, m2(0x0, 0, key, 3, int(round((pitch + bend) * (1 << 25)))), "pitch with a slide's bend" if i == 0 else "")
             prev = pr
             t += 0.002

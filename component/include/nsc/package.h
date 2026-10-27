@@ -126,7 +126,7 @@ inline bool check_package(const uint8_t* p, size_t have, uint32_t total, Reason&
 	memcpy(&h, p, sizeof h);
 	if (h.magic != PACKAGE_MAGIC) return why.s("not a package"), false;
 	if (crc32(0, p, 60) != h.header_crc) return why.s("package header crc"), false;
-	if (h.format != FORMAT || h.header_size != sizeof(PackageHeader)) return why.s("package format ").u(h.format).s(", firmware reads ").u(FORMAT), false;
+	if (h.format != FORMAT || h.header_size != sizeof(PackageHeader)) return why.s("package format ").u(h.format).s(", the host reads ").u(FORMAT), false;
 	if (h.n_sections == 0 || h.n_sections > MAX_SECTIONS || h.table_offset != sizeof(PackageHeader))
 		return why.s("bad section table"), false;
 	if (total && h.file_size != total) return why.s("package size ").u(total).s(", header says ").u(h.file_size), false;
@@ -174,12 +174,12 @@ struct Target {
 inline bool check_module(const ModuleHeader& m, uint32_t size, const Target& t, Reason& why) {
 	if (m.magic != MODULE_MAGIC) return why.s("not a module"), false;
 	if (crc32(0, &m, 252) != m.header_crc) return why.s("module header crc"), false;
-	if (m.format != FORMAT || m.header_size != sizeof(ModuleHeader)) return why.s("module format ").u(m.format).s(", firmware reads ").u(FORMAT), false;
+	if (m.format != FORMAT || m.header_size != sizeof(ModuleHeader)) return why.s("module format ").u(m.format).s(", the host reads ").u(FORMAT), false;
 	if (!terminated(m.arch, sizeof m.arch) || !terminated(m.fpu, sizeof m.fpu) || !terminated(m.float_abi, sizeof m.float_abi) ||
 	    !terminated(m.toolchain, sizeof m.toolchain) || !terminated(m.id, sizeof m.id) || !terminated(m.uid, sizeof m.uid) ||
 	    !terminated(m.version, sizeof m.version) || m.id[0] == 0)
 		return why.s("bad module header"), false;
-	if (m.abi != NSC_ABI) return why.s("abi ").u(m.abi).s(", firmware has ").u(NSC_ABI), false;
+	if (m.abi != NSC_ABI) return why.s("abi ").u(m.abi).s(", the host has ").u(NSC_ABI), false;
 	if (!field_is(m.arch, t.arch)) return why.s("arch ").s(m.arch).s(", this is ").s(t.arch), false;
 	if (!field_is(m.fpu, t.fpu)) return why.s("fpu ").s(m.fpu[0] ? m.fpu : "none").s(", this has ").s(t.fpu[0] ? t.fpu : "none"), false;
 	if (!field_is(m.float_abi, t.float_abi))

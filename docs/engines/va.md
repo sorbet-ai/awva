@@ -122,7 +122,7 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 
 An expressive virtual-analog voice.
 
-- **Oscillators:** A is a band-limited saw, a pulse (PWM) and a square sub an octave down, all from one phase. B is a saw hard-synced to A (the ratio swept by forward tilt, pressure and strike), or in some presets a free-running saw detuned downwards (a three-saw ensemble). C is a free-running saw a few cents off (chorus, widened by rotation). Every discontinuity (saw wraps, pulse edges, sub flips, sync resets) gets a polyBLEP correction; the output is delayed one sample so sync resets are corrected exactly.
+- **Oscillators:** A is a band-limited saw, a pulse (PWM) and a square sub an octave down, all from one phase. B is a saw hard-synced to A (the ratio swept by `timbre` above 0, pressure and strike), or in some presets a free-running saw detuned downwards (a three-saw ensemble). C is a free-running saw a few cents off (chorus, widened by spin). Every discontinuity (saw wraps, pulse edges, sub flips, sync resets) gets a polyBLEP correction; the output is delayed one sample so sync resets are corrected exactly.
 - **Filter:** a 4-pole zero-delay-feedback (TPT) ladder. The feedback is solved linearly and then soft-clipped, so loud notes squash the resonance as an analog ladder does. Every stage is a passive one-pole and the feedback is bounded, so it is stable for any control values.
 - **Output:** a soft saturation after the filter (driven harder by pressure and strikes), then the level.
 - **Modulation:** slow random pitch and cutoff drift per voice, and vibrato from shaking.
@@ -130,8 +130,10 @@ An expressive virtual-analog voice.
 
 ## Playing
 
-- **pressure:** the level and, through the accent and the drive, the brightness.
-- **strike:** an accent: louder, brighter, more sync sweep.
-- **tilt forward/back:** the sync sweep and the filter (per preset).
-- **shake:** vibrato. **rotation:** the chorus width.
-- **pedal:** the release length; a fast release shortens it.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the level and, through the accent and the drive, the brightness.
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): an accent: louder, brighter, more sync sweep.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the sync sweep and the filter (per preset).
+- **acceleration** (`motion.accel_g`, from a host's motion sensor): vibrato. **spin** (`motion.spin`, from a host's gyroscope): the chorus width.
+- **sustain** (`sustain`, CC64): the release length; a fast release shortens it.

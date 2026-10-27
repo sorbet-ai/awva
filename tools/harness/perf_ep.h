@@ -8,13 +8,13 @@
 //              rises), plus 2 ms strikes cycling over all 10 voices, notes 28..103
 //  C 5.0-7.5   hard chords on all 10 voices (pressure 1.2, 1 ms strikes), pedal down, repeated,
 //              then pedal up at 6.8 s while the keys are already released (10 dampers at once)
-//  D 7.5-10.0  10 held voices jumping to new notes every 90 ms, tilt sweeping +-1, pressure
+//  D 7.5-10.0  10 held voices jumping to new notes every 90 ms, timbre sweeping +-1, pressure
 //              swells to 1.5
-//  E 10.0-12.0 out-of-range controls: notes -10..140, pressure 3, tilt +-3, vpres +-2, pedal
+//  E 10.0-12.0 out-of-range controls: notes -10..140, pressure 3, timbre +-3, pressure rate +-2, pedal
 //              flapping, shaking
 //  F 12.0-14.0 high note 96 hard alone (aliasing check 12.2-12.9 s), then note 28 hard (bass bark)
 //  G 14.0-17.5 everything: dense random strikes on all voices, pedal toggling every 150 ms,
-//              chords, vibrato, tilt
+//              chords, vibrato, timbre
 // -DEP_TONE: strike sweep for analysis: notes {28,40,52,64,76,88,100} x vpres {0.12,0.45,1.0},
 //            each held 1.2 s (pres 0.6) then released 0.3 s, on voice 0 (31.5 s)
 // -DEP_DEMO [-DEP_DEMO_TRANSPOSE=n]: musical demo (~16 s): chords, melody, soft to hard, pedal
@@ -82,7 +82,7 @@ static void stress_controls(double t, Ctl* v, int nv, float* g) {
 			if (e > 0) set(i, ch[i] + 2 * r, 1.2 * e, 0, 0);
 		}
 	}
-	// D: jumps on held voices, tilt sweeps, pressure swells
+	// D: jumps on held voices, timbre sweeps, pressure swells
 	if (t >= 7.5 && t < 10.0) {
 		for (int i = 0; i < nv && i < 10; i++) {
 			double e = gate(t, 7.5, 9.9, 0.01, 0.1);

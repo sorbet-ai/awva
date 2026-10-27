@@ -47,8 +47,8 @@
  *
  * Cost per voice-sample: string+bow loop ~185 instructions on the usual path (~65 FP incl. 1 vsqrt; 1 division only
  * at slip onsets), body loop ~55 (~35 FP); block-rate coefficients ~12 divisions. Silent voices are
- * skipped. Section: ~20 instructions per sample for the whole engine. Memory: delay lines in ram1
- * (AHB SRAM1/2), 100 KB for 10 voices; section delay 8 KB in AXI SRAM; Engine (DTCM) ~2.5 KB.
+ * skipped. Section: ~20 instructions per sample for the whole engine. Memory: delay lines in the
+ * stream region, 100 KB for 10 voices; section delay 8 KB in the bulk region; Engine (hot) ~2.5 KB.
  */
 #ifndef VOICE_BOWED_H_
 #define VOICE_BOWED_H_
@@ -78,8 +78,8 @@ static constexpr int ENS_LEN = 2048; // section delay (42 ms)
 static constexpr uint32_t ENS_MASK = ENS_LEN - 1;
 
 // The host gives the engine its delay lines (engine contract, engines/bowed.h): the strings,
-// touched every sample (100 KB for 10 voices; e.g. AHB SRAM), and the section delay of
-// the mix (8 KB, any RAM; e.g. AXI SRAM)
+// touched every sample (100 KB for 10 voices; the stream region), and the section delay of
+// the mix (8 KB, any RAM; the bulk region)
 struct StreamMemory {
 	alignas(32) float neck[MAX_VOICES][NECK_LEN];
 	alignas(32) float bridge[MAX_VOICES][BRIDGE_LEN];
@@ -111,8 +111,8 @@ struct Params {
 	real speed_curve;        // bow speed from pressure: P * (1 - c + c * P)
 	real rosin;              // bow noise (jitter of the static friction)
 	// bow position
-	real pos;       // bow-bridge distance / string length at flat tilt and medium pressure
-	real pos_tilt;  // octaves of position per unit tilt (forward = bridge)
+	real pos;       // bow-bridge distance / string length at timbre 0 and medium pressure
+	real pos_tilt;  // octaves of position per unit of timbre (above 0 = bridge)
 	real pos_press; // octaves towards the fingerboard from full to light pressure
 	// string
 	real damp;             // string decay time (s) at note 40 (halves every 2 octaves)
@@ -194,7 +194,7 @@ struct VoiceState {
 	real Ps;                        // slowly smoothed pressure (bow position, corner rounding)
 	real acc;                       // accent envelope from positive pressure velocity
 	real lift;                      // quick release memory (negative pressure velocity)
-	real by;                        // smoothed but_y
+	real by;                        // smoothed timbre
 	real age;                       // seconds since the note started (vibrato delay)
 	real vib_ph;                    // vibrato phase 0..1
 	real vb, ds, cw, nz, dn;        // per-sample ramped values at the end of the previous block
@@ -472,12 +472,12 @@ static inline void process_voice(Engine& e, int v, real trem, real body_shift, r
 	const real f0 = 8.1757989156f * p2;
 	const real L = rmin(e.c_period / p2, (real)(NECK_LEN - 8));
 	const real w0 = e.two_pi_sr * f0; // <= 0.86 rad
-	// bow position: tilt forward = towards the bridge (sul ponticello), back = sul tasto;
+	// bow position: timbre above 0 = towards the bridge (sul ponticello), below 0 = sul tasto;
 	// a light bow drifts towards the fingerboard (flautando), a heavy one towards the bridge
 	const real eb = clampf(-p.pos_tilt * s.by + p.pos_press * (0.5f - s.Ps), -0.75f, 0.9f);
 	// 0.055 .. 0.2, at least 2 samples from the bridge (the highest notes)
 	// (and on the longest strings not too close to it: the motion gets irregular there)
-	// (pizzicato: plucked over the end of the fingerboard, 0.15 .. 0.3, tilt forward = nearer the bridge)
+	// (pizzicato: plucked over the end of the fingerboard, 0.15 .. 0.3, timbre above 0 = nearer the bridge)
 	const real beta = pizz ? clampf(0.21f * exp2_fast(-0.5f * s.by), rmax(4.0f / L, 0.15f), 0.3f) : clampf(rmax(clampf(p.pos, 0.05f, 0.2f) * exp2_fast(eb), rmax(2.2f / L, 0.03f + 6e-5f * L)), 0.055f, 0.2f);
 	// string losses: a heavier bow gives sharper corners (brighter)
 	// corner rounding time (one pole time constant) as a fraction of the period, like the
@@ -1006,7 +1006,7 @@ static constexpr ParamEntry param_table[] = {
     {{"speed_curve", "bow", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::speed_curve},  // 0 linear .. 1 quadratic dynamics
     {{"rosin", "bow", 0.0f, 0.2f, awva::ParamKind::continuous}, &Params::rosin},              // bow noise texture
     {{"pos", "position", 0.05f, 0.2f, awva::ParamKind::continuous}, &Params::pos},            // bow position (fraction of string)
-    {{"pos_tilt", "position", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pos_tilt},   // tilt range (octaves)
+    {{"pos_tilt", "position", 0.0f, 1.5f, awva::ParamKind::continuous}, &Params::pos_tilt},   // timbre range (octaves)
     {{"pos_press", "position", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::pos_press}, // light bow drifts to the fingerboard
     {{"damp", "string", 0.5f, 10.0f, awva::ParamKind::continuous}, &Params::damp},            // ring time (s) at note 40
     {{"bright", "string", 0.3f, 3.0f, awva::ParamKind::continuous}, &Params::bright},         // corner sharpness

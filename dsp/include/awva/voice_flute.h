@@ -51,9 +51,9 @@
  *              released fast and thin, it grows att_gain times more for the first att_t, so the
  *              tone speaks in tens of ms; none: a breath attack (att_soft of it)
  *   release    the breath stops, the pipe rings out (pedal lengthens the release)
- *   tilt fwd/back  the jet angle and the cover of the embouchure hole: forward rolls in (darker,
- *              a little flatter, the edge offset moves), back rolls out
- *   tilt sideways  pitch bend (the host moves the note; the pipe follows)
+ *   timbre     the jet angle and the cover of the embouchure hole: above 0 rolls in (darker,
+ *              a little flatter, the edge offset moves), below 0 rolls out
+ *   pitch      bends (the host moves the note; the pipe follows)
  *   shake      breath vibrato
  *   ob_amt     (0 by default) overblowing: above ob_thr of the breath the player stops shortening the
  *              lip-to-edge distance as the jet speeds up, its travel time falls and the next mode of
@@ -75,12 +75,12 @@
  * tune and in its register. The piccolo (v4): the flute's player on the piccolo's geometry, its jet,
  * bore losses, radiation, noise and attack fitted to the VSCO-2 Community Edition piccolo (CC0).
  * The attack (v2) refitted alone, the sustain's parameters fixed: the tone's rise (harmonics 1-3
- * within 3 dB of their sustain) from the key on the recorded takes (hard strikes <= 50 ms,
+ * within 3 dB of their sustain) from the key on played phrases (hard strikes <= 50 ms,
  * soft <= 120 ms) and against the recordings' attacks.
  *
- * Cost (QEMU Cortex-M7 instruction counts, 10 voices): profile.sh's default performance 34.7k
+ * Cost (QEMU Cortex-M7 instruction counts, 10 voices): the default performance 34.7k
  * (flute) to 36.7k (alto) per block; a stress (10 voices ff, notes jumping every 0.25 s over every
- * register, tilts, shaking) 92k in the worst block. Per voice-sample: two divisions, one square
+ * register, timbres, shaking) 92k in the worst block. Per voice-sample: two divisions, one square
  * root, four interpolated delay reads, four SVF steps.
  * Sample rates: from 11025 to 192000 Hz the pitch holds 48 kHz's within 0.2 c (the cutoffs at most
  * 0.4 of the rate, the delay lines long enough at 192 kHz); up to 48828 Hz the samples are v4's.
@@ -172,7 +172,7 @@ struct Params {
 	                // for it, louder breath raises the gain with the jet's velocity
 	real amp_loud;  // the embouchure's growth at full breath (octaves)
 	real y0;        // edge offset re h
-	real y_tilt;    // forward tilt moves it (re h per unit)
+	real y_tilt;    // timbre above 0 moves it (re h per unit)
 	real jet_st;    // the jet's response falls above this Strouhal number (f h / U): its growth is
 	                // band-limited (a critically damped 2-pole low-pass on the deflection)
 	real vortex;    // vena contracta of the edge losses (alpha_vc; larger: less loss)
@@ -183,7 +183,7 @@ struct Params {
 	real cut_hz;   // tone-hole lattice cutoff
 	real wall;     // wall losses: a one-pole low-pass in the loop at this many harmonics of the bore
 	real disp;     // end-correction allpass (0: none)
-	real cover;    // forward tilt flattens (cents per unit)
+	real cover;    // timbre above 0 flattens (cents per unit)
 	real cover_hz; // and darkens: cutoff octaves per unit
 	// fingering
 	real low_note; // the instrument's lowest note (first register from here)
@@ -231,14 +231,14 @@ static constexpr int NPARAMS = sizeof(Params) / sizeof(real);
 static_assert(sizeof(Params) == NPARAMS * sizeof(real), "Params must hold only floats");
 
 // The factory presets: presets/flute/NN-<name>.preset.json, compiled in (the end of this file);
-// their values fitted by tools/flute and tools/fit (awvafit flute):
+// their values fitted to recordings:
 //   0 flute       the concert flute, fitted to the University of Iowa MIS flute recordings
 //   1 alto flute  in G: a fourth lower, a wider bore (13 mm); its player fitted to the alto's
 //                 recordings
 //   2 piccolo     the flute's player on the piccolo's geometry (an octave higher, a bore of 5.4 mm
 //                 instead of 9.5), its jet, bore losses, radiation, noise and attack fitted to the
 //                 VSCO-2 Community Edition piccolo (CC0: five sustained notes G5-G7 at one dynamic;
-//                 the takes' rise from the key); its top notes, to C8, outside its range (they speak
+//                 the rise from the key on played phrases); its top notes, to C8, outside its range (they speak
 //                 at the lightest touch so), its output level so that its fitted top meets them
 static constexpr int NUM_PRESETS = 3;
 [[nodiscard]] static constexpr const char* preset_name(int i);
@@ -272,7 +272,7 @@ struct VoiceState {
 	real acc, tn;   // accent and tongue noise envelopes
 	real att;       // the attack's jet (the tongue's release): 1 at a hard strike, decays
 	real accf;      // the accent's pressure
-	real ty1, ty2;  // tilt smoother
+	real ty1, ty2;  // timbre smoother
 	real pm_prev;   // blowing pressure at the end of the last block
 	real note_prev; //
 	real vneg;      // release speed latch
@@ -584,14 +584,14 @@ static inline void process_voice(Engine& e, int vi) {
 		s.ty1 = 0.0f;
 		s.ty2 = by;
 	}
-	real tilt;
+	real tmb;
 	{
 		real ty1 = s.ty1, ty2 = s.ty2, t1;
-		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tilt);
+		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tmb);
 		s.ty1 = ty1;
 		s.ty2 = ty2;
 	}
-	tilt = clampr(tilt, -1.0f, 1.0f);
+	tmb = clampr(tmb, -1.0f, 1.0f);
 
 	int mode;
 	real bnote;
@@ -605,7 +605,7 @@ static inline void process_voice(Engine& e, int vi) {
 	const real P1 = e.sr / f1;
 	// bore: the open end's reflection (low-pass at the lattice cutoff, the round-trip loss) and the
 	// end corrections' allpass
-	const real fc = clampr(P.cut_hz * exp2s(P.cover_hz * tilt), 200.0f, rmin(12000.0f, 0.4f * e.sr)); // (below Nyquist at any rate)
+	const real fc = clampr(P.cut_hz * exp2s(P.cover_hz * tmb), 200.0f, rmin(12000.0f, 0.4f * e.sr)); // (below Nyquist at any rate)
 	const real gc = tanp(e.pi_sr * fc);
 	const real Gc = gc / (1.0f + gc);
 	const real fw = clampr(P.wall * f1, 50.0f, 0.45f * e.sr);
@@ -623,7 +623,7 @@ static inline void process_voice(Engine& e, int vi) {
 	g = rmin(g * fsqrt((1.0f + rc * rc) * (1.0f + rw * rw)), 0.98f);
 	// allpass (a + z^-1) / (1 + a z^-1): phase delay = 2 atan(tan(w/2) (1 - a) / (1 + a)) / w
 	const real ap_d = 2.0f * atans(t0 * (1.0f - ap) / (1.0f + ap)) / w1;
-	const real cover_c = P.cover * tilt;
+	const real cover_c = P.cover * tmb;
 	if (jump) {
 		s.trim = 0.0f;
 		s.tlast = -1e4f;
@@ -725,7 +725,7 @@ static inline void process_voice(Engine& e, int vi) {
 	// gain at the note, at the lightest touch, is g_soft: G = (rho delta_d / S_m) b H U sech^2(y0 / b)
 	// (e^{mu W} / 2 b) |H_jet| |Y| (the displacement's 1 / w and the source's d/dt cancel), |Y| the
 	// window admittance at the resonance (1 + ge) / ((1 - ge) zw), ge the loop's loss at the note
-	const real iy0 = clampr(P.y0 + P.y_tilt * tilt, -6.0f, 6.0f) * 2.5f; // offset re b (b = 0.4 h)
+	const real iy0 = clampr(P.y0 + P.y_tilt * tmb, -6.0f, 6.0f) * 2.5f; // offset re b (b = 0.4 h)
 	real growth;
 	{
 		const real Ulo = fsqrt(2.0f * p_lo / RHO) + 0.05f;

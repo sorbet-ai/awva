@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Sorbet AI
 // SPDX-License-Identifier: Apache-2.0
 // Stress performance for the va voice (same interface as performance.h), 17.5 s:
-//  A 0.0-2.6  single note 69 (440 Hz), pressure swell 0.2..1.2, flat tilt (pitch check 0.6-2.4 s)
+//  A 0.0-2.6  single note 69 (440 Hz), pressure swell 0.2..1.2, timbre 0 (pitch check 0.6-2.4 s)
 //  B 2.6-5.0  hard accents: 2 ms strikes cycling over all 6 voices, notes 40..100, short holds
-//  C 5.0-7.5  full resonance (tilt -1), 3 low voices, fast pressure swells up to 1.4, pedal 1 (long tails)
-//  D 7.5-10.5 6-voice chord at high pressure, fast tilt sweeps -1..1, shaking and gyro rotation
-//  E 10.5-13  6 held voices jumping by large intervals every 120 ms, tilt varying
-//  F 13.0-14.6 high note 103 alone at steady pressure, flat tilt (aliasing check 13.3-14.5 s)
-//  G 14.6-15.8 note 96 with tilt +1 (maximum sync) (sync aliasing check 14.9-15.7 s)
-//  H 15.8-17.0 everything at once: notes 20..127, pressure 1.5, hard strikes, tilt +-1, pedal, shaking
+//  C 5.0-7.5  full resonance (timbre -1), 3 low voices, fast pressure swells up to 1.4, pedal 1 (long tails)
+//  D 7.5-10.5 6-voice chord at high pressure, fast timbre sweeps -1..1, shaking and spin
+//  E 10.5-13  6 held voices jumping by large intervals every 120 ms, timbre varying
+//  F 13.0-14.6 high note 103 alone at steady pressure, timbre 0 (aliasing check 13.3-14.5 s)
+//  G 14.6-15.8 note 96 with timbre +1 (maximum sync) (sync aliasing check 14.9-15.7 s)
+//  H 15.8-17.0 everything at once: notes 20..127, pressure 1.5, hard strikes, timbre +-1, pedal, shaking
 #ifndef PERFORMANCE_H_
 #define PERFORMANCE_H_
 #include <math.h>
@@ -60,7 +60,7 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		double e = gate(t, 5.0 + 0.1 * i, 6.8, 0.03, 0.05);
 		if (e > 0) set(i, 36 + 12 * i + (i == 2 ? 7 : 0), e * (0.75 + 0.65 * sin(2 * M_PI * 3.0 * t + i)), 0, -1.0);
 	}
-	// D: chord with tilt sweeps, shaking, rotation
+	// D: chord with timbre sweeps, shaking, spin
 	for (int i = 0; i < 6; i++) {
 		static const int ch[6] = {43, 50, 55, 59, 62, 67};
 		double e = gate(t, 7.5 + 0.02 * i, 10.3, 0.01, 0.2);
@@ -155,7 +155,7 @@ static const DNote demo[] = {
 	{5, 5.10, 6.30, 0.020, 0.60, 53, 0.60, 0, 0, 0},
 	{0, 5.12, 6.30, 0.020, 0.60, 58, 0.60, 0, 0, 0},
 	{1, 5.14, 6.30, 0.020, 0.60, 62, 0.65, 0, 0, 0},
-	// long note: tilt sweep back -> forward -> centre under a pressure swell
+	// long note: timbre sweep -1 -> 1 -> 0 under a pressure swell
 	{2, 6.80, 9.20, 0.300, 0.40, 57, 0.85, -1, 1, 0.15},
 	// staccato riff low, strikes
 	{3, 9.40, 9.52, 0.002, 0.03, 38, 0.80, 0, 0, 0},
@@ -260,7 +260,7 @@ static void va_test_hook(Engine& e) {
 		}
 		fprintf(stderr, "live params: %d, table check %s\n", EP::count, bad ? "FAILED" : "ok");
 	}
-	// voices 6..9: overlapping phrases with swells, strikes, tilt and note changes
+	// voices 6..9: overlapping phrases with swells, strikes, timbre and note changes
 	// (-DVA_LIVE_SOLO: not played, only the performance's voices sound)
 	const double t = (double)b * BLOCK / SAMPLERATE;
 #ifdef VA_LIVE_SOLO

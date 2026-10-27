@@ -44,9 +44,9 @@
  *              breath_mod: how far it pulses with the flow, breath_hp: its colour) and the breath's
  *              fluctuations (wander) are the reed's once it speaks, whatever the attack's are
  *   release    the breath stops, the bore rings out (the pedal lengthens the release)
- *   tilt fwd/back  embouchure: forward firmer (a smaller reed opening: brighter, a little sharp),
- *              back looser (darker, flatter)
- *   tilt sideways  pitch bend (the host moves the note; the bore follows)
+ *   timbre     embouchure: above 0 firmer (a smaller reed opening: brighter, a little sharp),
+ *              below 0 looser (darker, flatter)
+ *   pitch      bends (the host moves the note; the bore follows)
  *
  * Every element is passive or bounded: the jet only draws on the mouth pressure, the bore loop has
  * gain < 1, the register hole is a passive shunt; the reed's excursion is clamped; a per-voice guard
@@ -128,8 +128,8 @@ struct Params {
 	real reed_hz;  // reed resonance
 	real reed_q;   // reed damping (the lip)
 	real lay;      // contact stiffness when shut, re the reed's
-	real emb;      // forward tilt firms the embouchure: octaves of reed opening per unit tilt
-	real emb_bend; // and moves the pitch (cents per unit tilt)
+	real emb;      // timbre above 0 firms the embouchure: octaves of reed opening per unit
+	real emb_bend; // and moves the pitch (cents per unit of timbre)
 	// bore
 	real bore_r;  // bore radius (mm): the wall losses
 	real wall;    // wall losses re a smooth cylinder's
@@ -209,7 +209,7 @@ struct VoiceState {
 	real pk, tcl;          // the mouthpiece pressure's oscillation (peak, held over a period), its last clean crossing
 	real um, nl;           // the flow's mean (its positive part), the noise high-pass's low-pass state
 	real accf;             // the accent's pressure
-	real ty1, ty2;         // tilt smoother
+	real ty1, ty2;         // timbre smoother
 	real gth;              // threshold mouth pressure (gamma)
 	real vneg;             // release speed latch
 	awva::NoteGlide glide; // the fingering: a slur's step of the note over GLIDE_S
@@ -580,14 +580,14 @@ static inline void process_voice(Engine& e, int vi) {
 		s.ty1 = 0.0f;
 		s.ty2 = by;
 	}
-	real tilt;
+	real tmb;
 	{
 		real ty1 = s.ty1, ty2 = s.ty2, t1;
-		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tilt);
+		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tmb);
 		s.ty1 = ty1;
 		s.ty2 = ty2;
 	}
-	tilt = clampr(tilt, -1.0f, 1.0f);
+	tmb = clampr(tmb, -1.0f, 1.0f);
 	// the breath's life: a fast flutter and a slow wander (each about unit variance)
 	s.jn += e.kj * (4.5f * e.sj * block_noise(s.rng) - s.jn);
 	s.jn = clampr(s.jn, -4.0f, 4.0f);
@@ -606,13 +606,13 @@ static inline void process_voice(Engine& e, int vi) {
 		s.trim = 0.0f;
 		s.tlast = -1e4f;
 	}
-	const real cents = P.tune + P.emb_bend * tilt;
+	const real cents = P.tune + P.emb_bend * tmb;
 	const real fn = rmin(note_freq(note) * exp2s(cents * (1.0f / 1200)), 0.2f * e.sr); // the note played
 	const real f0 = rmin(fn * exp2s(s.trim * (1.0f / 1200)), 0.2f * e.sr);             // the bore's aim
 	const real w0 = 2.0f * PI * f0 * e.dt;
 	const real oct = (note - low - 12.0f) * (1.0f / 12);
 	// the embouchure: forward firms the lip, the opening H x e (zeta ~ sqrt(H), p_M ~ H)
-	const real eo = exp2s(-clampr(P.emb, -2.0f, 2.0f) * tilt);
+	const real eo = exp2s(-clampr(P.emb, -2.0f, 2.0f) * tmb);
 	const real zeta = clampr(P.zeta * exp2s(P.zeta_reg * oct), 0.02f, 2.0f) * fsqrt(eo);
 	// reed: a two-pole resonator of unit static gain, driven by the last sample's pressure
 	real ra1, ra2, rb0;

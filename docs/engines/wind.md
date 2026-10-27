@@ -111,7 +111,9 @@ The reed is a mass-spring reed with lip damping and Bernoulli flow, solved exact
 
 ## Playing
 
-- **pressure:** the breath. Below the speaking pressure there is only a soft breath; then the tone blooms, louder and brighter.
-- **strike:** tonguing: a fast strike gives a crisp attack (a pressure kick and a "t"); a slow press a breathy swell.
-- **tilt forward/back:** the embouchure, subtly: forward brighter and edgier, back darker and breathier (the saxes' subtone, the flute's covered tone).
-- **shake:** the saxophone presets growl (so do they when pushed past about 1.05); the other presets have no growl.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the breath. Below the speaking pressure there is only a soft breath; then the tone blooms, louder and brighter.
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): tonguing: a fast strike gives a crisp attack (a pressure kick and a "t"); a slow press a breathy swell.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the embouchure, subtly: above 0 brighter and edgier, below 0 darker and breathier (the saxes' subtone, the flute's covered tone).
+- **acceleration** (`motion.accel_g`, from a host's motion sensor): the saxophone presets growl (so do they when pushed past about 1.05); the other presets have no growl.

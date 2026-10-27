@@ -53,4 +53,6 @@ The minimal example engine: one sine per voice whose amplitude follows pressure.
 
 ## Playing
 
-- **pressure:** the amplitude (smoothed over about 5 ms). Nothing else is read.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the amplitude (smoothed over about 5 ms). Nothing else is read.

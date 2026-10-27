@@ -3,13 +3,13 @@
 // Stress performance for the bowed string voice (voice_bowed.h): same interface as performance.h.
 // Sections (17.5 s, the renderer's default length):
 //  A 0-2.5      slow pressure swells 0.05 -> 1 -> 0.05 with vibrato, low and mid note together
-//  B 2.5-5      pressure tremolo (8 Hz, 0.15..0.95), tilt sweeps -1..1, a third voice holding
+//  B 2.5-5      pressure tremolo (8 Hz, 0.15..0.95), timbre sweeps -1..1, a third voice holding
 //  C 5-6.5      extreme pressure: held at 1.5, and repeated instant 0 -> 1.4 attacks (vpres = 1)
 //  D 6.5-8.5    fast strikes: 17 ms notes over the whole range on all voices, 2 ms attacks
 //  E 8.5-11     note jumps on a held bow (20 <-> 115 and everything between), then fast glides
-//  F 11-14.5    all (10) voices: extreme chord 20..115 at pressure 1.2, tilt extremes, shaking,
+//  F 11-14.5    all (10) voices: extreme chord 20..115 at pressure 1.2, timbre extremes, shaking,
 //               rotation, pedal 1; released all at once at 13.5 (pedal held: long ring)
-//  G 14.5-16.5  bow bouncing: pressure flutter 0 <-> 1 at 30 Hz on all voices with random tilt
+//  G 14.5-16.5  bow bouncing: pressure flutter 0 <-> 1 at 30 Hz on all voices with random timbre
 //  H 16.5-17.5  silence (tails, gating)
 #ifndef PERFORMANCE_H_
 #define PERFORMANCE_H_
@@ -33,8 +33,8 @@ static double hash01(int i) {
 
 #ifdef BOWED_DEMO
 // A short musical demo (17.5 s), transposed by DEMO_BASE (the preset's register, MIDI note of
-// the tonic): a legato melody with swells and vibrato through tilt-x, a held chord with a swell,
-// accented (struck) notes, a quick lift-off that rings, a tilt sweep tasto -> ponticello.
+// the tonic): a legato melody with swells and vibrato through the pitch bend, a held chord with a swell,
+// accented (struck) notes, a quick lift-off that rings, a timbre sweep tasto -> ponticello.
 #ifndef DEMO_BASE
 #define DEMO_BASE 62
 #endif
@@ -82,7 +82,7 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 		double u = t - 10.0 - 0.4 * k;
 		if (k < 6 && u < 0.28) set(5 + (k % 2), B + st[k], pmin(u / 0.004, 1.0) * (u > 0.24 ? 0.0 : 0.8), 0, 0);
 	}
-	// 4: held note, tilt sweep fingerboard -> bridge -> flat, then a quick lift-off (12.6 - 16.6 s)
+	// 4: held note, timbre sweep fingerboard -> bridge -> 0, then a quick lift-off (12.6 - 16.6 s)
 	if (t >= 12.6 && t < 15.6) {
 		double u = t - 12.6;
 		double by = u < 1.2 ? -u / 1.2 : (u < 2.4 ? -1 + 2 * (u - 1.2) / 1.2 : 1 - (u - 2.4) / 0.6);

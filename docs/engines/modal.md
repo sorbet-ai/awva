@@ -90,9 +90,11 @@ Every voice has a NaN/energy guard, the decay changes are smoothed, and the mast
 
 ## Playing
 
-- **strike:** the loudness; a harder strike is also a little brighter (the upper partials grow with mallet hardness). Nothing changes the pitch.
-- **tilt forward/back at the strike:** a harder (forward) or softer (back) mallet.
-- **holding and release:** the note rings with its natural decay; releasing the note engages the damper gradually.
-- **pedal:** the sustain pedal (it lifts the damper).
-- **pressure:** the vibraphone's motor tremolo when pressed harder than a normal hold; the wine glass is rubbed by held pressure (a sustained singing tone); the other presets ignore pressure after the strike.
-- **rotation:** the vibraphone's tremolo too.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): the loudness; a harder strike is also a little brighter (the upper partials grow with mallet hardness). Nothing changes the pitch.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74) at the strike: a harder (above 0) or softer (below 0) mallet.
+- **holding and release** (the Note Off): the note rings with its natural decay; the Note Off engages the damper gradually.
+- **sustain** (`sustain`, CC64): the sustain pedal (it lifts the damper).
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the vibraphone's motor tremolo when pressed harder than a normal hold; the wine glass is rubbed by held pressure (a sustained singing tone); the other presets ignore pressure after the strike.
+- **spin** (`motion.spin`, from a host's gyroscope): the vibraphone's tremolo too.

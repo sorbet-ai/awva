@@ -5,7 +5,7 @@
  *
  * Per voice:
  *   oscillators: A = band-limited saw + pulse (PWM) + square sub one octave down (all from one phase)
- *                B = saw hard-synced to A (ratio swept by forward tilt, pressure and strike), or in
+ *                B = saw hard-synced to A (ratio swept by timbre above 0, pressure and strike), or in
  *                    some presets a free running saw detuned downwards (three-saw ensemble)
  *                C = free running saw, detuned a few cents (chorus; widened by gyro rotation)
  *                every discontinuity (saw wraps, pulse edges, sub flips, sync resets) gets a polyBLEP
@@ -59,8 +59,8 @@ static_assert(BLOCK % CTRL == 0, "CTRL must divide BLOCK");
 using awva::rmax;
 using awva::rmin;
 
-// Sound design parameters. Notation: y = smoothed forward/back tilt (+ y_off), yn = max(-y, 0)
-// (tilted back), yp = max(y, 0) (tilted forward); b = brightness 0..1.1 from the level; acc = strike
+// Sound design parameters. Notation: y = smoothed timbre (+ y_off), yn = max(-y, 0)
+// (timbre below 0), yp = max(y, 0) (timbre above 0); b = brightness 0..1.1 from the level; acc = strike
 // accent 0..0.7; semitone units for pitch and cutoff.
 struct Params {
 	// level
@@ -81,12 +81,12 @@ struct Params {
 	real cut_key, cut_base;        // closed cutoff (as a note number): cut_key * note + cut_base
 	real cut_env;                  // cutoff opening by brightness b (semitones)
 	real cut_drift;                // cutoff drift depth (semitones per unit drift)
-	real cut_yn, cut_yp;           // cutoff lowered by back tilt, raised by forward tilt
+	real cut_yn, cut_yp;           // cutoff lowered by timbre below 0, raised above 0
 	real res_base, res_yn, res_yp; // resonance k = 4 * (res_base + res_yn * yn - res_yp * yp)
 	real bass_comp;                // ladder input gain 1 + bass_comp * k (resonance loudness compensation)
 	real dr_base, dr_env;          // post-filter drive dr_base + dr_env * b (+ acc_drive * acc)
-	// tilt
-	real y_off; // home position on the tilt morph (added to the tilt, clamped to +-1)
+	// timbre
+	real y_off; // home position on the timbre morph (added to the timbre, clamped to +-1)
 	// oscillator mix
 	real saw, saw_yn, saw_yp;       // saw A: saw * (1 - saw_yn * yn) * (1 - saw_yp * yp)
 	real c_lvl, c_yn, c_yp;         // detuned saw C: c_lvl * (1 - c_yn * yn) * (1 - c_yp * yp)
@@ -128,7 +128,7 @@ struct VoiceState {
 	real lv1, lv2;             // pressure/level smoother (control rate SVF)
 	real amp;                  // level after the release logic
 	real acc;                  // strike accent envelope
-	real ty1, ty2;             // tilt (but_y) smoother (block rate SVF)
+	real ty1, ty2;             // timbre smoother (block rate SVF)
 	real ctrl_prev[NCV];       // last control point of the previous block
 	real dr1[3], dr2[3];       // drift noise (two one-poles each): pitch A, pitch C, cutoff
 	uint32_t rng;
@@ -398,8 +398,8 @@ static inline void process_voice(Engine& e, int v) {
 	const int32_t dC = (int32_t)(iC1 - s.incC) / BLOCK;
 	const real invA = 1.0f / (real)iA1, invB = 1.0f / (real)iB1, invC = 1.0f / (real)iC1;
 
-	// oscillator mix (timbre morph by tilt): in classic, back = hollow PWM square + sub, centre =
-	// two detuned saws + sub, forward = sync lead
+	// oscillator mix (the timbre morph): in classic, below 0 = hollow PWM square + sub, centre =
+	// two detuned saws + sub, above 0 = sync lead
 	const real lSaw = P.saw * (1.0f - P.saw_yn * yn) * (1.0f - P.saw_yp * yp);
 	const real lC = P.c_lvl * (1.0f - P.c_yn * yn) * (1.0f - P.c_yp * yp);
 	const real lPul = P.pul0 + P.pul_yn * yn;
@@ -679,21 +679,21 @@ static constexpr ParamEntry param_table[] = {
     {{"acc_key", "accent", 0.0f, 0.06f, awva::ParamKind::continuous}, &Params::acc_key},    // longer decay low: 2^((132-note)*acc_key)
     {{"acc_cutoff", "accent", 0.0f, 48.0f, awva::ParamKind::continuous}, &Params::acc_cut}, // semitones
     {{"acc_drive", "accent", 0.0f, 2.0f, awva::ParamKind::continuous}, &Params::acc_drive},
-    {{"acc_sync", "accent", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::acc_sync},   // semitones (with forward tilt)
+    {{"acc_sync", "accent", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::acc_sync},   // semitones (with timbre above 0)
     {{"acc_pitch", "accent", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::acc_pitch}, // semitones, decays with the accent
     // filter
     {{"cut_base", "filter", -20.0f, 80.0f, awva::ParamKind::continuous}, &Params::cut_base}, // closed cutoff, note number
     {{"cut_key", "filter", 0.0f, 1.2f, awva::ParamKind::continuous}, &Params::cut_key},      // keytracking
     {{"cut_env", "filter", 0.0f, 80.0f, awva::ParamKind::continuous}, &Params::cut_env},     // opening by pressure (semitones)
-    {{"cut_back", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yn},   // lowered by back tilt
-    {{"cut_fwd", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yp},    // raised by forward tilt
+    {{"cut_back", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yn},   // lowered by timbre below 0
+    {{"cut_fwd", "filter", -24.0f, 24.0f, awva::ParamKind::continuous}, &Params::cut_yp},    // raised by timbre above 0
     {{"res", "filter", 0.0f, 0.98f, awva::ParamKind::continuous}, &Params::res_base},        // 0.98 ~ self-oscillation
     {{"res_back", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yn},
-    {{"res_fwd", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yp}, // subtracted with forward tilt
+    {{"res_fwd", "filter", -0.5f, 0.98f, awva::ParamKind::continuous}, &Params::res_yp}, // subtracted with timbre above 0
     {{"bass_comp", "filter", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::bass_comp},
     {{"drive", "filter", 0.1f, 3.0f, awva::ParamKind::continuous}, &Params::dr_base},
     {{"drive_env", "filter", 0.0f, 3.0f, awva::ParamKind::continuous}, &Params::dr_env},
-    // oscillators (back/fwd: how much tilting back/forward reduces or adds)
+    // oscillators (back/fwd: how much timbre below/above 0 reduces or adds)
     {{"saw", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw},
     {{"saw_back", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw_yn},
     {{"saw_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::saw_yp},
@@ -713,10 +713,10 @@ static constexpr ParamEntry param_table[] = {
     {{"b_level", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::b_lvl0},
     {{"b_fwd", "osc", 0.0f, 1.0f, awva::ParamKind::continuous}, &Params::b_yp},
     {{"b_detune", "osc", -0.5f, 0.5f, awva::ParamKind::continuous}, &Params::b_det}, // semitones down (free mode)
-    {{"sync", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync0},     // sync ratio, semitones (x fwd tilt)
+    {{"sync", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync0},     // sync ratio, semitones (x timbre above 0)
     {{"sync_fwd", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync_yp},
     {{"sync_env", "osc", 0.0f, 24.0f, awva::ParamKind::continuous}, &Params::sync_env}, // sync sweep by pressure
-    {{"tilt_home", "osc", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::y_off},   // rest position on the tilt morph
+    {{"tilt_home", "osc", -1.0f, 1.0f, awva::ParamKind::continuous}, &Params::y_off},   // rest position on the timbre morph
     // modulation
     {{"drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::drift_a}, // semitones
     {{"saw2_drift", "mod", 0.0f, 0.3f, awva::ParamKind::continuous}, &Params::c_drift},

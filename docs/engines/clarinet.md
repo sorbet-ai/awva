@@ -109,12 +109,14 @@ A physical model: nothing sets the pitch but the reed and the bore together. The
 - **Radiation:** the flow through the open end, differentiated (a monopole), then a tone low-pass.
 - **Tuning:** the bore's length is solved per block (Newton's method) so that the input impedance, register hole and lattice included, peaks at the note together with the reed's own reactance; a slow "player's ear" trims the rest. The same impedance gives the threshold of oscillation, which places the lightest touch.
 
-Every element is passive or bounded, and a per-voice guard resets a voice whose state goes non-finite. The presets' parameters were fitted (CMA-ES, `tools/clarinet/`) to recordings of a B-flat and a bass clarinet (University of Iowa Musical Instrument Samples, pp, mf and ff, note by note): the harmonic spectrum, the level, the noise between the harmonics, the attack, the pitch.
+Every element is passive or bounded, and a per-voice guard resets a voice whose state goes non-finite. The presets' parameters were fitted (CMA-ES) to recordings of a B-flat and a bass clarinet (University of Iowa Musical Instrument Samples, pp, mf and ff, note by note): the harmonic spectrum, the level, the noise between the harmonics, the attack, the pitch.
 
 ## Playing
 
-- **pressure:** the breath, from just above the threshold (pp: round, nearly odd harmonics only) to a beating reed (ff: bright).
-- **strike:** tonguing. The tongue holds the reed shut against the built-up breath and lets it go, faster for a harder strike, with an accent. No strike is a breath attack.
-- **release:** the breath stops and the bore rings out; the pedal lengthens the release.
-- **tilt forward/back:** the embouchure: forward firmer (a smaller opening: brighter, a little sharp), back looser (darker, flatter).
-- **sideways tilt:** a pitch bend (the host moves the note; the bore follows).
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the breath, from just above the threshold (pp: round, nearly odd harmonics only) to a beating reed (ff: bright).
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): tonguing. The tongue holds the reed shut against the built-up breath and lets it go, faster for a harder strike, with an accent. No strike is a breath attack.
+- **release** (the Note Off): the breath stops and the bore rings out; `sustain` lengthens the release.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the embouchure: above 0 firmer (a smaller opening: brighter, a little sharp), below 0 looser (darker, flatter).
+- **pitch bend** (`pitch`: MIDI 2.0's per-note pitch, MPE's member-channel bend): the host moves the note; the bore follows.

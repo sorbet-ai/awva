@@ -116,13 +116,15 @@ A hybrid: a lip source sets the pitch, and a physical bore shapes it.
 - **Lips:** an outward-striking valve that opens once per period. The flow pulse is max(cos(2πφ) − c, 0)², and the closure c follows the breath: soft playing is almost sinusoidal, loud playing closes the lips for most of the cycle (a narrow, harmonic-rich pulse). The oscillator is the pitch master, so the voice stays in tune and can't jump registers. Lip life comes from a few cents of pitch jitter and breath turbulence modulated by the lip opening. A tongued attack adds a short blat: a scoop from below, irregular buzz, a brighter pulse, an overshoot and a "t".
 - **Bore:** a waveguide loop one period long (mouthpiece → bell → mouthpiece). At the bell the low frequencies reflect and the rest radiates; the loop delay is the period minus the bell filter's phase delay, so its resonances sit on the harmonics. In steady state the radiated wave equals the source, but in time it behaves like a bore: the attack starts as a bright buzz while the low resonances build up, a release rings briefly, and legato changes smear.
 - **Brassiness:** the wave steepens on its way to the bell like a finite-amplitude wave: the radiated wave is read at a delay that moves with the pressure, in two stages in series, with the read speed limited (no fold-back, no aliasing). High harmonics grow like powers of the amplitude, so soft is round and loud blares.
-- **Body:** a radiation high-pass, the mouthpiece cup formant, and a bell/tone low-pass whose cutoff rises with the level. The mutes are one state-variable filter (straight, harmon, plunger); forward/back tilt sweeps the mute resonance or the tone.
+- **Body:** a radiation high-pass, the mouthpiece cup formant, and a bell/tone low-pass whose cutoff rises with the level. The mutes are one state-variable filter (straight, harmon, plunger); `timbre` sweeps the mute resonance or the tone.
 - **Section:** an optional second player a few cents apart.
 
 ## Playing
 
-- **pressure:** breath, dynamics and brightness together (pp mellow, ff blaring).
-- **strike:** tonguing. A hard strike gives a bright blat, an accent, a slight scoop and a "t"; re-striking a held note re-tongues.
-- **release:** the lips stop and the bore rings out briefly; the pedal lengthens the tail a little.
-- **tilt forward/back:** open presets are brighter or darker (lips and bell; the horn's hand). In the mute presets it is a wah (harmon: forward opens; plunger: back closes).
-- **shake:** flutter tongue.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): breath, dynamics and brightness together (pp mellow, ff blaring).
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): tonguing. A hard strike gives a bright blat, an accent, a slight scoop and a "t"; re-striking a held note re-tongues.
+- **release** (the Note Off): the lips stop and the bore rings out briefly; `sustain` lengthens the tail a little.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): open presets are brighter (above 0) or darker (below 0) (lips and bell; the horn's hand). In the mute presets it is a wah (harmon: above 0 opens; plunger: below 0 closes).
+- **acceleration** (`motion.accel_g`, from a host's motion sensor): flutter tongue.

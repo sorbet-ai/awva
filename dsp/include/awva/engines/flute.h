@@ -18,7 +18,7 @@ struct flute {
 	static constexpr const char* name = "flute";
 	static constexpr const char* title = "Flute";
 	static constexpr const char* short_name = "flute";
-	static constexpr uint32_t led = 0x004000; // the wind key's colour (the firmware plays the flute there)
+	static constexpr uint32_t led = 0x004000;
 	static constexpr const char* summary = "physical flutes: an air jet on the edge of an open-open bore (flute, alto flute, piccolo)";
 	// pressure the breath, pressure_rate the tongue, timbre the jet angle and cover; motion.accel_g (vibrato) and sustain
 	static constexpr uint32_t inputs = in_pressure | in_pressure_rate | in_timbre | in_accel | in_sustain;

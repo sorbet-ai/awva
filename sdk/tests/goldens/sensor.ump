@@ -4,7 +4,7 @@
 4800 40900300 80000000  # a key down (its velocity a nominal 0.5)
 4800 40100301 80000000  # measured pressure rate
 4800 40a00300 00000000  # pressure (up to 1.5)
-4800 40100302 80000000  # timbre: a tilt
+4800 40100302 80000000  # timbre: a per-note controller
 4800 40000303 64000000  # pitch with a slide's bend
 4896 40100301 8d676b3b
 4896 40a00300 044a2251
@@ -609,7 +609,7 @@
 19200 40900400 80000000  # a key down (its velocity a nominal 0.5)
 19200 40100401 80000000  # measured pressure rate
 19200 40a00400 00000000  # pressure (up to 1.5)
-19200 40100402 983bc1de  # timbre: a tilt
+19200 40100402 983bc1de  # timbre: a per-note controller
 19200 40000403 72000000  # pitch with a slide's bend
 19296 40100301 80250128
 19296 40a00300 35bdaded
@@ -1854,7 +1854,7 @@
 33600 40900500 80000000  # a key down (its velocity a nominal 0.5)
 33600 40100501 80000000  # measured pressure rate
 33600 40a00500 00000000  # pressure (up to 1.5)
-33600 40100502 9a2fd17e  # timbre: a tilt
+33600 40100502 9a2fd17e  # timbre: a per-note controller
 33600 40000503 7c800000  # pitch with a slide's bend
 33600 40300010 612acc96
 33600 40300014 4803e4c4
@@ -7439,7 +7439,7 @@
 76800 40900600 80000000  # a key down (its velocity a nominal 0.5)
 76800 40100601 80000000  # measured pressure rate
 76800 40a00600 00000000  # pressure (up to 1.5)
-76800 40100602 84102081  # timbre: a tilt
+76800 40100602 84102081  # timbre: a per-note controller
 76800 40000603 85000000  # pitch with a slide's bend
 76800 40300010 96d53369
 76800 40300014 9c459f8a
@@ -16547,7 +16547,7 @@
 139200 40900700 80000000  # a key down (its velocity a nominal 0.5)
 139200 40100701 80000000  # measured pressure rate
 139200 40a00700 00000000  # pressure (up to 1.5)
-139200 40100702 6a3451a3  # timbre: a tilt
+139200 40100702 6a3451a3  # timbre: a per-note controller
 139200 40000703 8c000000  # pitch with a slide's bend
 139296 40100501 7f69fb50
 139296 40a00500 2a3d51ea

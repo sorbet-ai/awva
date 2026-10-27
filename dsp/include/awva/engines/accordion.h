@@ -21,13 +21,13 @@ struct accordion {
 	static constexpr uint32_t led = 0x401024;
 	static constexpr const char* summary =
 	    "free-reed accordion: registers, musette tuning, reed chambers, cassotto, a shared bellows (9 presets)";
-	// pressure drives the bellows, timbre the tilt expression; motion.accel_g the bellows shake, sustain its reversal
+	// pressure drives the bellows, timbre the reed voicing; motion.accel_g the bellows shake, sustain its reversal
 	static constexpr uint32_t inputs = in_pressure | in_timbre | in_accel | in_sustain;
 	static constexpr int max_voices = ::accordion::MAX_VOICES;
 	static constexpr float tail_seconds = 1.0f;
 	static constexpr Cost cost = {100.0f}; // measured 98.6 (master, preset 6: 31556 a block); silent 0.67 s after the release
 	// the hero parameters: how it plays (the musette's beating, the bellows, the pressure response, the
-	// reeds' speech, the cassotto, the chamber's brightness, the pallet bend, the tilt expression)
+	// reeds' speech, the cassotto, the chamber's brightness, the pallet bend, the voicing under timbre)
 	static constexpr Heroes heroes = {{"beat", "bellows", "curve", "speak_ms", "cassotto", "ch_hz", "bend", "tilt"}};
 };
 } // namespace traits

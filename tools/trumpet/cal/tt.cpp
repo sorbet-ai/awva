@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // single-note host driver for voice_trumpet.h (calibration, tools/trumpet/cal): tt out.f32 preset note pres seconds strike
 // [param=value ...] [nopll= nocal=0/1/2 callip= caltrim= calpthr= rb= cb= qb= seed= norefl= trim0=]; env RAMP (key
-// pressure ramp, s), TILT, PINT (print interval, blocks). Prints EARLY (early_db 20-60 ms re 250-400 ms, c25, worst
+// pressure ramp, s), TIMBRE, PINT (print interval, blocks). Prints EARLY (early_db 20-60 ms re 250-400 ms, c25, worst
 // |cents| 15-60 ms), JIT, PC50/PC70 (cup pressure rise), PCC (cup pressure pitch) and SUMMARY (t30/t10: within 30/12 c
 // from the cup pressure, steady cents from the output, trim, partial). Writes pc/u/x.f32 (96 kHz, in time with the output).
 // a note sequence: note may be "60,62,64" (each held seconds, legato overlap 20 ms if strike < 0)
@@ -68,8 +68,8 @@ int main(int argc, char** argv) {
 				float a = (float)std::min(1.0, (t - t0) / ramp);
 				e.vc[v].note = notes[k];
 				e.vc[v].pres = pres * a;
-				static float tilt = getenv("TILT") ? (float)atof(getenv("TILT")) : 0.0f;
-				e.vc[v].but_y = tilt;
+				static float timbre = getenv("TIMBRE") ? (float)atof(getenv("TIMBRE")) : 0.0f;
+				e.vc[v].but_y = timbre;
 			}
 		}
 		for (int v = 0; v < 10; v++) {

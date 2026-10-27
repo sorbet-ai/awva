@@ -111,3 +111,14 @@ Default: the value after `init()` (preset 0). The id is the component ABI's (FNV
 ## How it works
 
 (to be written)
+
+## Playing
+
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure): the breath: dynamics and brightness together (pp sweet and covered, ff reedy, the blades beating).
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): tonguing. A hard strike is a fast release from a closed reed, an accent and a "t"; a soft one is a "d"; no strike is a breath attack.
+- **release** (the Note Off): the breath stops and the bore rings out; `sustain` lengthens the release.
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the embouchure: above 0 it bites (a smaller tip opening, more lip damping: thinner, brighter, a little sharp), below 0 it relaxes (darker, fuller, a little flat).
+- **pitch bend** (`pitch`: MIDI 2.0's per-note pitch, MPE's member-channel bend): the host moves the note; the bore follows.
+- **acceleration** (`motion.accel_g`, from a host's motion sensor): flutter tongue.

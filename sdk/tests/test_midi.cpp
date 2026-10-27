@@ -67,7 +67,7 @@ TEST_CASE("midi in: a note on and off, as the decoder (ump.h) maps them") {
 	CHECK(m.notes_held() == 0);
 }
 
-TEST_CASE("midi in: MPE members bend, press and tilt their own notes") {
+TEST_CASE("midi in: MPE members bend, press and colour their own notes") {
 	Mapper m(10);
 	send(m, {{0x91, 60, 90}, {0x92, 64, 90}}); // member channels 2 and 3
 	const int a = voice_of(m, 60.0f), b = voice_of(m, 64.0f);

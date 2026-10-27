@@ -104,7 +104,9 @@ A physically inspired electric piano: the Rhodes first, the Wurlitzer and others
 
 ## Playing
 
-- **strike:** the velocity: soft is warm and round, hard is bright and barking.
-- **pressure while holding:** digging in adds a little pickup drive (bark).
-- **tilt forward/back:** the pickup alignment: back sweeter, forward barkier.
-- **release and pedal:** the damper; the pedal is a sustain pedal (fully lifted at 0.8). Easing a held note's pressure a little and striking again re-strikes.
+The controls are the engine's inputs above ([MIDI 2.0 and MPE](../midi.md)).
+
+- **strike** (`pressure_rate` above 0: the Note On's velocity, or a fast rise of the pressure): the velocity: soft is warm and round, hard is bright and barking.
+- **pressure** (`pressure`: MIDI 2.0's Poly Pressure, MPE's channel pressure) while holding: digging in adds a little pickup drive (bark).
+- **timbre** (`timbre`: MIDI 2.0's Registered Per-Note Controller 74, MPE's CC74): the pickup alignment: below 0 sweeter, above 0 barkier.
+- **release** (the Note Off) and **sustain** (`sustain`, CC64): the damper; `sustain` is a sustain pedal (fully lifted at 0.8). Easing a held note's pressure a little and striking again re-strikes.

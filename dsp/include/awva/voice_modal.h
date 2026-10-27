@@ -19,8 +19,8 @@
  *
  * Playing:
  * - strike (fast pressure rise, vpres): loudness; a harder strike is also a little brighter (upper
- *   partials grow modestly with mallet hardness). Tilt at the moment of the strike makes the mallet
- *   a bit softer (back) or harder (forward). Nothing changes pitch.
+ *   partials grow modestly with mallet hardness). The timbre at the moment of the strike makes the mallet
+ *   a bit softer (below 0) or harder (above 0). Nothing changes pitch.
  * - holding: the note rings with its natural decay. Lifting the key engages the damper gradually
  *   (fully at release); the pedal is the sustain pedal (lifts the damper).
  * - vibraphone: pressing harder than a normal hold, or rotating the instrument (gyro), adds the
@@ -136,7 +136,7 @@ struct Params {
 	float span;      // mallet: vpres above thresh for a full strike (sensitivity)
 	float hard;      // mallet: hardness of the softest strike
 	float hardvel;   // mallet: hardness added by strike strength
-	float tilt;      // mallet: hardness change per unit tilt (at the strike)
+	float tilt;      // mallet: hardness change per unit of timbre (at the strike)
 	float mute;      // mallet: fraction of the ringing a full strike stops
 	float upper;     // tone: level of all partials but the first, relative to the preset
 	float decay;     // decay: T60 scale
@@ -448,7 +448,7 @@ static inline void process_voice(Engine& e, int v, real trem_lfo) {
 		s.sdone = starget;
 	}
 	const real keep = 1.0f - Q.mute * clampr(dlev * (1.0f / STRIKE_LEVEL), 0.0f, 1.0f);
-	// mallet hardness: strike strength, a little tilt (at the moment of the strike only)
+	// mallet hardness: strike strength, a little timbre (at the moment of the strike only)
 	const real hard = (Q.hard + Q.hardvel * starget) * (1.0f + Q.tilt * clampr(c.timbre, -1.0f, 1.0f));
 	const real lhard = hard > 1e-3f ? hard : 1e-3f;
 

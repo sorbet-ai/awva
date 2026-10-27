@@ -27,7 +27,7 @@
  *   MOUTHPIECE  cup compliance V / (rho c^2), backbore inertance with a loss in parallel (none for
  *            the mean flow): the Helmholtz "popping" resonance between lips and bore, solved
  *            implicitly (trapezoidal) together with the jet's conductance
- *   BORE     a waveguide (two delay lines, AXI SRAM) whose resonances sit on the harmonics of the note
+ *   BORE     a waveguide (two delay lines, stream or bulk memory) whose resonances sit on the harmonics of the note
  *            (the horn a real flare and mouthpiece approximate; its length follows the note, as a
  *            slide). At the bell the low frequencies reflect (one-pole lowpass x the round-trip loss
  *            from a decay time), -1 at DC (the open end: the mean flow neither builds up nor
@@ -51,8 +51,8 @@
  *   strike     tonguing: hard = a fast release, an accent, the lips released from closed (a blat that
  *              scoops up onto the note) and a "t"; soft = "d"; none = a breath attack
  *   release    the breath stops, the bore rings out (pedal lengthens the release)
- *   tilt fwd/back  embouchure: forward firmer (brighter), back looser (darker)
- *   tilt sideways  pitch bend (the host moves the note; the horn follows)
+ *   timbre     embouchure: above 0 firmer (brighter), below 0 looser (darker)
+ *   pitch      bends (the host moves the note; the horn follows)
  *   shake      flutter tongue
  *
  * Cost (QEMU Cortex-M7 instruction counts, 10 voices at ff, notes jumping every 0.25 s): the engine
@@ -113,7 +113,7 @@ static constexpr real DC_HZ = 2.0f;
 #endif
 
 // the bore delay lines, 8 KB per voice, placed by the host (engine SDK): the first NFAST voices' in
-// StreamMemory (e.g. AHB SRAM), the others' in BulkMemory (e.g. AXI SRAM); in an EngineSet
+// StreamMemory (the stream region), the others' in BulkMemory (the bulk region); in an EngineSet
 // neither region has room for all 80 KB
 static constexpr int NFAST = 8;
 struct StreamMemory {
@@ -149,7 +149,7 @@ struct Params {
 	real lip_nl;    // tissue losses growing with the lip speed: x (1 + lip_nl (v / (wl x0))^2)
 	real embouch;   // the embouchure firms with the breath: the lips' rest position moves in by this part
 	                // of the static deflection of the pressure above the threshold (1: the aperture holds)
-	real lip_tilt;  // forward tilt firms the lips: octaves of opening per unit tilt
+	real lip_tilt;  // timbre above 0 firms the lips: octaves of opening per unit
 	real jitter;    // lip tension jitter (cents)
 	// mouthpiece
 	real cup;    // cup volume (cm^3)
@@ -217,7 +217,7 @@ struct VoiceState {
 	real gate_rate;        // its opening rate (per control step)
 	real acc, tn;          // accent and tongue noise envelopes
 	real accf;             // the accent's pressure, rising with the tongue's release (after the breath smoother)
-	real ty1, ty2;         // tilt smoother
+	real ty1, ty2;         // timbre smoother
 	real pm_prev;          // mouth pressure at the end of the last block
 	real pthr;             // threshold estimate (Pa)
 	real lre, lim;         // small-signal loop gain at the note (analysis)
@@ -555,14 +555,14 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 		s.ty1 = 0.0f;
 		s.ty2 = by;
 	}
-	real tilt;
+	real tmb;
 	{
 		real ty1 = s.ty1, ty2 = s.ty2, t1;
-		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tilt);
+		SVF_TICK(by, ty1, ty2, e.ty_c, t1, tmb);
 		s.ty1 = ty1;
 		s.ty2 = ty2;
 	}
-	tilt = clampr(tilt, -1.0f, 1.0f);
+	tmb = clampr(tmb, -1.0f, 1.0f);
 	// lip life: tension jitter (~35 Hz noise) and a slow wander
 	s.jn += 0.15f * (6.0f * block_noise(s.rng) - s.jn);
 	s.jn = clampr(s.jn, -4.0f, 4.0f);
@@ -580,7 +580,7 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	const real q = e.k.q;
 	const real mu = clampr(P.lip_mass * exp2s(-P.mass_reg * oct), 0.05f, 50.0f);
 	const real imu = 1.0f / mu;
-	const real x0 = clampr(P.lip_open * 0.001f * exp2s(-P.open_reg * oct - P.lip_tilt * tilt), 0.0f, 0.003f);
+	const real x0 = clampr(P.lip_open * 0.001f * exp2s(-P.open_reg * oct - P.lip_tilt * tmb), 0.0f, 0.003f);
 	const real lw = e.k.lw;
 	const real dt = e.dt;
 	// lip damping per sample: linear (Q) and growing with the speed (tissue losses), contact when closed
@@ -594,7 +594,7 @@ __attribute__((noinline)) static void process_voice(Engine& e, int vi) {
 	const real Cc = e.k.Cc, Mb = e.k.Mb, iRp = e.k.iRp, alpha = e.k.alpha, beta = e.k.beta;
 	const real a1 = e.k.a1, one_m = e.k.one_m; // backbore (trapezoidal): ub' = a1 pc' + b1, see the audio loop
 	// bore: bell reflection lowpass, DC high-pass, round-trip loss
-	const real fb = clampr(P.bell_hz * exp2s(0.3f * P.lip_tilt * tilt), 50.0f, f_top(e, 8000.0f));
+	const real fb = clampr(P.bell_hz * exp2s(0.3f * P.lip_tilt * tmb), 50.0f, f_top(e, 8000.0f));
 	const real gb = tanp(e.pi_sr * fb);
 	const real Gb = gb / (1.0f + gb);
 	const real gd = e.k.gd, Gd = e.k.Gd; // the open end (DC_HZ)

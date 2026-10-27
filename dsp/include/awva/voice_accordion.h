@@ -61,8 +61,8 @@
  *   pres   bellows/pallet: below the threshold only air; then the reeds speak, growing louder
  *          and brighter and a little flatter with pressure. With `bellows` up, the strongest
  *          note sets the pressure for the whole chord and light notes just open their pallets.
- *   but_y  tilt forward/back (a per-note controller): the reed voicing, forward a little
- *          brighter, back softer.
+ *   timbre  (a per-note controller): the reed voicing, above 0 a little brighter, below 0
+ *          softer.
  *   note   pitch and bends (reeds follow exactly).
  *   pedal  press: bellows reversal.
  *   acc_abs  the instrument's motion (a global input): shaking it gives the bellows shake.
@@ -211,7 +211,7 @@ struct Params {
 	real cas_hz;    // cassotto lowpass, Hz
 	real cas_leak;  // highs passing the cassotto
 	real grille_hz; // grille / body lowpass, Hz
-	real tilt;      // reed voicing with tilt y
+	real tilt;      // reed voicing with timbre
 	// articulation
 	real rev_pedal; // bellows reversal on pedal press (on/off)
 	real rev_shake; // bellows reversal on shaking (on/off)
@@ -540,7 +540,7 @@ static inline void process_voice(Engine& e, int v) {
 	const real voice8 = pow2(-vo * (L8 + 0.748f)), vo_oct = pow2(vo);
 	const real slow8 = pow2(ls * L8), ls_oct = pow2(ls);
 
-	// tilt: voicing
+	// timbre: voicing
 	const real ty = clampr(c.timbre, -1.0f, 1.0f) * q.tilt;
 	const real isc0 = life_on ? pow2(0.8f * ty) / clampr(q.constrict, 0.2f, 6.0f) * l_br : pow2(0.8f * ty) / clampr(q.constrict, 0.2f, 6.0f);
 

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Trumpet performance (voice_trumpet.h): a phrase that shows what a player does with the instrument.
 // 31 s: tongued staccato, a slurred legato line (overlapping keys pressed softly), a pp -> ff ->
-// pp swell on a long note (the brassiness blooms), a fall and a doit at releases (sideways tilt),
-// a lip shake (motion), pedal vibrato, embouchure / mute wah (forward/back tilt), a half-valve bend
+// pp swell on a long note (the brassiness blooms), a fall and a doit at releases (pitch bends),
+// a lip shake (motion), pedal vibrato, embouchure / mute wah (timbre), a half-valve bend
 // and a three note chord.
 #ifndef PERFORMANCE_H_
 #define PERFORMANCE_H_
@@ -19,8 +19,8 @@ struct Ctl {
 	float note, pres, vpres, but_x, but_y;
 };
 
-// key: voice, start, end, attack (s), release (s), note, pressure, tilt x at the end (fall/doit),
-// tilt y amplitude (slow sweep), bend (semitones, reached at the end), swell (1: pp -> ff -> pp)
+// key: voice, start, end, attack (s), release (s), note, pressure, bend at the end (fall/doit),
+// timbre amplitude (slow sweep), bend (semitones, reached at the end), swell (1: pp -> ff -> pp)
 struct Key {
 	int voice;
 	double t0, t1, att, rel, note, pres, bx_end, ty, bend, swell;
@@ -46,13 +46,13 @@ static const Key keys[] = {
     {3, 6.55, 7.60, 0.060, 0.15, 70, 0.55, 0, 0, 0, 0},
     // 3. swell pp -> ff -> pp on G4 (the brassiness blooms at ff)
     {0, 8.00, 12.00, 0.030, 0.30, 67, 1.00, 0, 0, 0, 1},
-    // 4. a fall (tilt left at the release) and a doit (tilt right)
+    // 4. a fall (bent down at the release) and a doit (bent up)
     {1, 12.60, 13.60, 0.006, 0.05, 79, 0.85, -0.9, 0, 0, 0},
     {2, 14.20, 15.00, 0.006, 0.05, 74, 0.80, 0.9, 0, 0, 0},
     // 5. lip shake on a high C (motion) and 6. pedal vibrato on a held F5 (see the globals)
     {3, 15.60, 17.60, 0.010, 0.10, 84, 0.80, 0, 0, 0, 0},
     {0, 18.00, 20.60, 0.030, 0.25, 77, 0.60, 0, 0, 0, 0},
-    // 7. embouchure / wah: slow forward-back tilt on a held D5
+    // 7. embouchure / wah: a slow timbre sweep on a held D5
     {1, 21.00, 24.00, 0.020, 0.20, 74, 0.70, 0, 1.0, 0, 0},
     // 8. half-valve bend: Bb4 bent down a whole tone and back
     {2, 24.50, 26.50, 0.010, 0.10, 70, 0.70, 0, 0, -2.0, 0},
@@ -85,7 +85,7 @@ static void controls(double t, Ctl* v, int nv, float* g) {
 			p = k.pres * e * (0.08 + 0.92 * sin(M_PI * pmin(u, 1.0)) * sin(M_PI * pmin(u, 1.0)));
 		}
 		c.pres = (float)p;
-		// tilt x ramps in over the last 0.2 s for falls and doits
+		// the bend ramps in over the last 0.2 s for falls and doits
 		const double ramp = k.bx_end != 0 ? pmin(pmax((t - (k.t1 - 0.2)) / 0.2, 0.0), 1.0) : 0.0;
 		c.but_x = (float)(k.bx_end * ramp);
 		c.but_y = (float)(k.ty * sin(2 * M_PI * (t - k.t0) / 1.5));

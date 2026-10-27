@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // soak: the long run, behind the ctest label "soak" (ctest -L soak; not in CI's default run):
 // every preset, in three phases (after the sax lane's soak):
-//   chaos   random playing (notes in and out of range, instant strikes, pressure to 1.5, tilts,
+//   chaos   random playing (notes in and out of range, instant strikes, pressure to 1.5, timbre,
 //           shake, pedal) with random parameter writes, AWVA_SOAK_SECONDS long (default 60)
 //   held    the preset's values back, every voice at full pressure on fixed notes with slow
-//           tilts, 10 s
+//           timbre sweeps, 10 s
 //   decay   everything released, the tail and 2 s more
 // Checked: finite and bounded throughout, silent and idle after the decay. Reported per phase:
 // the peak, subnormal samples, the cost of a block (a subnormal tail shows as a decay costing
